@@ -265,7 +265,7 @@ data: {"event_type": "video_job_progress", "jobId": "...", "status": "running", 
 2. 策划书 §2 六条验收标准全部通过并记录截图/录屏；
 3. `video_jobs` 表有完整状态机流转记录；Worker 重启恢复演练通过；
 4. `multi_image_video.py` 旧实现已退化为薄封装，`video_pipeline.py` 死代码已删除（TieredModelRouter 已迁出）；
-5. 接口契约（§5）写入 `docs/api-reference.md`。
+5. 接口契约（§5）由 `backend/app/api/routers/` 下的路由 schema 承载，并通过 `/openapi.json` 可查。
 
 ---
 

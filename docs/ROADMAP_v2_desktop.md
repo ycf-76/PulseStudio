@@ -235,9 +235,9 @@ LLM 通过工具链（搜索 → 分析 → 文案 → 图片 → 审核 → 发
 ### 8.1 相关文档
 
 - [skills-architecture.md](./skills-architecture.md) — Skill 架构设计
-- [DEV_TOOLS_GUIDE.md](./DEV_TOOLS_GUIDE.md) — 开发工具指南
-- [PLUGIN_SDK_GUIDE.md](./PLUGIN_SDK_GUIDE.md) — 插件 SDK 指南
-- [fix-plan-2026-08-31.md](./fix-plan-2026-08-31.md) — 全面修复计划
+- [内核-能力分层架构方案.md](./内核-能力分层架构方案.md) — 内核与能力分层
+- [能力外置服务化执行计划.md](./能力外置服务化执行计划.md) — 能力外置分期落地
+- [VIDEO_ARCHITECTURE_ALIGNMENT_MIGRATION_PLAN.md](./VIDEO_ARCHITECTURE_ALIGNMENT_MIGRATION_PLAN.md) — AI 视频架构对齐
 
 ### 8.2 技术栈
 
