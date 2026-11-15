@@ -101,3 +101,28 @@ backend/app/data/
 
 # 旧仓库备份目录
 .git.bak/
+
+# ---- 2026-11-15 从仓库移除（仅取消跟踪，本地文件保留）----
+# 临时探测脚本
+backend/scripts/_*.py
+backend/scripts/_*.json
+
+# 第三方 npm 包参考代码
+_ref_dsh/
+
+# 废弃空占位图（0 字节，代码零引用）
+frontend/public/static/recipe-preview/
+
+# 架构重构后的空壳目录（0 字节，无任何 import）
+backend/app/account/
+
+# 独立 HTML 交付物（与项目源码无关）
+react-prompt-architecture/
+competitor-assessment/
+.trae-html-share-packages/
+
+# 空测试占位文件
+backend/tests/test_asset_ref.py
+backend/tests/test_intent_parser.py
+backend/tests/test_offline_e2e_asset_link.py
+backend/tests/test_session_context.py
