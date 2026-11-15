@@ -2,7 +2,7 @@
   <div class="byok-manager">
     <section class="byok-hero">
       <div class="byok-hero-frame">
-        <img class="byok-hero-img" src="/images/setting_images/img_5.png" alt="模型配置" />
+        <img class="byok-hero-img" src="/images/setting_images/img_5.webp" alt="模型配置" />
       </div>
       <div class="byok-hero-body">
         <h3 class="byok-hero-title">API Key 管理</h3>

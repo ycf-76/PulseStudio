@@ -185,7 +185,7 @@
           </div>
           <div v-else-if="activeSection === 'plugins'" class="ao-page">
             <section v-if="!selectedPlugin" class="stg-hero stg-hero-wide stg-hero-plugin">
-              <img class="stg-hero-img stg-hero-img-plugin" src="/images/setting_images/img_1.png" alt="插件管理" />
+              <img class="stg-hero-img stg-hero-img-plugin" src="/images/setting_images/img_1.webp" alt="插件管理" />
               <div class="stg-hero-body">
                 <h3 class="stg-hero-title">用插件扩展你的创作能力</h3>
                 <p class="stg-hero-desc">接入更多发布渠道、数据源与工作流节点，让平台按你的方式运转。</p>
@@ -206,7 +206,7 @@
           </div>
           <div v-else-if="activeSection === 'skills'" class="ao-page">
             <section class="stg-hero stg-hero-skills">
-              <img class="stg-hero-img stg-hero-img-skills" src="/images/setting_images/img_2.png" alt="Skills 技能" @error="($event.target as HTMLElement).style.display='none'" />
+              <img class="stg-hero-img stg-hero-img-skills" src="/images/setting_images/img_2.webp" alt="Skills 技能" @error="($event.target as HTMLElement).style.display='none'" />
               <div class="stg-hero-body">
                 <h3 class="stg-hero-title">给智能体装配可复用的技能</h3>
                 <p class="stg-hero-desc">把常用的工具组合与提示词封装成技能模板，一次配置，反复调用。</p>

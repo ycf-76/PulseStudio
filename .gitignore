@@ -1,154 +1,138 @@
-# Python
+# ---- Python ----
 __pycache__/
 *.py[cod]
 *.egg-info/
 .eggs/
+*.egg
 dist/
 build/
-*.egg
 
-# Virtual environments
+# ---- 虚拟环境 ----
 .venv/
 venv/
 env/
 
-# IDE
+# ---- IDE / 编辑器 ----
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# OS
+# ---- 操作系统 ----
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Environment variables
+# ---- 环境变量 ----
 .env
 .env.local
 .env.*.local
 
-# Node
+# ---- Node ----
 node_modules/
-frontend/node_modules/
-
-# pnpm
 .pnpm-store/
 .pnpm-debug.log
-
-# Build output
-frontend/dist/
 .next/
 
-# Uploads
+# ---- 运行时数据与生成产物 ----
 uploads/
+backend/outputs/
+backend/models/
+backend/data/
+backend/app/data/
 
-# Logs
-*.log
-logs/
-
-# Database
+# ---- 数据库 ----
 *.db
 *.sqlite3
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 
-# Data directory
-backend/data/
-
-# Playwright
-pw-browsers/
-
-# Temp files
+# ---- 日志、临时文件与缓存 ----
+*.log
+logs/
 *.tmp
 *.bak
-
-# Scratch scripts (backend root)
-backend/_*.py
-backend/test_*.py
-backend/test_*.txt
-
-# pytest cache
 .pytest_cache/
+pw-browsers/
+.trash-*/
 
-# Frontend temp files
-frontend/_sfc_check.mjs
-frontend/_typecheck_output.txt
-frontend/*.proof.png
-# 调试残留与会话数据（2026-10-20）
+# ---- 运行时凭据（含真实 bot_token，禁止入库）----
+**/.wechat_credentials*.json
+
+# ---- 旧仓库备份目录 ----
+.git.bak/
+
+# ---- 临时探测脚本与调试残留 ----
 _*.txt
 _*_result.json
 missing.txt
 snap.txt
-.workbuddy/
-.workbuddy-ai/
-backend/_*.txt
+backend/_*.py
 backend/_*.json
-
-# 垃圾箱/旧构建残留（2026-11-02 清理，历史中已移除跟踪）
-.trash-*/
-
-# 生成产物与模型权重（2026-11-15 重建仓库时补充，不入库）
-backend/outputs/
-backend/models/
-
-# 运行时凭据（含真实 bot_token，禁止入库）
-**/.wechat_credentials*.json
-
-# 运行时数据目录（浏览器登录态 Cookie / 会话工作区 / 检查点）
-backend/app/data/
-
-# 旧仓库备份目录
-.git.bak/
-
-# ---- 2026-11-15 从仓库移除（仅取消跟踪，本地文件保留）----
-# 临时探测脚本
+backend/_*.txt
+backend/test_*.py
+backend/test_*.txt
 backend/scripts/_*.py
 backend/scripts/_*.json
 
-# 第三方 npm 包参考代码
+# ---- 前端临时文件 ----
+frontend/_sfc_check.mjs
+frontend/_typecheck_output.txt
+frontend/*.proof.png
+
+# ---- AI 工具配置与流程文档（个人开发环境，非项目源码）----
+.trae/
+.superpowers/
+.workbuddy/
+.workbuddy-ai/
+.screenshots/
+
+# ---- 第三方参考代码与独立交付物 ----
 _ref_dsh/
-
-# 废弃空占位图（0 字节，代码零引用）
-frontend/public/static/recipe-preview/
-
-# 架构重构后的空壳目录（0 字节，无任何 import）
-backend/app/account/
-
-# 独立 HTML 交付物（与项目源码无关）
 react-prompt-architecture/
 competitor-assessment/
 .trae-html-share-packages/
 
-# 空测试占位文件
+# ---- 架构重构后的空壳目录与空占位图（0 字节，无任何引用）----
+backend/app/account/
+frontend/public/static/recipe-preview/
+
+# ---- 空测试占位文件 ----
 backend/tests/test_asset_ref.py
 backend/tests/test_intent_parser.py
 backend/tests/test_offline_e2e_asset_link.py
 backend/tests/test_session_context.py
 
-# ---- 2026-11-15 第二批从仓库移除（仅取消跟踪，本地文件保留）----
-# AI 工具配置与流程文档（属于个人开发环境，非项目源码）
-.trae/
-.superpowers/
-.workbuddy-ai/
-.screenshots/
-
-# 基准测试输出产物（每次运行都会重新生成）
+# ---- 基准测试输出产物（每次运行重新生成）----
 backend/bench/results/*.json
 backend/bench/results/*.md
 
-# 未落地或已过时的方案文档
+# ---- 未落地或已过时的方案文档 ----
 backend/docs/feishu-integration.md
 backend/docs/pip-handoff-presentation.md
-
-# 前端设计文档与原型 HTML
 frontend/docs/
 frontend/prototype/
 
-# 零引用的技能示例脚本
+# ---- 零引用的技能示例脚本 ----
 backend/skills/pixel2motion_skill.py
 
-# 个人工作记录与问题分析报告
+# ---- 个人工作记录与问题分析报告 ----
 待办bug修复表.md
 问题分析/
+
+# ---- 设置页示意图：已转为 WebP，原始 PNG 不再入库 ----
+frontend/public/images/setting_images/img.png
+frontend/public/images/setting_images/img_1.png
+frontend/public/images/setting_images/img_2.png
+frontend/public/images/setting_images/img_3.png
+frontend/public/images/setting_images/img_4.png
+frontend/public/images/setting_images/img_5.png
+
+# ---- 设置页示意图：代码零引用，已取消跟踪 ----
+frontend/public/images/setting_images/2.jpg
+frontend/public/images/setting_images/51.jpg
+frontend/public/images/setting_images/img_5.jpg
+frontend/public/images/setting_images/agents-banner.png
+frontend/public/images/setting_images/skills-banner.png
+frontend/public/images/setting_images/image-*.png

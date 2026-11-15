@@ -3,7 +3,7 @@
     <section class="am-hero">
       <img
         class="am-hero-img"
-        src="/images/setting_images/img.png"
+        src="/images/setting_images/img.webp"
         alt="智能体管理"
         @error="($event.target as HTMLElement).style.display='none'"
       />
