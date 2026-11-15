@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- Studio P0 spike 分层场景（Task 6 fixture）：四层合成，DOM 顺序即层序——
+     底帧(#base) → 身后动效标题条(#title) → 人物(#person) → 前景触发卡片(#card)。
+     运行时由测试拷入工作区 scene/，并生成 assets_manifest.js
+     （帧目录/数量/尺寸/节拍标题/触发卡片）。seekTo(t) 纯函数驱动全部画面状态；
+     渲染模式（URL 无参数）只暴露 seekTo 供逐帧截图，?preview 才启动 rAF 实时循环。 -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>studio spike scene</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #000; }
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #101018; }
+  /* world = 原始帧坐标系（底帧/人物同几何），由 play.js 按 cover 比例缩放居中 */
+  #world { position: absolute; left: 50%; top: 50%; }
+  #base, #person { position: absolute; left: 0; top: 0; display: block; }
+  /* 身后层：标题条（人物之下，顶部落纯背景区不被人物遮挡），滑入手写插值。
+     配色：低饱和暗调——压暗底 + 琥珀强调条 + 米白字（2026-11-10 验收回炉，
+     原 #ff2442 正红过艳） */
+  #title {
+    position: absolute; left: 0; top: 24px; box-sizing: border-box; width: 100%;
+    padding: 22px 44px 22px 40px; border-left: 14px solid #e0b36a;
+    background: rgba(10, 11, 16, 0.82); color: #f2efe9;
+    font: 700 58px/1.28 "Microsoft YaHei", "PingFang SC", sans-serif;
+    opacity: 0; transform: translateX(-108%);
+  }
+  /* 前景层：触发卡片（最上层，落人物躯干上方），弹入手写插值。
+     配色：深色半透明底 + 琥珀描边 + 米白字，替代原大块正红 */
+  #card {
+    position: absolute; left: 50%; bottom: 190px; box-sizing: border-box; max-width: 86%;
+    padding: 26px 42px; border-radius: 26px; background: rgba(28, 28, 34, 0.88);
+    border: 2px solid rgba(224, 179, 106, 0.85); color: #f2efe9;
+    font: 700 54px/1.3 "Microsoft YaHei", "PingFang SC", sans-serif;
+    opacity: 0; transform: translate(-50%, 0) scale(0.8);
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="world">
+      <img id="base" alt="" draggable="false">
+      <div id="title"><span id="title_text"></span></div>
+      <img id="person" alt="" draggable="false">
+      <div id="card"><span id="card_text"></span></div>
+    </div>
+  </div>
+  <script src="assets_manifest.js"></script>
+  <script src="play.js"></script>
+</body>
+</html>

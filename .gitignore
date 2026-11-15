@@ -1,0 +1,103 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# pnpm
+.pnpm-store/
+.pnpm-debug.log
+
+# Build output
+frontend/dist/
+.next/
+
+# Uploads
+uploads/
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Data directory
+backend/data/
+
+# Playwright
+pw-browsers/
+
+# Temp files
+*.tmp
+*.bak
+
+# Scratch scripts (backend root)
+backend/_*.py
+backend/test_*.py
+backend/test_*.txt
+
+# pytest cache
+.pytest_cache/
+
+# Frontend temp files
+frontend/_sfc_check.mjs
+frontend/_typecheck_output.txt
+frontend/*.proof.png
+# 调试残留与会话数据（2026-10-20）
+_*.txt
+_*_result.json
+missing.txt
+snap.txt
+.workbuddy/
+.workbuddy-ai/
+backend/_*.txt
+backend/_*.json
+
+# 垃圾箱/旧构建残留（2026-11-02 清理，历史中已移除跟踪）
+.trash-*/
+
+# 生成产物与模型权重（2026-11-15 重建仓库时补充，不入库）
+backend/outputs/
+backend/models/
+
+# 运行时凭据（含真实 bot_token，禁止入库）
+**/.wechat_credentials*.json
+
+# 运行时数据目录（浏览器登录态 Cookie / 会话工作区 / 检查点）
+backend/app/data/
+
+# 旧仓库备份目录
+.git.bak/

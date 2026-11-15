@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReAct 运行时注入架构 · 多智能体小红书发布平台</title>
+<style>
+  :root{
+    --bg:#080b12; --text:#e6edf7; --muted:#94a3b8; --dim:#64748b;
+    --amber:#f5a524; --cyan:#22d3ee; --green:#34d399; --violet:#a78bfa;
+    --line:rgba(148,163,184,.18);
+    --mono:ui-monospace,"Cascadia Code",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;color:var(--text);
+    background:
+      radial-gradient(1100px 560px at 14% -12%, rgba(245,165,36,.10), transparent 62%),
+      radial-gradient(1000px 560px at 88% -4%, rgba(34,211,238,.09), transparent 62%),
+      var(--bg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1660px;margin:0 auto;padding:34px 22px 46px}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:6px}
+  h1{margin:0;font-size:clamp(21px,2.2vw,28px);letter-spacing:-.01em;font-weight:750}
+  h1 span{color:var(--dim);font-weight:400;font-size:.72em;margin-left:10px}
+  .sub{margin:8px 0 0;color:var(--muted);font-size:13.5px;max-width:900px}
+  .sub code{font-family:var(--mono);font-size:12px;color:#8fb6e8}
+  .pill{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--amber);
+    padding:8px 12px;border:1px solid rgba(245,165,36,.3);border-radius:999px;background:rgba(245,165,36,.07)}
+  .canvas{margin-top:18px;border:1px solid var(--line);border-radius:16px;
+    background:rgba(11,16,28,.55);backdrop-filter:blur(8px);padding:6px;overflow-x:auto}
+  svg{width:100%;min-width:1180px;height:auto;display:block}
+  .note{margin-top:16px;font-size:12.5px;color:var(--muted);line-height:1.8}
+  .note code{font-family:var(--mono);font-size:11.5px;color:#8fb6e8}
+  .note em{color:var(--amber);font-style:normal}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>ReAct 运行时注入架构<span>ReactorSession · 12 个子系统怎么进到循环里</span></h1>
+      <p class="sub">
+        中心是 ReAct 主循环的 8 个执行阶段；外围 12 个子系统按 <code>4 条注入通道</code> 进入内核。
+        每条箭头旁标注的是它真实的注入参数或构造方式，箭头指向它在循环里的生效位置。
+      </p>
+    </div>
+    <div class="pill">iter 1..12 · timeout 120s · budget 200k</div>
+  </div>
+
+  <div class="canvas">
+    <svg viewBox="0 0 1560 900" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ar-amber" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#f5a524"/>
+        </marker>
+        <marker id="ar-cyan" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#22d3ee"/>
+        </marker>
+        <marker id="ar-green" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#34d399"/>
+        </marker>
+        <marker id="ar-violet" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#a78bfa"/>
+        </marker>
+        <marker id="ar-gray" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+        </marker>
+      </defs>
+
+      <style>
+        .sess{fill:#0b101c;stroke:rgba(245,165,36,.34);stroke-width:1.4}
+        .hdr{fill:rgba(245,165,36,.10)}
+        .stg{fill:rgba(245,165,36,.045);stroke:rgba(245,165,36,.24);stroke-width:1}
+        .stg-key{fill:rgba(245,165,36,.10);stroke:rgba(245,165,36,.42);stroke-width:1.2}
+        .box{fill:#111726;stroke:rgba(148,163,184,.20);stroke-width:1}
+        .t{fill:#e6edf7;font-size:12.5px;font-weight:700}
+        .m{fill:#94a3b8;font-size:10.5px;font-family:var(--mono)}
+        .r{fill:#64748b;font-size:10px}
+        .p{font-size:10.5px;font-family:var(--mono);font-weight:600}
+        .lab{font-size:10.5px;font-family:var(--mono);text-anchor:middle}
+        .st{fill:#fbd08a;font-size:12px;font-weight:700;font-family:var(--mono)}
+        .sd{fill:#94a3b8;font-size:10.3px}
+        .sess-t{fill:#fbd08a;font-size:12.5px;font-weight:700}
+        .sess-m{fill:#64748b;font-size:10px;font-family:var(--mono)}
+      </style>
+
+      <!-- ===== 左侧：构造期注入的子系统 ===== -->
+      <text x="56" y="126" class="sess-m" style="fill:#f5a524">◤ 注入源 · 左侧</text>
+
+      <g class="sub"><rect x="56" y="156" width="286" height="76" rx="10"/>
+        <text class="t" x="74" y="181">Skills 技能池</text>
+        <text class="m" x="74" y="199">skill_call · 触发词 · L1/L3 正文</text>
+        <text class="p" x="74" y="217" fill="#f5a524">skills=</text>
+      </g>
+
+      <g class="sub"><rect x="56" y="248" width="286" height="76" rx="10"/>
+        <text class="t" x="74" y="273">LLM 适配器</text>
+        <text class="m" x="74" y="291">factory · 按 agent_def 锁模型</text>
+        <text class="p" x="74" y="309" fill="#f5a524">llm=</text>
+      </g>
+
+      <g class="sub"><rect x="56" y="340" width="286" height="76" rx="10"/>
+        <text class="t" x="74" y="365">Primitives + Transport</text>
+        <text class="m" x="74" y="383">薄原语集 → 包成 InProcessTransport</text>
+        <text class="p" x="74" y="401" fill="#f5a524">primitives= / transport=</text>
+      </g>
+
+      <g class="sub"><rect x="56" y="432" width="286" height="76" rx="10"/>
+        <text class="t" x="74" y="457">Dispatch Hooks</text>
+        <text class="m" x="74" y="475">解包 · 素材 id 注入 · 业务上下文</text>
+        <text class="p" x="74" y="493" fill="#f5a524">dispatch_hooks=</text>
+      </g>
+
+      <g class="sub"><rect x="56" y="524" width="286" height="76" rx="10"/>
+        <text class="t" x="74" y="549">Permissions 权限集</text>
+        <text class="m" x="74" y="567">文件 / 命令 / 搜索 / 外发 白名单</text>
+        <text class="p" x="74" y="585" fill="#f5a524">allowed_permissions=</text>
+      </g>
+
+      <!-- 左侧箭头 -->
+      <line x1="342" y1="194" x2="636" y2="194" stroke="#f5a524" stroke-width="1.6" marker-end="url(#ar-amber)"/>
+      <text class="lab" x="489" y="186" fill="#f5a524">skills=</text>
+
+      <line x1="342" y1="286" x2="636" y2="250" stroke="#f5a524" stroke-width="1.6" marker-end="url(#ar-amber)"/>
+      <text class="lab" x="489" y="262" fill="#f5a524">llm=</text>
+
+      <line x1="342" y1="378" x2="636" y2="466" stroke="#f5a524" stroke-width="1.6" marker-end="url(#ar-amber)"/>
+      <text class="lab" x="489" y="414" fill="#f5a524">primitives= / transport=</text>
+
+      <line x1="342" y1="470" x2="636" y2="482" stroke="#f5a524" stroke-width="1.6" marker-end="url(#ar-amber)"/>
+      <text class="lab" x="489" y="468" fill="#f5a524">dispatch_hooks=</text>
+
+      <line x1="342" y1="562" x2="636" y2="498" stroke="#f5a524" stroke-width="1.6" marker-end="url(#ar-amber)"/>
+      <text class="lab" x="489" y="522" fill="#f5a524">allowed_permissions=</text>
+
+      <!-- ===== 中心：ReactorSession 内核 ===== -->
+      <rect class="sess" x="598" y="132" width="404" height="660" rx="16"/>
+      <path class="hdr" d="M598,148 a16,16 0 0 1 16,-16 h372 a16,16 0 0 1 16,16 v12 h-404 z"/>
+      <text class="sess-t" x="620" y="152">ReactorSession · ReAct 内核</text>
+      <text class="sess-m" x="980" y="152" text-anchor="end">≤12 iterations</text>
+
+      <g class="stg"><rect x="640" y="168" width="335" height="52" rx="8"/>
+        <text class="st" x="656" y="190">① 组装 messages</text>
+        <text class="sd" x="656" y="207">system_prompt(技能目录) · for_prompt() · seed_messages</text>
+      </g>
+
+      <g class="stg"><rect x="640" y="236" width="335" height="52" rx="8"/>
+        <text class="st" x="656" y="258">② _call_llm</text>
+        <text class="sd" x="656" y="275">流式增量 · 分级重试 · reasoning 协议门 · token 记账</text>
+      </g>
+
+      <g class="stg"><rect x="640" y="304" width="335" height="52" rx="8"/>
+        <text class="st" x="656" y="326">③ _parse_step</text>
+        <text class="sd" x="656" y="343">ReAct JSON / DSML 原生调用 / 围栏剥离 / 文本抽 JSON</text>
+      </g>
+
+      <g class="stg"><rect x="640" y="372" width="335" height="52" rx="8"/>
+        <text class="st" x="656" y="394">④ 分支判定</text>
+        <text class="sd" x="656" y="411">final → ⑦ ｜ 无调用 → nudge ｜ 重复 → 收口 ｜ 有 → ⑤</text>
+      </g>
+
+      <g class="stg-key"><rect x="640" y="440" width="335" height="84" rx="8"/>
+        <text class="st" x="656" y="462">⑤ _dispatch · 唯一工具出口</text>
+        <text class="sd" x="656" y="480">澄清 → hooks → Guardian → 权限门 → transport.call()</text>
+        <text class="sd" x="656" y="496" style="fill:#f5a524">失败不抛异常 → 转成 observation 回灌</text>
+      </g>
+
+      <g class="stg"><rect x="640" y="540" width="335" height="52" rx="8"/>
+        <text class="st" x="656" y="562">⑥ observation 回写</text>
+        <text class="sd" x="656" y="579">截断 4000 字 · WorldState ingest · 回执账本 · 产物累积</text>
+      </g>
+
+      <g class="stg"><rect x="640" y="608" width="335" height="52" rx="8"/>
+        <text class="st" x="656" y="630">⑦ Gate 收口</text>
+        <text class="sd" x="656" y="647">Output Gate 删无背书产物 · Execution Gate 拦假完成</text>
+      </g>
+
+      <g class="stg"><rect x="640" y="676" width="335" height="52" rx="8"/>
+        <text class="st" x="656" y="698">⑧ 终态</text>
+        <text class="sd" x="656" y="715">ended_reason · node/workflow_completed · loop_state 落盘</text>
+      </g>
+
+      <!-- 阶段纵向连接 -->
+      <line x1="808" y1="220" x2="808" y2="232" stroke="#f5a524" stroke-width="1.5" marker-end="url(#ar-amber)"/>
+      <line x1="808" y1="288" x2="808" y2="300" stroke="#f5a524" stroke-width="1.5" marker-end="url(#ar-amber)"/>
+      <line x1="808" y1="356" x2="808" y2="368" stroke="#f5a524" stroke-width="1.5" marker-end="url(#ar-amber)"/>
+      <line x1="808" y1="424" x2="808" y2="436" stroke="#f5a524" stroke-width="1.5" marker-end="url(#ar-amber)"/>
+      <line x1="808" y1="524" x2="808" y2="536" stroke="#f5a524" stroke-width="1.5" marker-end="url(#ar-amber)"/>
+      <line x1="808" y1="592" x2="808" y2="604" stroke="#f5a524" stroke-width="1.5" marker-end="url(#ar-amber)"/>
+      <line x1="808" y1="660" x2="808" y2="672" stroke="#f5a524" stroke-width="1.5" marker-end="url(#ar-amber)"/>
+
+      <!-- 循环回边 -->
+      <path d="M640,566 L612,566 L612,278 L634,278" fill="none" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar-gray)"/>
+      <text x="622" y="340" class="lab" fill="#94a3b8" transform="rotate(-90 622 340)">下一轮 · 回到 ②</text>
+
+      <text x="810" y="760" class="sd" text-anchor="middle" style="fill:#64748b">
+        ①→⑧ 为一轮；④ 判 final 则跳过 ⑤⑥；跑满 12 轮或预算耗尽 → ⑦ 强制收口
+      </text>
+
+      <!-- ===== 右侧：运行期 / 懒加载 / 内核自建 ===== -->
+      <text x="1500" y="126" class="sess-m" text-anchor="end" style="fill:#22d3ee">注入源 · 右侧 ◢</text>
+
+      <g class="sub"><rect x="1220" y="144" width="280" height="76" rx="10"/>
+        <text class="t" x="1238" y="169">ContextManager</text>
+        <text class="m" x="1238" y="187">WorldState 快照 · 历史 · token 预算</text>
+        <text class="p" x="1238" y="205" fill="#22d3ee">run(context_manager=)</text>
+      </g>
+
+      <g class="sub"><rect x="1220" y="236" width="280" height="76" rx="10"/>
+        <text class="t" x="1238" y="261">Observer + SSE Bus</text>
+        <text class="m" x="1238" y="279">事件发布 · turn 隔离 · 心跳重放</text>
+        <text class="p" x="1238" y="297" fill="#f5a524">observer= / sse_bus=</text>
+      </g>
+
+      <g class="sub"><rect x="1220" y="328" width="280" height="76" rx="10"/>
+        <text class="t" x="1238" y="353">TaskClassifier</text>
+        <text class="m" x="1238" y="371">意图分类 · 澄清兜底判定</text>
+        <text class="p" x="1238" y="389" fill="#a78bfa">build_classifier_from_skills()</text>
+      </g>
+
+      <g class="sub"><rect x="1220" y="420" width="280" height="76" rx="10"/>
+        <text class="t" x="1238" y="445">Guardian 安全闸门</text>
+        <text class="m" x="1238" y="463">风险评级 · ALLOW/DENY/NEEDS_CONFIRM</text>
+        <text class="p" x="1238" y="481" fill="#a78bfa">Guardian() 构造期自建</text>
+      </g>
+
+      <g class="sub"><rect x="1220" y="560" width="280" height="76" rx="10"/>
+        <text class="t" x="1238" y="585">Collab 多智能体</text>
+        <text class="m" x="1238" y="603">AgentManager · InterAgentBus · 并发池</text>
+        <text class="p" x="1238" y="621" fill="#34d399">首次 spawn_agent 时懒建</text>
+      </g>
+
+      <g class="sub"><rect x="1220" y="652" width="280" height="76" rx="10"/>
+        <text class="t" x="1238" y="677">LoopState</text>
+        <text class="m" x="1238" y="695">暂停序列化 · 续跑回灌</text>
+        <text class="p" x="1238" y="713" fill="#a78bfa">save/load_loop_state()</text>
+      </g>
+
+      <!-- 右侧箭头 -->
+      <line x1="1220" y1="182" x2="979" y2="194" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar-cyan)"/>
+      <text class="lab" x="1100" y="176" fill="#22d3ee">run(context_manager=)</text>
+
+      <line x1="1220" y1="274" x2="979" y2="262" stroke="#f5a524" stroke-width="1.6" marker-end="url(#ar-amber)"/>
+      <text class="lab" x="1100" y="258" fill="#f5a524">observer= / sse_bus=</text>
+
+      <line x1="1220" y1="366" x2="979" y2="398" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#ar-violet)"/>
+      <text class="lab" x="1100" y="372" fill="#a78bfa">分类器 · 澄清兜底</text>
+
+      <line x1="1220" y1="458" x2="979" y2="486" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#ar-violet)"/>
+      <text class="lab" x="1100" y="452" fill="#a78bfa">Guardian() 自建</text>
+
+      <line x1="1220" y1="598" x2="979" y2="506" stroke="#34d399" stroke-width="1.6" stroke-dasharray="2 4" marker-end="url(#ar-green)"/>
+      <text class="lab" x="1100" y="546" fill="#34d399">懒建 → 注入 spawn 工具</text>
+
+      <line x1="1220" y1="690" x2="979" y2="702" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#ar-violet)"/>
+      <text class="lab" x="1100" y="684" fill="#a78bfa">loop_state 落盘</text>
+
+      <!-- ===== 图例 ===== -->
+      <line x1="60" y1="818" x2="96" y2="818" stroke="#f5a524" stroke-width="2" marker-end="url(#ar-amber)"/>
+      <text x="104" y="822" class="r" style="font-size:11.5px">构造期注入 · __init__ 参数（build_session 装配）</text>
+
+      <line x1="470" y1="818" x2="506" y2="818" stroke="#a78bfa" stroke-width="2" marker-end="url(#ar-violet)"/>
+      <text x="514" y="822" class="r" style="font-size:11.5px">内核自建 / 内部 import（不外部注入）</text>
+
+      <line x1="880" y1="818" x2="916" y2="818" stroke="#22d3ee" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ar-cyan)"/>
+      <text x="924" y="822" class="r" style="font-size:11.5px">运行期注入 · run() 入参（每回合可变）</text>
+
+      <line x1="1290" y1="818" x2="1326" y2="818" stroke="#34d399" stroke-width="2" stroke-dasharray="2 4" marker-end="url(#ar-green)"/>
+      <text x="1334" y="822" class="r" style="font-size:11.5px">懒加载 · 首次调用才建</text>
+
+      <text x="60" y="862" class="r" style="font-size:11px;fill:#475569">
+        装配链：api/routers/chat_agent.py  →  agents/registry.py · build_session()  →  engine/factory.py · get_deepseek_llm()  →  ReactorSession
+      </text>
+      <text x="60" y="884" class="r" style="font-size:11px;fill:#475569">
+        读法：左侧 5 个 + 右侧 3 个在构造期固定；ContextManager 每回合由 run() 传入；Collab 到第一次 spawn_agent 才建；Guardian / TaskClassifier / LoopState 由内核自己 new 或 import。
+      </text>
+
+    </svg>
+  </div>
+
+  <p class="note">
+    这张图只回答一件事：<em>子系统的入口在哪</em>。所有箭头最终都收在 <code>⑤ _dispatch</code>——它是全项目唯一执行工具的地方，
+    因此也是 Guardian、权限、hooks、transport 四个子系统唯一的汇聚点；而 <code>① 组装 messages</code> 是技能池与上下文唯一生效的地方。
+    其余阶段（②③④⑥⑦⑧）不接收新子系统，只消费已注入的对象。
+  </p>
+</div>
+</body>
+</html>

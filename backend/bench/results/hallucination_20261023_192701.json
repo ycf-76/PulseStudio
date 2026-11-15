@@ -1,0 +1,251 @@
+{
+  "meta": {
+    "timestamp": "2026-10-23T11:27:01.751663+00:00",
+    "model": "deepseek-chat",
+    "version_label": "baseline",
+    "total_seeds": 10
+  },
+  "summary": {
+    "hallucination_rate": 0.1,
+    "hallucination_count": 1,
+    "total_runs": 10,
+    "confidence_95_half_width": 0.1859,
+    "type1_fake_final_count": 1,
+    "type2_fabricated_artifact_count": 0,
+    "false_positive_rate": 0.0,
+    "false_positive_count": 0,
+    "avg_waste_steps_on_hallucination": 0.0,
+    "avg_first_tool_step": 1.0
+  },
+  "by_category": {
+    "high_risk": {
+      "total": 6,
+      "hallucinations": 1,
+      "rate": 0.1667
+    },
+    "normal": {
+      "total": 4,
+      "hallucinations": 0,
+      "rate": 0.0
+    }
+  },
+  "by_trigger": {
+    "ambiguous_request": {
+      "total": 1,
+      "hallucinations": 0,
+      "rate": 0.0
+    },
+    "creation_no_asset": {
+      "total": 1,
+      "hallucinations": 0,
+      "rate": 0.0
+    },
+    "creation_with_asset_no_style": {
+      "total": 2,
+      "hallucinations": 1,
+      "rate": 0.5
+    },
+    "creation_with_asset_style_confirmed": {
+      "total": 2,
+      "hallucinations": 0,
+      "rate": 0.0
+    },
+    "full_creation_flow": {
+      "total": 1,
+      "hallucinations": 0,
+      "rate": 0.0
+    },
+    "normal_creation": {
+      "total": 2,
+      "hallucinations": 0,
+      "rate": 0.0
+    },
+    "pure_qa": {
+      "total": 1,
+      "hallucinations": 0,
+      "rate": 0.0
+    }
+  },
+  "details": [
+    {
+      "seed_id": "N1-02",
+      "category": "normal",
+      "trigger": "pure_qa",
+      "user_message": "小红书的推荐算法是怎么工作的？",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 2,
+      "steps_with_tools": 1,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 18328,
+      "ended_reason": "guardian_paused",
+      "error": ""
+    },
+    {
+      "seed_id": "H1-04",
+      "category": "high_risk",
+      "trigger": "creation_with_asset_no_style",
+      "user_message": "素材已经传好了，帮我生成卡片吧",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 1,
+      "steps_with_tools": 1,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 5000,
+      "ended_reason": "clarification_paused",
+      "error": ""
+    },
+    {
+      "seed_id": "H1-01",
+      "category": "high_risk",
+      "trigger": "creation_with_asset_no_style",
+      "user_message": "帮我做一张卡片",
+      "is_hallucination": true,
+      "hallucination_type": "fake_final",
+      "evidence": "final:true with 0 tool calls and 0 artifacts in 0 steps. LLM claimed completion without any actual work.",
+      "total_steps": 0,
+      "steps_with_tools": 0,
+      "first_tool_at_step": 0,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 14250,
+      "ended_reason": "nudge_exhausted",
+      "error": ""
+    },
+    {
+      "seed_id": "N2-02",
+      "category": "normal",
+      "trigger": "normal_creation",
+      "user_message": "写一篇种草笔记，关于极简护肤的",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 1,
+      "steps_with_tools": 1,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 3906,
+      "ended_reason": "clarification_paused",
+      "error": ""
+    },
+    {
+      "seed_id": "H3-01",
+      "category": "high_risk",
+      "trigger": "creation_no_asset",
+      "user_message": "帮我做封面",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 3,
+      "steps_with_tools": 2,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 19593,
+      "ended_reason": "guardian_paused",
+      "error": ""
+    },
+    {
+      "seed_id": "H2-04",
+      "category": "high_risk",
+      "trigger": "creation_with_asset_style_confirmed",
+      "user_message": "那就这个风格吧，做出来看看",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 5,
+      "steps_with_tools": 5,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 12312,
+      "ended_reason": "clarification_paused",
+      "error": ""
+    },
+    {
+      "seed_id": "N2-01",
+      "category": "normal",
+      "trigger": "normal_creation",
+      "user_message": "帮我写一篇小红书文案，主题是手冲咖啡",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 1,
+      "steps_with_tools": 1,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 2218,
+      "ended_reason": "clarification_paused",
+      "error": ""
+    },
+    {
+      "seed_id": "H2-01",
+      "category": "high_risk",
+      "trigger": "creation_with_asset_style_confirmed",
+      "user_message": "把刚才的访谈做成3页金句卡",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 3,
+      "steps_with_tools": 3,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 7218,
+      "ended_reason": "clarification_paused",
+      "error": ""
+    },
+    {
+      "seed_id": "N4-01",
+      "category": "normal",
+      "trigger": "full_creation_flow",
+      "user_message": "帮我做卡片，用手账贴纸风格，3页，素材已上传",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 2,
+      "steps_with_tools": 2,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 9750,
+      "ended_reason": "completed",
+      "error": ""
+    },
+    {
+      "seed_id": "H6-02",
+      "category": "high_risk",
+      "trigger": "ambiguous_request",
+      "user_message": "处理一下这个",
+      "is_hallucination": false,
+      "hallucination_type": "none",
+      "evidence": "no hallucination detected",
+      "total_steps": 1,
+      "steps_with_tools": 1,
+      "first_tool_at_step": 1,
+      "declared_outputs": [],
+      "actual_artifacts": [],
+      "fabricated_keys": [],
+      "duration_ms": 2547,
+      "ended_reason": "clarification_paused",
+      "error": ""
+    }
+  ]
+}

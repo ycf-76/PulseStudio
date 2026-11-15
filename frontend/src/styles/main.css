@@ -1,0 +1,156 @@
+/* ===== Pulse Studio 全局设计规范 v1.0 ===== */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-web-font@1.7.0/style.css');
+
+:root {
+  /* ===== 字体 ===== */
+  --font-sans: 'DM Sans', 'LXGW WenKai', -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', Consolas, monospace;
+  --font-display: 'LXGW WenKai', cursive;
+
+  /* ===== 文本色 ===== */
+  --text-primary: #1A1A1A;
+  --text-secondary: #4B4B4B;
+  --text-muted: #9A9A9A;
+
+  /* ===== 背景色（银灰页面底 + 白卡） ===== */
+  /* ⚠️ 与全站基底灰同源（--ma-bg-base）。此前这里是 #F5F5F5 暖米黄，
+     被 main.css/_layout.css 两处 body 规则消费，导致侧边栏和页面底部背景
+     在多数功能页发黄，和聊天画布的灰底完全不一致。
+     现在统一为一种银灰：底（侧边栏 + 页面底部）银灰，卡片白。 */
+  --bg-page: var(--ma-bg-base, #EBEEF2);
+  --bg-card: #FFFFFF;
+
+  /* ===== 边框 ===== */
+  --border-color: #EDEDED;
+
+  /* ===== 品牌色 ===== */
+  --color-accent: #FF2442;
+  --color-accent-hover: #E01D3A;
+
+  /* ===== 语义色 ===== */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B6CF6;
+
+  /* ===== 字号 ===== */
+  --text-h1: 22px;
+  --text-h2: 18px;
+  --text-h3: 16px;
+  --text-body: 14px;
+  --text-sm: 13px;
+  --text-xs: 12px;
+
+  /* ===== 字重 ===== */
+  --weight-bold: 500;
+  --weight-semibold: 600;
+  --weight-medium: 500;
+  --weight-regular: 400;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+::selection {
+  background: #C4B5FD;
+  color: #1A1A1A;
+}
+
+::-moz-selection {
+  background: #C4B5FD;
+  color: #1A1A1A;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-size: var(--text-body);
+  min-height: 100vh;
+}
+
+/* ===== 胶囊圆角：输入框和按钮 ===== */
+/* 注意：textarea/select 不能进此规则——多行控件被 9999px 全圆角强制裁剪，
+   会导致正文文字四角被圆弧切掉（文案撰写卡片正文不可读的根因） */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="url"],
+input[type="tel"],
+button,
+.btn,
+[class*="btn-"] {
+  border-radius: 9999px !important;
+}
+
+/* 输入框统一灰色背景（不覆盖 padding，带图标的输入框自行设定） */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+textarea,
+select {
+  background-color: var(--ma-secondary, #F5F5F5);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+input:focus:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #D4D4D8;
+  background-color: var(--ma-secondary, #F5F5F5);
+  box-shadow: none;
+}
+
+.font-cal {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+}
+
+/* ===== 全局隐藏滚动条（仅隐藏视觉，滚动能力保留） =====
+   Chromium/Safari 走 ::-webkit-scrollbar，Firefox/IE 走 scrollbar-width / -ms-overflow-style。
+   各组件内可能单独写了滚动条样式（如 .wf-node-body、.sk-body、.tp-container），
+   这里统一用 !important 覆盖，保证所有页面视觉一致、不出现灰色滑条。 */
+::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* 动画 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== 面板拖拽时全局禁用 transition，保证跟手 ===== */
+body.is-panel-resizing,
+body.is-panel-resizing * {
+  transition: none !important;
+}
+
+/* ===== 全局圆角放大 ===== */
+/* 将硬编码的小圆角统一提升一档，让整体视觉更柔和。
+   9999px / 50% / 50px（圆形）保持不动。
+   映射：2→4  3→6  4→8  5→8  6→10  7→10  8→12  10→14  11→14  12→16  14→18  16→20  20→24 */

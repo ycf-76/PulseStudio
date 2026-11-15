@@ -1,0 +1,264 @@
+/* ===== theme-vars ===== */
+/* ✅ Tailwind CSS v4: 使用 @tailwindcss/vite 插件，无需手动导入 */
+
+/* ===== theme-vars ===== */
+/* ============================================================
+   澶氭櫤鑳戒綋灏忕孩涔﹀彂甯冨钩鍙?鈥?鍝佺墝 CSS
+   涓ユ牸渚濇嵁銆婂墠绔牱寮忚鑼?v1.0銆嬫淳鐢?   姘旇川锛氬厠鍒朵笓涓?路 鍐疯皟钃?路 宸ュ叿鍨嬶紙瀵规爣 Linear/Vercel/Raycast锛?   涓昏壊锛氬崟涓€鍐疯皟钃?#3B6CF6锛屼笉鐢ㄦ銆佷笉鐢ㄧ传绮夋笎鍙?   ============================================================ */
+
+:root {
+  /* ===== 品牌主色（Pulse Studio 红） ===== */
+  --ma-primary: #FF2442;
+  --ma-primary-foreground: #FFFFFF;
+  --ma-ring: #FF2442;
+
+  /* ===== 语义牌（shadcn/ui 模式） ===== */
+  --ma-background: #FFFFFF;
+  --ma-foreground: #1A1A1A;
+  --ma-card: #FFFFFF;
+  --ma-card-foreground: #1A1A1A;
+  --ma-popover: #FFFFFF;
+  --ma-popover-foreground: #1A1A1A;
+  --ma-secondary: #F5F5F5;
+  --ma-secondary-foreground: #4B4B4B;
+  --ma-muted: #F5F5F5;
+  --ma-muted-foreground: #9A9A9A;
+  --ma-accent: rgba(255,36,66,0.08);
+  --ma-accent-foreground: #FF2442;
+  --ma-destructive: #EF4444;
+  --ma-destructive-foreground: #FFFFFF;
+  --ma-border: #EDEDED;
+  --ma-input: #EDEDED;
+
+  /* ===== 侧边栏 ===== */
+  --ma-sidebar: #F5F5F5;
+  --ma-sidebar-foreground: #4B4B4B;
+  --ma-sidebar-primary: #FF2442;
+  --ma-sidebar-primary-foreground: #FFFFFF;
+  --ma-sidebar-accent: rgba(255,36,66,0.08);
+  --ma-sidebar-accent-foreground: #FF2442;
+
+  /* ===== 文字层级 ===== */
+  --ma-text-primary: #1A1A1A;
+  --ma-text-secondary: #4B4B4B;
+  --ma-text-tertiary: #9A9A9A;
+  --ma-text-disabled: #9A9A9A;
+
+  /* ===== 背景层级（银灰底 + 白卡） ===== */
+  --ma-bg-base: #EBEEF2;
+  --ma-bg-subtle: #E2E7EF;
+  --ma-bg-elevated: #FFFFFF;
+
+  /* ===== 边框层级 ===== */
+  --ma-border-default: #EDEDED;
+  --ma-border-strong: #EDEDED;
+
+  /* 鈥斺€?9 绉嶈妭鐐圭姸鎬佽壊锛堜骇鍝佽瑙夌伒榄傦級鈥斺€?*/
+  --ma-status-pending: #6B7280;            /* 寰呮墽琛?鐏?*/
+  --ma-status-running: #FF2442;           /* running - xhs red */
+  --ma-status-awaiting: #F59E0B;          /* awaiting review - amber */
+  --ma-status-passed: #10B981;             /* 閫氳繃 缁?*/
+  --ma-status-rejected: #EF4444;           /* 鎵撳洖 绾?*/
+  --ma-status-error: #EF4444;             /* error - red */
+  --ma-status-suspended: #3B82F6;         /* suspended - blue */
+  --ma-status-completed: #2B52E0;          /* 瀹屾垚 钃濓紙娣憋級*/
+  --ma-status-terminated: #6B7280;         /* 缁堟 鐏帮紙娣憋級*/
+
+  /* 鈥斺€?鐩戠潱寤鸿 severity 鈥斺€?*/
+  --ma-severity-low: #3B6CF6;     /* 寤鸿鎬?钃?*/
+  --ma-severity-medium: #F59E0B;  /* 闇€鍏虫敞 鐞ョ弨 */
+  --ma-severity-high: #EF4444;    /* 蹇呴』澶勭悊 绾?*/
+
+  /* ===== 海蓝色点缀（Ocean Accent） ===== */
+  --ocean-h: 205;                    /* 色相基准 */
+  --ocean-s: 72%;                    /* 饱和度 */
+  --ocean-l: 55%;                    /* 亮度 */
+  --ocean-glow: hsl(205, 72%, 55%);  /* 主光晕色 */
+  --ocean-deep: hsl(210, 65%, 45%);  /* 深色端 */
+  --ocean-soft: hsl(200, 60%, 70%);  /* 浅色端 */
+  --ocean-opacity: 0.12;             /* 默认透明度 */
+
+  --state-success: #10B981;
+  --state-warning: #F59E0B;
+  --state-error: #EF4444;
+  --state-info: #3B6CF6;
+
+  /* ===== 字体 ===== */
+  --ma-font-sans: 'Inter', -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --ma-font-mono: 'SF Mono', 'JetBrains Mono', Consolas, monospace;
+  --ma-font-display: 'LXGW WenKai', cursive;
+
+  /* ===== 字号（rem，基准 16px） ===== */
+  --ma-font-xs: 0.75rem;    /* 12px 标签/时间戳 */
+  --ma-font-sm: 0.8125rem;   /* 13px 辅助文字 */
+  --ma-font-base: 0.875rem;  /* 14px 正文 */
+  --ma-font-md: 1rem;         /* 16px H3 */
+  --ma-font-lg: 1.125rem;     /* 18px H2 */
+  --ma-font-xl: 1.375rem;     /* 22px H1 */
+  --ma-font-2xl: 1.875rem;  /* 30px 浠呯櫥褰曢〉/绌虹姸鎬?*/
+
+  /* 鈥斺€?闂磋窛锛?px 鍩哄噯锛夆€斺€?*/
+  --ma-space-1: 4px;
+  --ma-space-2: 8px;
+  --ma-space-3: 12px;
+  --ma-space-4: 16px;   /* 鈽?榛樿鍐呰竟璺?*/
+  --ma-space-5: 20px;
+  --ma-space-6: 24px;   /* 鈽?鍖哄潡闂磋窛 */
+  --ma-space-8: 32px;
+  --ma-space-10: 40px;
+  --ma-space-12: 48px;
+  --ma-space-16: 64px;  /* 澶у尯鍧?鑺傜偣姘村钩闂磋窛 */
+
+  /* 鈥斺€?鍦嗚锛堝垎绾э紝涓嶆互鐢ㄥぇ鍦嗚锛屾渶澶?12px锛夆€斺€?*/
+  --ma-radius-sm: 9999px;    /* 杈撳叆妗?灏忔爣绛?鎸夐挳 - 鑲冮厤鑴滅墿鍦嗚鍙?*/
+  --ma-radius-md: 12px;    /* 鍗＄墖/涓嬫媺/鑺傜偣 */
+  --ma-radius-lg: 16px;   /* 澶у崱鐗?瀵硅瘽妗?鎶藉眽 */
+  --ma-radius-xl: 20px;   /* 涓婇檺灏侀顶 */
+  --ma-radius-full: 9999px; /* 鑳跺泭/鍦嗙偣/瑙掓爣 */
+
+  /* 鈥斺€?闃村奖锛堟瀬娴咃紝闈犺儗鏅壊宸〃杈惧眰绾э級鈥斺€?*/
+  --ma-shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --ma-shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.06);
+  --ma-shadow-md: 0 4px 12px rgba(17, 24, 39, 0.08);
+  --ma-shadow-lg: 0 8px 24px rgba(17, 24, 39, 0.10);
+  --ma-shadow-focus: 0 0 0 3px rgba(59, 108, 246, 0.15);
+
+  /* 鈥斺€?缂撳姩 鈥斺€?*/
+  --ma-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ma-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ma-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ma-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* 鈥斺€?z-index 灞傜骇 鈥斺€?*/
+  --ma-z-base: 0;
+  --ma-z-dropdown: 100;
+  --ma-z-sticky: 200;
+  --ma-z-node-active: 300;
+  --ma-z-popover: 400;
+  --ma-z-drawer: 500;
+  --ma-z-modal: 600;
+  --ma-z-toast: 700;
+}
+
+/* ============================================================
+   鏆楄壊妯″紡锛堣摑榛戝簳鑹?#0B0F1A锛岄潪绾粦锛?   ============================================================ */
+.dark {
+  --ma-background: #0B0F1A;
+  --ma-foreground: #F1F5F9;
+  --ma-card: #1A2233;
+  --ma-card-foreground: #F1F5F9;
+  --ma-popover: #1A2233;
+  --ma-popover-foreground: #F1F5F9;
+  --ma-primary: #3B6CF6;
+  --ma-primary-foreground: #FFFFFF;
+  --ma-secondary: #111726;
+  --ma-secondary-foreground: #CBD5E1;
+  --ma-muted: #111726;
+  --ma-muted-foreground: #64748B;
+  --ma-accent: rgba(59, 108, 246, 0.12);
+  --ma-accent-foreground: #93B4FD;
+  --ma-destructive: #F87171;
+  --ma-destructive-foreground: #0B0F1A;
+  --ma-border: #2A3245;
+  --ma-input: #2A3245;
+  --ma-ring: #608CFA;
+
+  --ma-sidebar: #111726;
+  --ma-sidebar-foreground: #CBD5E1;
+  --ma-sidebar-primary: #3B6CF6;
+  --ma-sidebar-primary-foreground: #FFFFFF;
+  --ma-sidebar-accent: rgba(59, 108, 246, 0.12);
+  --ma-sidebar-accent-foreground: #93B4FD;
+
+  --ma-text-primary: #F1F5F9;
+  --ma-text-secondary: #CBD5E1;
+  --ma-text-tertiary: #64748B;
+  --ma-text-disabled: #475569;
+
+  --ma-bg-base: #0B0F1A;
+  --ma-bg-subtle: #111726;
+  --ma-bg-elevated: #1A2233;
+
+  --ma-border-default: #2A3245;
+  --ma-border-strong: #3A4255;
+
+  /* 鏆楄壊涓嬬姸鎬佽壊鏇翠寒 */
+  --ma-status-pending: #64748B;
+  --ma-status-running: #FF4D6A;           /* running - xhs red */
+  --ma-status-awaiting: #FBBF24;          /* awaiting review - amber */
+  --ma-status-passed: #34D399;
+  --ma-status-rejected: #F87171;
+  --ma-status-error: #F87171;             /* error - red */
+  --ma-status-suspended: #A78BFA;         /* suspended - blue */
+  --ma-status-completed: #3B6CF6;
+  --ma-status-terminated: #64748B;
+
+  --ma-severity-low: #608CFA;
+  --ma-severity-medium: #FBBF24;
+  --ma-severity-high: #F87171;
+
+  --state-success: #34D399;
+  --state-warning: #FBBF24;
+  --state-error: #F87171;
+  --state-info: #608CFA;
+
+  /* ===== 海蓝色点缀（暗色模式） ===== */
+  --ocean-h: 210;
+  --ocean-s: 55%;
+  --ocean-l: 45%;
+  --ocean-glow: hsl(210, 55%, 45%);
+  --ocean-deep: hsl(215, 50%, 30%);
+  --ocean-soft: hsl(205, 50%, 55%);
+  --ocean-opacity: 0.08;
+
+  /* 鏆楄壊闃村奖锛氱函榛?+ 鏇撮珮閫忔槑搴?*/
+  --ma-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ma-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --ma-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --ma-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --ma-shadow-focus: 0 0 0 3px rgba(96, 140, 250, 0.25);
+}
+
+/* ============================================================
+   瀛楀彿宸ュ叿绫伙紙瑙勮寖瀛楀彿闃舵 + 琛岄珮 + 瀛楅噸锛?   浠呯敤 400/500/600 涓夋。瀛楅噸
+   ============================================================ */
+.ma-text-xs { font-size: var(--ma-font-xs); line-height: 1.5; font-weight: 400; }
+.ma-text-sm { font-size: var(--ma-font-sm); line-height: 1.5; font-weight: 400; }
+.ma-text-base { font-size: var(--ma-font-base); line-height: 1.6; font-weight: 400; }
+.ma-text-md { font-size: var(--ma-font-md); line-height: 1.5; font-weight: 500; }
+.ma-text-lg { font-size: var(--ma-font-lg); line-height: 1.4; font-weight: 500; }
+.ma-text-xl { font-size: var(--ma-font-xl); line-height: 1.3; font-weight: 500; }
+.ma-text-2xl { font-size: var(--ma-font-2xl); line-height: 1.2; font-weight: 500; }
+
+/* 鏁板瓧鐢?mono + tabular-nums */
+.ma-num { font-family: var(--ma-font-mono); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   鑺傜偣鐘舵€佸姩鏁堬紙鍏嬪埗銆佹湁鐩殑锛?   ============================================================ */
+@keyframes ma-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 108, 246, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(59, 108, 246, 0); }
+}
+@keyframes ma-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+@keyframes ma-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+@keyframes ma-blink-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes ma-cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.ma-anim-breathe { animation: ma-breathe 2s ease-in-out infinite; }
+.ma-anim-shake { animation: ma-shake 0.4s ease-out; }
+.ma-anim-pulse { animation: ma-pulse 2.5s ease-in-out infinite; }
+.ma-anim-blink { animation: ma-blink-slow 3s ease-in-out infinite; }
+.ma-anim-cursor { animation: ma-cursor-blink 1s step-end infinite; }

@@ -1,0 +1,2495 @@
+/* ===== Magic UI Particles 鑳屾櫙灞?===== */
+/* canvas 缁濆瀹氫綅閾烘弧 mint-shell锛屼笉鍙備笌 grid 甯冨眬锛屼笉鍗犲崱鐗囦綅缃?*/
+/* pointer-events: none 璁╀簨浠剁┛閫忓埌鍗＄墖锛堝崱鐗囧彲姝ｅ父鐐瑰嚮锛夛紝榧犳爣浜や簰鏀圭敱 mint-shell 鐩戝惉鍐掓场 */
+.magic-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+/* 璁?grid 鍐呯殑鍗＄墖鑷劧浣嶄簬 particles canvas 涔嬩笂锛屼笖鍗＄墖鍙甯哥偣鍑?*/
+.mint-shell > aside,
+.mint-shell > .mint-sidebar-wrapper,
+.mint-shell > section,
+.mint-shell > nav,
+.mint-shell > footer,
+.mint-shell > header {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  /* grid 瀛愰」榛樿 min-height: auto 浼氳鍐呭鎾戝紑锛屽鑷?overflow 婊氬姩澶辨晥銆?     鏄惧紡璁句负 0 璁?minmax(0,1fr) 琛岄珮搴﹂檺鍒剁敓鏁堬紝瀛愰」鍙纭Е鍙戞粴鍔ㄣ€?*/
+  min-height: 0;
+}
+/* 灏婇噸鐢ㄦ埛鐨勬棤闅滅鍋忓ソ */
+@media (prefers-reduced-motion: reduce) {
+  .magic-particles { display: none; }
+}
+
+@media (max-width: 1023px) {
+  .mint-shell { grid-template-columns: 1fr; height: 100vh; overflow-y: auto; }
+  .mint-shell.mint-collapsed { grid-template-columns: 1fr; }
+  .mint-shell.mint-collapsed .mint-sidebar-toggle span { display: inline; }
+  .mint-shell.mint-collapsed .mint-sidebar-toggle { width: 100%; }
+}
+
+.mint-glass {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(167,243,208,0.4);
+}
+
+.mint-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
+  border-radius: 20px;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.04),
+    0 4px 12px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.6);
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease;
+}
+.mint-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 4px 8px rgba(107,114,128,0.08),
+    0 12px 24px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  border-color: rgba(107,114,128,0.3);
+}
+.mint-card:hover .mint-config-title {
+  color: #4B4B4B;
+}
+.mint-config-title {
+  transition: color 0.25s ease;
+}
+.mint-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(107,114,128,0.3), transparent);
+}
+
+.mint-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.mint-btn-primary { background: #FF2442; color: #fff; }
+.mint-btn-primary:hover { background: #FF2442; }
+.mint-btn-ghost { background: #FFF1F3; color: #FF2442; }
+.mint-btn-ghost:hover { background: #FFE4E8; }
+.mint-btn-outline { background: #F5F5F5; color: #4B4B4B; border: 1px solid #F5F5F5; }
+.mint-btn-outline:hover { border-color: #FF2442; color: #FF2442; }
+
+.mint-input {
+  background: #F5F5F5;
+  border: 1px solid #F5F5F5;
+  border-radius: 9999px;
+  padding: 8px 12px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  color: #1A1A1A;
+  width: 100%;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.mint-input:focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+.mint-input::placeholder { color: #4B4B4B; }
+
+.mint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge-mint { background: #F5F5F5; color: #4B4B4B; }
+.badge-laven { background: #EDE9FE; color: #7C3AED; }
+.badge-sky { background: #DBEAFE; color: #2563EB; }
+.badge-cream { background: #FEF3C7; color: #D97706; }
+
+.mint-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.mint-sidebar-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: var(--left-sidebar-width, 216px);
+  position: relative;
+  z-index: 5;
+  font-family: 'Host Grotesk', var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--ma-bg-base, #EBEEF2);
+}
+.mint-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.mint-sidebar-search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  color: #9A9A9A;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+  margin-top: -12px;
+}
+.mint-sidebar-search-btn:hover {
+  background: #EDEDED;
+  color: #4B4B4B;
+}
+.mint-sidebar-search-panel {
+  margin: -8px 8px 0;
+  background: #FFFFFF;
+  border-radius: 18px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #EDEDED;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mint-search-panel-enter-active { transition: all 0.2s ease; }
+.mint-search-panel-leave-active { transition: all 0.15s ease; }
+.mint-search-panel-enter-from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+.mint-search-panel-leave-to { opacity: 0; transform: translateY(-4px) scale(0.98); }
+.mint-sidebar-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #F5F5F7;
+  flex-shrink: 0;
+}
+.mint-sidebar-search-field-icon {
+  color: #9A9A9A;
+  flex-shrink: 0;
+}
+.mint-sidebar-search-field-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+  font-family: inherit;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+.mint-sidebar-search-field-input::placeholder {
+  color: #9A9A9A;
+  font-weight: 400;
+}
+.mint-sidebar-search-field-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: #F5F5F7;
+  border-radius: 50%;
+  color: #9A9A9A;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.mint-sidebar-search-field-clear:hover {
+  background: #EDEDED;
+  color: #4B4B4B;
+}
+.mint-sidebar-search-results {
+  overflow-y: auto;
+  padding: 6px 0;
+  flex: 1;
+  min-height: 0;
+}
+.mint-sidebar-search-empty {
+  padding: 24px 14px;
+  text-align: center;
+  color: #9A9A9A;
+  font-size: 12px;
+}
+.mint-sidebar-search-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-radius: 0;
+}
+.mint-sidebar-search-item:hover {
+  background: #FAFAFA;
+}
+.mint-sidebar-search-item-icon {
+  color: #C4B5FD;
+  flex-shrink: 0;
+}
+.mint-sidebar-search-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.mint-sidebar-search-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.mint-sidebar-search-item-time {
+  font-size: 11px;
+  color: #B0B0B0;
+  margin-top: 2px;
+}
+.mint-logo-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1px 4px;
+  background: transparent;
+  border-radius: 24px;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  margin-top: 0;
+  border: none;
+  box-shadow: none;
+  width: fit-content;
+  transition: padding 0.25s ease, background 0.25s ease, gap 0.25s ease, box-shadow 0.25s ease;
+}
+.mint-logo-top:hover {
+  box-shadow: none;
+}
+.mint-logo-top::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: rgba(17, 24, 39, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: var(--z-tooltip);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  font-family: var(--font-sans);
+  letter-spacing: 0.3px;
+}
+.mint-logo-top::before {
+  content: '';
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  border: 5px solid transparent;
+  border-bottom-color: rgba(17, 24, 39, 0.92);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: var(--z-tooltip);
+}
+.mint-logo-top:hover::after {
+  opacity: 0;
+}
+.mint-logo-top:hover::before {
+  opacity: 0;
+}
+
+.mint-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  width: calc(var(--left-sidebar-width, 216px) - 4px);
+  padding-right: 4px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  /* 容器基准：侧边栏被拖窄时，内部 tab/列表可按实际宽度降级（见 SidebarNav.vue 的 @container） */
+  container-type: inline-size;
+}
+/* 顶部导航区（logo / 会话-内容 tab）：固定不滚动，滚动交给下方列表区 */
+.mint-sidebar-head {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mint-sidebar-main {
+  flex: 1;
+  /* 2026-11-04 大哥要求：导航区固定，滚动只发生在「对话」「素材区」列表区
+     （滚动容器下沉到 .mint-sidebar-scroll，这里不再整体滚动） */
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 36px;
+  padding-left: 6px;
+  transition: padding-top 0.28s cubic-bezier(0.4, 0, 0.2, 1), gap 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* 「对话」+「素材区」列表区：唯一可滚动区域（滚轮滚动保留，仅隐藏滚动条）
+   flex-basis 用 0%：高度严格等于「nav 剩余空间」，不会被内容撑开导致整块被裁掉 */
+.mint-sidebar-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mint-sidebar-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+/* 关键：滚动区内的每个块都不许被 flex 压缩（默认 flex-shrink:1 会把对话/素材列表挤扁，
+   表现为「列表被钉死、历史记录消失」）。压缩一律改为溢出，交给外层滚动条 */
+.mint-sidebar-scroll > * {
+  flex: 0 0 auto;
+}
+.mint-sidebar-main::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.mint-sidebar-main::-webkit-scrollbar-track { background: initial; }
+.mint-sidebar-main::-webkit-scrollbar-thumb { background: initial; border-radius: initial; }
+/* 2026-11-04 大哥要求：侧边栏不显示滚动条（滚轮滚动保留，仅隐藏条本身） */
+.mint-sidebar-main {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+/* 内容 tab：整体不再滚动（2026-11-04 大哥要求顶部导航固定、滚动只在作品列表区内），
+   创作面板吃满剩余高度，tab 导航/工具栏天然钉在顶部 */
+.mint-sidebar-main.mint-main-noscroll {
+  overflow-y: hidden;
+}
+.mint-sidebar-bottom {
+  flex-shrink: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  position: relative;
+  z-index: 10;
+}
+/* 底部收起按钮：自适应宽度 */
+.mint-sidebar-bottom { align-items: stretch; }
+.mint-sidebar-bottom .mint-sidebar-toggle {
+  width: auto;
+  margin: 0 6px;
+}
+.mint-sidebar-bottom .mint-user-card {
+  width: auto;
+  margin: 6px;
+}
+.mint-shell.mint-collapsed .mint-sidebar-bottom .mint-sidebar-toggle { width: 40px; margin: 0 auto; }
+.mint-shell.mint-collapsed .mint-sidebar-bottom .mint-user-card { width: 40px; margin: 0 auto; }
+
+.mint-sidebar-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+/* ===== Collapsible Sidebar ===== */
+.mint-sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.mint-sidebar-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 30px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+}
+.mint-sidebar-toggle:hover { background: rgba(0,0,0,0.04); color: #333; }
+.mint-sidebar-toggle:active { background: rgba(0,0,0,0.06); }
+.mint-sidebar-toggle svg { width: 16px; height: 16px; flex-shrink: 0; transition: transform 0.28s ease; }
+.mint-sidebar-toggle span { transition: opacity 0.2s ease; }
+
+.mint-shell.mint-collapsed .mint-sidebar-wrapper {
+  overflow: visible;
+  width: 56px;
+  z-index: 10;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mint-shell.mint-collapsed .mint-sidebar { width: 56px; overflow: visible; padding-right: 0; z-index: var(--z-overlay, 500); transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding-right 0.25s ease; }
+.mint-shell.mint-right-collapsed { grid-template-columns: auto 1fr 0px; }
+.mint-shell.mint-collapsed.mint-right-collapsed { grid-template-columns: auto 1fr 0px; }
+.mint-shell.mint-right-collapsed .mint-resize-handle { display: none; }
+.mint-shell.mint-collapsed .mint-sidebar-footer { padding: 6px; }
+.mint-shell.mint-collapsed .mint-sidebar-actions { flex-direction: column; align-items: center; padding: 0; gap: 4px; }
+.mint-shell.mint-collapsed .mint-sidebar-toggle {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border-radius: 14px;
+}
+.mint-shell.mint-collapsed .mint-sidebar-toggle span { opacity: 0; width: 0; overflow: hidden; }
+.mint-shell.mint-collapsed .mint-sidebar-toggle svg { transform: none; }
+.mint-shell.mint-collapsed .mint-user-card { justify-content: center; padding: 0; width: 40px; height: 40px; margin: 0 auto; border-radius: 14px; }
+.mint-shell.mint-collapsed .mint-user-card > :not(.mint-avatar) { display: none; }
+
+/* ===== 用户卡片（头像 + 昵称 + 小红书号） ===== */
+.mint-user-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.mint-user-card:hover {
+  background: rgba(0,0,0,0.04);
+}
+.mint-user-card > div { min-width: 0; }
+.mint-user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A1A1A;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mint-user-card .mint-badge {
+  max-width: 100%;
+  overflow: visible;
+  white-space: nowrap;
+}
+.mint-user-card .mint-badge > span:first-child { flex-shrink: 0; }
+/* 用户卡片展开态高亮 */
+.mint-user-card-active {
+  background: rgba(0,0,0,0.05);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+}
+/* 切换账号按钮 */
+.mint-user-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #9A9A9A;
+  cursor: pointer;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.mint-user-switch-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: #4B4B4B;
+}
+.mint-user-switch-btn svg {
+  width: 14px;
+  height: 14px;
+}
+/* 折叠态隐藏切换按钮 */
+.mint-shell.mint-collapsed .mint-user-switch-btn { display: none; }
+
+/* ===== 切换账号下拉浮层 ===== */
+.mint-account-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 4px;
+  right: 4px;
+  margin-bottom: 6px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 24px rgba(0,0,0,0.12),
+    0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+  z-index: var(--z-dropdown);
+}
+.mint-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #4B4B4B;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: rgba(249,250,251,0.8);
+}
+.mint-dropdown-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  color: #4B4B4B;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.15s ease;
+}
+.mint-dropdown-add:hover {
+  border-color: #10B981;
+  color: #10B981;
+  background: rgba(236,253,245,0.5);
+}
+.mint-dropdown-add svg {
+  width: 14px;
+  height: 14px;
+}
+.mint-dropdown-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.mint-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.mint-dropdown-item:hover {
+  background: rgba(236,253,245,0.6);
+}
+.mint-dropdown-item.is-current {
+  background: rgba(236,253,245,0.4);
+}
+.mint-dropdown-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.mint-dropdown-info {
+  flex: 1;
+  min-width: 0;
+}
+.mint-dropdown-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1A1A1A;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mint-dropdown-id {
+  font-size: 15px;
+  color: #9A9A9A;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mint-dropdown-check {
+  width: 16px;
+  height: 16px;
+  color: #10B981;
+  flex-shrink: 0;
+}
+.mint-dropdown-empty {
+  padding: 20px 14px;
+  text-align: center;
+  font-size: 15px;
+  color: #9A9A9A;
+}
+.mint-dropdown-footer {
+  border-top: 1px solid rgba(0,0,0,0.06);
+  padding: 6px;
+}
+.mint-dropdown-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #9A9A9A;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.mint-dropdown-logout:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #EF4444;
+}
+.mint-dropdown-logout svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+/* 下拉过渡动画 */
+.mint-dropdown-enter-active {
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mint-dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.mint-dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.mint-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+/* 折叠态隐藏下拉 */
+.mint-shell.mint-collapsed .mint-account-dropdown { display: none; }
+
+/* 头像基础样式 */
+.mint-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--mint-gradient, linear-gradient(135deg, #FF2442, #FF6B6B));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 500;
+  font-size: 14px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.mint-shell.mint-collapsed .mint-nav-item span,
+.mint-shell.mint-collapsed .mint-nav-sub span { opacity: 0; width: 0; margin-left: 0; overflow: hidden; display: none; }
+.mint-shell.mint-collapsed .mint-nav { max-width: none; }
+.mint-shell.mint-collapsed .mint-nav-item {
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  position: relative;
+  box-sizing: border-box;
+  text-align: center;
+  gap: 0;
+  border-radius: 14px;
+}
+.mint-shell.mint-collapsed .mint-nav-item > :not(svg):not(:first-child) {
+  display: none !important;
+}
+
+.mint-shell.mint-collapsed .mint-nav-sub {
+  justify-content: center;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  gap: 0;
+}
+.mint-shell.mint-collapsed .mint-nav-subgroup { display: none; }
+.mint-shell.mint-collapsed .mint-nav-item::after,
+.mint-shell.mint-collapsed .mint-nav-sub::after,
+.mint-shell.mint-collapsed .mint-sidebar-toggle::after,
+.mint-shell.mint-collapsed .mint-user-card::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: var(--z-tooltip);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 14px rgba(0, 0, 0, 0.06);
+  font-family: var(--font-sans);
+  letter-spacing: 0.3px;
+}
+.mint-shell.mint-collapsed .mint-nav-item:hover::after,
+.mint-shell.mint-collapsed .mint-nav-sub:hover::after,
+.mint-shell.mint-collapsed .mint-sidebar-toggle:hover::after,
+.mint-shell.mint-collapsed .mint-user-card:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(4px);
+}
+.mint-shell.mint-collapsed .mint-nav-item svg,
+.mint-shell.mint-collapsed .mint-nav-sub svg {
+  margin: 0;
+  flex-shrink: 0;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mint-shell.mint-collapsed .mint-sidebar { gap: 10px; padding-right: 0; }
+.mint-shell.mint-collapsed .mint-sidebar-wrapper { padding-right: 0; }
+.mint-logo-collapsed-item {
+  cursor: pointer !important;
+  margin-top: -16px;
+}
+.mint-logo-collapsed-item:hover {
+  transform: none !important;
+  background: transparent !important;
+}
+.mint-logo-collapsed-item::before {
+  display: none !important;
+}
+.mint-logo-collapsed-item .mint-logo-icon {
+  transition: transform 0.3s ease;
+}
+.mint-logo-collapsed-item:hover .mint-logo-icon {
+}
+
+/* .mint-logo-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+.mint-logo-box:hover {
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+} */
+
+
+
+
+.mint-logo-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1), height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mint-logo-icon svg { width: 18px; height: 18px; }
+.mint-logo-top:hover .mint-logo-icon { }
+
+.mint-logo-img {
+  height: 48px;
+  width: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mint-logo-top:hover .mint-logo-img { }
+
+/* 展开状态：文字 logo */
+.mint-logo-text {
+  width: auto;
+  height: 64px;
+  object-fit: contain;
+  margin-top: -52px;
+}
+
+/* Logo 切换过渡动画 */
+.logo-fade-enter-active,
+.logo-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.logo-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+.logo-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* 收起状态：螃蟹图形 logo（原地切换，不偏移） */
+.mint-logo-crab {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: transparent;
+  border: none;
+  padding: 3px;
+  box-sizing: border-box;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+/* 收起状态：悬停螃蟹 logo 时切换成「打开侧边栏」图标 */
+.mint-logo-crab:hover {
+}
+.mint-shell.mint-collapsed .mint-logo-top {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  background: transparent !important;
+  width: 80px !important;
+  height: 80px !important;
+  transition: padding 0.25s ease, background 0.25s ease, width 0.25s ease, height 0.25s ease;
+}
+/* 收起态搜索入口：位于 logo 下方，与导航图标同列同尺寸 */
+.mint-sidebar-search-collapsed {
+  background: transparent;
+  flex-shrink: 0;
+}
+.mint-shell.mint-collapsed .mint-sidebar-main {
+  padding-top: 4px !important;
+  align-items: center !important;
+  overflow: visible !important;
+  gap: 4px !important;
+}
+/* 收起态：固定头部内也是紧凑间距 + 居中（与原先直接排在 main 里的效果一致） */
+.mint-shell.mint-collapsed .mint-sidebar-head {
+  align-items: center !important;
+  gap: 4px !important;
+}
+.mint-shell.mint-collapsed .mint-nav {
+  margin-top: 12px !important;
+  align-items: center !important;
+}
+.mint-shell.mint-collapsed .mint-logo-crab:hover {
+}
+
+.mint-nav { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 2px; 
+  align-items: stretch; 
+  /* 2026-11-04：nav 内的导航项固定，只有内部 .mint-sidebar-scroll 滚动，
+     所以 nav 自身要撑满剩余高度并允许子项收缩（basis 用 0%，高度严格等于剩余空间） */
+  flex: 1 1 0%;
+  min-height: 0;
+  transition: margin-top 0.28s cubic-bezier(0.4, 0, 0.2, 1), gap 0.28s cubic-bezier(0.4, 0, 0.2, 1); 
+  padding: 0 4px;
+}
+.mint-nav-workflow + .mint-nav-item {
+  margin-top: 16px;
+}
+/* 导航项本身固定高度、不参与压缩：空间不够时由下方滚动区吸收，导航项不会被压扁 */
+.mint-nav > .mint-nav-item {
+  flex: none;
+}
+.mint-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  font-family: var(--font-sans);
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em;
+  color: #4B4B4B;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  width: 100%;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+}
+.mint-nav-item span,
+.mint-nav-sub span {
+  white-space: nowrap;
+  overflow: hidden;
+}
+.mint-nav-item::before {
+  display: none;
+}
+.mint-nav-item:hover {
+  background: #E8E8E8;
+  color: #1A1A1A;
+}
+.mint-nav-item:hover svg {
+}
+.mint-nav-item svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: #9A9A9A;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mint-nav-item:hover svg {
+  color: #4B4B4B;
+}
+.mint-nav-active {
+  background: rgba(249, 115, 22, 0.08) !important;
+  color: #1A1A1A !important;
+  font-weight: 500 !important;
+  border-radius: 14px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+.mint-nav-active::before {
+  display: none;
+}
+.mint-nav-active svg {
+  color: #1A1A1A;
+}
+
+.mint-nav-workflow {
+  background: #F5F5F5;
+  border: 1px solid #EDEDED;
+  border-radius: 14px;
+  color: #1A1A1A;
+  width: 100%;
+}
+.mint-nav-workflow svg {
+  stroke: #1A1A1A;
+}
+.mint-nav-workflow:hover {
+  background: #EDEDED;
+  border-color: #D4D4D8;
+  color: #1A1A1A;
+}
+.mint-nav-workflow:hover svg {
+  stroke: #1A1A1A;
+}
+.mint-nav-workflow.mint-nav-active {
+  background: #F5F5F5;
+  border-color: #D4D4D8;
+  color: #1A1A1A;
+  font-weight: 500;
+}
+.mint-nav-workflow.mint-nav-active svg {
+  stroke: #1A1A1A;
+}
+.mint-nav-workflow.mint-nav-active::before {
+  background: #fff;
+}
+
+/* ===== 鍙姌鍙犲鑸」 + chevron 鏃嬭浆 ===== */
+.mint-nav-collapsible {
+  position: relative;
+}
+.mint-nav-chevron {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: #9A9A9A;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mint-nav-chevron:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(249, 115, 22, 0.12) 100%);
+  color: #F97316;
+}
+.mint-nav-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+.mint-nav-collapsed .mint-nav-chevron {
+  transform: rotate(-90deg);
+}
+.mint-nav-chevron-rotated {
+  transform: rotate(180deg);
+}
+.mint-shell.mint-collapsed .mint-nav-chevron { display: none; }
+.mint-shell.mint-collapsed .mint-nav-new-chat { display: none; }
+
+/* 瀛愰€夐」 stagger 鍔ㄧ敾鍗犱綅锛堝疄闄呰繃娓＄敱 JS 鎺у埗锛?*/
+.mint-nav-sub-stagger {
+  will-change: opacity, transform;
+}
+
+.mint-nav-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 16px;
+  margin-top: 4px;
+  margin-left: 8px;
+  align-items: stretch;
+  border-left: 2px solid rgba(0, 0, 0, 0.06);
+}
+.mint-nav-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-family: var(--font-sans);
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.01em;
+  color: #4B4B4B;
+  border-radius: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease;
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+}
+.mint-nav-sub::before {
+  display: none;
+}
+.mint-nav-sub:hover {
+  background: #E8E8E8;
+  color: #4B4B4B;
+}
+.mint-nav-sub:hover svg {
+  color: #4B4B4B;
+}
+.mint-nav-sub svg {
+  flex-shrink: 0;
+  color: #9A9A9A;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mint-nav-sub.mint-nav-active {
+  background: #EDEDED !important;
+  color: #1A1A1A !important;
+  font-weight: 500 !important;
+  border-radius: 12px;
+  transition: all 0.15s ease;
+}
+.mint-nav-sub.mint-nav-active svg {
+  color: #4B4B4B;
+}
+
+.mint-nav-new-chat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 10px;
+  color: #9A9A9A;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.mint-nav-new-chat:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0.15) 100%);
+  color: #F97316;
+  transform: scale(1.1) rotate(90deg);
+}
+
+.mint-chat-history-group {
+  position: relative;
+}
+.mint-chat-history-item {
+  cursor: pointer;
+}
+.mint-chat-history-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+  font-size: 13px !important;
+}
+.mint-chat-history-fade {
+  position: relative;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.15) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.15) 100%);
+}
+.mint-chat-more {
+  justify-content: center;
+  color: #9A9A9A;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  cursor: pointer;
+  padding: 6px 12px !important;
+  letter-spacing: 0.5px;
+}
+.mint-chat-more:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.06) 0%, rgba(249, 115, 22, 0.1) 100%);
+  color: #F97316;
+}
+
+.mint-context-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: var(--z-global-ui);
+}
+.mint-context-menu {
+  position: fixed;
+  z-index: var(--z-top);
+  min-width: 120px;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #EDEDED;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
+  animation: mint-context-in 0.15s ease-out;
+}
+@keyframes mint-context-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.mint-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #4B4B4B;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-family: inherit;
+}
+.mint-context-menu-item:hover {
+  background: #F5F5F5;
+}
+.mint-context-delete {
+  color: #DC2626;
+}
+.mint-context-delete:hover {
+  background: #FEF2F2;
+  color: #B91C1C;
+}
+.mint-folder-menu {
+  position: fixed;
+  z-index: var(--z-top);
+  min-width: 176px;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #EDEDED;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
+  animation: mint-context-in 0.15s ease-out;
+}
+.mint-sidebar-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: var(--z-top);
+  padding: 8px 16px;
+  background: rgba(32, 32, 32, 0.9);
+  color: #fff;
+  font-size: 13px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.mint-toast-enter-active,
+.mint-toast-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.mint-toast-enter-from,
+.mint-toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+}
+
+/* ===== 侧边栏搜索框 ===== */
+.mint-sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin: 0 4px;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid #EDEDED;
+  transition: border-color 0.2s ease;
+}
+.mint-sidebar-search:focus-within {
+  border-bottom-color: #9A9A9A;
+}
+.mint-sidebar-search-icon {
+  color: #9A9A9A;
+  flex-shrink: 0;
+}
+.mint-sidebar-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: #4B4B4B;
+  width: 100%;
+  font-family: inherit;
+}
+.mint-sidebar-search-input::placeholder {
+  color: #9A9A9A;
+}
+
+/* ===== 侧边栏 Tab 切换 ===== */
+.mint-sidebar-tabs {
+  display: flex;
+  gap: 0;
+  padding: 4px;
+  margin: 0 8px;
+  background: #EDEDED;
+  border-radius: 14px;
+  border: none;
+}
+.mint-sidebar-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  border-radius: 10px !important;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+.mint-sidebar-tab:hover {
+  color: #1A1A1A;
+}
+.mint-sidebar-tab-active {
+  background: #fff;
+  color: #1A1A1A;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  border-radius: 10px !important;
+}
+
+/* ===== 工作区 ===== */
+.mint-ws-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 4px;
+  margin-top: 8px;
+}
+.mint-ws-toolbar-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9A9A9A;
+}
+.mint-ws-toolbar-actions {
+  display: flex;
+  gap: 2px;
+}
+.mint-ws-toolbar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: #9A9A9A;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mint-ws-toolbar-action:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #4B4B4B;
+}
+.mint-conversations-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+  /* 2026-11-04：取消自带 240px 限高+内层滚动，对话历史并进外层 .mint-sidebar-scroll 统一滚动，
+     避免 flex 压缩把对话列表挤成 0 高（看起来像「历史记录没了」） */
+  flex: none;
+}
+.mint-conversations-empty {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #9A9A9A;
+  text-align: center;
+}
+.mint-ws-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  --ws-indent: 12px;
+}
+.mint-ws-folder {
+  border-radius: 12px;
+}
+.mint-ws-folder-active {
+  background: rgba(249, 115, 22, 0.04);
+}
+.mint-ws-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px 6px var(--ws-indent);
+  cursor: pointer;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+.mint-ws-folder-header:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.mint-ws-folder-icon-wrap {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+}
+.mint-ws-folder-count {
+  flex: none;
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  color: #9A9A9A;
+  background: rgba(0, 0, 0, 0.045);
+  border-radius: 7px;
+  transition: opacity 0.15s ease;
+}
+.mint-ws-folder-header:hover .mint-ws-folder-count {
+  opacity: 0;
+}
+.mint-ws-folder-icon {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: #B4B4B4;
+  transition: color 0.15s ease, transform 0.16s ease;
+}
+/* 展开态：文件夹图标变"打开"，作为展开/收回的状态指示 */
+.mint-ws-folder-header.is-open .mint-ws-folder-icon {
+  color: #F97316;
+  transform: scale(1.06);
+}
+.mint-ws-folder:hover .mint-ws-folder-icon,
+.mint-ws-folder-active .mint-ws-folder-icon {
+  color: #F97316;
+}
+.mint-ws-folder-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #4B4B4B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.mint-ws-folder-action,
+.mint-ws-folder-delete,
+.mint-ws-folder-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  color: #9A9A9A;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.mint-ws-folder-header:hover .mint-ws-folder-action,
+.mint-ws-folder-header:hover .mint-ws-folder-delete,
+.mint-ws-folder-header:hover .mint-ws-folder-more {
+  opacity: 1;
+}
+.mint-ws-folder-action:hover {
+  background: rgba(249, 115, 22, 0.1);
+  color: #F97316;
+}
+.mint-ws-folder-delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
+}
+.mint-ws-folder-more:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #4B4B4B;
+}
+.mint-ws-folder-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 20px;
+}
+.mint-ws-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mint-ws-file:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.mint-ws-file-active {
+  background: rgba(249, 115, 22, 0.06);
+}
+.mint-ws-file-active .mint-ws-file-name {
+  color: #EA580C;
+  font-weight: 500;
+}
+.mint-ws-file-name {
+  font-size: 12px;
+  color: #4B4B4B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.mint-ws-folder-empty {
+  padding: clamp(6px, calc(1.32cqi + 3.21px), 10px) 8px clamp(6px, calc(1.32cqi + 3.21px), 10px) clamp(28px, calc(2.63cqi + 22.42px), 36px);
+  font-size: var(--sb-meta, 11px);
+  color: #9A9A9A;
+  font-style: italic;
+  user-select: none;
+}
+.mint-ws-thread {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mint-ws-thread:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.mint-ws-thread-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  color: #9A9A9A;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.mint-ws-thread:hover .mint-ws-thread-delete {
+  opacity: 1;
+}
+.mint-ws-thread-delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
+}
+
+/* ═══ 侧边栏「正在执行」螃蟹标志（2026-11-02）═══
+   对话行右侧的 crab.svg：放大缩小呼吸动画指示该会话的 agent
+   正在跑（ChatView 回合状态机写入 runningSessionIds，done/error 自动熄灭）。
+   等待澄清/确认（awaiting_*）不算执行中，螃蟹会停住。
+   只挂对话行（未归档 + 文件夹内嵌套），素材区文件夹头不放（大哥拍板）。 */
+@keyframes mint-crab-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+.mint-ws-thread-crab {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  object-fit: contain;
+  animation: mint-crab-pulse 1.5s ease-in-out infinite;
+  /* 清晰度优先：不加发光/阴影滤镜——crab-flat.svg 是无滤镜扁平版
+     （viewBox 已收紧贴住蟹体，无白底，大哥拍板），再叠 CSS 滤镜会糊 */
+  pointer-events: none;
+  /* 螃蟹吃掉删除按钮的 auto 边距位（标题 → auto → 螃蟹 → 垃圾桶），
+     悬停时垃圾桶贴着螃蟹出现，布局不跳 */
+  margin-left: auto;
+}
+.mint-ws-thread-crab + .mint-ws-thread-delete {
+  margin-left: 0;
+}
+/* 「还有 N 条」展开入口：文字与对话标题同一基线 */
+.mint-chat-show-more {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px 5px 30px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  color: #9A9A9A;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mint-chat-show-more:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: #4B4B4B;
+}
+/* 文件夹下的对话：缩进到文件夹名下方，形成明确的归属层级 */
+.mint-ws-folder-threads {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 1px 4px 4px calc(var(--ws-indent) + 9px);
+  animation: mint-folder-threads-in 0.16s ease;
+}
+@keyframes mint-folder-threads-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.mint-ws-thread-nested {
+  padding: 5px 8px;
+  border-radius: 10px;
+}
+.mint-ws-thread-nested .mint-ws-file-name {
+  font-size: 12px;
+  color: #6B6B6B;
+}
+.mint-ws-thread-nested:hover .mint-ws-file-name {
+  color: #2B2B2B;
+}
+.mint-chat-show-more-nested {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #9A9A9A;
+}
+
+/* ===== 创作面板 ===== */
+.mint-creation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
+  /* 2026-11-04：margin-top 12→4，导航区整体上提，减少「会话/内容」tab 下的空档 */
+  margin-top: 4px;
+  /* 吃满侧边栏剩余高度（配合 mint-main-noscroll）：
+     tab 导航/工具栏固定在上，列表区滚动，采集按钮固定在下 */
+  flex: 1;
+  min-height: 0;
+  /* 2026-11-08 响应式（第二版）：页面/窗口放大后侧边栏变宽，作品行不能跟着被撑成
+     「又高又厚」的胖行。这里只保留极轻微的宽度响应（缩放幅度控制在 1.3 倍以内），
+     行高主要由缩略图 + 紧凑内边距决定，多出来的宽度交给标题文本，而不是行框。
+     锚点 A = 内容宽 212px（默认 216px 侧栏）→ 与改造前完全一致；
+     锚点 B = 内容宽 516px（侧栏 520px）→ 行高 68→88px，仅为默认的 1.29 倍。 */
+  --sb-thumb: clamp(44px, calc(4.605cqi + 34.24px), 58px);
+  --sb-thumb-radius: clamp(6px, calc(1.316cqi + 3.21px), 10px);
+  --sb-row-pad-y: clamp(12px, calc(0.987cqi + 9.91px), 15px);
+  --sb-row-pad-x: clamp(8px, calc(1.645cqi + 4.51px), 13px);
+  --sb-row-gap: clamp(10px, calc(0.987cqi + 7.91px), 13px);
+  --sb-row-radius: clamp(8px, calc(1.316cqi + 5.21px), 12px);
+  --sb-title: clamp(13px, calc(0.658cqi + 11.61px), 15px);
+  --sb-meta: clamp(11px, calc(0.658cqi + 9.61px), 13px);
+  --sb-action: clamp(20px, calc(1.316cqi + 17.21px), 24px);
+  --sb-action-radius: clamp(4px, calc(0.987cqi + 1.91px), 7px);
+  --sb-list-gap: clamp(4px, calc(0.987cqi + 1.91px), 7px);
+  --sb-indent: clamp(8px, calc(1.645cqi + 4.51px), 13px);
+  --sb-tab-font: clamp(12px, calc(0.987cqi + 9.91px), 15px);
+  --sb-tab-pad-y: clamp(8px, calc(0.987cqi + 5.91px), 11px);
+  --sb-tab-icon: clamp(13px, calc(1.316cqi + 10.21px), 17px);
+  --sb-subgroup-font: clamp(11px, calc(0.658cqi + 9.61px), 13px);
+  --sb-subgroup-icon: clamp(18px, calc(1.645cqi + 14.51px), 23px);
+  --sb-thread-font: clamp(12px, calc(0.658cqi + 10.61px), 14px);
+  --sb-thread-pad-y: clamp(6px, calc(0.987cqi + 3.91px), 9px);
+  --sb-thread-pad-x: clamp(8px, calc(0.987cqi + 5.91px), 11px);
+}
+.mint-creation-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+}
+.mint-creation-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: #4B4B4B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.mint-creation-nav-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #4B4B4B;
+}
+.mint-creation-nav-item.mint-nav-active {
+  background: #EDEDED !important;
+  color: #1A1A1A !important;
+  font-weight: 500;
+}
+.mint-creation-nav-item svg {
+  flex-shrink: 0;
+}
+.mint-creation-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 4px;
+}
+.mint-creation-pill {
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4B4B4B;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.mint-creation-pill:hover {
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #EA580C;
+}
+.mint-creation-pill-active {
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #EA580C;
+  font-weight: 500;
+}
+.mint-creation-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  /* 2026-11-04：压缩导航区留白——刷新钮缩小（icon 18→14），上下 padding 6→2 */
+  padding: 2px 8px;
+}
+.mint-creation-toolbar .mint-creation-toolbar-btn {
+  width: clamp(22px, calc(1.316cqi + 19.21px), 26px);
+  height: clamp(22px, calc(1.316cqi + 19.21px), 26px);
+}
+.mint-creation-toolbar-label {
+  font-size: var(--sb-title);
+  font-weight: 500;
+  color: #4B4B4B;
+}
+.mint-creation-toolbar-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.mint-creation-search {
+  padding: 3px 6px !important;
+  margin: 0 !important;
+  flex: 1;
+  min-width: 0;
+}
+.mint-creation-search .mint-sidebar-search-input {
+  font-size: 11px;
+  padding: 0;
+}
+.mint-creation-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  color: #9A9A9A;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mint-creation-toolbar-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #4B4B4B;
+}
+/* 同步「我的空间」作品时的旋转反馈 */
+.mint-creation-toolbar-btn.is-syncing svg {
+  animation: mint-sync-spin 0.9s linear infinite;
+}
+@keyframes mint-sync-spin {
+  to { transform: rotate(360deg); }
+}
+.mint-creation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  /* 2026-11-04：整体不再滚动，滚动职责交给内部列表（见下方 > .mint-scrollable-list），
+     「添加采集内容」按钮才能钉在面板底部而不是贴在列表尾巴上 */
+  overflow: hidden;
+  min-height: 0;
+}
+/* 列表吃满剩余高度：原 max-height:360px 在采集条目多时下方留大片空白、
+   按钮悬在半空（大哥 2026-11-04 反馈）。滚动区内收，展示区顶到底。 */
+.mint-creation-list > .mint-scrollable-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.mint-creation-group {
+  display: flex;
+  flex-direction: column;
+}
+.mint-creation-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4B4B4B;
+  cursor: pointer;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.mint-creation-group-header:hover {
+  background: #E8E8E8;
+  color: #1A1A1A;
+}
+.mint-creation-group-icon {
+  flex-shrink: 0;
+  color: #9A9A9A;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mint-creation-group-header:hover .mint-creation-group-icon {
+  color: #4B4B4B;
+}
+.mint-creation-group-count {
+  font-size: var(--sb-meta, 11px);
+  color: #9A9A9A;
+  margin-left: auto;
+}
+/* 内容 Tab 内的二级分组（草稿 / 采集按产物类型分组） */
+.mint-content-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, calc(0.66cqi + 0.6px), 4px);
+}
+.mint-content-subgroup-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, calc(0.658cqi + 2.61px), 6px);
+  padding: clamp(4px, calc(0.658cqi + 2.61px), 6px) var(--sb-row-pad-x) clamp(2px, calc(0.329cqi + 1.30px), 3px);
+  font-size: var(--sb-subgroup-font);
+  font-weight: 500;
+  color: #9A9A9A;
+  letter-spacing: 0.02em;
+}
+.mint-content-subgroup-header svg {
+  color: #B4B4B4;
+  flex-shrink: 0;
+  width: var(--sb-subgroup-icon);
+  height: var(--sb-subgroup-icon);
+}
+.mint-creation-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-list-gap);
+  padding-left: var(--sb-indent);
+}
+.mint-work-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sb-row-gap);
+  width: 100%;
+  padding: var(--sb-row-pad-y) var(--sb-row-pad-x);
+  border-radius: var(--sb-row-radius);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  background: transparent;
+  position: relative;
+}
+.mint-work-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.mint-work-active {
+  background: rgba(249, 115, 22, 0.08) !important;
+}
+.mint-work-thumb {
+  width: var(--sb-thumb);
+  height: var(--sb-thumb);
+  border-radius: var(--sb-thumb-radius);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #F5F5F5 0%, #EDEDED 100%);
+  position: relative;
+}
+.mint-work-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1px, calc(0.33cqi + 0.3px), 3px);
+}
+.mint-work-title {
+  font-size: var(--sb-title);
+  font-weight: 500;
+  color: #1A1A1A;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+.mint-work-meta {
+  font-size: var(--sb-meta);
+  color: #9A9A9A;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mint-work-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sb-action);
+  height: var(--sb-action);
+  border-radius: var(--sb-action-radius);
+  color: #9A9A9A;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.mint-work-row:hover .mint-work-delete {
+  opacity: 1;
+  pointer-events: auto;
+}
+.mint-work-delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
+}
+/* 行级「添加会话」图标（2026-11-04 大哥指示）：删除按钮左侧，hover 显现 */
+.mint-work-add-chat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sb-action);
+  height: var(--sb-action);
+  border-radius: var(--sb-action-radius);
+  color: #9A9A9A;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.mint-work-row:hover .mint-work-add-chat {
+  opacity: 1;
+  pointer-events: auto;
+}
+.mint-work-add-chat:hover {
+  background: rgba(249, 115, 22, 0.1);
+  color: #EA580C;
+}
+/* ====== 笔记会话子列表（2026-11-04 方案 A：会话跟内容走）====== */
+.mint-work-thread-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sb-action);
+  height: var(--sb-action);
+  border-radius: var(--sb-action-radius);
+  color: #9A9A9A;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.mint-work-row:hover .mint-work-thread-toggle,
+.mint-work-thread-toggle.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.mint-work-thread-toggle:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #1A1A1A;
+}
+.mint-work-row:has(.mint-work-thread-toggle.is-open) {
+  background: rgba(0, 0, 0, 0.03);
+}
+/* 行内小图标随行高同步放大：lucide 默认 12~13px，宽侧栏下会显得过小 */
+.mint-work-row .mint-work-thread-toggle svg,
+.mint-work-row .mint-work-add-chat svg {
+  width: clamp(13px, calc(0.99cqi + 10.91px), 16px);
+  height: clamp(13px, calc(0.99cqi + 10.91px), 16px);
+}
+.mint-work-row .mint-work-delete svg,
+.mint-work-thread .mint-ws-thread-delete svg {
+  width: clamp(12px, calc(0.99cqi + 9.91px), 15px);
+  height: clamp(12px, calc(0.99cqi + 9.91px), 15px);
+}
+.mint-work-thread-add svg {
+  width: clamp(12px, calc(0.99cqi + 9.91px), 15px);
+  height: clamp(12px, calc(0.99cqi + 9.91px), 15px);
+}
+.mint-creation-toolbar .mint-creation-toolbar-btn svg {
+  width: clamp(14px, calc(1.32cqi + 11.21px), 18px);
+  height: clamp(14px, calc(1.32cqi + 11.21px), 18px);
+}
+.mint-work-threads {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1px, calc(0.33cqi + 0.3px), 3px);
+  margin: calc(-1 * clamp(4px, calc(1.15cqi + 3.6px), 10px)) 0 clamp(4px, calc(1.15cqi + 3.6px), 10px) var(--sb-indent);
+  padding: 2px 0 2px calc(var(--sb-indent) + 2px);
+  border-left: 2px solid rgba(0, 0, 0, 0.07);
+}
+.mint-work-thread {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, calc(0.82cqi + 3.3px), 8px);
+  padding: var(--sb-thread-pad-y) var(--sb-thread-pad-x);
+  border-radius: clamp(6px, calc(0.66cqi + 4.6px), 9px);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mint-work-thread:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.mint-work-thread:hover .mint-ws-thread-delete {
+  opacity: 1;
+}
+.mint-work-thread-title {
+  font-size: var(--sb-thread-font);
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.mint-work-thread .mint-ws-thread-crab {
+  width: clamp(14px, calc(1.65cqi + 10.6px), 20px);
+  height: clamp(14px, calc(1.65cqi + 10.6px), 20px);
+  flex-shrink: 0;
+}
+.mint-work-thread-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px var(--sb-row-pad-x) 0 0;
+  padding: var(--sb-thread-pad-y) var(--sb-thread-pad-x);
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  background: transparent;
+  border-radius: clamp(6px, calc(0.66cqi + 4.6px), 9px);
+  color: #9A9A9A;
+  font-size: var(--sb-thread-font);
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.mint-work-thread-add:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1A1A1A;
+  border-color: rgba(0, 0, 0, 0.25);
+}
+.mint-quick-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 4px;
+  margin-top: auto;
+}
+.mint-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4B4B4B;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  flex: 1;
+  justify-content: center;
+}
+.mint-quick-btn:hover {
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #EA580C;
+  background: rgba(249, 115, 22, 0.04);
+}
+
+.mint-main {
+  padding: 28px 20px 16px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  background: #F5F5F5;
+  border-radius: 20px;
+}
+.page-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  max-width: 960px;
+}
+.page-container > .wf-groups-scroll {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.mint-hero {
+  border-radius: 20px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  z-index: 30;
+  background: transparent;
+  position: relative;
+}
+/* 椤堕儴 hero 鍗＄墖瀹屽叏閫忔槑锛氳鐩?.mint-glass 鐨勮儗鏅?杈规/妯＄硦锛岃绮掑瓙鑳屾櫙閫忓嚭 */
+.mint-hero.mint-glass {
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.mint-hero-title {
+  font-family: 'LXGW WenKai', 'PingFang SC', cursive;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1;
+  margin: 0;
+  color: #1A1A1A;
+  letter-spacing: 2px;
+}
+.mint-hero-sub { font-size: 14px; color: #4B4B4B; margin-top: 6px; }
+
+@keyframes mintShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0% 0; }
+}
+.mint-hero-stats { display: flex; gap: 24px; }
+.mint-stat { text-align: right; }
+.mint-stat-num { font-size: 24px; font-weight: 500; color: #065F46; line-height: 1.2; }
+.mint-stat-label { font-size: 14px; color: #4B4B4B; margin-top: 2px; }
+
+.mint-workflow-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 8px;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: auto;
+  align-content: start;
+}
+/* Bento 妯″紡锛氳鐩?flex 涓?grid锛屼繚鐣欐粴鍔ㄨ涓?*/
+.mint-workflow-cards.mint-workflow-cards-bento {
+  display: grid;
+  grid-auto-flow: dense;
+  gap: 12px;
+  align-content: start;
+}
+.mint-workflow-cards.mint-workflow-cards-bento .mint-wf-card {
+  margin: 0;
+}
+.mint-workflow-cards::-webkit-scrollbar { width: auto; }
+.mint-workflow-cards::-webkit-scrollbar-track { background: initial; }
+.mint-workflow-cards::-webkit-scrollbar-thumb { background: initial; border-radius: initial; }
+
+.mint-wf-card {
+  position: relative;
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  border: 1px solid #EDEDED;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 200px;
+  max-height: none;
+  gap: 9px;
+  scroll-margin-top: 24px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: visible;
+  box-sizing: border-box;
+}
+/* 配置中心卡片：自适应高度，展开/收起 */
+.cfg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+.cfg-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  align-content: start;
+}
+.cfg-card.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.cfg-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.cfg-card-header .mint-wf-title-row { flex: 1; }
+.cfg-chevron {
+  flex-shrink: 0;
+  color: #4B4B4B;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 4px;
+}
+.cfg-chevron-open { transform: rotate(180deg); }
+.cfg-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 4px;
+}
+.cfg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cfg-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cfg-option {
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: none;
+  background: #F5F5F5;
+  color: #4B4B4B;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  outline: none;
+}
+.cfg-option:hover {
+  background: #EDEDED;
+  color: #4B4B4B;
+}
+.cfg-option-active {
+  background: #1A1A1A;
+  color: #fff;
+}
+.cfg-option-active:hover {
+  background: #4B4B4B;
+  color: #fff;
+}
+/* search 节点：自适应高度，响应式撑开 */
+.wf-node-search.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+/* recommended 节点：自适应高度，内容撑开 */
+.wf-node-recommended.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}  /* copywrite 节点：overflow:visible 让文字不被截断 */
+.wf-node-copywrite.mint-wf-card {
+  overflow: visible;
+  height: auto !important;
+  min-height: auto;
+  max-height: none;
+}
+
+/* analyze 节点：自适应高度，让三层内容完整展示 */
+.wf-node-analyze.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+/* analyze body 不要 flex:1 收缩，改为自然高度，不内部滚动 */
+.wf-node-analyze .wf-node-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+/* image-plan 节点：自适应高度，让页面列表完整展示 */
+.wf-node-image-plan.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.wf-node-image-plan .wf-node-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+/* image-gen 节点：编辑器模式固定高度，完成/错误/空闲时自适应 */
+.wf-node-image-gen.mint-wf-card {
+  height: 800px;
+  min-height: 800px;
+  max-height: 800px;
+  overflow: hidden;
+}
+.wf-node-image-gen.wf-state-completed.mint-wf-card,
+.wf-node-image-gen.wf-state-error.mint-wf-card,
+.wf-node-image-gen.wf-state-idle.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.wf-node-image-gen .wf-node-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.wf-node-image-gen.wf-state-completed .wf-node-body,
+.wf-node-image-gen.wf-state-error .wf-node-body,
+.wf-node-image-gen.wf-state-idle .wf-node-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+.wf-node-image-review.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.wf-node-image-review .wf-node-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+.wf-node-final-review.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.wf-node-final-review .wf-node-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+/* audit 节点：自适应高度，内容少不浪费空间 */
+.wf-node-audit.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.wf-node-audit .wf-node-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+/* publish 节点：自适应高度，内容少不浪费空间 */
+.wf-node-publish.mint-wf-card {
+  height: auto;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.wf-node-publish .wf-node-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+.mint-wf-card:hover {
+  box-shadow: none;
+  transform: none;
+}
+.mint-wf-card.card-highlight {
+  box-shadow: 0 0 0 2px rgba(255, 36, 66, 0.3), 0 4px 12px rgba(255, 36, 66, 0.08);
+  border-color: rgba(255, 36, 66, 0.4);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.mint-wf-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 16px; }
+.mint-wf-title-row { display: flex; align-items: center; gap: 12px; }
+.mint-wf-step {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: #FF2442;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.mint-wf-title { font-size: 16px; font-weight: 500; color: #1A1A1A; line-height: 1.3; }
+.mint-wf-desc { font-size: 15px; color: #4B4B4B; margin-top: 2px; }
+.mint-wf-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid #F5F5F5;
+}
+/* ===== left sidebar resize handle ===== */
+.mint-left-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--left-sidebar-width, 216px);
+  width: 8px;
+  margin-left: -4px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+}
+.mint-left-resize-handle:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+.mint-resize-line {
+  display: none !important;
+}
+.mint-shell.is-left-resizing .mint-left-resize-handle { opacity: 1; }

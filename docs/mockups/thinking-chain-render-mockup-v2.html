@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>思考链渲染 v2 · 两个变体</title>
+<style>
+  :root {
+    --accent: #534AB7;
+    --ink: #26242e; --ink-2: #6b6a75; --ink-3: #9c9ba6;
+    --hair: #ececf1; --bg: #f6f6f8; --card: #fff;
+    --serif: Georgia, "Songti SC", SimSun, serif;
+    --sans: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); padding: 28px 16px 70px; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 20px; }
+  .lede { color: var(--ink-2); font-size: 13.5px; margin-top: 6px; line-height: 1.7; max-width: 760px; }
+  .lede b { color: var(--ink); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .col-head { font-size: 15px; font-weight: 700; margin: 0 2px 10px; }
+  .col-head small { font-weight: 500; color: var(--ink-3); margin-left: 8px; font-size: 12px; }
+  .col-desc { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; margin: 0 2px 12px; }
+
+  .stage { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; overflow: hidden; }
+  .stage-body { padding: 16px 16px 20px; }
+
+  .msg-user {
+    margin-left: auto; max-width: 80%; width: fit-content;
+    background: var(--accent); color: #fff;
+    padding: 8px 13px; border-radius: 15px 15px 4px 15px;
+    font-size: 13px; line-height: 1.6; margin-bottom: 12px;
+  }
+
+  /* 状态行：独立一行，绝不混工具名 */
+  .status-line {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--ink-2); padding: 2px 0 8px; user-select: none;
+  }
+  .status-line .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    animation: pulse 1.1s ease infinite; flex: none;
+  }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .status-line.done .dot { animation: none; background: var(--ink-3); }
+  .status-line .t { font-weight: 600; }
+  .status-line .chev { margin-left: auto; color: var(--ink-3); cursor: pointer; font-size: 12px; }
+
+  /* 变体1：原始推理容器——固定高度 + 内部滚动，绝不截断外部内容 */
+  .raw-box {
+    max-height: 210px; overflow-y: auto;
+    background: #f7f7fa; border: 1px solid var(--hair); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 10px;
+    font-size: 12.8px; line-height: 1.8; color: var(--ink-2);
+  }
+  .raw-box .cursor {
+    display: inline-block; width: 7px; height: 13px; background: var(--ink-3);
+    vertical-align: -2px; animation: pulse .8s ease infinite; margin-left: 1px;
+  }
+  .toolrow {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12.8px; color: var(--ink-2); padding: 5px 0;
+  }
+  .toolrow .sp {
+    width: 10px; height: 10px; border-radius: 50%; flex: none;
+    border: 1.5px solid var(--hair); border-top-color: var(--accent);
+    animation: rot .7s linear infinite;
+  }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .toolrow .ck { flex: none; color: #2e9e6b; font-weight: 700; }
+  .toolrow .mt { margin-left: auto; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .toolrow b { font-weight: 600; color: var(--ink); }
+
+  /* 变体2：精炼摘要 */
+  .sum-text {
+    font-family: var(--serif); font-style: italic; font-size: 13.5px;
+    color: #7a7686; line-height: 1.85; padding: 0 0 8px 2px;
+  }
+  .sum-line { animation: rowin .35s ease; }
+  @keyframes rowin { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; } }
+
+  .final {
+    border-top: 1px solid var(--hair); padding-top: 10px; margin-top: 4px;
+    font-size: 13.2px; line-height: 1.8;
+  }
+  .final b { color: var(--accent); }
+
+  /* 二级折叠：原始推理抽屉（变体2） */
+  .raw-toggle {
+    font-size: 12px; color: var(--ink-3); cursor: pointer; user-select: none;
+    display: inline-flex; gap: 5px; align-items: center; padding: 3px 0;
+  }
+  .raw-toggle:hover { color: var(--accent); }
+
+  /* 底部对照 */
+  .fixlist { margin-top: 26px; background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 18px 20px; }
+  .fixlist h2 { font-size: 15px; margin-bottom: 10px; }
+  .fixlist li { font-size: 13px; color: var(--ink-2); line-height: 1.9; margin-left: 18px; }
+  .fixlist b { color: var(--ink); }
+  .ctrl { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .ctrl button {
+    appearance: none; font-family: var(--sans); font-size: 12.5px; font-weight: 600;
+    border: 1px solid var(--hair); background: #fff; color: var(--ink);
+    border-radius: 9px; padding: 7px 12px; cursor: pointer;
+  }
+  .ctrl button:hover { border-color: var(--accent); color: var(--accent); }
+  .ctrl button.pri { background: var(--accent); border-color: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>思考链渲染 v2 · 两个变体</h1>
+  <p class="lede">
+    场景取自你截图里的真实任务：「去平台上帮我再找类似的内容」（对标 B站知识管理 / AI+Obsidian / 第二大脑）。
+    两个变体都修掉了截图里的三个问题：<b>状态行独立、工具名不混入；原始推理不再外溢；下方内容永不截断</b>。
+    差别只在「原始推理给不给用户直接看」。
+  </p>
+
+  <div class="grid">
+    <!-- ═══ 变体 1 ═══ -->
+    <div>
+      <div class="col-head">变体 1 · 原文流式<small>ChatGPT 式：推理可见但关进抽屉</small></div>
+      <div class="col-desc">状态行独立显示「思考中…」；原始推理装进<b>固定高度、内部滚动</b>的灰盒（自动滚到最新）；工具调用在盒内以纯文本行呈现。结束后整体收成一行，随时可展开回看。</div>
+      <div class="stage"><div class="stage-body">
+        <div class="msg-user">去平台上帮我再找类似的内容</div>
+        <div class="status-line" id="s1">
+          <span class="dot"></span><span class="t" id="s1t">思考中…</span>
+          <span class="chev" id="s1c" onclick="t1Collapse()">收起 ▴</span>
+        </div>
+        <div id="body1">
+          <div class="raw-box" id="raw1"><span id="raw1txt"></span><span class="cursor" id="cur1"></span></div>
+          <div id="tools1"></div>
+          <div class="final" id="fin1" style="display:none">
+            找到 3 个同赛道对标作品：<b>① 沉浸式梳理我的第二大脑</b>（小红书 · 4.2w 赞，Obsidian 工作流实拍）；<b>② AI 时代如何做知识管理</b>（B站 · 12w 播放，与原作品互补可做联动）；<b>③ 我用 Notion 替代了半个大脑</b>（小红书 · 2.8w 赞，选题角度可差异化切入）。建议重点拆解 ① 的封面结构。
+          </div>
+        </div>
+      </div></div>
+      <div class="ctrl">
+        <button class="pri" onclick="run1()">▶ 重播</button>
+        <button onclick="t1Collapse()">收起 / 展开</button>
+      </div>
+    </div>
+
+    <!-- ═══ 变体 2 ═══ -->
+    <div>
+      <div class="col-head">变体 2 · 精炼摘要<small>Claude 式：读者看的校准面板</small></div>
+      <div class="col-desc">状态行同样独立；思考只给<b>两三句人话摘要</b>（衬线斜体）；工具聚合为一行。原始推理收进「查看原始推理」二级抽屉，默认不展开。结束后收成一行摘要。</div>
+      <div class="stage"><div class="stage-body">
+        <div class="msg-user">去平台上帮我再找类似的内容</div>
+        <div class="status-line" id="s2">
+          <span class="dot"></span><span class="t" id="s2t">思考中…</span>
+          <span class="chev" id="s2c" onclick="t2Collapse()">收起 ▴</span>
+        </div>
+        <div id="body2">
+          <div class="sum-text" id="sum2"></div>
+          <div id="tools2"></div>
+          <div class="raw-toggle" id="rawt2" style="display:none" onclick="raw2Toggle()">▸ 查看原始推理</div>
+          <div class="raw-box" id="raw2" style="display:none; max-height:160px;"><span class="sum-text" style="padding:0">这是模型原始推理的存放处（默认折叠给想深挖的人，普通用户永不看到「我的工具调用格式出错了」这类内容）。</span></div>
+          <div class="final" id="fin2" style="display:none">
+            找到 3 个同赛道对标作品：<b>① 沉浸式梳理我的第二大脑</b>（小红书 · 4.2w 赞，Obsidian 工作流实拍）；<b>② AI 时代如何做知识管理</b>（B站 · 12w 播放，与原作品互补可做联动）；<b>③ 我用 Notion 替代了半个大脑</b>（小红书 · 2.8w 赞，选题角度可差异化切入）。建议重点拆解 ① 的封面结构。
+          </div>
+        </div>
+      </div></div>
+      <div class="ctrl">
+        <button class="pri" onclick="run2()">▶ 重播</button>
+        <button onclick="t2Collapse()">收起 / 展开</button>
+        <button onclick="raw2Toggle()">原始推理抽屉</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="fixlist">
+    <h2>对照你截图的三个问题，v2 的修法</h2>
+    <li><b>思考中和思考链混在一起</b> → 状态行只承载「思考中… / 已思考 Xs」，工具调用在自己的行里（变体1）或聚合为一行（变体2）。协议层对应：状态从 turn 生命周期推导，不再取「最后一个活动行」。</li>
+    <li><b>原始推理裸奔</b> → 变体1 关进固定高度滚动盒；变体2 干脆不给原文，只给后端生成的精炼摘要（需要协议加 reasoning_summary 事件），原文进二级抽屉。</li>
+    <li><b>下方内容被截断</b> → 链路容器「内部滚动、外部不裁剪」：raw-box 有 max-height + overflow-y:auto，收起用 max-height 过渡，正文始终完整可见。</li>
+  </div>
+</div>
+
+<script>
+const RAW = '用户要"去平台上帮我再找类似的内容"。这是搜索类任务。作品是B站知识管理/AI+Obsidian/第二大脑。可用：xhs_search（小红书）、trending_search（跨平台热点）。"找类似内容"用 trending_search 跨平台更合适，也顺手用 xhs_search 找小红书站内对标。并行调用两个。trending_search 返回了部分结果，xhs_search 的结果似乎被截断了，我应该继续搜索，拿到更有针对性的结果。让我再调一次 xhs_search（关键词更精准）和 trending_search 另一个关键词。保持精简：调 xhs_search + trending_topics。';
+const SUMS = [
+  "判断这是搜索类任务：要为 B站知识管理作品找跨平台对标。",
+  "跨平台用 trending_search，站内对标用 xhs_search，两者并行。",
+  "首次结果有截断，换更精准的关键词补搜了一轮。"
+];
+const TOOLS = [
+  { name: "trending_search", zh: "跨平台热点搜索", kw: "知识管理 第二大脑", dur: 2100 },
+  { name: "xhs_search",      zh: "小红书站内搜索", kw: "Obsidian 知识管理", dur: 1800 }
+];
+const fmt = ms => (ms/1000).toFixed(1) + "s";
+const timers = [];
+const clear = () => { timers.forEach(clearTimeout); timers.length = 0; };
+
+/* ═══ 变体 1 ═══ */
+let c1Open = true;
+function toolRow(hostId, t, i) {
+  const el = document.createElement("div");
+  el.className = "toolrow"; el.id = `${hostId}-tr-${i}`;
+  el.innerHTML = `<span class="sp" id="${hostId}-sp-${i}"></span>
+    调用 <b>${t.name}</b>（${t.zh}）· 「${t.kw}」
+    <span class="mt" id="${hostId}-mt-${i}"></span>`;
+  document.getElementById(hostId).appendChild(el);
+}
+function run1() {
+  clear();
+  document.getElementById("raw1txt").textContent = "";
+  document.getElementById("tools1").innerHTML = "";
+  document.getElementById("fin1").style.display = "none";
+  const st = document.getElementById("s1");
+  st.classList.remove("done"); document.getElementById("s1t").textContent = "思考中…";
+  /* 流式吐原文 */
+  let p = 0;
+  const box = document.getElementById("raw1");
+  const iv = setInterval(() => {
+    p += 2;
+    document.getElementById("raw1txt").textContent = RAW.slice(0, p);
+    box.scrollTop = box.scrollHeight;
+    if (p >= RAW.length) {
+      clearInterval(iv);
+      document.getElementById("cur1").style.display = "none";
+    }
+  }, 26);
+  timers.push(iv);
+  /* 工具行 */
+  let t0 = 1500;
+  TOOLS.forEach((t, i) => {
+    timers.push(setTimeout(() => toolRow("tools1", t, i), t0));
+    timers.push(setTimeout(() => {
+      document.getElementById(`tools1-sp-${i}`).outerHTML = '<span class="ck">✓</span>';
+      document.getElementById(`tools1-mt-${i}`).textContent = fmt(t.dur);
+    }, t0 + t.dur));
+    t0 += t.dur + 300;
+  });
+  timers.push(setTimeout(() => {
+    document.getElementById("s1t").textContent = "已思考 5.1s";
+    document.getElementById("s1").classList.add("done");
+    document.getElementById("fin1").style.display = "block";
+  }, t0 + 300));
+}
+function t1Collapse() {
+  c1Open = !c1Open;
+  const b = document.getElementById("body1");
+  b.style.display = c1Open ? "block" : "none";
+  document.getElementById("s1c").textContent = c1Open ? "收起 ▴" : "展开 ▾";
+}
+
+/* ═══ 变体 2 ═══ */
+let c2Open = true;
+function run2() {
+  clear();
+  document.getElementById("sum2").innerHTML = "";
+  document.getElementById("tools2").innerHTML = "";
+  document.getElementById("fin2").style.display = "none";
+  const rawt = document.getElementById("rawt2");
+  rawt.style.display = "none";
+  document.getElementById("raw2").style.display = "none";
+  const st = document.getElementById("s2");
+  st.classList.remove("done"); document.getElementById("s2t").textContent = "思考中…";
+  let t0 = 400;
+  SUMS.forEach((s, i) => {
+    timers.push(setTimeout(() => {
+      const el = document.createElement("div");
+      el.className = "sum-line"; el.id = "sum2-" + i;
+      document.getElementById("sum2").appendChild(el);
+      let k = 0;
+      const iv = setInterval(() => {
+        k += 2; el.textContent = s.slice(0, k);
+        if (k >= s.length) clearInterval(iv);
+      }, 26);
+      timers.push(iv);
+    }, t0));
+    t0 += s.length * 26 / 2 + 500;
+  });
+  timers.push(setTimeout(() => toolRow("tools2", { name: "并行搜索", zh: "2 个平台", kw: "知识管理 · 第二大脑", dur: 3900 }, 0), t0));
+  timers.push(setTimeout(() => {
+    document.getElementById("tools2-sp-0").outerHTML = '<span class="ck">✓</span>';
+    document.getElementById("tools2-mt-0").textContent = fmt(3900);
+  }, t0 + 3900));
+  timers.push(setTimeout(() => {
+    document.getElementById("s2t").textContent = "已思考 6.8s · 2 次搜索";
+    document.getElementById("s2").classList.add("done");
+    document.getElementById("rawt2").style.display = "inline-flex";
+    document.getElementById("fin2").style.display = "block";
+  }, t0 + 4200));
+}
+function t2Collapse() {
+  c2Open = !c2Open;
+  document.getElementById("body2").style.display = c2Open ? "block" : "none";
+  document.getElementById("s2c").textContent = c2Open ? "收起 ▴" : "展开 ▾";
+}
+function raw2Toggle() {
+  const box = document.getElementById("raw2");
+  const t = document.getElementById("rawt2");
+  const open = box.style.display !== "none";
+  box.style.display = open ? "none" : "block";
+  t.textContent = open ? "▸ 查看原始推理" : "▾ 收起原始推理";
+}
+
+setTimeout(run1, 500);
+setTimeout(run2, 500);
+</script>
+</body>
+</html>

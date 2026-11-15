@@ -1,0 +1,537 @@
+/* ===== tailwindcss custom layer ===== */
+  @theme inline {
+    --color-background: var(--ma-background);
+    --color-foreground: var(--ma-foreground);
+    --color-card: var(--ma-card);
+    --color-card-foreground: var(--ma-card-foreground);
+    --color-popover: var(--ma-popover);
+    --color-popover-foreground: var(--ma-popover-foreground);
+    --color-primary: var(--ma-primary);
+    --color-primary-foreground: var(--ma-primary-foreground);
+    --color-secondary: var(--ma-secondary);
+    --color-secondary-foreground: var(--ma-secondary-foreground);
+    --color-muted: var(--ma-muted);
+    --color-muted-foreground: var(--ma-muted-foreground);
+    --color-accent: var(--ma-accent);
+    --color-accent-foreground: var(--ma-accent-foreground);
+    --color-destructive: var(--ma-destructive);
+    --color-destructive-foreground: var(--ma-destructive-foreground);
+    --color-border: var(--ma-border);
+    --color-input: var(--ma-input);
+    --color-ring: var(--ma-ring);
+    --color-sidebar: var(--ma-sidebar);
+    --color-sidebar-foreground: var(--ma-sidebar-foreground);
+    --color-sidebar-primary: var(--ma-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--ma-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--ma-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--ma-sidebar-accent-foreground);
+    --radius-sm: var(--ma-radius-sm);
+    --radius-md: var(--ma-radius-md);
+    --radius-lg: var(--ma-radius-lg);
+    --radius-xl: var(--ma-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ma-background); color: var(--ma-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+
+/* ===== semantic-token-fallback ===== */
+      .bg-background { background-color: var(--ma-background); }
+      .text-background { color: var(--ma-background); }
+      .border-background { border-color: var(--ma-background); }
+      .ring-background { --tw-ring-color: var(--ma-background); }
+      .bg-foreground { background-color: var(--ma-foreground); }
+      .text-foreground { color: var(--ma-foreground); }
+      .border-foreground { border-color: var(--ma-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ma-foreground); }
+      .bg-card { background-color: var(--ma-card); }
+      .text-card { color: var(--ma-card); }
+      .border-card { border-color: var(--ma-card); }
+      .ring-card { --tw-ring-color: var(--ma-card); }
+      .bg-card-foreground { background-color: var(--ma-card-foreground); }
+      .text-card-foreground { color: var(--ma-card-foreground); }
+      .border-card-foreground { border-color: var(--ma-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ma-card-foreground); }
+      .bg-popover { background-color: var(--ma-popover); }
+      .text-popover { color: var(--ma-popover); }
+      .border-popover { border-color: var(--ma-popover); }
+      .ring-popover { --tw-ring-color: var(--ma-popover); }
+      .bg-popover-foreground { background-color: var(--ma-popover-foreground); }
+      .text-popover-foreground { color: var(--ma-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ma-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ma-popover-foreground); }
+      .bg-primary { background-color: var(--ma-primary); }
+      .text-primary { color: var(--ma-primary); }
+      .border-primary { border-color: var(--ma-primary); }
+      .ring-primary { --tw-ring-color: var(--ma-primary); }
+      .bg-primary-foreground { background-color: var(--ma-primary-foreground); }
+      .text-primary-foreground { color: var(--ma-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ma-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ma-primary-foreground); }
+      .bg-secondary { background-color: var(--ma-secondary); }
+      .text-secondary { color: var(--ma-secondary); }
+      .border-secondary { border-color: var(--ma-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ma-secondary); }
+      .bg-secondary-foreground { background-color: var(--ma-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ma-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ma-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ma-secondary-foreground); }
+      .bg-muted { background-color: var(--ma-muted); }
+      .text-muted { color: var(--ma-muted); }
+      .border-muted { border-color: var(--ma-muted); }
+      .ring-muted { --tw-ring-color: var(--ma-muted); }
+      .bg-muted-foreground { background-color: var(--ma-muted-foreground); }
+      .text-muted-foreground { color: var(--ma-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ma-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ma-muted-foreground); }
+      .bg-accent { background-color: var(--ma-accent); }
+      .text-accent { color: var(--ma-accent); }
+      .border-accent { border-color: var(--ma-accent); }
+      .ring-accent { --tw-ring-color: var(--ma-accent); }
+      .bg-accent-foreground { background-color: var(--ma-accent-foreground); }
+      .text-accent-foreground { color: var(--ma-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ma-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ma-accent-foreground); }
+      .bg-destructive { background-color: var(--ma-destructive); }
+      .text-destructive { color: var(--ma-destructive); }
+      .border-destructive { border-color: var(--ma-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ma-destructive); }
+      .bg-destructive-foreground { background-color: var(--ma-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ma-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ma-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ma-destructive-foreground); }
+      .bg-border { background-color: var(--ma-border); }
+      .text-border { color: var(--ma-border); }
+      .border-border { border-color: var(--ma-border); }
+      .ring-border { --tw-ring-color: var(--ma-border); }
+      .bg-input { background-color: var(--ma-input); }
+      .text-input { color: var(--ma-input); }
+      .border-input { border-color: var(--ma-input); }
+      .ring-input { --tw-ring-color: var(--ma-input); }
+      .bg-ring { background-color: var(--ma-ring); }
+      .text-ring { color: var(--ma-ring); }
+      .border-ring { border-color: var(--ma-ring); }
+      .ring-ring { --tw-ring-color: var(--ma-ring); }
+      .bg-sidebar { background-color: var(--ma-sidebar); }
+      .text-sidebar { color: var(--ma-sidebar); }
+      .border-sidebar { border-color: var(--ma-sidebar); }
+      .ring-sidebar { --tw-ring-color: var(--ma-sidebar); }
+      .bg-sidebar-foreground { background-color: var(--ma-sidebar-foreground); }
+      .text-sidebar-foreground { color: var(--ma-sidebar-foreground); }
+      .border-sidebar-foreground { border-color: var(--ma-sidebar-foreground); }
+      .ring-sidebar-foreground { --tw-ring-color: var(--ma-sidebar-foreground); }
+      .bg-sidebar-primary { background-color: var(--ma-sidebar-primary); }
+      .text-sidebar-primary { color: var(--ma-sidebar-primary); }
+      .border-sidebar-primary { border-color: var(--ma-sidebar-primary); }
+      .ring-sidebar-primary { --tw-ring-color: var(--ma-sidebar-primary); }
+      .bg-sidebar-primary-foreground { background-color: var(--ma-sidebar-primary-foreground); }
+      .text-sidebar-primary-foreground { color: var(--ma-sidebar-primary-foreground); }
+      .border-sidebar-primary-foreground { border-color: var(--ma-sidebar-primary-foreground); }
+      .ring-sidebar-primary-foreground { --tw-ring-color: var(--ma-sidebar-primary-foreground); }
+      .bg-sidebar-accent { background-color: var(--ma-sidebar-accent); }
+      .text-sidebar-accent { color: var(--ma-sidebar-accent); }
+      .border-sidebar-accent { border-color: var(--ma-sidebar-accent); }
+      .ring-sidebar-accent { --tw-ring-color: var(--ma-sidebar-accent); }
+      .bg-sidebar-accent-foreground { background-color: var(--ma-sidebar-accent-foreground); }
+      .text-sidebar-accent-foreground { color: var(--ma-sidebar-accent-foreground); }
+      .border-sidebar-accent-foreground { border-color: var(--ma-sidebar-accent-foreground); }
+      .ring-sidebar-accent-foreground { --tw-ring-color: var(--ma-sidebar-accent-foreground); }
+
+/* ===== plain style ===== */
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+
+/* ===== mint-atelier-override ===== */
+:root {
+  --mint-primary: #10B981;
+  --mint-primary-hover: #059669;
+  --mint-text-dark: #065F46;
+  --mint-gradient: linear-gradient(135deg, #A7F3D0, #6EE7B7);
+  --mint-gradient-3d: linear-gradient(135deg, #ECFDF5 0%, #A7F3D0 22%, #6EE7B7 50%, #34D399 78%, #059669 100%);
+  --mint-glass-bg: rgba(255,255,255,0.72);
+  --mint-glass-border: rgba(209,213,219,0.4);
+  --mint-body-bg: #F5F5F5;
+  --ma-primary: #10B981;
+  --ma-primary-foreground: #FFFFFF;
+  --ma-accent: #ECFDF5;
+  --ma-accent-foreground: #10B981;
+  --ma-sidebar-accent: #ECFDF5;
+  --ma-sidebar-accent-foreground: #10B981;
+  --ma-ring: #4B4B4B;
+  --ma-shadow-focus: 0 0 0 3px rgba(107,114,128,0.08);
+  --ma-radius-lg: 16px;
+  --ma-radius-xl: 16px;
+
+  /* ===== z-index 分层体系（可拓展：新增页面/组件按层级取变量，不硬编码数字） ===== */
+  --z-base: 1;          /* 普通内容层 */
+  --z-raised: 10;       /* 提升层：侧边栏 toggle、面板按钮 */
+  --z-sticky: 50;       /* 粘性层：散落卡片、统计区 */
+  --z-dropdown: 100;    /* 下拉层：select 下拉、导航子菜单 */
+  --z-overlay: 500;     /* 遮罩层：dialog、collapsed 按钮 */
+  --z-tooltip: 600;     /* 提示层：tooltip、popover */
+  --z-modal: 1000;      /* 弹窗层：modal dialog */
+  --z-global-ui: 9000;  /* 全局 UI 层：头像、右键菜单 overlay */
+  --z-top: 9999;        /* 最高层：右键菜单、view-transition-new */
+  --z-max: 10000;       /* 绝对最高：头像下拉菜单 */
+}
+
+body {
+  background: var(--bg-page, #EBEEF2);
+  font-family: var(--ma-font-sans, var(--font-sans));
+  color: var(--text-primary, #1A1A1A);
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: none;
+}
+
+
+
+@keyframes oceanBreathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.06); }
+}
+
+@keyframes blobDrift {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  33% { transform: translate(3%, -2%) rotate(120deg) scale(1.1); }
+  66% { transform: translate(-2%, 3%) rotate(240deg) scale(0.95); }
+  100% { transform: translate(0, 0) rotate(360deg) scale(1); }
+}
+
+.font-cal { font-family: var(--ma-font-display, var(--font-display)); }
+
+.mint-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto 1fr var(--right-panel-width, 280px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  height: 100vh;
+  max-width: 1920px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--ma-bg-base, #EBEEF2);
+}
+.mint-shell.mint-collapsed {
+  overflow: visible;
+}
+.mint-shell.mint-collapsed > main {
+  overflow: hidden;
+}
+
+/* ===== 通用布局壳（AppShell 共用） =====
+   原先 .da-shell / .tp-shell / .tpd-shell 的列定义在各页面 scoped 样式里各复制一份，
+   三者的规则完全相同，统一收敛到这里，避免再出现某页漏改导致栅格错位。 */
+.da-shell,
+.tp-shell,
+.tpd-shell {
+  grid-template-columns: auto auto 1fr !important;
+}
+.da-shell.mint-collapsed,
+.tp-shell.mint-collapsed,
+.tpd-shell.mint-collapsed {
+  grid-template-columns: 56px 1fr !important;
+}
+
+/* 侧边栏拖拽条：宽度 0 的隐形条，::before 向外扩 4px 作为命中区
+   .da-sidebar-resizer 是各页面仍在使用的旧类名，与 .app-shell-resizer 完全等价，
+   一并收敛于此，页面 scoped 里的副本已删除。 */
+.da-sidebar-resizer,
+.app-shell-resizer {
+  position: relative;
+  width: 0;
+  cursor: col-resize;
+  flex-shrink: 0;
+  align-self: stretch;
+  z-index: 5;
+  overflow: visible;
+}
+.da-sidebar-resizer::before,
+.app-shell-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+  z-index: 1;
+}
+.da-sidebar-resizer-line {
+  display: none !important;
+}
+.da-sidebar-resizer:hover,
+.app-shell-resizer:hover,
+.app-shell-resizer:active {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* 拖拽期间关闭侧边栏宽度过渡，跟随鼠标实时变化 */
+.mint-shell.is-left-resizing .mint-sidebar {
+  transition: none !important;
+}
+
+/* ===== 全局右上角用户信息 ===== */
+.mint-global-user {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  position: fixed;
+  top: 12px;
+  right: 36px;
+  z-index: var(--z-global-ui);
+  overflow: visible;
+  transition: opacity 0.2s ease;
+}
+.mint-global-user:hover {
+  opacity: 0.8;
+}
+.mint-global-user-active {
+  opacity: 1;
+}
+.mint-global-user .mint-avatar {
+  width: 36px;
+  height: 36px;
+}
+.mint-global-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mint-global-user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A1A1A;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+.mint-global-user-info .mint-badge {
+  max-width: 100%;
+  overflow: visible;
+  white-space: nowrap;
+}
+.mint-global-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 180px;
+  margin-top: 6px;
+  background: #fff;
+  border: 1px solid #EDEDED;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  overflow: hidden;
+  z-index: var(--z-max);
+}
+.mint-dropdown-user-section {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #F5F5F5;
+}
+.mint-dropdown-user-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+  line-height: 1.3;
+}
+.mint-dropdown-user-method {
+  display: block;
+  font-size: 11px;
+  color: #9A9A9A;
+  margin-top: 2px;
+}
+.mint-dropdown-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  color: #4B4B4B;
+  cursor: pointer;
+  border-radius: 9999px;
+  transition: all 0.15s ease;
+}
+.mint-dropdown-add:hover {
+  border-color: #4B4B4B;
+  color: #4B4B4B;
+  background: rgba(243,244,246,0.5);
+}
+.mint-dropdown-add svg {
+  width: 12px;
+  height: 12px;
+}
+.mint-dropdown-list {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.mint-dropdown-body {
+  padding: 4px 6px;
+}
+.mint-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.mint-dropdown-item:hover {
+  background: rgba(243,244,246,0.6);
+}
+.mint-dropdown-item.is-current {
+  background: rgba(243,244,246,0.4);
+}
+.mint-dropdown-logout {
+  width: 100%;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #4B4B4B;
+  padding: 10px 14px;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.mint-dropdown-logout:hover {
+  background: #F5F5F5;
+  color: #4B4B4B;
+}
+.mint-dropdown-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4B4B4B, #4B4B4B);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.mint-dropdown-info {
+  flex: 1;
+  min-width: 0;
+}
+.mint-dropdown-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1A1A1A;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mint-dropdown-id {
+  font-size: 11px;
+  color: #4B4B4B;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mint-dropdown-check {
+  width: 14px;
+  height: 14px;
+  color: #4B4B4B;
+  flex-shrink: 0;
+}
+.mint-dropdown-empty {
+  padding: 6px 10px;
+  text-align: center;
+  font-size: 11px;
+  color: #4B4B4B;
+}
+.mint-dropdown-footer {
+  border-top: 1px solid rgba(0,0,0,0.06);
+  padding: 4px;
+}
+.mint-dropdown-logout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #4B4B4B;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.mint-dropdown-logout:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #EF4444;
+}
+.mint-dropdown-logout svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.mint-dropdown-enter-active {
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mint-dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.mint-dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.mint-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-2px);
+}
+.mint-content-card-wrapper {
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  min-width: 0;
+  overflow: visible;
+}
+.mint-content-card {
+  flex: 1;
+  min-width: 500px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 20px 20px 16px;
+}

@@ -1,0 +1,314 @@
+/**
+ * render-layer.css — 跨组件共享的渲染层样式（必须放全局，不能 scoped）
+ * 现存：.rl-traj-* 执行轨迹（ToolCallCell 与 AssistantMessageCell 共用）
+ */
+
+/**
+ * 执行轨迹 — 与 render-layer-prototype.html 的 #trajCell 逐项对齐：
+ *   head 12px/text-secondary、meta 11px/text-tertiary/tabular-nums、chev 11px/text-tertiary
+ *   .trail 竖线 1px/border-tertiary、行 padding-left:20px、子行 38px + └ 前缀
+ *   dot 三色：待执行 gray-200 / 执行中 amber-600b(pulse) / 已完成 green-600
+ *   折叠用 max-height 过渡（原型 .collapsible），不是淡入淡出
+ */
+.rl-traj {
+  margin-top:10px;
+}
+
+.rl-traj-head {
+  color:var(--rl-ink-2,#5F5E5A);
+  cursor:pointer;
+  -webkit-user-select:none;
+  user-select:none;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  display:flex;
+}
+
+.rl-traj-title {
+  font-weight:500;
+}
+
+.rl-traj-meta {
+  color:var(--rl-ink-3,#888780);
+  font-variant-numeric:tabular-nums;
+  margin-left:auto;
+  font-size:11px;
+}
+
+.rl-traj-chev {
+  color:var(--rl-ink-3,#888780);
+  flex:none;
+  font-size:11px;
+  transition:transform .2s cubic-bezier(.19,1,.22,1);
+}
+.rl-traj-chev.is-open {
+  transform:rotate(180deg);
+}
+
+/* 徽标暗色提亮（rgba 底不变，文字色上浮一档） */
+.rl-chat.is-dark .rl-traj-badge--run { color:#38BDF8; }
+.rl-chat.is-dark .rl-traj-badge--ok { color:#8FBC4E; }
+.rl-chat.is-dark .rl-traj-badge--err { color:#F87171; }
+
+/* 折叠改 Claude CSS Grid 0fr↔1fr（原 max-height 600px 会截断长内容） */
+.rl-traj-body {
+  overflow:hidden;
+  display:grid;
+  transition:grid-template-rows .25s cubic-bezier(.19,1,.22,1);
+  grid-template-rows:1fr;
+}
+
+.rl-traj-body.is-closed {
+  grid-template-rows:0fr;
+}
+
+.rl-traj-body > .rl-traj-items {
+  min-height:0;
+  overflow:hidden;
+}
+
+/* 三态状态徽标（对齐 Claude McpToolDecisionCard 徽标形态） */
+.rl-traj-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:1px 8px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:500;
+  flex:none;
+  white-space:nowrap;
+}
+.rl-traj-badge-dot {
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:currentColor;
+}
+.rl-traj-badge--run {
+  color:#0284C7;
+  background:rgba(2,132,199,.10);
+}
+.rl-traj-badge--run .rl-traj-badge-dot {
+  animation:1.2s ease-in-out infinite rl-traj-pulse;
+}
+.rl-traj-badge--ok {
+  color:#3B6D11;
+  background:rgba(59,109,17,.10);
+}
+.rl-traj-badge--err {
+  color:#B42318;
+  background:rgba(180,35,24,.10);
+}
+
+.rl-traj-items {
+  margin-top:4px;
+  position:relative;
+}
+
+.rl-trail {
+  background:var(--rl-line,rgba(0,0,0,.12));
+  width:1px;
+  position:absolute;
+  top:14px;
+  bottom:10px;
+  left:3.5px;
+}
+
+.rl-traj-item {
+  align-items:center;
+  gap:8px;
+  padding:4px 0 4px 20px;
+  font-size:12px;
+  display:flex;
+  position:relative;
+}
+
+.rl-traj-sub {
+  padding-left:38px;
+}
+
+.rl-traj-dot {
+  border-radius:50%;
+  flex:none;
+  width:8px;
+  height:8px;
+  position:absolute;
+  left:0;
+}
+
+.rl-traj-dot--sm {
+  width:6px;
+  height:6px;
+}
+
+.rl-traj-dot--wait {
+  background:var(--rl-dot-wait,#D3D1C7);
+}
+
+.rl-traj-dot--done {
+  background:#3B6D11;
+}
+
+.rl-traj-dot--run {
+  background:#0284C7;
+  animation:1.2s ease-in-out infinite rl-traj-pulse;
+}
+
+.rl-traj-dot--err {
+  background:#B42318;
+}
+
+.rl-traj-dot--skip {
+  background:var(--rl-dot-skip,#B4B2A9);
+}
+
+@keyframes rl-traj-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.rl-traj-label {
+  color:var(--rl-ink-2,#5F5E5A);
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+}
+
+.rl-traj-sublabel {
+  color:var(--rl-ink-3,#888780);
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+}
+
+.rl-traj-label--run {
+  color:var(--rl-text-1,#1A1A1A);
+  font-weight:500;
+}
+
+.rl-traj-x {
+  color:var(--rl-ink-3,#888780);
+  background:var(--rl-chip,#F1EFE8);
+  border-radius: 8px;
+  flex:none;
+  padding:0 4px;
+  font-size:10.5px;
+}
+
+.rl-traj-dur {
+  color:var(--rl-ink-3,#888780);
+  font-variant-numeric:tabular-nums;
+  flex:none;
+  margin-left:auto;
+  font-size:11px;
+}
+
+/* 尊重系统「减少动效」偏好（原型 @media prefers-reduced-motion） */
+@media (prefers-reduced-motion: reduce){
+  .rl-traj-dot--run{animation:none}
+  .rl-traj-body{transition:none}
+}
+
+.rl-slide-enter-active {
+  transition:opacity .2s;
+}
+
+.rl-slide-leave-active {
+  transition:opacity .15s;
+}
+
+.rl-slide-enter-from,.rl-slide-leave-to {
+  opacity:0;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   内容展示（纯文本）— .rl-plain / .rl-content-*
+   ════════════════════════════════════════════════════════════════
+   跨组件共享，收拢此前各表面各写一份的本地定义：
+   - MarkdownView / ScriptView  头部 + 空状态（原 #1a1a1a/#888/#aaa 冷灰）
+   - MyWorksView .da-pre / TaskPlanView .tp-pre（已是暖纸，改走共享以去重）
+   - ScriptView .sv-script（原 #333 + rgba(0,0,0,.02) 冷灰）
+   - WorkPreview .wdp-preview-text-body / panel-shared .wdp-content-text
+     （原 #444 + #f9f9fa 冷灰）
+   统一后：单一暖纸色板、单一换行策略（pre-wrap + break-word），
+   并消除「{{ }}` 插值把换行折叠成空格」这类纯文本展示缺陷。
+   与 .rl-md 配合：markdown 内容套 .rl-md（ChatView.vue 全局 82 条规则），
+   纯文本内容套 .rl-plain，两条线共用同一套容器头部/空状态类。
+
+   配色沿用本文件惯例：优先 var(--rl-*) 令牌，缺失时回退硬编码暖纸色，
+   保证无 ChatView 路由（/my-works、/task-plan 等）下独立可用。 */
+
+.rl-plain {
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  background:var(--rl-bg-2,#F5F5F5);
+  color:var(--rl-text-2,#4B4B4B);
+  font-size:12px;
+  line-height:1.7;
+  margin:0;
+  padding:10px 12px;
+  border-radius: 12px;
+}
+
+/* 限高滚动：侧栏/预览卡片里的长正文，避免把容器顶爆 */
+.rl-plain--scroll {
+  max-height:200px;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+
+/* 等宽变体：脚本 / 代码类文本 */
+.rl-plain--mono {
+  font-family:'Menlo','Consolas','Liberation Mono',monospace;
+  font-size:12px;
+  line-height:1.6;
+}
+
+/* 内容区头部（标题 + 描述行），替换各组件本地同构定义 */
+.rl-content-head {
+  display:flex;
+  flex-direction:column;
+  padding:12px;
+  border-bottom:1px solid var(--rl-border-thin,rgba(0,0,0,.06));
+  flex:none;
+}
+
+.rl-content-title {
+  font-size:15px;
+  font-weight:600;
+  color:var(--rl-text-1,#1A1A1A);
+  margin:0;
+}
+
+.rl-content-meta {
+  font-size:11px;
+  color:var(--rl-text-3,#9A9A9A);
+  margin-top:4px;
+}
+
+/* 空状态（原 <p style="color:#aaa"> 内联硬编码） */
+.rl-plain-empty {
+  color:var(--rl-text-3,#9A9A9A);
+  font-size:13px;
+  padding:12px;
+}
+
+/* 内容滚动区通用滚动条，替换各组件重复的 ::-webkit-scrollbar 定义 */
+.rl-content-scroll {
+  scrollbar-width:thin;
+  scrollbar-color:var(--rl-scrollbar,rgba(0,0,0,.14)) transparent;
+}
+
+.rl-content-scroll::-webkit-scrollbar {
+  width:4px;
+}
+
+.rl-content-scroll::-webkit-scrollbar-thumb {
+  background:var(--rl-scrollbar,rgba(0,0,0,.14));
+  border-radius: 4px;
+}
+

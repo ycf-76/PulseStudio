@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>思考块真身样例 · Claude / Codex 分层形态</title>
+<style>
+  :root{
+    --page:#f4f3ef;
+    --surface:#ffffff;
+    --chat:#fbfaf8;
+    --text:#373734;
+    --muted:#7b7974;
+    --faint:#9a9891;
+    --line:rgba(31,31,30,.12);
+    --accent:#534AB7;
+    --accent-soft:#AFA9EC;
+    --clay:#d97757;
+    --danger:#A32D2D;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:28px 20px 40px;background:var(--page);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
+    color:var(--text);-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:18px;font-weight:500;margin:0 0 6px}
+  .sub{font-size:12px;color:var(--muted);line-height:1.7;margin:0 0 18px}
+  .sub code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;background:rgba(31,31,30,.05);padding:1px 5px;border-radius:4px}
+
+  .toolbar{
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  }
+  button{
+    font-family:inherit;font-size:12px;padding:7px 13px;border-radius:999px;
+    border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;
+    transition:background .15s,border-color .15s;
+  }
+  button:hover{background:#f2f1ee}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{background:#4439a0}
+  .sep{width:1px;height:22px;background:var(--line);margin:0 2px}
+  .field{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  select{font-family:inherit;font-size:12px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+  label.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+  .status{font-size:12px;color:var(--faint);margin-left:auto;font-variant-numeric:tabular-nums}
+
+  .chat{
+    background:var(--chat);border:1px solid var(--line);border-radius:16px;
+    height:520px;overflow-y:auto;padding:22px 26px;
+  }
+  .chat::-webkit-scrollbar{width:6px}
+  .chat::-webkit-scrollbar-thumb{background:rgba(31,31,30,.14);border-radius:3px}
+
+  .user-row{display:flex;justify-content:flex-end;margin-bottom:22px}
+  .user-bubble{background:#eeedfe;color:#3c3489;font-size:13px;line-height:1.6;padding:10px 15px;border-radius:14px 14px 4px 14px;max-width:78%}
+
+  .assistant{position:relative}
+  .brand{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .brand-dot{width:22px;height:22px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px}
+  .brand-name{font-size:12px;color:var(--muted)}
+  .brand-time{margin-left:auto;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+  .disclosure{
+    display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+    background:none;border:none;padding:5px 0;cursor:pointer;font-family:inherit;
+    color:var(--muted);font-size:13px;line-height:19px;
+  }
+  .disclosure:hover{color:var(--text)}
+  .chev{display:inline-block;width:11px;font-size:12px;color:var(--faint);transition:transform .2s;flex:none}
+  .chev.open{transform:rotate(90deg)}
+  .disc-label{flex:1;min-width:0}
+  .disc-preview{
+    color:var(--faint);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52%;
+  }
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--clay);flex:none;animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
+
+  .fold{
+    margin-top:8px;max-height:200px;overflow-y:auto;position:relative;
+    scrollbar-width:thin;scrollbar-color:rgba(31,31,30,.18) transparent;
+  }
+  .fold::-webkit-scrollbar{width:5px}
+  .fold::-webkit-scrollbar-thumb{background:rgba(31,31,30,.16);border-radius:3px}
+  .fold.legacy{max-height:none;overflow:visible}
+  .thought{
+    white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.7;
+    color:var(--muted);padding:2px 0 10px;
+  }
+  .steps{padding:2px 0 4px}
+  .step{display:flex;align-items:flex-start;gap:10px;animation:rowIn .22s cubic-bezier(.22,1,.36,1) both}
+  @keyframes rowIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .step-ic{width:20px;display:flex;justify-content:center;flex:none;padding-top:2px}
+  .step-ic i{width:13px;height:13px;border-radius:4px;background:rgba(31,31,30,.08);display:block}
+  .step-ic.done i{background:rgba(83,74,183,.20)}
+  .step-body{flex:1;min-width:0}
+  .step-label{font-size:13px;line-height:19px;color:var(--text)}
+  .step-note{font-size:12px;line-height:17px;color:var(--faint);margin-top:2px}
+  .step.active .step-label{color:var(--accent)}
+  .step-meta{font-size:11px;color:var(--faint);flex:none;font-variant-numeric:tabular-nums;padding-top:3px}
+  .rail{width:1px;height:8px;background:var(--line);margin-left:9.5px}
+  .fold-foot{
+    position:sticky;bottom:0;background:linear-gradient(to top,var(--chat) 55%,transparent);
+    padding:10px 0 4px;text-align:center;
+  }
+  .fold-foot button{font-size:12px;color:var(--muted);border:none;background:none;padding:2px 8px}
+
+  .answer{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .answer-cap{font-size:11px;color:var(--faint);margin-bottom:6px}
+  .answer-text{font-size:14px;line-height:1.75;color:var(--text);white-space:pre-wrap;word-break:break-word}
+  .caret{display:inline-block;width:2px;height:15px;background:var(--accent);vertical-align:-3px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  .answer.legacy-answer{border-top:1px dashed var(--danger);color:var(--danger)}
+  .legacy-warn{font-size:12px;color:var(--danger);margin-top:10px;line-height:1.6}
+
+  .legend{
+    margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:14px 18px;font-size:12px;line-height:1.9;color:var(--muted);
+  }
+  .legend b{font-weight:500;color:var(--text)}
+  .legend .k{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:7px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>思考块 · 真身形态样例</h1>
+  <p class="sub">
+    1:1 对齐源码级参照 <code>AssistantThinkingMessage.tsx</code>（默认一行 · 无打字机）与
+    <code>AssistantThinkingChain.tsx</code>（折叠披露条 · 展开限高 200px · 自动滚底 · 正文独立）。<br>
+    点「重播完整流程」看全过程；勾「对照旧版」看之前把正文顶飞的毛病。思考块无边框、无辉光、无跑马灯。
+  </p>
+
+  <div class="toolbar">
+    <button class="primary" id="btnReplay">重播完整流程</button>
+    <button id="btnToggle">展开 / 折叠</button>
+    <button id="btnLong">长链路 20 步</button>
+    <button id="btnDone">直接到完成态</button>
+    <span class="sep"></span>
+    <span class="field">步骤数
+      <select id="selCount">
+        <option value="4">4</option>
+        <option value="8" selected>8</option>
+        <option value="14">14</option>
+        <option value="20">20</option>
+      </select>
+    </span>
+    <label class="chk"><input type="checkbox" id="chkLegacy">对照旧版（正文被顶飞）</label>
+    <span class="status" id="status">待机</span>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="user-row"><div class="user-bubble">帮我看看今日科技热搜，写个 15 秒的小红书口播脚本</div></div>
+    <div class="assistant">
+      <div class="brand">
+        <span class="brand-dot">P</span>
+        <span class="brand-name">助手</span>
+        <span class="brand-time" id="brandTime"></span>
+      </div>
+
+      <button class="disclosure" id="disclosure">
+        <span class="chev" id="chev">▸</span>
+        <span class="live-dot" id="liveDot" style="display:none"></span>
+        <span class="disc-label" id="discLabel">已思考 12.4s · 8 个步骤</span>
+        <span class="disc-preview" id="discPreview" style="display:none"></span>
+      </button>
+
+      <div class="fold" id="fold">
+        <div class="thought" id="thought"></div>
+        <div class="steps" id="steps"></div>
+        <div class="fold-foot" id="foldFoot" style="display:none"><button type="button">显示更多</button></div>
+      </div>
+
+      <div class="answer" id="answerBox">
+        <div class="answer-cap">最终回复 · 独立区，始终可见</div>
+        <div class="answer-text" id="answerText"></div>
+      </div>
+      <div class="legacy-warn" id="legacyWarn" style="display:none">
+        旧版：思考状态与正文预览挤在同一行常驻顶部，步骤链无限撑开 —— 正文被挤到视口外，展开链路后既看不清过程也看不到回复。
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="k"></span><b>真身四条硬规矩</b><br>
+    ① 思考与答案是<b>两个物理隔离的块</b>（<code>thinking_delta</code> / <code>text_delta</code> 分容器，绝不拼进同一行）；<br>
+    ② 思考块<b>默认折叠成 1 行</b>披露条，流式时只显示状态与计时，<b>完成后自动折叠</b>；<br>
+    ③ 展开后<b>限高 200px 自滚</b>、流式自动滚底 + Show more，链路再长也不会撑爆消息；<br>
+    ④ <b>正文在下方独立流式，永远可见</b>，思考块在物理上顶不动它。
+  </div>
+</div>
+
+<script>
+(function(){
+  var STEP_LIB = [
+    ['搜索网络资料','拉取今日科技热搜榜，命中 12 条候选'],
+    ['分析平台热点','筛出 3 条互动量过 10 万的选题'],
+    ['生成选题草稿','定「AI 手机出货量反超」做主线'],
+    ['内容合规检查','敏感词与广告法扫描，无命中'],
+    ['检索补充素材','补两条可引用的出货量数据'],
+    ['撰写口播脚本','开头反差钩子 + 中段数字 + 结尾提问'],
+    ['脚本时长校验','按 15 秒语速压到 62 字'],
+    ['调用剪辑合成','匹配画面与字幕轴'],
+    ['导出预览','生成 720p 预览片段'],
+    ['画质检查','确认无黑帧、无爆音'],
+    ['封面文案生成','出 3 版标题备选'],
+    ['标签推荐','按平台热度选 6 个标签'],
+    ['发布时段评估','建议 20:30 前后'],
+    ['合规复核','二次校验引用数据来源'],
+    ['脚本微调','把专业词换成口语'],
+    ['字幕断句','按呼吸点切 5 段'],
+    ['预览回放','确认节奏与画面同步'],
+    ['生成发布单','汇总脚本 / 封面 / 标签'],
+    ['等待确认','暂停，交由用户拍板'],
+    ['完成','本轮全部步骤结束']
+  ];
+  var THOUGHT_LIB = [
+    '先确认用户要的是「今日」热点，需要一次实时检索，不能用缓存结果。',
+    '检索结果里科技类占 7 条，其中 AI 硬件相关互动量最高，优先这一条。',
+    '小红书口播要口语化、带具体数字，开头 3 秒必须给反差，否则完播率会掉。',
+    '合规检查通过，没有敏感词，也没有绝对化用语，可以进入撰写。',
+    '补两条可核验的出货量数据，避免脚本里出现无来源的断言。',
+    '按 15 秒语速估算约 60-65 字，超了就砍修饰词，保留钩子和数据。',
+    '字幕按呼吸点断句，单屏不超过 14 字，方便竖屏阅读。',
+    '导出预览前再确认一次音画同步，避免合成后返工。'
+  ];
+  var ANSWER = '今日科技热搜里最值得做的是「AI 手机出货量反超」这一条。\n\n给你一版 15 秒口播：开头用「你以为还是概念机？它已经卖过普通手机了」当钩子，中段给一个具体数字撑住可信度，结尾留一句「你会换吗」把评论区带起来。脚本 62 字、字幕切 5 段，封面和 6 个标签也一并整理好了，预览片段在作品区，你先看节奏。';
+
+  var $ = function(id){ return document.getElementById(id); };
+  var el = {
+    disc:$('disclosure'), chev:$('chev'), liveDot:$('liveDot'), label:$('discLabel'), preview:$('discPreview'),
+    fold:$('fold'), thought:$('thought'), steps:$('steps'), foldFoot:$('foldFoot'),
+    answerBox:$('answerBox'), answerText:$('answerText'), legacyWarn:$('legacyWarn'),
+    brandTime:$('brandTime'), status:$('status'), chat:$('chat'),
+    count:$('selCount'), legacy:$('chkLegacy')
+  };
+
+  var timers = [];
+  var tick = null;
+  var st = { mode:'idle', expanded:false, count:8, elapsed:0, steps:0, thought:'', answer:'' };
+
+  function clearAll(){ timers.forEach(clearTimeout); timers = []; if(tick){clearInterval(tick);tick=null;} }
+  function later(fn,ms){ var t=setTimeout(fn,ms); timers.push(t); return t; }
+  function legacy(){ return el.legacy.checked; }
+  function stepCount(){ return parseInt(el.count.value,10) || 8; }
+
+  function fmt(s){ return s.toFixed(1) + 's'; }
+
+  function labelText(){
+    if(st.mode==='thinking') return '思考中 ' + fmt(st.elapsed) + ' · ' + st.steps + ' 个步骤';
+    return '已思考 ' + fmt(st.elapsed) + ' · ' + st.steps + ' 个步骤';
+  }
+
+  function render(){
+    var leg = legacy();
+    el.fold.classList.toggle('legacy', leg);
+    el.answerBox.classList.toggle('legacy-answer', leg);
+    el.legacyWarn.style.display = leg ? 'block' : 'none';
+
+    el.preview.style.display = (leg && st.mode==='thinking') ? 'inline' : 'none';
+    if(leg && st.mode==='thinking') el.preview.textContent = '分析热点并生成脚本…（正文预览挤在这一行）';
+    el.liveDot.style.display = (!leg && st.mode==='thinking') ? 'inline-block' : 'none';
+
+    el.label.textContent = labelText();
+    el.brandTime.textContent = st.mode==='thinking' ? fmt(st.elapsed) : '';
+
+    el.chev.classList.toggle('open', st.expanded);
+    el.fold.style.display = st.expanded ? 'block' : 'none';
+
+    // 展开区内容
+    el.thought.textContent = st.thought;
+    el.steps.innerHTML = '';
+    for(var i=0;i<st.steps;i++){
+      var s = STEP_LIB[i % STEP_LIB.length];
+      var row = document.createElement('div');
+      row.className = 'step' + (st.mode==='thinking' && i===st.steps-1 ? ' active' : '');
+      row.innerHTML =
+        '<div class="step-ic' + (st.mode==='done'?' done':'') + '"><i></i></div>' +
+        '<div class="step-body"><div class="step-label">' + s[0] + '</div>' +
+        '<div class="step-note">' + s[1] + '</div></div>' +
+        '<div class="step-meta">' + (0.4 + (i*0.7)%2.3).toFixed(1) + 's</div>';
+      el.steps.appendChild(row);
+      if(i < st.steps-1){
+        var rail = document.createElement('div'); rail.className='rail'; el.steps.appendChild(rail);
+      }
+    }
+    el.foldFoot.style.display = (!leg && st.expanded && st.steps>4) ? 'block' : 'none';
+
+    el.answerText.innerHTML = '';
+    el.answerText.appendChild(document.createTextNode(st.answer));
+    if(st.mode==='thinking' && st.answer.length>0){
+      var c=document.createElement('span'); c.className='caret'; el.answerText.appendChild(c);
+    }
+
+    el.status.textContent = (st.mode==='thinking'?'流式进行中':st.mode==='done'?'已完成':'待机')
+      + ' · ' + st.steps + ' 步' + (leg?' · 旧版对照':' · 真身');
+
+    if(!leg && st.expanded && st.mode==='thinking') el.fold.scrollTop = el.fold.scrollHeight;
+  }
+
+  function startTick(){
+    if(tick) clearInterval(tick);
+    tick = setInterval(function(){
+      st.elapsed += 0.1;
+      el.label.textContent = labelText();
+      el.brandTime.textContent = fmt(st.elapsed);
+    },100);
+  }
+  function stopTick(){ if(tick){clearInterval(tick);tick=null;} }
+
+  function reset(){
+    clearAll();
+    st = { mode:'thinking', expanded:true, count:stepCount(), elapsed:0, steps:0, thought:'', answer:'' };
+    render();
+    startTick();
+  }
+
+  function runFull(){
+    reset();
+    var n = st.count;
+    var gap = legacy() ? 260 : 380;
+
+    function addStep(i){
+      if(st.mode!=='thinking') return;
+      st.steps = i+1;
+      if(i < THOUGHT_LIB.length) st.thought += (st.thought?'\n':'') + THOUGHT_LIB[i];
+      render();
+      if(i+1 < n) later(function(){ addStep(i+1); }, gap);
+    }
+    later(function(){ addStep(0); }, 200);
+
+    // 正文与思考并行流式：两条独立容器，互不影响
+    var totalMs = 200 + n*gap;
+    var startAnswerAt = Math.round(totalMs*0.42);
+    later(function(){
+      var j=0;
+      var perChar = Math.max(12, Math.round((totalMs-startAnswerAt-500)/ANSWER.length));
+      function type(){
+        if(st.mode!=='thinking') return;
+        st.answer += ANSWER[j] || '';
+        j++;
+        render();
+        if(j<ANSWER.length) later(type, perChar);
+      }
+      type();
+    }, startAnswerAt);
+
+    later(function(){
+      st.answer = ANSWER;
+      st.steps = n;
+      finish();
+    }, Math.max(totalMs+300, startAnswerAt + ANSWER.length*Math.max(12,Math.round((totalMs-startAnswerAt-500)/ANSWER.length)) + 400));
+  }
+
+  function finish(){
+    stopTick();
+    st.mode='done';
+    // 真身：完成自动折叠，把舞台让给正文
+    if(!legacy()) st.expanded=false;
+    else st.expanded=true;
+    render();
+    // 真身：正文始终在视口内，无需滚动即可阅读
+    if(!legacy()) el.chat.scrollTop = Math.max(0, el.answerBox.offsetTop - 300);
+  }
+
+  function setDone(){
+    clearAll(); stopTick();
+    st.mode='done'; st.steps=stepCount(); st.elapsed=12.4;
+    st.thought = THOUGHT_LIB.slice(0,Math.min(8,THOUGHT_LIB.length)).join('\n');
+    st.answer = ANSWER;
+    if(!legacy()) st.expanded=false; else st.expanded=true;
+    render();
+  }
+
+  el.disc.onclick = function(){ st.expanded = !st.expanded; render(); };
+  $('btnReplay').onclick = runFull;
+  $('btnToggle').onclick = function(){ st.expanded=!st.expanded; render(); };
+  $('btnDone').onclick = setDone;
+  $('btnLong').onclick = function(){ el.count.value='20'; runFull(); };
+  el.count.onchange = function(){ st.count = stepCount(); };
+  el.legacy.onchange = function(){
+    if(legacy()){ el.count.value='20'; st.count=20; }
+    setDone();
+  };
+  $('foldFoot').querySelector('button').onclick = function(e){ e.stopPropagation(); };
+
+  // 初始：完成态（默认折叠），一眼看到真身的安静形态
+  setDone();
+  // 自动播一遍完整流程，便于直接观察
+  later(runFull, 600);
+})();
+</script>
+</body>
+</html>

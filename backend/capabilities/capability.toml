@@ -1,0 +1,127 @@
+# ============================================================
+# capability.toml — 能力包声明式配置
+# ============================================================
+# 改 enabled = false 即可关闭对应能力，无需改代码
+# 改 runtime = "service" 即可外置到独立服务进程，无需改代码
+# 内核 Skill（file_ops / evolve / analyze / prompt_skills）不在此声明，
+# 它们永远启用，硬编码在 skill_registry.py 的 KERNEL_SKILL_MODULES 中
+#
+# runtime 字段（五期-B 声明即拓扑）：
+#   "inprocess" = 进程内直调（默认，零配置，永久保留一键回退）
+#   "service"   = 走外部 HTTP 服务（需配对应 *_service_url 环境变量）
+# ============================================================
+
+# ─── 爬虫能力包 ────────────────────────────────────
+[scrapling]
+enabled = true
+description = "Scrapling 爬虫：小红书/抖音/B站账号数据同步"
+skills = [
+    "capabilities.content_search.skills.xhs_search",
+    "capabilities.content_search.skills.spider_sync",
+]
+sources = [
+    "capabilities.content_search.sources.xhs_spider_source:XhsSpiderSource",
+]
+
+# ─── 内容搜索能力包 ────────────────────────────────
+[content_search]
+enabled = true
+description = "多平台内容源：Tavily/Serper/Reddit/HN/GitHub/YouTube/DevTo/热榜/内置话题"
+skills = [
+    "capabilities.content_search.skills.trending_search",
+    "capabilities.content_search.skills.trending_topics",
+    "capabilities.content_search.skills.url_collect",
+]
+sources = [
+    "capabilities.content_search.sources.tavily_source:TavilySource",
+    "capabilities.content_search.sources.tavily_site_source:TavilySiteSource",
+    "capabilities.content_search.sources.serper_source:SerperSource",
+    "capabilities.content_search.sources.sogou_source:SogouSource",
+    "capabilities.content_search.sources.reddit_source:RedditSource",
+    "capabilities.content_search.sources.hackernews_source:HackerNewsSource",
+    "capabilities.content_search.sources.github_source:GitHubSource",
+    "capabilities.content_search.sources.youtube_source:YouTubeSource",
+    "capabilities.content_search.sources.devto_source:DevToSource",
+    "capabilities.content_search.sources.builtin_source:BuiltinSource",
+    "capabilities.content_search.sources.hotboard_source:HotboardSource",
+]
+
+# ─── 图片生成能力包 ────────────────────────────────
+[image_gen]
+enabled = true
+description = "AI 图片生成：通义万相 / Qwen-VL 视觉理解"
+skills = [
+    "capabilities.image_gen.skills.card_image_gen",
+]
+
+# ─── 视频能力包 ────────────────────────────────────
+[video]
+enabled = true
+description = "AI 视频工坊：分镜生成 / 合成 / 字幕 / 短视频 / TTS / Meme / 智能剪辑 / 口播叠加"
+skills = [
+    "capabilities.video.skills.video_gen",
+    "capabilities.video.skills.video_compose",
+    "capabilities.video.skills.auto_short_video",
+    "capabilities.video.skills.multi_image_video",
+    "capabilities.video.skills.smart_cut",
+    "capabilities.video.skills.talking_head_overlay",
+    "capabilities.video.skills.video_studio",
+    "capabilities.video.skills.meme_render",
+    "capabilities.video.skills.tts2",
+    "capabilities.video.skills.video_transcribe",
+]
+
+# ─── 消息平台能力包 ────────────────────────────────
+[messaging]
+enabled = true
+description = "飞书 / 微信 / 邮件消息发送与文件操作"
+skills = [
+    "capabilities.messaging.skills.wechat_send_text",
+    "capabilities.messaging.skills.wechat_send_file",
+    "capabilities.messaging.skills.feishu_file_ops",
+    "capabilities.messaging.skills.feishu_wiki_doc",
+    "capabilities.messaging.skills.feishu_bitable",
+    "capabilities.messaging.skills.email_send",
+]
+
+# ─── 文案能力包 ────────────────────────────────────
+[copywrite]
+enabled = true
+description = "文案构建器"
+skills = [
+    "app.skills.copywrite.builder",
+]
+
+# ─── 选题池能力包 ──────────────────────────────────
+[pool_monitor]
+enabled = true
+description = "选题池智能监控：自动抓取 + 评分 + 水位检查"
+
+# ─── RPA 能力包 ────────────────────────────────────
+[rpa]
+enabled = true
+description = "RPA：飞书 Bot / 微信 Bot 自动化"
+
+# ─── 九宫格能力包（三期外置，五期-B 收编声明）──────
+[grid]
+enabled = true
+description = "九宫格检测/拆分：numpy/Pillow 重计算"
+runtime = "inprocess"
+
+# ─── 浏览器能力包（五期-A 外置，五期-B 收编声明）────
+[browser]
+enabled = true
+description = "Playwright/Chromium 渲染：卡片导图 / 扫码登录 / 浏览器自动化"
+runtime = "inprocess"
+
+# ─── 媒体能力包（五期-D 预留）──────────────────────
+[media]
+enabled = true
+description = "onnx/ffmpeg 计算：TTS 推理 / 视频合成转码字幕"
+runtime = "inprocess"
+
+# ─── 爬虫能力包（五期-E 预留）──────────────────────
+[spider]
+enabled = true
+description = "Scrapling 爬虫引擎：反爬对抗 / Session 管理"
+runtime = "inprocess"

@@ -1,0 +1,3051 @@
+@font-face {
+  font-family: 'AlimamaDaoLiTi';
+  src: url('/fonts/AlimamaDaoLiTi.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.rl-chat-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+  align-items: stretch;
+}
+.rl-chat-layout > .rl-chat {
+  flex: 1;
+  min-width: 0;
+}
+body.is-detail-resizing .rl-chat-layout {
+  pointer-events: none;
+}
+.rl-chat-layout > .wdp {
+  flex-shrink: 0;
+  border-radius: 0;
+  border: none;
+  overflow: hidden;
+}
+
+.rl-chat-layout > .ctx-sidebar {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.rl-ctx-slide {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 100%;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  border-radius: 0 12px 12px 0;
+  border: none;
+  background: #fff;
+  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              border-radius 0.35s ease;
+}
+.rl-ctx-slide-open {
+  max-width: 640px;
+  opacity: 1;
+}
+.rl-ctx-slide > .rl-ctx-resize-bar {
+  opacity: 0;
+  transition: opacity 0.2s ease 0.15s, background-color 0.15s ease;
+}
+.rl-ctx-slide-open > .rl-ctx-resize-bar {
+  opacity: 1;
+}
+
+.rl-ctx-resize-bar {
+  width: 1px;
+  margin-left: 0;
+  margin-right: 0;
+  cursor: col-resize;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.10);
+  align-self: stretch;
+  position: relative;
+  z-index: 5;
+  transition: background-color 0.15s ease;
+}
+.rl-ctx-resize-bar::after {
+  content: '';
+  display: none;
+}
+.rl-ctx-resize-bar:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.18);
+}
+.rl-ctx-resize-bar:hover::after {
+  display: none;
+}
+.rl-ctx-resize-bar:active::after {
+  display: none;
+}
+body.is-ctx-resizing .rl-ctx-resize-bar::after {
+  display: none;
+}
+body.is-ctx-resizing .rl-ctx-resize-bar {
+  opacity: 1;
+  pointer-events: auto;
+}
+body.is-ctx-resizing .rl-chat-layout {
+  pointer-events: none;
+}
+body.is-ctx-resizing .rl-ctx-slide {
+  transition: none;
+}
+.rl-chat.is-dark ~ .rl-ctx-resize-bar::after,
+.rl-chat-layout:has(.rl-chat.is-dark) .rl-ctx-resize-bar::after {
+  display: none;
+}
+.rl-chat-layout:has(.rl-chat.is-dark) .rl-ctx-resize-bar {
+  background: rgba(255, 255, 255, 0.10);
+}
+.rl-chat-layout:has(.rl-chat.is-dark) .rl-ctx-resize-bar:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+.rl-chat-layout:has(.rl-chat.is-dark) .rl-ctx-resize-bar:hover::after {
+  display: none;
+}
+
+.rl-chat {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-x: hidden;
+  overflow-y: visible;
+  /* ⚠️ 令牌已整体重映射到 rl 渲染层语言。
+     画布（--rl-bg）与全站基底灰同源（--ma-bg-base = body 的 #F5F5F7）：
+     页面外框灰（--ma-bg-base = #F5F5F7），chat 画布白（#FFFFFF），
+     形成「灰桌面 + 白纸」的视觉层次，chat 区域不再融入页面底色。
+     所有"功能面"——气泡、输入卡、下拉面板——在白底上用更浅灰区分。 */
+  --rl-bg: #FFFFFF;
+  /* 二级底面（思考盒、NotePreview 等卡片内的浅色块）。
+     ⚠️ 这个变量以前在全项目里只被使用、从未定义——消费方只能靠
+     render-layer.css 的 var(--rl-bg-2, <兜底>) 兜底（早期兜底是 #F5F5F5 暖米黄），
+     而 chat-view.css / NotePreview.vue 里的三处没有兜底值，直接退化成
+     transparent。这里补一个中性定义，两处都归位到同一层级。 */
+  --rl-bg-2: #FAFBFC;
+  --rl-surface: #FFFFFF;
+  --rl-card: #FFFFFF;
+  --rl-input-surface: #FFFFFF;
+  --rl-border: rgba(0, 0, 0, 0.10);
+  --rl-border-thin: rgba(0, 0, 0, 0.07);
+  --rl-border-strong: rgba(0, 0, 0, 0.18);
+  --rl-bubble: #F7F8FA;
+  --rl-text-1: #1A1A1A;
+  --rl-text-2: #4B4B4B;
+  --rl-text-3: #9A9A9A;
+  --rl-text-cap: #9A9A9A;
+  --rl-hover: rgba(0, 0, 0, 0.04);
+  --rl-hover-solid: #F5F5F5;
+  --rl-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --rl-scrollbar: rgba(0, 0, 0, 0.14);
+  --rl-scrollbar-hover: rgba(0, 0, 0, 0.24);
+  --rl-code-bg: #F7F8FA;
+  /* 代码块调色板（Oct-18：亮紫主题对齐。原硬编码 GitHub-Dark 与亮底界面割裂） */
+  --rl-code-header-bg: rgba(83, 74, 183, 0.05);
+  --rl-code-text: #1A1A1A;
+  --rl-code-muted: #9A9A9A;
+  --rl-code-line: rgba(0, 0, 0, 0.08);
+  --rl-code-keyword: #534AB7;
+  --rl-code-string: #0F6E56;
+  --rl-code-number: #854F0B;
+  --rl-code-builtin: #993556;
+  --rl-code-tag: #7F77DD;
+  --rl-code-alert: #A32D2D;
+  /* 思考盒紫底（Oct-13 settings 检查点终值：亮 #EEEDFE/#AFA9EC） */
+  --rl-think-bg: #EEEDFE;
+  --rl-think-border: #AFA9EC;
+  --rl-accent: #534AB7;
+  --rl-green: #3B6D11;
+  --rl-red: #B42318;
+  --rl-amber: #4B4B4B;
+  /* ── 原型令牌（render-layer-prototype.html :root 对齐）─────────────────
+     只服务于「单回合输出表面」：品牌头 / 思考盒 / 执行轨迹 / 进度行 / 正文。
+     注意：--rl-amber 是全局旧令牌（值 #4B4B4B，登录页当主色消费），
+     不能改；原型琥珀色另开 --rl-amber-ink / --rl-amber-bg 专用通道。 */
+  --rl-ink-2: #5F5E5A;             /* 原型 --text-secondary */
+  --rl-ink-3: #888780;             /* 原型 --text-tertiary */
+  --rl-line: rgba(0, 0, 0, 0.12);  /* 原型 --border-tertiary */
+  --rl-chip: #F1EFE8;              /* 原型 --bg-secondary */
+  --rl-amber-ink: #854F0B;         /* 原型 --amber-600 */
+  --rl-amber-bg: #FAEEDA;          /* 原型 --amber-50 */
+  --rl-dot-wait: #D3D1C7;          /* 原型 --gray-200（待执行）*/
+  --rl-dot-skip: #B4B2A9;          /* 原型 --gray-400（已跳过）*/
+  --rl-think-ink: #3C3489;         /* 原型 --purple-800（思考正文）*/
+  --rl-think-accent: #534AB7;      /* 原型 --purple-600（思考强调/光标）*/
+  /* Aura：流式氛围，改用 rl 思考紫（#534AB7/#AFA9EC） */
+  /* Markdown 静态描边：暖纸淡灰 */
+  --rl-md-rule: #D4D4D8;
+  --rl-md-quote-bg: rgba(0, 0, 0, 0.03);
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--rl-bg);
+  color: var(--rl-text-1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+  position: relative;
+}
+
+.rl-chat-layout:has(.rl-ctx-slide-open) > .rl-chat {
+  border-radius: 16px 0 0 12px;
+  border-right: none;
+}
+
+.rl-chat.is-dark {
+  /* 暗色按 rl 暖纸语言推导：暖黑底 + 亮一档的暖灰文字 + 浅紫强调 */
+  --rl-bg: #1A1A1A;
+  --rl-bg-2: #1E1E1E;
+  --rl-surface: #141414;
+  --rl-card: #222222;
+  --rl-input-surface: #222222;
+  --rl-border: rgba(255, 255, 255, 0.09);
+  --rl-border-thin: rgba(255, 255, 255, 0.06);
+  --rl-border-strong: rgba(255, 255, 255, 0.14);
+  --rl-bubble: #2A2A2A;
+  --rl-text-1: #F1F5F9;
+  --rl-text-2: #CBD5E1;
+  --rl-text-3: #64748B;
+  --rl-text-cap: #64748B;
+  --rl-hover: rgba(255, 255, 255, 0.05);
+  --rl-hover-solid: #2A2A2A;
+  --rl-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --rl-scrollbar: rgba(255, 255, 255, 0.1);
+  --rl-scrollbar-hover: rgba(255, 255, 255, 0.18);
+  --rl-code-bg: #2A2A2A;
+  /* 暗色保留原 One-Dark 配色 */
+  --rl-code-header-bg: #1f2937;
+  --rl-code-text: #f3f4f6;
+  --rl-code-muted: #6b7280;
+  --rl-code-line: rgba(148, 163, 184, 0.12);
+  --rl-code-keyword: #c678dd;
+  --rl-code-string: #98c379;
+  --rl-code-number: #d19a66;
+  --rl-code-builtin: #e5c07b;
+  --rl-code-tag: #61afef;
+  --rl-code-alert: #e06c75;
+  /* 思考盒紫底（暗色：rgba(83,74,183,.14) / rgba(175,169,236,.22)） */
+  --rl-think-bg: rgba(83, 74, 183, 0.14);
+  --rl-think-border: rgba(175, 169, 236, 0.22);
+  --rl-accent: #AFA9EC;
+  --rl-green: #97C459;
+  --rl-red: #E5484D;
+  --rl-amber: #CBD5E1;
+  /* 原型令牌 · 暗色推导：暖灰文字提亮一档，线/片反相，琥珀用亮一档的 400 */
+  --rl-ink-2: #B8B4AA;
+  --rl-ink-3: #8A867E;
+  --rl-line: rgba(255, 255, 255, 0.14);
+  --rl-chip: #2A2926;
+  --rl-amber-ink: #EF9F27;
+  --rl-amber-bg: rgba(239, 159, 39, 0.14);
+  --rl-dot-wait: #4A4741;
+  --rl-dot-skip: #6B6862;
+  --rl-think-ink: #C9C3F5;
+  --rl-think-accent: #AFA9EC;
+  /* 深底上紫色偏亮，改用亮一档的分支持 */
+  /* 深色下淡灰要反过来提亮，否则深底上完全看不见 */
+  --rl-md-rule: #3A3A3A;
+  --rl-md-quote-bg: rgba(255, 255, 255, .04);
+}
+
+
+.rl-pill-active {
+  background: var(--rl-hover-solid);
+  border-color: var(--rl-border-strong);
+  color: var(--rl-text-1);
+}
+
+/* ============ 滚动主体 ============ */
+.rl-scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 1;
+}
+
+.rl-scroll-body::-webkit-scrollbar {
+  width: 0;
+  display: none;
+}
+
+.rl-scroll-hidden {
+  display: none;
+}
+
+/* ============ Hero 阶段 ============ */
+/* 整组垂直居中并略微上提（padding-bottom 把视觉重心抬高一点）。
+   参考 Claude / ChatGPT 新会话首页：问候 + 输入框 + 下方一排推荐，作为一个整体居中，
+   空白均分在上下，而不是像 flex-start 那样把内容顶在上边、底部留一大块死白。 */
+.rl-chat.is-hero {
+  justify-content: center;
+  padding-top: 0;
+  padding-bottom: clamp(0px, 6vh, 64px);
+  overflow: hidden;
+  /* 2026-11-04：主光晕（.rl-hero-glow）搬到了 .rl-chat 根层且 z-index:0。
+     必须把 .rl-chat 变成层叠上下文，否则这个 z-index:0 的绝对定位子元素
+     会「穿透」到上层的层叠上下文里，可能盖到右侧 ctx-sidebar 之上。
+     isolation 只影响层叠，不改布局、不改裁剪，且只在 hero 模式生效。 */
+  isolation: isolate;
+}
+
+/* 标题区只占自身内容高度，剩余空间留给模板区，标题与输入卡随之上移 */
+.rl-chat.is-hero .rl-hero-zone {
+  flex: 0 0 auto;
+  padding-bottom: 12px;
+  overflow: visible;
+  z-index: 10;
+}
+.rl-hero-zone {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* 作为容器，供下方 @container 按实际宽度（右侧面板开合会改变它）降级排版 */
+  container-type: inline-size;
+  /* Hero 区统一用中性墨色，不再让主色紫出现在 logo 旁、问候语强调词和标签图标上；
+     变量在这里定义，暗色主题只需在下方覆盖一处。 */
+  --hero-accent-ink: #33322E;
+  --hero-accent-mark: rgba(51, 50, 46, 0.09);
+}
+
+.rl-hero-stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  width: 100%;
+  max-width: 780px;
+  padding: 0 16px;
+}
+
+.rl-hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rl-hero-title {
+  font-family: 'AlimamaDaoLiTi', 'LXGW WenKai', sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  /* 窄宽度（右侧预览面板打开）时保持单行，超出省略，不许折成两排 */
+  min-width: 0;
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 问候语里的关键词：手写体上压一笔半透明强调色，
+   像用马克笔划过一道，比整句一个颜色更有记忆点。
+   强调色取中性墨色（不用主色紫），与 logo / 标签图标的灰度保持一致。 */
+.rl-hero-title-accent {
+  color: var(--hero-accent-ink);
+  background: linear-gradient(
+    to top,
+    var(--hero-accent-mark) 0,
+    var(--hero-accent-mark) 42%,
+    transparent 42%
+  );
+  border-radius: 3px;
+}
+
+.rl-hero-logo-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  flex: none;
+  /* 固定坑位：切换 logo 时旧图先退场（out-in 有一段空档），
+     尺寸不能由图片撑开，否则品牌行会跟着抖一下 */
+  width: 80px;
+  height: 80px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 点击 logo 彩蛋：悬停给一点「可点」的反馈，按下回缩，点击瞬间再补一记弹跳 */
+.rl-hero-logo-wrap:hover {
+  transform: scale(1.04);
+}
+
+.rl-hero-logo-wrap:active {
+  transform: scale(0.96);
+}
+
+.rl-hero-logo-wrap:focus-visible {
+  outline: 2px solid var(--rl-accent);
+  outline-offset: 4px;
+}
+
+.rl-hero-logo-wrap.is-pop {
+  animation: rl-hero-logo-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rl-hero-logo-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.88) rotate(-4deg); }
+  70% { transform: scale(1.08) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* 文字 logo ⇄ 螃蟹：旧图缩着转出去、新图从虚焦里弹进来，制造「变身」感 */
+.rl-hero-logo-swap-enter-active,
+.rl-hero-logo-swap-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.22s ease;
+}
+
+.rl-hero-logo-swap-enter-from {
+  opacity: 0;
+  transform: scale(0.55) rotate(-20deg);
+  filter: blur(8px);
+}
+
+.rl-hero-logo-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.7) rotate(14deg);
+  filter: blur(6px);
+}
+
+.rl-hero-logo-crab {
+  height: 80px;
+  width: 80px;
+  opacity: 0.92;
+  display: block;
+  flex: none;
+}
+
+/* 螃蟹原图是横版构图（约 1.9:1），用 contain 装进 80×80 的坑位，
+   不拉伸变形，也不改变 hero 品牌行的占位尺寸 */
+.rl-hero-logo-crab-art {
+  object-fit: contain;
+}
+
+/* 尊重系统「减少动态效果」：只保留淡入淡出，不做缩放/旋转弹跳 */
+@media (prefers-reduced-motion: reduce) {
+  .rl-hero-logo-wrap.is-pop {
+    animation: none;
+  }
+  .rl-hero-logo-swap-enter-active,
+  .rl-hero-logo-swap-leave-active {
+    transition: opacity 0.12s ease;
+  }
+  .rl-hero-logo-swap-enter-from,
+  .rl-hero-logo-swap-leave-to {
+    transform: none;
+    filter: none;
+  }
+}
+
+/* 中间 logo 光晕（重建时随旧 dsh 前缀重命名丢失，此处还原）：底部紫色柔光 + logo 扫光 */
+/* 2026-11-04 重构（A 方案）：
+   ① 从「输入卡座位」搬到 .rl-chat 根层，z-index:0，永远在内容之下（不再给文字蒙紫）。
+   ② 居中基准从单张输入卡改为「logo+标题+输入卡」整组：
+      .rl-chat.is-hero 用 justify-content:center 居中整组，再用 padding-bottom
+      clamp(0, 6vh, 64px) 把整组上提，所以内容区中心 = 画布中心 - padding-bottom/2。
+      这里用 translate 的第二个分量抵消它（clamp(0, 3vh, 32px) 正好是 6vh/64px 的一半）。
+   ③ 椭圆 cy=200 就是 viewBox 垂直中点，所以画布居中即等于光晕居中，无需改椭圆坐标。
+   颜色与模糊全部保持不变：fill-opacity 走 CSS（见 .rl-hero-glow ellipse），
+   暗色主题单独提亮一档，否则 8% 的淡紫在 #1A1A1A 上几乎看不见。 */
+.rl-hero-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  width: 120%;
+  max-width: 820px;
+  aspect-ratio: 2.25;
+  transform: translate(-50%, calc(-50% - clamp(0px, 3vh, 32px)));
+  pointer-events: none;
+}
+
+/* 主光的颜色浓度单独抽到 CSS：亮色 0.10（比原来的 0.08 略提一档 —— 挪到内容之下后
+   不再和文字抢对比度，可以稍浓一点才看得出范围），暗色 0.14。 */
+.rl-hero-glow ellipse {
+  fill: #C4B5FD;
+  fill-opacity: 0.10;
+}
+
+.rl-chat.is-dark .rl-hero-glow ellipse {
+  fill-opacity: 0.14;
+}
+
+/* Hero 背光（D 方案，2026-11-04）：让「底部那团光」去描输入卡的轮廓，而不是另打一圈描边。
+   做法 = 一块和卡片同宽同高的圆角矩形光源，垫在卡片正下方，再用高斯模糊把边界化开。
+   卡片是不透明白底，会把光源的中心整个吃掉，留在外面的只有溢出轮廓的那半圈高斯尾巴。
+
+   ── 几何推导（所有数字都可复算）────────────────────────────────────
+   座位 .rl-composer-hero 的 padding 是 `0 16px 8px`，卡片 margin:0 auto、max-width:680。
+   绝对定位的包含块是座位的 padding box，于是：
+     卡片左边   = 16px            → 光源 left:0 / right:0 + width:calc(100% - 32px) + margin:auto
+     卡片右边界 = 座位宽 - 16px    → 与上式同宽，且 max-width 同步 680
+     卡片上边   = 0               → 光源 top:6px（故意下移 6px，让顶边吃不到光）
+     卡片下边   = 座位高 - 8px     → 光源 bottom:-6px，即光源底边比卡片底边再低 14px
+   所以光源高度 = 座位高 + 8 = 卡片高 + 8，卡片下沿恒落在「光源底部往上 14px」处。
+   卡片高度是变的（textarea 最高 336px），因此纵向浓度用 px 锚底部 + % 锚顶部：
+   底部两档用 px（不随卡片长高而变薄，那圈「余晖」厚度恒定），往上交给百分比按比例衰减。
+
+   ── 模糊半径 ────────────────────────────────────────────────────
+   CSS filter: blur(Npx) 的 N 就是高斯 σ。阶跃边被 σ 模糊后，边缘处浓度正好是 0.5，
+   向外按 erfc(d/σ√2) 衰减：1σ 剩 16%、2σ 剩 2.3%、3σ 剩 0.13%。
+   取 σ = 14px → 光带可见宽度约 2σ = 28px，卡片圆角 24px 相对 σ 够大，
+   拐角外侧立体角更小，自然比直边暗一档 —— 不会冒出「四个角光斑」。
+
+   ── 浓度（Chromium 单倍图实测反解校准）──────────────────────────
+   紫 #C4B5FD 压在 #FFFFFF 上，alpha 每 0.01 只动 R 0.59 / G 0.74 / B 0.02 个单位，
+   所以「看得见」的门槛是边缘可见 alpha ≈ 0.10，低于 0.05 就只剩一点灰紫。
+   卡片边缘处的可见浓度 ≈ 光源浓度的一半（另一半被卡片吃掉），按此反推光源梯度：
+     光源  0.26 → 0.25 → 0.26 → 0.13 → 0.05（底 → 顶）
+     实测  底部池 0.190（在卡片下沿外，不被遮挡，接近满值）
+           侧边近底 0.087 → 侧边中段 0.082 → 顶边 0.019
+   底/侧 = 2.3 : 1，侧/顶 = 4.3 : 1。这个比例就是「底最亮、两侧向上衰减、顶边只剩一丝」
+   的量化表达 —— 轮廓亮度本身在变，才不像「描了一圈边」。
+   2026-11-06 两次收敛：底部池 0.305 → 0.267 → 0.190（累计 −38%），
+   底部那团「积」退干净了，现在只剩一层漫上来的雾。下限在 0.23 档（底部池 0.133）：
+   实测底/侧比会掉到 1.88，底部不再是视觉重心，「光从下往上」的方向感随之消失，
+   所以 0.26 这一档就是「淡」与「还有方向」的平衡点。
+   两档 px 锚点的含义：0px 在卡片下沿外 14px、16px 在卡片下沿外 2px，
+   即整条最亮的斜坡都落在卡片下沿之下，卡片本身只吃到 0.25 及以下。 */
+.rl-hero-glow-rim {
+  position: absolute;
+  top: 6px;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  width: calc(100% - 32px);
+  max-width: 680px;
+  margin: 0 auto;
+  border-radius: 24px;
+  background: linear-gradient(
+    to top,
+    rgba(196, 181, 253, 0.26) 0px,
+    rgba(196, 181, 253, 0.25) 16px,
+    rgba(196, 181, 253, 0.26) 46%,
+    rgba(196, 181, 253, 0.13) 78%,
+    rgba(196, 181, 253, 0.05) 100%
+  );
+  filter: blur(14px);
+  pointer-events: none;
+}
+
+/* 暗色：同样的紫压在 #1A1A1A 上对比度天然更高，按亮色的 0.75 档配平，
+   实测底部可见 0.143（#1A1A1A → #2E2C37）、侧边中段 0.064，底/侧 2.2 : 1，
+   与亮色的 2.3 : 1 基本对齐。暗色这里比亮色少降一档：
+   深底上同样的 alpha 看起来更浓，降太狠侧边会直接消失。 */
+.rl-chat.is-dark .rl-hero-glow-rim {
+  background: linear-gradient(
+    to top,
+    rgba(196, 181, 253, 0.26) 0px,
+    rgba(196, 181, 253, 0.23) 16px,
+    rgba(196, 181, 253, 0.21) 46%,
+    rgba(196, 181, 253, 0.10) 78%,
+    rgba(196, 181, 253, 0.04) 100%
+  );
+}
+
+/* 品牌字标（2026-11-06）：垫在输入卡**正后方**的一行 PULSE STUDIO，
+   作用是让新对话时那团光晕不是一块空色块。
+
+   ── 2026-11-06 第二次修正：不许漏出输入卡 ──────────────────────
+   ① 之前挂在根层 .rl-hero-glow 里，位置按整页画布算，
+      结果字落在卡片上方的标题/起手式一带 —— 从卡片外面露出来了。
+      现在挪进「输入卡座位」，用与卡片完全相同的几何框住（见下方
+      .rl-hero-brand-backdrop 的注释），矩形恒等于卡片矩形。
+   ② z-index:0 < 卡片 z-index:10，卡片 #ffffff 不透明白底 → 字被整块吃掉。
+      它仍在光晕图层（与 .rl-hero-glow 同层），只是不再溢出卡片范围。
+
+   ── 字号换算（上一轮"太小"的真正原因）────────────────────────
+   这个 SVG 的 viewBox 宽 900，实际渲染宽度上限是卡片的 680px，
+   缩放比 680/900 = 0.756。所以 font-size 写的是「用户单位」，不是像素：
+     写 56 → 实际 56 × 0.756 ≈ 42px
+   字距 0.16em：0.34em 会把 12 个字符拉成一条 200px 的长条，
+   笔画间距远大于笔画宽度，视觉上就"虚"。
+
+   ── 颜色 ────────────────────────────────────────────────────
+   #D8D0BE 对白底差 R33 / G40 / B65，过「看得清」的门槛；
+   仍是暖灰白家族，不抢标题。字体 Fraunces（非系统字体），weight 600 补笔画密度。 */
+.rl-hero-glow-brand {
+  font-family: 'Fraunces', 'Iowan Old Style', 'Georgia', serif;
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  fill: #d8d0be;
+  fill-opacity: 1;
+  /* SVG 平移落在小数像素时，默认渲染会亚像素重采样让字形发糊；
+     geometricPrecision 强制按几何精度描字形，缩放后边缘仍是实的。 */
+  text-rendering: geometricPrecision;
+  user-select: none;
+}
+
+/* 字标的几何框：与输入卡严格重合。
+   座位 .rl-composer-hero 的 padding 是 `0 16px 8px`，绝对定位包含块是 padding box，于是：
+     卡片顶 = padding box 顶   → top:0
+     卡片底 = padding box 底 − 8px → bottom:8px
+     卡片宽 = 座位宽 − 32px     → width:calc(100% - 32px) + max-width:680 + margin:auto
+   框住之后无论卡片被 textarea 撑多高、窗口怎么变，字标永远在卡片背后。
+   preserveAspectRatio 用 slice：viewBox 900×200 铺满整个卡片矩形，
+   按较大的缩放比撑开、居中裁剪 —— 字始终居中且不变形，也不会露到框外。 */
+.rl-hero-brand-backdrop {
+  position: absolute;
+  top: 0;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  width: calc(100% - 32px);
+  max-width: 680px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+/* 暗色底：暖灰白在 #1A1A1A 上本来就更跳，色相往亮提一档、透明度收到 0.45，
+   既看得清又不会变成一块刺眼的亮斑。 */
+.rl-chat.is-dark .rl-hero-glow-brand {
+  fill: #e6dfd2;
+  fill-opacity: 0.45;
+}
+
+/* logo 扫光。
+   2026-11-04：纯白扫光改成暖色高光。
+   原因：logo 的两张插画都是暖色（logo2.svg 黄蟹 #FAE23A、crab.svg 红蟹 #E8655A/#D94F44），
+   白光 0.3→0.5 属于「覆盖色」，划过时把黄/红直接洗成一块白斑，
+   看起来像贴了张半透明白纸，而不是光在金属/釉面上滑过。
+   改法：色相拉到奶油金（#FFFAE8 系），峰值 0.50 → 0.30，
+   两侧多插一档 0.10 的过渡，让光带在插画上散开成渐变而不是一条能看出边界的白条。
+   扫光只做「提亮」，不做「染色」，所以暖色比纯白更贴光的行为。 */
+.rl-hero-logo-shimmer {
+  position: absolute;
+  top: -10%;
+  left: -120%;
+  width: 80%;
+  height: 120%;
+  background: linear-gradient(
+    105deg,
+    rgba(255, 250, 232, 0) 14%,
+    rgba(255, 250, 232, 0.10) 32%,
+    rgba(255, 252, 240, 0.26) 46%,
+    rgba(255, 252, 240, 0.30) 50%,
+    rgba(255, 252, 240, 0.26) 54%,
+    rgba(255, 250, 232, 0.10) 68%,
+    rgba(255, 250, 232, 0) 86%
+  );
+  animation: rl-logo-shimmer 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* 暗色：暖光在深底上更「跳」，且深底会把光带之外的空区显出来（logo 坑位没有底色），
+   所以浓度压到 0.18，只留一道极淡的暖光。 */
+.rl-chat.is-dark .rl-hero-logo-shimmer {
+  background: linear-gradient(
+    105deg,
+    rgba(255, 250, 232, 0) 14%,
+    rgba(255, 250, 232, 0.06) 32%,
+    rgba(255, 252, 240, 0.15) 46%,
+    rgba(255, 252, 240, 0.18) 50%,
+    rgba(255, 252, 240, 0.15) 54%,
+    rgba(255, 250, 232, 0.06) 68%,
+    rgba(255, 250, 232, 0) 86%
+  );
+}
+
+@keyframes rl-logo-shimmer {
+  0% { left: -100%; }
+  60% { left: 150%; }
+  100% { left: 150%; }
+}
+
+.rl-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--rl-border);
+  background: transparent;
+  color: var(--rl-text-3);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 20px;
+  position: relative;
+  z-index: 2;
+  /* 徽标不允许被 flex 压缩成竖排 */
+  flex: none;
+  white-space: nowrap;
+}
+
+/* ── Hero 能力标签 / 起手式 ──
+   问候语只解决「打招呼」，平台实力靠这两层讲清楚：
+   六个核心能力标签 → 三条可点击的示例指令。 */
+.rl-hero-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 640px;
+}
+
+.rl-hero-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--rl-border-thin);
+  border-radius: 999px;
+  background: var(--rl-card);
+  color: var(--rl-text-2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.rl-hero-cap-icon {
+  flex: none;
+  color: var(--rl-text-2);
+}
+
+.rl-hero-starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.rl-hero-starter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--rl-border-thin);
+  border-radius: 12px;
+  background: var(--rl-card);
+  color: var(--rl-text-2);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 32px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: color 0.15s ease, background-color 0.15s ease,
+              border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rl-hero-starter:hover {
+  color: var(--rl-text-1);
+  background: var(--rl-hover-solid);
+  border-color: var(--rl-border-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.rl-hero-starter:active {
+  transform: translateY(0);
+}
+
+.rl-hero-starter-icon {
+  flex: none;
+  color: var(--rl-text-2);
+}
+
+/* 暗色主题：中性墨色翻转为暖白，保证在深底上仍有对比 */
+.rl-chat.is-dark .rl-hero-zone {
+  --hero-accent-ink: #E7E3DA;
+  --hero-accent-mark: rgba(231, 227, 218, 0.12);
+}
+
+/* 竖向空间不够时逐层收：先收起手式，再收能力标签，保证问候不被挤扁 */
+@media (max-height: 760px) {
+  .rl-hero-starters {
+    display: none;
+  }
+}
+@media (max-height: 640px) {
+  .rl-hero-capabilities {
+    display: none;
+  }
+}
+
+/* 小屏让空间：先收留白与 logo，再收文案层，
+   保证「标题 + 输入卡 + 模板橱窗」三段都在视口内（橱窗降为一排高，仍可见） */
+@media (max-height: 860px) {
+  .rl-chat.is-hero {
+    padding-bottom: 0;
+  }
+  .rl-chat.is-hero .rl-hero-zone {
+    padding-bottom: 10px;
+  }
+  .rl-hero-stack {
+    gap: 11px;
+  }
+}
+@media (max-height: 720px) {
+  .rl-hero-stack {
+    gap: 8px;
+  }
+  .rl-hero-logo-crab {
+    width: 52px;
+    height: 52px;
+  }
+  .rl-hero-logo-wrap {
+    width: 52px;
+    height: 52px;
+  }
+  .rl-hero-title {
+    font-size: 22px;
+  }
+}
+
+/* ===== Hero 区窄宽度降级（容器查询，基准为 .rl-hero-zone 实际宽度） ===== */
+@container (max-width: 640px) {
+  .rl-hero-title {
+    font-size: 22px;
+  }
+  .rl-hero-logo-crab {
+    width: 64px;
+    height: 64px;
+  }
+  .rl-hero-logo-wrap {
+    width: 64px;
+    height: 64px;
+  }
+}
+@container (max-width: 520px) {
+  .rl-hero-title {
+    font-size: 19px;
+  }
+  .rl-hero-logo-crab {
+    width: 52px;
+    height: 52px;
+  }
+  .rl-hero-logo-wrap {
+    width: 52px;
+    height: 52px;
+  }
+  .rl-hero-brand {
+    gap: 6px;
+  }
+  .rl-hero-starters {
+    gap: 8px;
+  }
+  .rl-hero-starter {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+    line-height: 30px;
+  }
+}
+
+@keyframes rl-crab-peek {
+  0%, 100% { transform: translateX(-4px) rotate(-2deg); }
+  50% { transform: translateX(2px) rotate(2deg); }
+}
+
+/* ============ 消息列 ============ */
+.rl-column {
+  max-width: 748px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 16px 16px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+.rl-flow-item {
+  min-width: 0;
+}
+
+/* 回合状态行（方案 A：极简一行，与消息头 pill 分工——行=本轮总状态+总时钟） */
+.rl-turn-status {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.rl-turn-status-shimmer-text {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--rl-text-3);
+}
+
+.rl-turn-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #BA7517;
+  flex: none;
+  animation: rl-turn-dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes rl-turn-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rl-turn-status-dot { animation: none; }
+}
+
+.rl-turn-status-icon {
+  width: 14px !important;
+  height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.rl-turn-status-clock {
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--rl-text-cap);
+}
+
+.rl-turn-status-hint {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+  opacity: 0.5;
+  margin-left: 4px;
+}
+
+/* ============ UserCell ══════════════════ */
+/* ============ AssistantCell ══════════════════ */
+
+
+/*
+ * 注意：本文件是 scoped（<style scoped src="./chat-view.css">），
+ * 而 .rl-assistant-content 是 AssistantMessageCell 的**内部节点**，
+ * 拿不到这里的 data-v 属性 → 这条规则实际不生效。
+ * 真正生效的是 ChatView.vue 全局 <style> 块里的 .rl-md blockquote。
+ * 这里保留副本仅为一致性，改色时两边要同步。
+ */
+
+
+/* ═══ Code Block: 语法高亮 + 行号 + 复制反馈（配色走 --rl-code-* 变量，亮/暗自动切换） ═══ */
+
+
+/* ═══ JSON 数据卡：可解析 JSON 的结构化树视图（Oct-18） ═══
+   替代「JSON 整段塞暗色代码块」：键值树 + 折叠 + 计数徽标 + 复制原文。
+   配色全部走 --rl-* 主题变量，亮/暗自动跟随。 */
+
+
+/* ═══ ThinkingCell: Codex 风格思考过程渲染 ═══
+   流式阶段：spinner + 最后3行预览（dim + italic）
+   完成后：折叠为一行 dim 指示器 `思考过程 (N行)`
+   展开内容：dim + italic，视觉上从属于正式回复 */
+.rl-thinking {
+  position: relative;
+  margin: 2px 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+@keyframes rl-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes rl-shimmer-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes rl-shimmer-text {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.rl-slide-enter-active,
+.rl-slide-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.rl-slide-enter-from,
+.rl-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.rl-slide-enter-to,
+.rl-slide-leave-from {
+  opacity: 1;
+  max-height: 2000px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ToolCallCell — 通用工具调用渲染设计系统
+   ═══════════════════════════════════════════════════════════════
+   设计原则：
+   - 左侧状态轨道（rail）提供时间线感和状态色标
+   - 状态图标用 Lucide SVG（Loader2/CheckCircle2/XCircle/CircleDot）
+   - 工具专属图标从 icon-map 取，放在名称前
+   - 结果区支持结构化渲染（key-value/metric/list/table）
+   - 与 assistant markdown 内容形成清晰的视觉层级差
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══ DiffCell: 代码变更 — 极简终端风格 ═══ */
+.rl-diff {
+  margin: 4px 0;
+}
+
+.rl-diff-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rl-diff-file {
+  color: var(--rl-text-2);
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, Menlo, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.rl-diff-stats {
+  display: flex;
+  gap: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, Menlo, monospace;
+  flex-shrink: 0;
+}
+
+.rl-diff-add {
+  color: #16a34a;
+}
+
+.rl-diff-del {
+  color: #dc2626;
+}
+
+.rl-diff-toggle {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.rl-diff-line:hover .rl-diff-toggle {
+  opacity: 1;
+}
+
+.rl-diff-body {
+  padding: 4px 0 4px 16px;
+}
+
+.rl-diff-output {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.rl-diff-line-add {
+  color: #16a34a;
+}
+
+.rl-diff-line-del {
+  color: #dc2626;
+}
+
+.rl-diff-line-hunk {
+  color: var(--rl-text-3);
+  font-style: italic;
+}
+
+/* ═══ 回复主体 + 流式 Bloom ═══
+   text-shadow 多层扩散 + 底部暖边
+   光从文字本身发出，底部有"正在书写"的暖光 */
+
+.rl-assistant-content--after-meta {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--rl-border) 60%, transparent);
+}
+
+.rl-assistant-content h1,
+.rl-assistant-content h2,
+.rl-assistant-content h3,
+
+
+.rl-assistant-content th,
+
+.rl-assistant-content pre,
+
+/* 注意：.rl-streaming-light 已迁到 ChatView.vue 的全局 <style> 块。
+   本文件是 scoped，而该类名落在 AssistantMessageCell 的内部节点上，
+   拿不到这里的 data-v 作用域属性，写在本文件里不生效。 */
+
+.rl-chat.is-dark .rl-msg-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+
+/* ── 用户消息行 / 气泡（Oct-13 最终态补齐）── */
+.rl-user-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+
+.rl-user-row:hover .rl-msg-time,
+
+.rl-chat.is-dark .rl-bubble {
+  background: #222;
+  color: #e0e0e0;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.rl-chat.is-dark .rl-composer-card {
+  background: #1a1a1a;
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ═══ 错误重试 ═══ */
+.rl-error-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.rl-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--rl-border);
+  border-radius: 12px;
+  background: var(--rl-card);
+  color: var(--rl-text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.rl-retry-btn:hover {
+  background: var(--rl-hover);
+  border-color: var(--rl-border-strong);
+  color: var(--rl-text-1);
+}
+
+/* ═══ Chat 模式：轻量内联指示器 ═══ */
+.rl-chat-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin-bottom: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 13px;
+  color: var(--rl-text-2, #666);
+  animation: rl-indicator-pulse 1.5s ease-in-out infinite;
+}
+
+.rl-chat-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4A90D9;
+  flex-shrink: 0;
+}
+
+.rl-chat-indicator-icon {
+  width: 12px !important;
+  height: 12px !important;
+  max-width: 12px !important;
+  max-height: 12px !important;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+@keyframes rl-indicator-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ═══ Chat 模式：友好错误提示 ═══ */
+.rl-chat-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  margin-top: 8px;
+  background: rgba(255, 200, 50, 0.1);
+  border-radius: 14px;
+  font-size: 13px;
+  color: #B8860B;
+}
+
+/* ═══ 回到底部浮动钮 ═══ */
+/* 定位在输入卡座位（.rl-composer-seat，docked 模式下是 position:sticky，
+   天然给绝对定位子元素提供包含块）内，跨在输入卡上边缘：
+   top:-16px 正好吃掉消息列底部 16px 留白，剩下 18px 落在卡片顶部内边距
+   （padding-top 10px + flex gap）里，不会压到 textarea 的任何文字。
+   水平居中（座位与卡片同轴居中），刻意避开卡片右上角——那里是桌面伙伴
+   （螃蟹/猫/海绵宝宝）的归位点。 */
+.rl-to-bottom-slot {
+  position: absolute;
+  top: -16px;
+  left: 0;
+  right: 0;
+  z-index: 12;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.rl-to-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--rl-border);
+  border-radius: 999px;
+  color: var(--rl-text-1);
+  background: var(--rl-card);
+  box-shadow: var(--rl-shadow);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.12s ease;
+}
+
+.rl-to-bottom:hover {
+  background: var(--rl-hover);
+}
+
+/* HERO 模式下的 composer */
+.rl-composer-hero {
+  position: relative;
+  bottom: auto;
+  /* 2026-11-04：1 → 20。此前低于 .rl-hero-zone 的 z-index:10，
+     导致 composer 内所有向上弹的下拉（技能 / 模型 / @ 快速召唤，
+     内部 z-index 200 也一样）被问候语+模板区整体盖住顶行。
+     抬到 hero 区之上即可；与模板条（z-index 1/2）无空间重叠，无副作用。 */
+  z-index: 20;
+  background: transparent;
+  padding: 0 16px 8px;
+  flex: none;
+  width: 100%;
+}
+
+.rl-composer-hero .rl-composer-card {
+  max-width: 680px;
+  margin: 0 auto;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+  /* 这里不挂常驻动画：入场动画统一由 is-hero-intro 的 rl-hero-composer-rise 负责。
+     若在此处再挂一条 rl-composer-hero-in，入场标记摘掉时 animation-name 变更
+     会重新触发一次淡入，动画结束时输入卡会闪一下。 */
+}
+
+/* 光晕自己淡入，位置固定，与输入卡解耦。
+   2026-11-04：主光已搬到 .rl-chat 根层，选择器从 .rl-composer-hero 改为 .rl-chat.is-hero；
+   副光跟着一起淡入，避免卡片升起时光晕突兀地已经在那儿。 */
+.rl-chat.is-hero .rl-hero-glow,
+.rl-chat.is-hero .rl-hero-glow-rim {
+  animation: rl-hero-glow-in 0.9s ease-out 0.15s both;
+}
+
+@keyframes rl-hero-glow-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* DOCKED 模式下的 composer */
+.rl-composer-seat:not(.rl-composer-hero) {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rl-bg-2) 0%, transparent) 0px, var(--rl-bg-2) 36px);
+  padding: 0 16px 8px;
+  animation: rl-composer-dock-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes rl-composer-dock-in {
+  from { transform: translateY(40vh); }
+  to { transform: translateY(0); }
+}
+
+/* 首帧不播 docked 入位动画：刷新后输入卡应原地出现，不该从下方升起 */
+.rl-chat.is-composer-anim-off .rl-composer-seat:not(.rl-composer-hero) {
+  animation: none;
+}
+
+/* ═══ 新创作入场编排（is-hero-intro）═══
+   节奏：输入卡先从底部升起（1.8s），随后 logo → 标题 → 徽标依次
+   从 logo 所在位置「化开」。用 blur + 位移 + 缓出，不用回弹。
+   位移只作用于输入卡本身，紫色光晕原地淡入，不被拖走。
+
+   曲线用 easeInOutSine（cubic-bezier(0.37, 0, 0.63, 1)）：
+   起手慢、中段匀速、收尾也慢，整段速度分布均匀。
+   不能用 expo-out（0.16, 1, 0.3, 1）——那种曲线前 0.3 秒就走完 80% 距离，
+   长距离位移会像被「弹射」上去，后半段又慢得像卡住，观感很割裂。 */
+.rl-chat.is-hero.is-hero-intro .rl-composer-hero .rl-composer-card {
+  animation: rl-hero-composer-rise 1.8s cubic-bezier(0.37, 0, 0.63, 1) both;
+}
+
+@keyframes rl-hero-composer-rise {
+  from { opacity: 0; transform: translateY(64vh) scale(0.96); }
+  50% { opacity: 1; }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* logo：从虚焦里浮出，只在起点略小，不做放大过冲。
+   延迟跟输入卡（1.8s）对齐：等卡片基本落位后才开始长出来。 */
+.rl-chat.is-hero-intro .rl-hero-logo-wrap {
+  transform-origin: center center;
+  animation: rl-hero-brand-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) 1.55s both;
+}
+
+/* 标题：从 logo 一侧滑出，同时由虚到实、轻微上浮 */
+.rl-chat.is-hero-intro .rl-hero-title {
+  transform-origin: left center;
+  animation: rl-hero-title-in 0.95s cubic-bezier(0.16, 1, 0.3, 1) 1.75s both;
+}
+
+/* 徽标：最后一枚，位移更短，让节奏收尾 */
+.rl-chat.is-hero-intro .rl-hero-badge {
+  transform-origin: left center;
+  animation: rl-hero-badge-in 0.95s cubic-bezier(0.16, 1, 0.3, 1) 1.95s both;
+}
+
+/* 能力标签 → 起手式：沿同一节奏逐层浮现，
+   总时长（2.2s + 0.8s = 3.0s）必须落在 HERO_INTRO_TOTAL_MS（3.4s）内，
+   否则标记摘掉的瞬间动画会被截断、元素跳回初始态。 */
+.rl-chat.is-hero-intro .rl-hero-capabilities {
+  animation: rl-hero-sub-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 2.2s both;
+}
+
+.rl-chat.is-hero-intro .rl-hero-starters {
+  animation: rl-hero-sub-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 2.35s both;
+}
+
+@keyframes rl-hero-sub-in {
+  from { opacity: 0; transform: translateY(10px); filter: blur(6px); }
+  55% { opacity: 1; }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes rl-hero-brand-in {
+  from { opacity: 0; transform: scale(0.84); filter: blur(10px); }
+  55% { opacity: 1; }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+@keyframes rl-hero-title-in {
+  from { opacity: 0; transform: translate(-24px, 6px) scale(0.95); filter: blur(9px); }
+  50% { opacity: 1; }
+  to { opacity: 1; transform: translate(0, 0) scale(1); filter: blur(0); }
+}
+
+@keyframes rl-hero-badge-in {
+  from { opacity: 0; transform: translate(-16px, 4px) scale(0.97); filter: blur(6px); }
+  50% { opacity: 1; }
+  to { opacity: 1; transform: translate(0, 0) scale(1); filter: blur(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rl-composer-hero .rl-composer-card,
+  .rl-chat.is-hero .rl-hero-glow,
+  .rl-chat.is-hero .rl-hero-glow-rim,
+  .rl-chat.is-hero.is-hero-intro .rl-composer-hero .rl-composer-card,
+  .rl-chat.is-hero-intro .rl-hero-logo-wrap,
+  .rl-chat.is-hero-intro .rl-hero-title,
+  .rl-chat.is-hero-intro .rl-hero-badge,
+  .rl-chat.is-hero-intro .rl-hero-capabilities,
+  .rl-chat.is-hero-intro .rl-hero-starters,
+  .rl-composer-seat:not(.rl-composer-hero) {
+    animation: none;
+  }
+  .rl-turn-status-dot {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ═══ 浮动输入卡 ═══ */
+.rl-composer-card {
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding-top: 10px;
+  /* 容器查询锚点（2026-11-04）：侧边栏压过来输入卡变窄时，按容器宽收起模型名文字 */
+  container-type: inline-size;
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* 输入卡被挤压到 500px 以下（模型名+发送真放不下）才收起名字，logo hover 靠原生 title */
+@container (max-width: 500px) {
+  .rl-model-pill-name {
+    display: none;
+  }
+}
+
+.rl-at-picker-wrap {
+  position: relative;
+}
+
+.rl-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--rl-text-1);
+  font-size: 14px;
+  line-height: 22px;
+  font-family: inherit;
+  resize: none;
+  min-height: 36px;
+  max-height: 336px;
+  padding: 4px 16px 0 16px;
+  overflow-y: auto;
+}
+
+.rl-input::placeholder {
+  color: var(--rl-text-cap);
+  font-weight: 300;
+  user-select: none;
+}
+
+.rl-input::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rl-input::-webkit-scrollbar-thumb {
+  background: var(--rl-scrollbar);
+  border-radius: 6px;
+}
+
+.rl-composer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 8px 6px;
+}
+
+.rl-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rl-plus-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rl-add {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--rl-text-2);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.rl-add:hover:not(:disabled) {
+  background: var(--rl-hover-solid);
+  color: var(--rl-text-1);
+}
+
+.rl-add:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 确认状态失效兜底：样式已迁至 AssistantMessageCell.vue scoped
+   （本文件 scoped 的选择器拿不到 AssistantMessageCell 内部节点的 data-v，
+   留在这里必然是死代码——教训见 2026-10-20 死代码清理）。 */
+
+.rl-add-active {
+  background: #EEEDFE;
+  color: #534AB7;
+}
+
+/* ── 聊天图片上传按钮与预览条 ── */
+.rl-img-upload-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.rl-img-upload-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--rl-text-2);
+  cursor: pointer;
+  transition: background 0.12s ease;
+  position: relative;
+}
+.rl-img-upload-btn:hover:not(:disabled) {
+  background: var(--rl-hover-solid);
+  color: var(--rl-text-1);
+}
+.rl-img-upload-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.rl-img-upload-active {
+  background: #EEEDFE;
+  color: #534AB7;
+}
+.rl-img-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 10px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  padding: 0 3px;
+  pointer-events: none;
+}
+.rl-hidden-input {
+  display: none;
+}
+/**
+ * 待发送图片条 —— 输入卡内的独立行（不再 absolute 浮层）。
+ *
+ * 之前是 position:absolute + bottom:100%，浮在输入框正上方，
+ * 上传多张时会盖住输入框和刚发出的消息。改为 flex 行后，
+ * 它占据自己的高度并把输入框往下推，永远不会遮挡内容。
+ */
+.rl-img-preview-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px;
+  max-height: 168px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.rl-img-thumb-item {
+  position: relative;
+  flex: none;
+}
+.rl-img-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--rl-border-thin, rgba(0, 0, 0, 0.08));
+  display: block;
+}
+.rl-img-thumb-remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+}
+.rl-img-thumb-remove:hover {
+  background: rgba(0,0,0,0.8);
+}
+.rl-img-clear-all {
+  flex: none;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rl-text-2);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+.rl-img-clear-all:hover {
+  color: var(--rl-text-1);
+  background: var(--rl-hover-solid);
+}
+
+/* ── 自动放行切换按钮 ── */
+.rl-auto-approve-wrap {
+  position: relative;
+}
+
+.rl-auto-approve-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--rl-text-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rl-auto-approve-btn:hover {
+  background: var(--rl-hover-solid);
+  color: var(--rl-text-2);
+}
+
+.rl-auto-approve-on {
+  background: rgba(249, 115, 22, 0.14);
+  color: #f97316;
+}
+
+.rl-auto-approve-on:hover {
+  background: rgba(249, 115, 22, 0.24);
+  color: #fb923c;
+}
+
+.rl-auto-approve-label {
+  font-weight: 500;
+}
+
+.rl-slide-up-enter-active,
+.rl-slide-up-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.rl-slide-up-enter-from,
+.rl-slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.rl-slide-down-enter-active,
+.rl-slide-down-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.rl-slide-down-enter-from,
+.rl-slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.rl-trailing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rl-model-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--rl-text-2);
+  font-size: 11px;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, Menlo, monospace;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.rl-model-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  line-height: 0;
+  overflow: hidden;
+}
+
+.rl-model-pill-icon :deep(svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.rl-model-pill-name {
+  font-weight: 400;
+}
+
+.rl-model-pill:hover {
+  color: var(--rl-text-1);
+}
+
+.rl-model-pick-active {
+  color: var(--rl-accent, #534AB7);
+}
+
+.rl-model-pick-wrap {
+  position: relative;
+}
+
+.rl-model-pop-enter-active,
+.rl-model-pop-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.rl-model-pop-enter-from,
+.rl-model-pop-leave-to {
+  opacity: 0;
+  transform: translateY(6px) scale(0.97);
+}
+
+.rl-model-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 232px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  background: var(--rl-card, #FFFFFF);
+  border: 1px solid var(--rl-border);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 32px -8px rgba(0, 0, 0, 0.18);
+  z-index: 60;
+  overflow: hidden;
+  transform-origin: bottom right;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.rl-model-dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px 7px;
+  border-bottom: 1px solid var(--rl-border-thin);
+}
+
+.rl-model-dropdown-title {
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rl-text-3);
+}
+
+.rl-model-dropdown-count {
+  min-width: 16px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--rl-hover-solid);
+  color: var(--rl-text-3);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 14px;
+  text-align: center;
+}
+
+.rl-model-dropdown-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 5px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rl-scrollbar) transparent;
+}
+
+.rl-model-dropdown-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rl-model-dropdown-body::-webkit-scrollbar-thumb {
+  background: var(--rl-scrollbar);
+  border-radius: 3px;
+}
+
+.rl-model-dropdown-body::-webkit-scrollbar-thumb:hover {
+  background: var(--rl-scrollbar-hover);
+}
+
+.rl-model-dropdown-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 4px 7px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rl-text-2);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-align: left;
+}
+
+.rl-model-dropdown-item:hover {
+  background: var(--rl-hover-solid);
+}
+
+.rl-model-dropdown-selected {
+  background: color-mix(in srgb, var(--rl-accent) 10%, transparent);
+}
+
+.rl-model-dropdown-selected:hover {
+  background: color-mix(in srgb, var(--rl-accent) 15%, transparent);
+}
+
+.rl-model-dropdown-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  padding: 3px;
+  border-radius: 6px;
+  background: var(--rl-hover-solid);
+  line-height: 0;
+  overflow: hidden;
+}
+
+.rl-model-dropdown-selected .rl-model-dropdown-icon {
+  background: color-mix(in srgb, var(--rl-accent) 14%, transparent);
+}
+
+.rl-model-dropdown-icon :deep(svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.rl-model-dropdown-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--rl-text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rl-model-dropdown-selected .rl-model-dropdown-name {
+  color: var(--rl-accent);
+}
+
+.rl-model-check {
+  flex: none;
+  color: var(--rl-accent);
+}
+
+.rl-model-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 14px 22px;
+  text-align: center;
+}
+
+.rl-model-empty-title {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--rl-text-2);
+}
+
+.rl-model-empty-desc {
+  font-size: 10.5px;
+  line-height: 15px;
+  color: var(--rl-text-3);
+}
+
+.rl-model-dropdown-foot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border-top: 1px solid var(--rl-border-thin);
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--rl-text-3);
+}
+
+.rl-model-foot-hint {
+  flex: 1;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.rl-model-foot-provider {
+  flex: none;
+  font-weight: 400;
+  color: var(--rl-accent);
+}
+
+.rl-model-foot-desc {
+  flex: 1;
+  min-width: 0;
+  color: var(--rl-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 智能体标签行 ── */
+.rl-agent-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px 0;
+}
+
+.rl-agent-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.rl-agent-tag-icon {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
+.rl-agent-tag-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rl-agent-tag-close {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #6366f1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s;
+}
+
+.rl-agent-tag-close:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+/* ── 智能体召唤按钮 ── */
+.rl-agent-pick-wrap {
+  position: relative;
+}
+
+.rl-agent-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--rl-text-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.rl-agent-btn-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.rl-agent-pick-btn:hover {
+  background: var(--rl-hover-solid);
+  color: var(--rl-text-2);
+}
+
+.rl-agent-pick-active {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+}
+
+/* ── 智能体下拉面板 ── */
+.rl-agent-dropdown {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: 260px;
+  background: var(--rl-surface);
+  border: 1px solid var(--rl-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.rl-agent-dropdown-header {
+  padding: 8px;
+  border-bottom: 1px solid var(--rl-border-thin);
+}
+
+.rl-agent-search {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid var(--rl-border);
+  border-radius: 10px;
+  background: var(--rl-input-surface);
+  color: var(--rl-text-1);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.rl-agent-search:focus {
+  border-color: #6366f1;
+}
+
+.rl-agent-search::placeholder {
+  color: var(--rl-text-cap);
+}
+
+.rl-agent-dropdown-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.rl-agent-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rl-text-1);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.rl-agent-dropdown-item:hover {
+  background: var(--rl-hover);
+}
+
+.rl-agent-dropdown-selected {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.rl-agent-dropdown-selected:hover {
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.rl-agent-item-svg {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex: none;
+}
+
+.rl-agent-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rl-agent-item-role {
+  font-size: 13px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rl-agent-item-id {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+}
+
+.rl-agent-item-check {
+  flex: none;
+  color: #6366f1;
+}
+
+.rl-agent-dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--rl-text-cap);
+  font-size: 13px;
+}
+
+.rl-agent-dropdown-footer {
+  padding: 6px 10px;
+  border-top: 1px solid var(--rl-border-thin);
+}
+
+.rl-agent-dropdown-hint {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+}
+
+.rl-ws-pick-wrap {
+  position: relative;
+}
+
+.rl-ws-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  width: 28px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rl-text-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.rl-ws-pick-btn:hover {
+  background: var(--rl-hover-solid);
+  color: var(--rl-text-2);
+}
+
+.rl-ws-pick-active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.rl-ws-pick-active:hover {
+  background: rgba(16, 185, 129, 0.18);
+  color: #059669;
+}
+
+/* ── 工作区下拉面板 ── */
+.rl-ws-dropdown {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: 320px;
+  background: var(--rl-surface);
+  border: 1px solid var(--rl-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.rl-ws-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--rl-border-thin);
+}
+
+.rl-ws-dropdown-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rl-text-2);
+}
+
+.rl-ws-dropdown-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.rl-ws-dropdown-add:hover {
+  background: rgba(16, 185, 129, 0.18);
+}
+
+.rl-ws-dropdown-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.rl-ws-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rl-text-1);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.rl-ws-dropdown-item:hover {
+  background: var(--rl-hover);
+}
+
+/* 外层从 <button> 改成 div[role=button]，键盘焦点必须显式画出来，
+   否则 Tab 导航时完全看不出落在哪一项上。 */
+.rl-ws-dropdown-item:focus-visible {
+  outline: 2px solid var(--rl-accent, #534AB7);
+  outline-offset: -2px;
+}
+
+.rl-ws-dropdown-selected {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.rl-ws-dropdown-selected:hover {
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.rl-ws-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rl-ws-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rl-ws-item-path {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rl-ws-item-check {
+  flex: none;
+  color: #10b981;
+}
+
+.rl-ws-item-unbind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rl-text-cap);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.rl-ws-dropdown-item:hover .rl-ws-item-unbind {
+  opacity: 1;
+}
+
+.rl-ws-item-unbind:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.rl-ws-dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--rl-text-cap);
+  font-size: 13px;
+}
+
+/* ── 技能召唤按钮 ── */
+.rl-skill-pick-wrap {
+  position: relative;
+}
+
+.rl-skill-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--rl-text-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.rl-skill-pick-slash {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+}
+
+.rl-skill-pick-btn:hover {
+  background: var(--rl-hover-solid);
+  color: var(--rl-text-2);
+}
+
+.rl-skill-pick-active {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+/* ── 技能下拉面板 ── */
+.rl-skill-dropdown {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: 300px;
+  background: var(--rl-surface);
+  border: 1px solid var(--rl-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.rl-skill-dropdown-header {
+  padding: 8px;
+  border-bottom: 1px solid var(--rl-border-thin);
+}
+
+.rl-skill-search {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid var(--rl-border);
+  border-radius: 10px;
+  background: var(--rl-input-surface);
+  color: var(--rl-text-1);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.rl-skill-search:focus {
+  border-color: #f59e0b;
+}
+
+.rl-skill-search::placeholder {
+  color: var(--rl-text-cap);
+}
+
+.rl-skill-dropdown-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.rl-skill-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rl-text-1);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.rl-skill-dropdown-item:hover {
+  background: var(--rl-hover);
+}
+
+.rl-skill-item-slash {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+  color: #f59e0b;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.rl-skill-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rl-skill-item-name {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rl-skill-item-desc {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rl-skill-item-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rl-skill-dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--rl-text-cap);
+  font-size: 13px;
+}
+
+.rl-skill-dropdown-footer {
+  padding: 6px 10px;
+  border-top: 1px solid var(--rl-border-thin);
+}
+
+.rl-skill-dropdown-hint {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+}
+
+.rl-primary {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 9px;
+  background: var(--rl-text-1);
+  color: var(--rl-bg);
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+
+.rl-primary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.rl-primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rl-stop {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 9px;
+  background: #000000;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.rl-stop:hover {
+  opacity: 0.85;
+}
+
+.rl-composer-footer {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 16px;
+  padding: 0 4px;
+}
+
+.rl-stats-line {
+  font-size: 11px;
+  color: var(--rl-text-cap);
+  letter-spacing: 0.3px;
+}
+
+/* ═══ 响应式 ═══ */
+@media (max-width: 640px) {
+  .rl-column {
+    padding: 16px 12px 12px;
+  }
+}
+
+.rl-chat-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.rl-chat-wrapper .rl-chat {
+  flex: 1;
+  min-width: 0;
+}
+
+.rl-work-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 16px 0px;
+  /* 同 .rl-file-bar：min-height 压到 38px（2026-11-14 顶栏整体瘦身），
+     底部分隔线避开右上角浮动开关（已缩到 top:4px + 30px，底部 34px） */
+  min-height: 38px;
+  margin-bottom: -4px;
+  /* 灰画布上的功能条：保持白面，与卡片/输入卡同一层 */
+  background: var(--rl-surface);
+  border-bottom: 1px solid var(--rl-border-thin);
+  font-size: 13px;
+}
+.rl-work-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+.rl-work-bar-title {
+  font-weight: 500;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rl-work-bar-platform {
+  flex: none;
+  font-size: 11px;
+  color: #888;
+  background: #fff;
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.rl-work-bar-metrics {
+  flex: none;
+  font-size: 11px;
+  color: #888;
+}
+.rl-work-bar-actions {
+  display: flex;
+  gap: 4px;
+}
+.rl-work-bar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  color: #888;
+  cursor: pointer;
+}
+.rl-work-bar-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: #333;
+}
+.rl-work-bar-btn-active {
+  background: rgba(16,185,129,0.1);
+  color: #059669;
+}
+.rl-work-bar-btn-active:hover {
+  background: rgba(16,185,129,0.15);
+  color: #047857;
+}
+.rl-work-bar-icon {
+  flex: none;
+  display: inline-flex;
+}
+.rl-work-bar-btn.rl-analysis-create {
+  color: var(--rl-accent);
+}
+
+.rl-sidebar-toggle {
+  position: absolute;
+  top: 4px;
+  right: 10px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 12px;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.rl-sidebar-toggle:hover {
+  background: #fff;
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.rl-sidebar-toggle:active {
+  background: #f5f5f5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* 侧会话面板开关（PRD FR-E）：与工作台开关同排，位于其左侧 */
+.rl-side-toggle {
+  position: absolute;
+  top: 4px;
+  right: 46px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 12px;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.rl-side-toggle:hover {
+  background: #fff;
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+.rl-side-toggle.is-on {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.rl-work-bar-hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  border-radius: 20px 16px 0 0;
+}
+
+.rl-analysis-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(8,145,178,0.06), rgba(8,145,178,0.02));
+  border-bottom: 1px solid rgba(8,145,178,0.12);
+  font-size: 12.5px;
+}
+.rl-analysis-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rl-analysis-bar-icon {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.rl-analysis-bar-label {
+  font-weight: 600;
+  color: #0E7490;
+}
+.rl-analysis-bar-detail {
+  font-size: 11px;
+  color: #6B7280;
+}
+.rl-analysis-bar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.rl-file-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  /* 2026-11-14：与顶栏瘦身同步压到 38px——右上角两个浮动开关已缩到
+     top:4px + 30px（底部 34px），分隔线在 38px 处从按钮底下 4px 走过 */
+  min-height: 38px;
+  background: rgba(0,180,180,0.04);
+  border-bottom: 1px solid rgba(0,180,180,0.1);
+  flex-shrink: 0;
+}
+.rl-file-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.rl-file-bar-icon {
+  flex-shrink: 0;
+  color: #6B7280;
+  width: 13px;
+  height: 13px;
+  max-width: 13px;
+  max-height: 13px;
+  object-fit: contain;
+}
+.rl-file-bar-name {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0E7490;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rl-file-bar-size {
+  font-size: 10px;
+  color: #9CA3AF;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.rl-file-bar-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HistoryCell 独立渲染单元（对齐 Codex HistoryCell trait）
+   每种 TurnItem 有自己的视觉区域，互不干扰
+   ═══════════════════════════════════════════════════════════════ */
+
+
+.rl-cell-streaming {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+
+@keyframes rl-reasoning-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes rl-reasoning-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ── ReasoningSummaryCell: dim + italic + markdown渲染（对齐 Codex ReasoningSummaryCell）── */
+
+
+@keyframes rl-reasoning-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes rl-reasoning-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+
+/* ── DecisionCell（对齐 Codex DecisionCell）── */
+
+
+/* ── ProgressCell 已移除（2026-10-19 原型对齐）：inline 进度提示与 AgentProgressCard
+       的 progCell、ToolCallCell 的执行轨迹三方同轨，且进度条属原型没有的装饰。
+       仅保留无边框一行状态（见 AgentProgressCard.vue / .rl-ap-*）。── */
+
+/* ── ErrorCell（对齐 Codex ErrorCell）── */
+
+
+/* ── Dark mode adjustments ── */
+
+
+.rl-chat.is-dark .rl-cell-progress-inline-text {
+  color: var(--rl-text-3);
+  opacity: 0.7;
+}
+
+
+/* ═══ Minimap 锚点导航栏 ═══ */
+.rl-minimap {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  width: 20px;
+  height: 80%;
+  min-height: 40px;
+  pointer-events: auto;
+}
+
+.rl-minimap-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.rl-minimap-tooltip {
+  position: absolute;
+  left: 24px;
+  max-width: 200px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #7C3AED;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: rl-minimap-tip-in 0.15s ease-out;
+}
+
+.rl-chat.is-dark .rl-minimap-tooltip {
+  background: rgba(175, 169, 236, 0.15);
+  color: #AFA9EC;
+}
+
+@keyframes rl-minimap-tip-in {
+  from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+/* ── hljs 顶层主题（Oct-13 dur 终态还原）──
+   容器内（.rl-md / .rl-assistant-content）的 One-Dark 深色规则优先；
+   顶层 github 主题覆盖独立渲染场景（MarkdownView / 无容器代码块）。 */
+.hljs {
+  color:#24292e;
+  background:#fff;
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color:#6f42c1;
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color:#005cc5;
+}
+
+.hljs-built_in,
+.hljs-symbol {
+  color:#e36209;
+}
+
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color:#6a737d;
+}
+
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color:#22863a;
+}
+
+.hljs-subst {
+  color:#24292e;
+}
+
+.hljs-section {
+  color:#005cc5;
+  font-weight:700;
+}
+
+.hljs-bullet {
+  color:#735c0f;
+}
+
+.hljs-emphasis {
+  color:#24292e;
+  font-style:italic;
+}
+
+.hljs-strong {
+  color:#24292e;
+  font-weight:700;
+}
+
+.hljs-addition {
+  color:#22863a;
+  background-color:#f0fff4;
+}
+
+.hljs-deletion {
+  color:#b31d28;
+  background-color:#ffeef0;
+}

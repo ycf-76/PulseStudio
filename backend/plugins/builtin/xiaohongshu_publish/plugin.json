@@ -1,0 +1,30 @@
+{
+  "id": "xiaohongshu-publish",
+  "name": "小红书发布",
+  "version": "1.0.0",
+  "description": "小红书笔记发布插件，支持图文笔记和视频笔记的自动发布，包括标题、正文、标签、封面图等完整字段。",
+  "category": "platform",
+  "author": {
+    "name": "Platform Team",
+    "email": "team@example.com"
+  },
+  "entry_point": "xiaohongshu_publish.py:XhsPublishPlugin",
+  "display_icon": "📕",
+  "display_color": "#FE2C55",
+  "pricing_model": "free",
+  "capabilities": ["publish_note", "upload_image", "publish_video"],
+  "permissions_required": ["xhs:publish"],
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "auto_publish": {
+        "type": "boolean",
+        "default": false,
+        "description": "是否自动发布（否则仅草稿）"
+      }
+    }
+  },
+  "dependencies": [],
+  "events_emits": ["publish:note_created", "publish:note_failed"],
+  "events_subscribes": []
+}
