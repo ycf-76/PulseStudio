@@ -21,6 +21,11 @@
   <img src="https://img.shields.io/badge/Models-7%20Providers-F6C344?style=flat-square" alt="7 Model Providers">
   <a href="#-license"><img src="https://img.shields.io/badge/License-MIT-2EA44F?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Scrapling-1F6E5C?style=flat-square" alt="Scrapling">
+  <img src="https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright">
+  <img src="https://img.shields.io/badge/SQLAlchemy%202-C63C3C?style=flat-square&logo=sqlalchemy&logoColor=white" alt="SQLAlchemy 2">
+  <img src="https://img.shields.io/badge/LangChain-1C3C3C?style=flat-square&logo=langchain&logoColor=white" alt="LangChain">
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis">
 </p>
 
 <!-- ▼ 产品海报占位：上传一张整体宣传图（工作台全景 + 亮点标注）到 assets/readme/poster.png 后取消注释
@@ -74,7 +79,7 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 
 | 能力层 | 已实现功能 |
 | --- | --- |
-| **发现与策划** | 多平台热点监控、SimHash 去重、LLM 价值评分、选题水位管理、爆款搜索与采集、爆款规律分析、竞品对比、选题方向生成 |
+| **发现与策划** | 多平台热点监控（Scrapling 隐身爬虫：小红书 / 抖音 / B站）、SimHash 去重、LLM 价值评分、选题水位管理、爆款搜索与采集、爆款规律分析、竞品对比、选题方向生成 |
 | **文字与视觉** | 小红书文案（标题 / 正文 / 标签）、图文卡片 DSL 渲染链路、通义万相 AI 生图、Qwen-VL 配图视觉分析、配图合规检查 |
 | **发布与集成** | 发布适配器与确认闸门、小红书 MCP 通道、Playwright 浏览器自动化（域名白名单）、飞书 Bot / OAuth / 多维表格、微信 iLink Bot、对外 MCP Server |
 | **数据与运营** | 平台账号绑定、作品数据回收、数据看板、多日定时发布计划、用户反馈闭环 |
