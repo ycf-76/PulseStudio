@@ -114,61 +114,53 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
       -->
     </td>
     <td width="50%" valign="top">
-      <strong>💬 主对话智能体</strong>
+      <strong>🎬 采集与创作</strong>
 
-      <sub>一条对话完成选题、创作、审核与发布，子 Agent 的执行过程透明可见。</sub>
+      <sub>爆款笔记采集入库，卡片化解析原文案，手机端实时预览成图效果。</sub>
 
-      <!-- ▼ 截图占位：上传截图到 assets/readme/features/chat.png 后取消注释
-      <img src="assets/readme/features/chat.png" width="100%" alt="主对话智能体">
-      -->
+      <img src="assets/readme/features/collect.png" width="100%" alt="采集与创作工作台">
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <strong>📊 数据看板</strong>
+      <strong>🎞️ AI 口播剪辑</strong>
 
-      <sub>绑定平台账号，回收作品数据，看哪类内容真的在涨。</sub>
+      <sub>口播视频智能剪辑，在原片全屏基础上叠加素材与特效，成片可直接导出。</sub>
 
-      <!-- ▼ 截图占位：上传截图到 assets/readme/features/dashboard.png 后取消注释
-      <img src="assets/readme/features/dashboard.png" width="100%" alt="数据看板">
-      -->
+      <img src="assets/readme/features/clip.png" width="100%" alt="AI 口播剪辑">
     </td>
     <td width="50%" valign="top">
       <strong>🚦 发布管理</strong>
 
-      <sub>三级审核闸门 + 人工确认，发布前最后一道关。</sub>
+      <sub>六大平台发布通道，三级审核闸门 + 人工确认，发布前最后一道关。</sub>
 
-      <!-- ▼ 截图占位：上传截图到 assets/readme/features/publish.png 后取消注释
       <img src="assets/readme/features/publish.png" width="100%" alt="发布管理">
-      -->
     </td>
   </tr>
 </table>
 
-> 📷 此处预留工作台截图位置，素材待上传。
+> 📷 热点选题池、主对话智能体与数据看板的界面截图待补充。
 
 ## 🖼️ 真实产物
 
 这些示例来自 PulseStudio 的实际工作流。
 
-<!-- ▼ 产物展示占位：把成图/成片上传到 assets/readme/showcase/ 后取消注释。
-     图文卡片建议两张一组 49% 宽并排；视频用「封面点击播放预览 + 标题链接完整成片」的形式（参考下方注释）。
-
-图文卡片（两张一组）：
-<p align="center">
-  <img src="assets/readme/showcase/cards-1.jpg" width="49%" alt="图文卡片示例 1">
-  <img src="assets/readme/showcase/cards-2.jpg" width="49%" alt="图文卡片示例 2">
-</p>
-<p align="center"><sub>图文卡片 · 实际生成效果</sub></p>
+<!-- ▼ 视频占位：把演示视频拖进任意 GitHub Issue/PR 的输入框上传，得到 user-images.githubusercontent.com 链接后替换并取消注释：
 
 视频（封面点击播放，最长 1 分钟轻量预览）：
 <p align="center">
-  <a href="assets/readme/videos/demo-preview.mp4"><img src="assets/readme/videos/demo-thumb.jpg" width="49%" alt="播放演示视频预览"></a>
+  <a href="user-attachments 链接"><img src="assets/readme/features/clip.png" width="49%" alt="播放演示视频预览"></a>
 </p>
-<p align="center"><sub>▶ 点击封面播放预览 · <a href="assets/readme/videos/demo-full.mp4">查看完整成片</a></sub></p>
 -->
 
-> 📷 此处预留真实产物展示位置，素材待上传。
+<p align="center">
+  <img src="assets/readme/showcase/cards-1.jpg" width="36%" alt="图文卡片示例：比奇堡打工人生存手册封面">
+  &nbsp;
+  <img src="assets/readme/showcase/cards-2.png" width="36%" alt="作品预览：Git 与 GitHub 图文笔记（B站 210 赞 / 487 收藏）">
+</p>
+<p align="center"><sub>图文卡片与作品预览 · 实际生成效果</sub></p>
+
+> 📷 演示视频待上传（拖进 GitHub Issue 取链接后按上方注释启用）。
 
 ## 🚀 快速开始
 
