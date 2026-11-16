@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="PulseStudio：多智能体小红书内容运营平台，从热点选题池到智能体流水线，一键发布小红书笔记">
+  <img src="./assets/readme/hero.svg" width="680" alt="PulseStudio：AI 内容创作工作台，热点选题池、智能体协作、多模型接入">
 </p>
 
 <p align="center">
