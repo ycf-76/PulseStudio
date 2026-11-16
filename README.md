@@ -17,6 +17,8 @@
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/Vue-3.x-42B883?style=flat-square&logo=vue.js&logoColor=white" alt="Vue 3">
+  <img src="https://img.shields.io/badge/Pinia-4-F9D807?style=flat-square&logo=pinia&logoColor=black" alt="Pinia 4">
+  <img src="https://img.shields.io/badge/Tailwind%20CSS-4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
   <a href="backend/app/agents/registry.py"><img src="https://img.shields.io/badge/Agents-12-0F9D8A?style=flat-square" alt="12 Agents"></a>
   <img src="https://img.shields.io/badge/Models-7%20Providers-F6C344?style=flat-square" alt="7 Model Providers">
   <a href="#-license"><img src="https://img.shields.io/badge/License-MIT-2EA44F?style=flat-square" alt="License: MIT"></a>
@@ -26,6 +28,8 @@
   <img src="https://img.shields.io/badge/SQLAlchemy%202-C63C3C?style=flat-square&logo=sqlalchemy&logoColor=white" alt="SQLAlchemy 2">
   <img src="https://img.shields.io/badge/LangChain-1C3C3C?style=flat-square&logo=langchain&logoColor=white" alt="LangChain">
   <img src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/APScheduler-6C7A89?style=flat-square" alt="APScheduler">
+  <img src="https://img.shields.io/badge/DashScope-615CED?style=flat-square" alt="DashScope">
 </p>
 
 <!-- ▼ 产品海报占位：上传一张整体宣传图（工作台全景 + 亮点标注）到 assets/readme/poster.png 后取消注释
