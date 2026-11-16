@@ -158,13 +158,14 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 这些示例来自 PulseStudio 的实际工作流。
 
 <p align="center">
-  <img src="assets/show/作者画像.png" width="24%" alt="作者画像工作台">
+  <img src="assets/show/作者画像.png" width="49%" alt="作者画像工作台">
   &nbsp;
-  <img src="assets/show/chat_页面.png" width="24%" alt="主对话智能体工作台">
+  <img src="assets/show/chat_页面.png" width="49%" alt="主对话智能体工作台">
+</p>
+<p align="center">
+  <img src="assets/show/我的空间.png" width="49%" alt="我的空间作品库">
   &nbsp;
-  <img src="assets/show/我的空间.png" width="24%" alt="我的空间作品库">
-  &nbsp;
-  <img src="assets/show/选题池.png" width="24%" alt="热点选题池">
+  <img src="assets/show/选题池.png" width="49%" alt="热点选题池">
 </p>
 
 ## 🖼️ 真实产物
