@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="760" alt="PulseStudio: AI Content Creation Workbench · Topic Pool × Agent Collaboration × Multi-Model Access">
+  <img src="./assets/readme/hero.svg" width="760" alt="PulseStudio: AI Content Creation Workbench · Topic Pool Agent Collaboration Multi-Model Access">
 </p>
 
 <p align="center">
