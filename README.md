@@ -153,17 +153,9 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 
 > 📷 数据看板的界面截图待补充。
 
-## 🖼️ 真实产物
+## 🖥️ 平台实况
 
 这些示例来自 PulseStudio 的实际工作流。
-
-<!-- ▼ 视频占位：把演示视频拖进任意 GitHub Issue/PR 的输入框上传，得到 user-images.githubusercontent.com 链接后替换并取消注释：
-
-视频（封面点击播放，最长 1 分钟轻量预览）：
-<p align="center">
-  <a href="user-attachments 链接"><img src="assets/readme/features/clip.png" width="49%" alt="播放演示视频预览"></a>
-</p>
--->
 
 <p align="center">
   <img src="assets/show/作者画像.png" width="24%" alt="作者画像工作台">
@@ -174,7 +166,32 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
   &nbsp;
   <img src="assets/show/选题池.png" width="24%" alt="热点选题池">
 </p>
-<p align="center"><sub>这些示例来自 PulseStudio 的实际工作流。</sub></p>
+
+## 🖼️ 真实产物
+
+<!-- ▼ 视频占位：把演示视频拖进任意 GitHub Issue/PR 的输入框上传，得到 user-images.githubusercontent.com 链接后替换并取消注释：
+
+视频（封面点击播放，最长 1 分钟轻量预览）：
+<p align="center">
+  <a href="user-attachments 链接"><img src="assets/readme/features/clip.png" width="49%" alt="播放演示视频预览"></a>
+</p>
+-->
+
+<p align="center">
+  <img src="assets/readme/showcase/real-1.jpg" width="31%" alt="图文卡片：affect 单词卡（插画风）">
+  &nbsp;
+  <img src="assets/readme/showcase/real-2.jpg" width="31%" alt="图文卡片：/rewind 一键退回（马克笔手写风）">
+  &nbsp;
+  <img src="assets/readme/showcase/real-3.jpg" width="31%" alt="图文卡片：周一到周三（清单风）">
+</p>
+<p align="center">
+  <img src="assets/readme/showcase/real-4.jpg" width="31%" alt="图文卡片：把一周的零件备好（白底清单风）">
+  &nbsp;
+  <img src="assets/readme/showcase/real-5.jpg" width="31%" alt="图文卡片：带娃早餐只求三件事（步骤卡）">
+  &nbsp;
+  <img src="assets/readme/showcase/real-6.jpg" width="31%" alt="图文卡片：带娃早餐 10 分钟（时段表）">
+</p>
+<p align="center"><sub>图文卡片 · 实际生成效果，不同主题 × 不同版式</sub></p>
 
 > 📷 演示视频待上传（拖进 GitHub Issue 取链接后按上方注释启用）。
 
