@@ -22,7 +22,7 @@
   <a href="backend/app/agents/registry.py"><img src="https://img.shields.io/badge/Agents-12-0F9D8A?style=flat-square" alt="12 Agents"></a>
   <img src="https://img.shields.io/badge/Models-7%20Providers-F6C344?style=flat-square" alt="7 Model Providers">
   <a href="#-license"><img src="https://img.shields.io/badge/License-MIT-2EA44F?style=flat-square" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+  <a href="https://github.com/ycf-76?tab=packages"><img src="https://img.shields.io/badge/Docker-GHCR-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker"></a>
   <img src="https://img.shields.io/badge/Scrapling-1F6E5C?style=flat-square" alt="Scrapling">
   <img src="https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright">
   <img src="https://img.shields.io/badge/SQLAlchemy%202-C63C3C?style=flat-square&logo=sqlalchemy&logoColor=white" alt="SQLAlchemy 2">
@@ -180,6 +180,20 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 ## 🚀 快速开始
 
 环境要求：Windows 10/11、macOS 或 Linux，Python 3.10+（推荐 [uv](https://docs.astral.sh/uv/)），Node.js 18+（推荐 pnpm）。默认 SQLite，启动自动建表，零配置运行。
+
+### 方式一：Docker 一键启动（推荐）
+
+```bash
+git clone https://github.com/ycf-76/PulseStudio.git
+cd PulseStudio
+
+docker compose up -d          # 首次会构建镜像，之后秒起
+# 打开 http://localhost:8080 · API 文档 http://localhost:8080/docs
+# 数据持久化在 ./docker-data/（db / uploads / outputs）
+# 模型 Key 在 docker-compose.yml 的 backend.environment 里配置
+```
+
+### 方式二：本地开发
 
 ```bash
 git clone https://github.com/ycf-76/PulseStudio.git
