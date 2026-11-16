@@ -194,6 +194,8 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 </p>
 <p align="center"><sub>图文卡片 · 实际生成效果，不同主题 × 不同版式</sub></p>
 
+<p align="center"><sub>🎨 更多生成案例：<a href="assets/showcase-local">插画系列</a>（吉卜力风铁道与向日葵 ×4 · 海底世界 ×2）</sub></p>
+
 > 📷 演示视频待上传（拖进 GitHub Issue 取链接后按上方注释启用）。
 
 ## 🚀 快速开始
