@@ -183,14 +183,14 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
   &nbsp;
   <img src="assets/readme/showcase/real-2.jpg" width="31%" alt="图文卡片：/rewind 一键退回（马克笔手写风）">
   &nbsp;
-  <img src="assets/readme/showcase/real-3.jpg" width="31%" alt="图文卡片：周一到周三（清单风）">
+  <img src="assets/readme/showcase/real-3.jpg" width="31%" alt="图文卡片：好粮不用哄（品牌大标排版）">
 </p>
 <p align="center">
-  <img src="assets/readme/showcase/real-4.jpg" width="31%" alt="图文卡片：把一周的零件备好（白底清单风）">
+  <img src="assets/readme/showcase/real-4.jpg" width="31%" alt="图文卡片：一周穿搭清单（彩色标签版式）">
   &nbsp;
-  <img src="assets/readme/showcase/real-5.jpg" width="31%" alt="图文卡片：带娃早餐只求三件事（步骤卡）">
+  <img src="assets/readme/showcase/real-5.jpg" width="31%" alt="图文卡片：Codex 保姆级教学（深色科技风）">
   &nbsp;
-  <img src="assets/readme/showcase/real-6.jpg" width="31%" alt="图文卡片：带娃早餐 10 分钟（时段表）">
+  <img src="assets/readme/showcase/real-6.jpg" width="31%" alt="图文卡片：甜品探店实拍（摄影种草风）">
 </p>
 <p align="center"><sub>图文卡片 · 实际生成效果，不同主题 × 不同版式</sub></p>
 
