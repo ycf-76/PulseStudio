@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="680" alt="PulseStudio：AI 内容创作工作台，热点选题池、智能体协作、多模型接入">
+  <img src="./assets/readme/hero.svg" width="640" alt="PulseStudio：AI 内容创作工作台">
 </p>
 
 <p align="center">
