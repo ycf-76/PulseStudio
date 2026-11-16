@@ -3,6 +3,11 @@
 </p>
 
 <p align="center">
+  <img src="./assets/readme/pulse-light.png#gh-light-mode-only" width="400" alt="PULSE 1.0 · 测试版 Your Agent">
+  <img src="./assets/readme/pulse-dark.png#gh-dark-mode-only" width="400" alt="PULSE 1.0 · 测试版 Your Agent">
+</p>
+
+<p align="center">
   <strong>你的 AI 内容运营搭档</strong>
 </p>
 <p align="center">
