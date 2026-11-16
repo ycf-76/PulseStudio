@@ -33,13 +33,12 @@
 </p>
 
 <p align="center">
-  <a href="backend/app/agents">🤖 智能体编排</a> &nbsp;·&nbsp;
-  <a href="backend/capabilities/scrapling">🕷️ 平台采集爬虫</a> &nbsp;·&nbsp;
-  <a href="backend/app/pool_monitor">🔥 热点选题池</a> &nbsp;·&nbsp;
-  <a href="backend/app/skills">🧩 技能库</a> &nbsp;·&nbsp;
-  <a href="backend/app/sandbox">🛡️ 执行沙箱</a> &nbsp;·&nbsp;
-  <a href="frontend/src">🖥️ Web 工作台</a> &nbsp;·&nbsp;
-  <a href="docs">📖 设计文档</a>
+  <a href="backend/app/agents">Agent Orchestration</a> &nbsp;·&nbsp;
+  <a href="backend/app/pool_monitor">Topic Pool</a> &nbsp;·&nbsp;
+  <a href="backend/app/skills">Skills Library</a> &nbsp;·&nbsp;
+  <a href="backend/app/sandbox">Execution Sandbox</a> &nbsp;·&nbsp;
+  <a href="frontend/src">Web Workbench</a> &nbsp;·&nbsp;
+  <a href="docs">Design Docs</a>
 </p>
 
 <!-- ▼ 产品海报占位：上传一张整体宣传图（工作台全景 + 亮点标注）到 assets/readme/poster.png 后取消注释
