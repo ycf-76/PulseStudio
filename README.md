@@ -3,8 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/readme/pulse-light.png#gh-light-mode-only" width="400" alt="PULSE 1.0 · 测试版 Your Agent">
-  <img src="./assets/readme/pulse-dark.png#gh-dark-mode-only" width="400" alt="PULSE 1.0 · 测试版 Your Agent">
+  <img src="./assets/readme/pulse-badge.png" width="360" alt="PULSE 1.0">
 </p>
 
 <p align="center">
