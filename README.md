@@ -166,14 +166,15 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 -->
 
 <p align="center">
-  <img src="assets/readme/showcase/cards-1.jpg" width="36%" alt="图文卡片示例：比奇堡打工人生存手册封面">
+  <img src="assets/show/作者画像.png" width="24%" alt="作者画像工作台">
   &nbsp;
-  <img src="assets/readme/showcase/cards-2.png" width="36%" alt="作品预览：Git 与 GitHub 图文笔记（B站 210 赞 / 487 收藏）">
+  <img src="assets/show/chat_页面.png" width="24%" alt="主对话智能体工作台">
+  &nbsp;
+  <img src="assets/show/我的空间.png" width="24%" alt="我的空间作品库">
+  &nbsp;
+  <img src="assets/show/选题池.png" width="24%" alt="热点选题池">
 </p>
-<p align="center">
-  <img src="assets/readme/showcase/cards-3.png" width="72%" alt="图文卡片工作台：那个夏天，我们都在等一场雨（5 页成套卡片 + 手机预览）">
-</p>
-<p align="center"><sub>图文卡片与作品预览 · 实际生成效果</sub></p>
+<p align="center"><sub>这些示例来自 PulseStudio 的实际工作流。</sub></p>
 
 > 📷 演示视频待上传（拖进 GitHub Issue 取链接后按上方注释启用）。
 
