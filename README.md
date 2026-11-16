@@ -42,7 +42,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/readme/poster.jpg" width="100%" alt="PulseStudio 产品海报：实时可驭 · 选题 / 剪辑 / 文案">
+  <img src="assets/readme/poster.jpg" width="100%" alt="PulseStudio：From a sentence to a creation · Pulse 懂你">
 </p>
 
 ## 🎨 PulseStudio 是什么
