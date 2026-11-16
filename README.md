@@ -107,9 +107,7 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 
       <sub>多平台热点聚合、去重与价值评分，按水位管理选题库存，支持 REST API 手动干预。</sub>
 
-      <!-- ▼ 截图占位：上传截图到 assets/readme/features/pool.png 后取消注释
       <img src="assets/readme/features/pool.png" width="100%" alt="热点选题池">
-      -->
     </td>
     <td width="50%" valign="top">
       <strong>🎬 采集与创作</strong>
@@ -153,7 +151,7 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
   </tr>
 </table>
 
-> 📷 热点选题池与数据看板的界面截图待补充。
+> 📷 数据看板的界面截图待补充。
 
 ## 🖼️ 真实产物
 
