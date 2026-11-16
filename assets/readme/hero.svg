@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="280" viewBox="0 0 1200 280"
+     role="img" aria-labelledby="hero-title hero-desc">
+  <title id="hero-title">PulseStudio 多智能体小红书内容运营平台</title>
+  <desc id="hero-desc">螃蟹 logo 与 PulseStudio 文字 logo。副标题：多智能体小红书内容运营平台——热点选题池、智能体流水线、一键发布。</desc>
+
+  <rect width="1200" height="280" rx="26" fill="#171110"/>
+
+  <!-- 螃蟹 logo（几何取自 frontend/public/icons/crab-flat.svg） -->
+  <g transform="translate(80 40) scale(1.32) translate(6 -26)">
+    <!-- 左臂 -->
+    <path d="M52,86 Q36,74 28,64" stroke="#D94F44" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <!-- 右臂 -->
+    <path d="M148,86 Q164,74 172,64" stroke="#D94F44" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <!-- 左钳 -->
+    <ellipse cx="20" cy="50" rx="24" ry="14" transform="rotate(-45 20 50)" fill="#E8655A"/>
+    <ellipse cx="42" cy="80" rx="20" ry="12" transform="rotate(15 42 80)" fill="#E8655A"/>
+    <!-- 右钳 -->
+    <ellipse cx="180" cy="50" rx="24" ry="14" transform="rotate(45 180 50)" fill="#E8655A"/>
+    <ellipse cx="158" cy="80" rx="20" ry="12" transform="rotate(-15 158 80)" fill="#E8655A"/>
+    <!-- 身体 -->
+    <ellipse cx="100" cy="105" rx="58" ry="48" fill="#E8655A"/>
+    <!-- 左腿 -->
+    <path d="M55,110 Q30,118 22,134" stroke="#E8655A" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M52,125 Q28,136 18,154" stroke="#E8655A" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M62,138 Q48,152 42,170" stroke="#E8655A" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- 右腿 -->
+    <path d="M145,110 Q170,118 178,134" stroke="#E8655A" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M148,125 Q172,136 182,154" stroke="#E8655A" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M138,138 Q152,152 158,170" stroke="#E8655A" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- 关节圆 -->
+    <circle cx="28" cy="64" r="8" fill="#D94F44"/>
+    <circle cx="172" cy="64" r="8" fill="#D94F44"/>
+    <!-- 左眼 -->
+    <circle cx="78" cy="62" r="16" fill="#FFFFFF"/>
+    <circle cx="80" cy="62" r="8" fill="#1A1A1A"/>
+    <circle cx="83" cy="59" r="3" fill="#FFFFFF"/>
+    <!-- 右眼 -->
+    <circle cx="122" cy="62" r="16" fill="#FFFFFF"/>
+    <circle cx="120" cy="62" r="8" fill="#1A1A1A"/>
+    <circle cx="123" cy="59" r="3" fill="#FFFFFF"/>
+  </g>
+
+  <!-- 分隔线 -->
+  <line x1="430" y1="60" x2="430" y2="220" stroke="#322620" stroke-width="1"/>
+
+  <!-- 文字 logo -->
+  <g id="wordmark">
+    <text x="470" y="92" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#FF7A59" letter-spacing="3">MULTI-AGENT · XIAOHONGSHU CONTENT OPS</text>
+    <text x="470" y="162" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="78" font-weight="800" fill="#F6EFE9">Pulse<tspan fill="#E8655A">Studio</tspan></text>
+    <rect x="470" y="180" width="56" height="4" rx="2" fill="#FF2442"/>
+    <text x="470" y="218" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="26" font-weight="600" fill="#FF7A59">多智能体小红书内容运营平台</text>
+    <text x="470" y="248" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="19" fill="#B5A69E">热点选题池 × 智能体流水线 × 一键发布</text>
+  </g>
+</svg>

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="460" viewBox="0 0 1200 460"
+     role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">Pulse Studio 系统架构</title>
+  <desc id="arch-desc">五层架构：前端层、网关层、编排层、能力层、数据层；热点选题池作为旁路接入编排层。</desc>
+
+  <rect width="1200" height="460" rx="26" fill="#171110"/>
+
+  <text x="64" y="34" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#9A8B84">ARCHITECTURE · 系统架构</text>
+
+  <!-- 层间箭头 -->
+  <polygon points="527,112 541,112 534,122" fill="#7A6A62"/>
+  <polygon points="527,194 541,194 534,204" fill="#7A6A62"/>
+  <polygon points="527,276 541,276 534,286" fill="#7A6A62"/>
+  <polygon points="527,358 541,358 534,368" fill="#7A6A62"/>
+
+  <!-- Band 1 前端层 -->
+  <rect x="64" y="48" width="940" height="62" rx="12" fill="#1F1815" stroke="#3A2E2A" stroke-width="1.5"/>
+  <text x="88" y="75" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="20" font-weight="700" fill="#F6EFE9">前端层</text>
+  <text x="88" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#6E625B">FRONTEND</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="18" fill="#E8DFD8" text-anchor="middle">
+    <rect x="214" y="61" width="78" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="253" y="85">Vue 3</text>
+    <rect x="306" y="61" width="76" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="344" y="85">Pinia</text>
+    <rect x="396" y="61" width="114" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="453" y="85">Tailwind 4</text>
+    <rect x="524" y="61" width="86" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="567" y="85">Tiptap</text>
+    <rect x="624" y="61" width="66" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="657" y="85">Vite</text>
+    <rect x="704" y="61" width="142" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="775" y="85">SSE 实时流</text>
+  </g>
+
+  <!-- Band 2 网关层 -->
+  <rect x="64" y="130" width="940" height="62" rx="12" fill="#1F1815" stroke="#3A2E2A" stroke-width="1.5"/>
+  <text x="88" y="157" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="20" font-weight="700" fill="#F6EFE9">网关层</text>
+  <text x="88" y="176" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#6E625B">GATEWAY</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="18" fill="#E8DFD8" text-anchor="middle">
+    <rect x="214" y="143" width="162" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="295" y="167">FastAPI :8000</text>
+    <rect x="390" y="143" width="116" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="448" y="167">JWT 认证</text>
+    <rect x="520" y="143" width="116" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="578" y="167">SSE 推送</text>
+    <rect x="650" y="143" width="190" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="745" y="167">BYOK 模型管理</text>
+  </g>
+
+  <!-- Band 3 编排层 -->
+  <rect x="64" y="212" width="940" height="62" rx="12" fill="#1F1815" stroke="#3A2E2A" stroke-width="1.5"/>
+  <text x="88" y="239" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="20" font-weight="700" fill="#F6EFE9">编排层</text>
+  <text x="88" y="258" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#6E625B">ORCHESTRATION</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="18" fill="#E8DFD8" text-anchor="middle">
+    <rect x="214" y="225" width="154" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="291" y="249">多智能体注册表</text>
+    <rect x="382" y="225" width="118" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="441" y="249">技能白名单</text>
+    <rect x="514" y="225" width="196" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="612" y="249">重试 · 熔断 · 降级恢复</text>
+    <rect x="724" y="225" width="136" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="792" y="249">定时任务调度</text>
+  </g>
+
+  <!-- Band 4 能力层 -->
+  <rect x="64" y="294" width="940" height="62" rx="12" fill="#1F1815" stroke="#3A2E2A" stroke-width="1.5"/>
+  <text x="88" y="321" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="20" font-weight="700" fill="#F6EFE9">能力层</text>
+  <text x="88" y="340" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#6E625B">CAPABILITIES</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="18" fill="#E8DFD8" text-anchor="middle">
+    <rect x="214" y="307" width="126" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="277" y="331">多模型 LLM</text>
+    <rect x="354" y="307" width="102" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="405" y="331">多源检索</text>
+    <rect x="470" y="307" width="136" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="538" y="331">通义万相生图</text>
+    <rect x="620" y="307" width="182" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="711" y="331">Playwright 自动化</text>
+    <rect x="816" y="307" width="128" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="880" y="331">小红书 MCP</text>
+  </g>
+
+  <!-- Band 5 数据层 -->
+  <rect x="64" y="376" width="940" height="62" rx="12" fill="#1F1815" stroke="#3A2E2A" stroke-width="1.5"/>
+  <text x="88" y="403" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="20" font-weight="700" fill="#F6EFE9">数据层</text>
+  <text x="88" y="422" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#6E625B">STORAGE</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="18" fill="#E8DFD8" text-anchor="middle">
+    <rect x="214" y="389" width="160" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="294" y="413">SQLite / MySQL</text>
+    <rect x="388" y="389" width="220" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="498" y="413">SQLAlchemy + Alembic</text>
+    <rect x="622" y="389" width="116" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="680" y="413">Redis 可选</text>
+    <rect x="752" y="389" width="182" height="36" rx="8" fill="#261D1A" stroke="#3A2E2A"/><text x="843" y="413">LangSmith 追踪可选</text>
+  </g>
+
+  <!-- 热点选题池旁路 -->
+  <rect x="1030" y="212" width="106" height="226" rx="12" fill="#221A18" stroke="#FF7A59" stroke-width="1.5"/>
+  <text x="1083" y="320" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#FF7A59">热点选题池</text>
+  <text x="1083" y="344" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#9A8B84">pool_monitor</text>
+  <polygon points="1028,236 1028,250 1008,243" fill="#FF7A59"/>
+</svg>
