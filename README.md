@@ -276,7 +276,7 @@ pnpm dev                      # http://localhost:5173
 
 ## 🙌 致谢
 
-项目的智能体架构与产品思路深受 [ZJU-REAL/Easel](https://github.com/ZJU-REAL/Easel)（Apache 2.0）启发，感谢浙大 REAL Lab 与北大 OpenDCAI Lab 的开源工作。
+项目的智能体架构与产品设计均为自主研发。[ZJU-REAL/Easel](https://github.com/ZJU-REAL/Easel)（Apache 2.0）的 Skills 组织方式为我们提供了参考，在此感谢浙大 REAL Lab 与北大 OpenDCAI Lab 的开源工作。
 
 ## 📄 License
 
