@@ -41,11 +41,9 @@
   <a href="docs">Design Docs</a>
 </p>
 
-<!-- ▼ 产品海报占位：上传一张整体宣传图（工作台全景 + 亮点标注）到 assets/readme/poster.png 后取消注释
 <p align="center">
-  <img src="assets/readme/poster.png" width="100%" alt="PulseStudio 产品海报">
+  <img src="assets/readme/poster.jpg" width="100%" alt="PulseStudio 产品海报：实时可驭 · 选题 / 剪辑 / 文案">
 </p>
--->
 
 ## 🎨 PulseStudio 是什么
 
@@ -123,11 +121,27 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
   </tr>
   <tr>
     <td width="50%" valign="top">
+      <strong>💬 主对话智能体</strong>
+
+      <sub>一条对话完成选题、创作、审核与发布，深度思考过程与子 Agent 执行透明可见。</sub>
+
+      <img src="assets/readme/features/chat.png" width="100%" alt="主对话智能体">
+    </td>
+    <td width="50%" valign="top">
       <strong>🎞️ AI 口播剪辑</strong>
 
       <sub>口播视频智能剪辑，在原片全屏基础上叠加素材与特效，成片可直接导出。</sub>
 
       <img src="assets/readme/features/clip.png" width="100%" alt="AI 口播剪辑">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>📚 我的空间</strong>
+
+      <sub>133 个作品统一管理，图文 / 视频 / 音频分类检索，平台生成与采集一键归档。</sub>
+
+      <img src="assets/readme/features/library.png" width="100%" alt="我的空间作品库">
     </td>
     <td width="50%" valign="top">
       <strong>🚦 发布管理</strong>
@@ -139,7 +153,7 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
   </tr>
 </table>
 
-> 📷 热点选题池、主对话智能体与数据看板的界面截图待补充。
+> 📷 热点选题池与数据看板的界面截图待补充。
 
 ## 🖼️ 真实产物
 
@@ -157,6 +171,9 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
   <img src="assets/readme/showcase/cards-1.jpg" width="36%" alt="图文卡片示例：比奇堡打工人生存手册封面">
   &nbsp;
   <img src="assets/readme/showcase/cards-2.png" width="36%" alt="作品预览：Git 与 GitHub 图文笔记（B站 210 赞 / 487 收藏）">
+</p>
+<p align="center">
+  <img src="assets/readme/showcase/cards-3.png" width="72%" alt="图文卡片工作台：那个夏天，我们都在等一场雨（5 页成套卡片 + 手机预览）">
 </p>
 <p align="center"><sub>图文卡片与作品预览 · 实际生成效果</sub></p>
 
