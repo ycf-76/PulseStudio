@@ -58,7 +58,7 @@ Think of it as an operations partner that remembers your account: it knows which
 **PulseStudio demo video**:
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/25afa889-1638-480f-adab-20ecd241d415" controls muted width="100%"></video>
+  <video src="https://github.com/user-attachments/assets/b364e1fd-28c3-41f5-8c7e-34a38ad5a445" controls muted width="100%"></video>
 </p>
 
 

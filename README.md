@@ -58,7 +58,7 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 **PulseStudio 演示视频**：
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/25afa889-1638-480f-adab-20ecd241d415" controls muted width="100%"></video>
+  <video src="https://github.com/user-attachments/assets/b364e1fd-28c3-41f5-8c7e-34a38ad5a445" controls muted width="100%"></video>
 </p>
 
 
