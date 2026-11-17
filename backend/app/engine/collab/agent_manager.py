@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from app.engine.collab.message_bus import InterAgentBus
+
 logger = logging.getLogger(__name__)
 
 

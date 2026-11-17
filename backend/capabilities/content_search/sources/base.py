@@ -34,7 +34,6 @@ async def get_ssl_context() -> ssl.SSLContext:
     这里只构建一次并复用，且放到线程池里跑，不阻塞事件循环。
     用 threading.Lock 而非 asyncio.Lock，避免跨事件循环（测试场景）绑定报错。
     """
-    global _SSL_CONTEXT
     if _SSL_CONTEXT is not None:
         return _SSL_CONTEXT
 

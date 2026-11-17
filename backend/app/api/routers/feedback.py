@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.api.schemas.common import StandardResponse
+from app.db.models import FeedbackEvent
 from app.db.session import get_db
 
 logger = logging.getLogger(__name__)

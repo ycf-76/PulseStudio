@@ -561,11 +561,11 @@ class TaskPlanService:
                 plan_title=plan.title,
                 day_index=day_index,
                 node=node,
-                title=str(copy_out.get("title") or wf.topic)[:50],
+                title=str(copy_out.get("title") or plan.title)[:50],
                 content_preview=str(copy_out.get("content") or "")[:150],
                 value={
                     "biz": "task_plan",
-                    "workflow_id": wf.id,
+                    "workflow_id": run.workflow_id or "",
                     "task_item_id": run.task_item_id,
                     "plan_id": plan.id,
                 },

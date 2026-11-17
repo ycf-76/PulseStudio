@@ -7,7 +7,7 @@ import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, desc, func, or_, select, update
+from sqlalchemy import and_, asc, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 

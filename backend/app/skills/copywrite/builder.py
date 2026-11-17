@@ -397,7 +397,7 @@ class CopywriteSkillBase(Skill):
             if safety_warnings:
                 logger.warning(f"[{self.__class__.__name__}] content safety: {safety_warnings}")
 
-            result = self._parse_streaming_response(full_text)
+            result = self._parse_streaming_response(full_text, topic=topic)
             return result
         except Exception as e:
             logger.exception(f"[{self.__class__.__name__}] LLM streaming failed: {e}")
@@ -461,7 +461,7 @@ class CopywriteSkillBase(Skill):
         )
         return _date_guard() + prompt
 
-    def _parse_streaming_response(self, text: str) -> dict[str, Any]:
+    def _parse_streaming_response(self, text: str, topic: str = "") -> dict[str, Any]:
         """从流式纯文本中解析出结构化字段。
 
         尝试多种模式匹配：

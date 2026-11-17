@@ -15,6 +15,7 @@ from typing import Any
 
 from app.agents.input_rules import ChatInputRule
 from app.agents.registry import AgentRegistry
+from app.agents.top_planner import ParsedIntent
 from app.core.context_vars import current_db_session
 from app.engine.reactor.session import ReactorSession
 from app.engine.reactor.task_classifier import TaskType, build_classifier_from_skills
