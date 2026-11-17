@@ -80,11 +80,14 @@ Think of it as an operations partner that remembers your account: it knows which
 
 ## 🧭 The full content operations loop
 
-1. **Discover**: aggregate multi-platform trends, deduplicate with SimHash, classify and score with LLMs, and settle them into the trending-topic pool.
-2. **Plan**: analyze viral patterns and competitors, turning trend opportunities into angles and content plans.
-3. **Create**: generate Xiaohongshu copy (title / body / hashtags), photo-text card visuals, and AI-generated images.
+1. **Discover**: scheduled multi-platform trend monitoring (every 10 minutes by default, plus persona-driven crawls based on each active user's search history), SimHash dedup + LLM value scoring, settled into the trending-topic pool with a nightly watermark cleanup.
+2. **Plan**: viral-note search and arbitrary link collection (`trending_search` / `url_collect`), Qwen-VL analysis of viral patterns and competitors, turning trend opportunities into concrete angles.
+3. **Create (image-text + video)**:
+   - **Image-text**: DeepSeek-R1 writes the copy (title / body / hashtags), card planning → Tongyi Wanxiang image generation → DSL rendering.
+   - **AI video**: text2video / image2video for single clips, dispatched to Wanxiang / Kling / Volcano Ark by config.
+   - **AI voiceover editing**: `auto_short_video` goes from topic to finished video — the LLM writes the voiceover script and splits it into shots, a shot draft waits for your confirmation first, then per-shot images are generated, TTS narration is added (edge-tts online, piper offline fallback), and ffmpeg composes subtitles + BGM into the final cut. `video_transcribe` is always loaded to extract voiceover scripts back from existing videos. Finished videos are auto-archived to "My Workspace" at the end of the turn, ready to preview.
 4. **Review**: `image_review` checks visuals, `audit` checks compliance, `final_review` is the final gate — three levels.
-5. **Publish & review**: adapt and publish per platform (after human confirmation), collect performance data into the dashboard, and distill what works back into the next round of topic selection.
+5. **Publish & review**: Scrapling StealthyFetcher anti-detection browser automation covers the publish pages of 8 creator platforms (Xiaohongshu / Douyin / Kuaishou / Bilibili / Zhihu / WeChat Channels / Weibo / WeChat MP), with storageState QR login and semi-auto by default — content is auto-filled, a human confirms before submit. After publishing, performance data flows back through a multi-level fallback chain, T+7 scheduled re-collection gathers real results, and topic-scoring weights are calibrated from the data, closing the loop back to step 1.
 
 ## 🧰 What's already built
 
