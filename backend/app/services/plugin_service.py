@@ -3,15 +3,12 @@ Plugin Service Layer
 插件业务逻辑层 - 处理CRUD操作、安装卸载、配置管理等
 """
 
-import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, asc, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-sys.path.insert(0, "D:/My_Project/多智能体内容运营创作平台/backend")
 
 from app.api.schemas.plugin_schemas import (
     PluginConfigRequest,

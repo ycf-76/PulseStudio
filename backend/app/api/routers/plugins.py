@@ -28,7 +28,6 @@ import json
 import logging
 import os
 import shutil
-import sys
 import tempfile
 import zipfile
 from datetime import datetime
@@ -39,8 +38,6 @@ from fastapi import APIRouter, Body, Depends, File, Form, HTTPException
 from fastapi import Path as FastPath
 from fastapi import Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
-sys.path.insert(0, "D:/My_Project/多智能体内容运营创作平台/backend")
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
