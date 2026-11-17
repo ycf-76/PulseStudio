@@ -55,10 +55,12 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 
 你可以把它理解成一个会记住你账号的运营搭档：它知道你在追什么热点、写过什么笔记、哪类内容表现更好，从热点发现一直陪你做到发布复盘，而不是每次都从零开始。
 
-**PulseStudio 演示视频**：
+**PulseStudio 演示视频**（点击封面播放）：
 
 <p align="center">
-  <video src="https://github.com/ycf-76/PulseStudio/releases/download/demo-v1/pulsestudio-demo.mp4" controls muted width="100%"></video>
+  <a href="https://github.com/ycf-76/PulseStudio/releases/download/demo-v1/pulsestudio-demo.mp4">
+    <img src="assets/readme/features/clip.png" width="640" alt="PulseStudio 演示视频，点击播放">
+  </a>
 </p>
 
 
