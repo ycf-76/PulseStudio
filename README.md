@@ -57,14 +57,10 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 
 **PulseStudio 演示视频**：
 
-<!-- ▼ 视频占位：GitHub README 无法直接播放仓库内的 mp4。
-     把演示视频拖进任意 GitHub Issue/PR 的输入框上传，得到 user-images.githubusercontent.com 链接后替换下面 URL 并取消注释：
 <p align="center">
-  <video src="https://user-images.githubusercontent.com/xxxx/pulsestudio-demo.mp4" controls muted width="100%"></video>
+  <video src="https://github.com/ycf-76/PulseStudio/releases/download/demo-v1/pulsestudio-demo.mp4" controls muted width="100%"></video>
 </p>
--->
 
-> 📷 此处预留演示视频位置，素材待上传。
 
 ## 📌 使用提示
 

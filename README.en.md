@@ -57,14 +57,10 @@ Think of it as an operations partner that remembers your account: it knows which
 
 **PulseStudio demo video**:
 
-<!-- ▼ Video placeholder: GitHub READMEs cannot play mp4 files stored in the repo directly.
-     Drag your demo video into any GitHub Issue/PR input box to upload it, then replace the URL below with the user-images.githubusercontent.com link and uncomment:
 <p align="center">
-  <video src="https://user-images.githubusercontent.com/xxxx/pulsestudio-demo.mp4" controls muted width="100%"></video>
+  <video src="https://github.com/ycf-76/PulseStudio/releases/download/demo-v1/pulsestudio-demo.mp4" controls muted width="100%"></video>
 </p>
--->
 
-> 📷 Demo video placeholder — waiting for assets.
 
 ## 📌 Usage Notes
 
