@@ -9,6 +9,7 @@
 借鉴 Pulse post-formatter 的平台感知 + wordcount 校验，
 但不做 LLM 重写（由 PromptDrivenSkill 负责）。
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -181,6 +182,7 @@ def check_platform_limits(
     """检查文案是否符合目标平台限制。"""
     spec = get_platform_spec(platform)
     from app.services.wordcount import count
+
     title_stats = count(title) if title else {"social_count": 0}
     content_stats = count(content) if content else {"social_count": 0}
     title_count = title_stats["social_count"]
@@ -188,9 +190,7 @@ def check_platform_limits(
 
     issues = []
     if spec.title_max > 0 and title_count > spec.title_max:
-        issues.append(
-            f"标题 {title_count} 字，超出 {spec.display_name} 上限 {spec.title_max} 字"
-        )
+        issues.append(f"标题 {title_count} 字，超出 {spec.display_name} 上限 {spec.title_max} 字")
     if content_count > spec.content_max:
         issues.append(
             f"正文 {content_count} 字，超出 {spec.display_name} 硬上限 {spec.content_max} 字"

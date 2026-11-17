@@ -10,6 +10,7 @@
     python scripts/gen_ppt_cards.py            # 全部
     python scripts/gen_ppt_cards.py --only 1   # 只跑第 1 组
 """
+
 from __future__ import annotations
 
 import argparse
@@ -264,13 +265,13 @@ async def _launch_browser(playwright):
         print(f"[warn] 默认 Chromium 启动失败（{exc}），尝试本地 ms-playwright 缓存")
         cache = Path.home() / "AppData" / "Local" / "ms-playwright"
         for exe in sorted(cache.glob("chromium-*/chrome-win64/chrome.exe"), reverse=True):
-            return await playwright.chromium.launch(executable_path=str(exe), headless=True, args=args)
+            return await playwright.chromium.launch(
+                executable_path=str(exe), headless=True, args=args
+            )
         raise
 
 
-_UPLOAD_URL_RE = re.compile(
-    r"/uploads/assets/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+\.(?:jpg|png|webp|gif)"
-)
+_UPLOAD_URL_RE = re.compile(r"/uploads/assets/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+\.(?:jpg|png|webp|gif)")
 
 
 def _absolutize_uploads(html: str) -> str:
@@ -299,8 +300,7 @@ async def _render_html(page, html: str, out_path: Path, name: str) -> dict:
     except Exception:
         pass
     await page.wait_for_timeout(500)
-    metrics = await page.evaluate(
-        """() => {
+    metrics = await page.evaluate("""() => {
             const card = document.querySelector('article') || document.body;
             const h1 = document.querySelector('h1');
             return {
@@ -311,13 +311,14 @@ async def _render_html(page, html: str, out_path: Path, name: str) -> dict:
                 h1Font: h1 ? getComputedStyle(h1).fontFamily : '',
                 h1Weight: h1 ? getComputedStyle(h1).fontWeight : '',
             };
-        }"""
-    )
+        }""")
     overflow = metrics["scrollH"] > 1442 or metrics["scrollW"] > 1082
     out_path.parent.mkdir(parents=True, exist_ok=True)
     await page.screenshot(path=str(out_path), type="png")
-    print(f"  ✓ {name}  ({metrics['cardW']}x{metrics['cardH']})  h1={metrics['h1Font']} {metrics['h1Weight']}"
-          + ("  ⚠ 溢出" if overflow else ""))
+    print(
+        f"  ✓ {name}  ({metrics['cardW']}x{metrics['cardH']})  h1={metrics['h1Font']} {metrics['h1Weight']}"
+        + ("  ⚠ 溢出" if overflow else "")
+    )
     return metrics
 
 
@@ -346,9 +347,7 @@ async def _illustrate(prompt: str, slug: str) -> list[str]:
         raise RuntimeError("生图返回空结果")
     fmt = (Image.open(io.BytesIO(blobs[0])).format or "PNG").upper()
     ctype = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}.get(fmt, "image/png")
-    asset = await save_asset(
-        "local", f"{slug}.{fmt.lower()}", ctype, blobs[0], source="ai"
-    )
+    asset = await save_asset("local", f"{slug}.{fmt.lower()}", ctype, blobs[0], source="ai")
     print(f"  插画已入库 asset_id={asset['asset_id']} url={asset['original_url']}")
     return [asset["asset_id"]]
 
@@ -361,8 +360,11 @@ async def _run_deck(spec: dict, index: int, llm, browser) -> list[Path]:
     kwargs = dict(topic=topic, content=spec["content"].strip(), user_id="local", llm=llm)
     if spec.get("image_prompt"):
         kwargs.update(asset_ids=await _illustrate(spec["image_prompt"], spec["slug"]))
-        kwargs.update(theme_id=spec["theme_id"], recipe_id=spec["recipe_id"],
-                      image_layout=spec.get("image_layout", "top"))
+        kwargs.update(
+            theme_id=spec["theme_id"],
+            recipe_id=spec["recipe_id"],
+            image_layout=spec.get("image_layout", "top"),
+        )
     elif spec["chain"] == "structured":
         kwargs.update(theme_id=spec["theme_id"], recipe_id=spec["recipe_id"])
     else:
@@ -397,8 +399,10 @@ async def _run_deck(spec: dict, index: int, llm, browser) -> list[Path]:
         await _render_html(page, html, out_path, name)
         density = item.get("density") or {}
         if density:
-            print(f"    密度审计: fill={density.get('fill')} min_fill={density.get('min_fill')} "
-                  f"problems={density.get('problems')}")
+            print(
+                f"    密度审计: fill={density.get('fill')} min_fill={density.get('min_fill')} "
+                f"problems={density.get('problems')}"
+            )
         saved.append(out_path)
     await context.close()
     return saved
@@ -412,8 +416,10 @@ async def _audit(paths: list[Path]) -> None:
     for p in paths:
         r = analyze(str(p))
         tag = "PASS" if r["pass"] else "FAIL"
-        print(f"{tag} {p.name}  跨度{r['span']*100:.0f}% 底部空{r['bottom_dead']*100:.0f}% "
-              f"最大空白带{r['max_gap']*100:.0f}% 四带{r['bands']}")
+        print(
+            f"{tag} {p.name}  跨度{r['span']*100:.0f}% 底部空{r['bottom_dead']*100:.0f}% "
+            f"最大空白带{r['max_gap']*100:.0f}% 四带{r['bands']}"
+        )
         if not r["pass"]:
             for prob in r["problems"]:
                 print(f"    !! {prob}")
@@ -428,12 +434,14 @@ async def main() -> int:
     args = parser.parse_args()
 
     from app.config import get_settings
+
     settings = get_settings()
     if not settings.deepseek_api_key:
         print("ERROR: DEEPSEEK_API_KEY 未配置")
         return 1
 
     from app.adapters.deepseek import DeepSeekAdapter
+
     llm = DeepSeekAdapter(
         api_key=settings.deepseek_api_key,
         base_url=settings.deepseek_base_url,
@@ -442,6 +450,7 @@ async def main() -> int:
     )
 
     from playwright.async_api import async_playwright
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     await _ensure_tables()
 

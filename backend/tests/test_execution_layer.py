@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-
 SKILLS_DIR = Path(__file__).resolve().parent.parent / "app" / "agents" / "prompts" / "skills"
 OUTPUTS_DIR = Path(__file__).resolve().parent.parent / "outputs"
 
@@ -28,7 +27,12 @@ class TestMemeOps:
     def test_classic_meme_top_bottom(self, base_image: Path, tmp_path: Path):
         from app.agents.prompts.scripts.meme_ops import render_classic
 
-        out = render_classic(base_image, top_text="上方文字", bottom_text="下方文字", output_path=tmp_path / "classic.png")
+        out = render_classic(
+            base_image,
+            top_text="上方文字",
+            bottom_text="下方文字",
+            output_path=tmp_path / "classic.png",
+        )
         assert out.exists()
         assert out.stat().st_size > 0
         with Image.open(out) as result:
@@ -44,7 +48,9 @@ class TestMemeOps:
     def test_reaction_meme(self, base_image: Path, tmp_path: Path):
         from app.agents.prompts.scripts.meme_ops import render_reaction
 
-        out = render_reaction(base_image, caption="反应图配文", output_path=tmp_path / "reaction.png")
+        out = render_reaction(
+            base_image, caption="反应图配文", output_path=tmp_path / "reaction.png"
+        )
         assert out.exists()
         with Image.open(out) as result:
             assert result.height > 400
@@ -52,7 +58,11 @@ class TestMemeOps:
     def test_classic_meme_long_text(self, base_image: Path, tmp_path: Path):
         from app.agents.prompts.scripts.meme_ops import render_classic
 
-        out = render_classic(base_image, top_text="这是一段很长的文字用来测试自动换行功能是否正常工作", output_path=tmp_path / "long.png")
+        out = render_classic(
+            base_image,
+            top_text="这是一段很长的文字用来测试自动换行功能是否正常工作",
+            output_path=tmp_path / "long.png",
+        )
         assert out.exists()
         assert out.stat().st_size > 0
 
@@ -144,7 +154,9 @@ class TestTTSEdge:
         assert resolve_voice("zh-CN-YunyangNeural") == "zh-CN-YunyangNeural"
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="真调 Edge TTS 网络服务（wss://speech.platform.bing.com）——硬规矩：测试不许打外部服务，网络合成验证走真机冒烟")
+    @pytest.mark.skip(
+        reason="真调 Edge TTS 网络服务（wss://speech.platform.bing.com）——硬规矩：测试不许打外部服务，网络合成验证走真机冒烟"
+    )
     async def test_synthesize(self, tmp_path: Path):
         from app.agents.prompts.scripts.tts_edge import synthesize
 
@@ -182,6 +194,7 @@ class TestCodeTypeSkills:
 class TestCapabilityTierDistribution:
     def test_tier_counts(self):
         import app.core.prompt_skills as _ps
+
         _ps._scanned = False
         from app.core.prompt_skills import scan_and_register_prompt_skills
         from app.core.skill_registry import SkillRegistry
@@ -191,6 +204,7 @@ class TestCapabilityTierDistribution:
         all_skills = registry.all_skill_classes()
 
         from collections import Counter
+
         tiers = Counter(getattr(s, "capability_tier", "NOT_SET") for s in all_skills)
 
         # 2026-10 技能改版：html_card 档被重分类（并入 text_only / image_render），
@@ -201,6 +215,7 @@ class TestCapabilityTierDistribution:
 
     def test_key_skills_have_correct_tier(self):
         import app.core.prompt_skills as _ps
+
         _ps._scanned = False
         from app.core.prompt_skills import scan_and_register_prompt_skills
         from app.core.skill_registry import SkillRegistry

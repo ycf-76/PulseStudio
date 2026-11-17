@@ -14,7 +14,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from helpers import ONE_PIXEL_PNG
 
 pytestmark = pytest.mark.integration
@@ -36,8 +35,8 @@ def preview_draft(client) -> dict:
         json={
             "topic": "番茄工作法",
             "content": "25 分钟专注，5 分钟休息。四个番茄钟后休息 15 分钟。\n"
-                       "关键：把干扰记在纸上，不打断当前番茄钟。\n"
-                       "工具：计时器、待办清单、一张纸。",
+            "关键：把干扰记在纸上，不打断当前番茄钟。\n"
+            "工具：计时器、待办清单、一张纸。",
             "theme_id": "ink",
             "image_layout": "top",
         },
@@ -136,7 +135,9 @@ def test_creative_artifact_build_read_patch_delete(client, preview_draft):
     assert card.status_code == 200, card.text
     assert card.json()["data"]["pages"], "工件 card-draft 无页面"
 
-    patched = client.patch(f"/api/creative-artifacts/{artifact_id}", json={"brief": {"topic": "番茄工作法（改）"}})
+    patched = client.patch(
+        f"/api/creative-artifacts/{artifact_id}", json={"brief": {"topic": "番茄工作法（改）"}}
+    )
     assert patched.status_code == 200, patched.text
 
     listed = client.get("/api/creative-artifacts", params={"limit": 10})
@@ -210,9 +211,7 @@ def test_assets_upload_list_delete(client):
     预期：返回 2 条资产（含 asset_id 与 url）；列表可查；删除后列表不含。
     文档依据：backend/app/api/routers/assets.py。
     """
-    files = [
-        ("files", (f"e2e-{i}.png", ONE_PIXEL_PNG, "image/png")) for i in range(2)
-    ]
+    files = [("files", (f"e2e-{i}.png", ONE_PIXEL_PNG, "image/png")) for i in range(2)]
     uploaded = client.post("/api/assets", files=files)
     assert uploaded.status_code == 200, uploaded.text
     assets = uploaded.json()["data"]
@@ -262,7 +261,9 @@ def test_feedback_like_and_dislike_validation(client, qa_session_id):
     assert like.status_code == 200, like.text
 
     dislike = client.post("/api/feedback", json={"type": "dislike", "session_id": qa_session_id})
-    assert dislike.status_code == 422, f"点踩缺维度未拦截: {dislike.status_code} {dislike.text[:200]}"
+    assert (
+        dislike.status_code == 422
+    ), f"点踩缺维度未拦截: {dislike.status_code} {dislike.text[:200]}"
 
     stats = client.get("/api/feedback/stats")
     assert stats.status_code == 200, stats.text
@@ -285,9 +286,9 @@ def test_profile_read_and_personalities(client):
     data = profile.json()["data"]
     if data is not None:
         assert isinstance(data, dict) and data, f"画像结构异常: {data}"
-        assert data.get("primary_domain") or data.get("tone"), (
-            f"画像缺创作者定位字段: {list(data)[:8]}"
-        )
+        assert data.get("primary_domain") or data.get(
+            "tone"
+        ), f"画像缺创作者定位字段: {list(data)[:8]}"
 
     personalities = client.get("/api/profile/personalities")
     assert personalities.status_code == 200, personalities.text
@@ -363,10 +364,16 @@ def test_plugins_health_and_marketplace(client):
     health = client.get("/api/plugins/health")
     assert health.status_code == 200, health.text
     health_body = health.json()
-    health_payload = health_body["data"] if isinstance(health_body, dict) and "data" in health_body else health_body
-    assert health_payload.get("status") in {"healthy", "error", "degraded"}, (
-        f"插件健康检查缺状态: {list(health_payload)[:8]}"
+    health_payload = (
+        health_body["data"]
+        if isinstance(health_body, dict) and "data" in health_body
+        else health_body
     )
+    assert health_payload.get("status") in {
+        "healthy",
+        "error",
+        "degraded",
+    }, f"插件健康检查缺状态: {list(health_payload)[:8]}"
 
     mine = client.get("/api/plugins/my")
     assert mine.status_code == 200, mine.text
@@ -377,7 +384,11 @@ def test_plugins_health_and_marketplace(client):
     market = client.get("/api/plugins/marketplace")
     assert market.status_code == 200, market.text
     market_body = market.json()
-    market_payload = market_body["data"] if isinstance(market_body, dict) and "data" in market_body else market_body
+    market_payload = (
+        market_body["data"]
+        if isinstance(market_body, dict) and "data" in market_body
+        else market_body
+    )
     assert isinstance(market_payload, dict), f"插件市场结构异常: {type(market_payload)}"
     for key in ("items", "total", "page", "page_size"):
         assert key in market_payload, f"插件市场缺字段 {key}: {list(market_payload)[:8]}"
@@ -418,7 +429,9 @@ def test_plugin_upload_rejects_invalid_category(client):
             )
         },
     )
-    assert resp.status_code == 400, f"非法 category 未返回 400: {resp.status_code} {resp.text[:200]}"
+    assert (
+        resp.status_code == 400
+    ), f"非法 category 未返回 400: {resp.status_code} {resp.text[:200]}"
     detail = resp.text
     assert "category" in detail.lower(), f"400 未说明原因: {detail[:200]}"
     for leak in ("INSERT INTO", "SQL:", "pymysql", "Data truncated"):
@@ -452,7 +465,10 @@ def test_task_plan_decompose_create_and_state_machine(client):
     """
     rule = client.post(
         "/api/task-plans/decompose",
-        json={"intent_text": "第1天：番茄工作法入门\n第2天：番茄钟实操\n第3天：常见误区", "dry_run": True},
+        json={
+            "intent_text": "第1天：番茄工作法入门\n第2天：番茄钟实操\n第3天：常见误区",
+            "dry_run": True,
+        },
     )
     assert rule.status_code == 200, rule.text
     rule_data = rule.json()["data"]
@@ -460,13 +476,18 @@ def test_task_plan_decompose_create_and_state_machine(client):
 
     llm = client.post(
         "/api/task-plans/decompose",
-        json={"intent_text": "帮我规划 3 天的小红书图文选题，主题是效率提升", "daily_time": "09:00"},
+        json={
+            "intent_text": "帮我规划 3 天的小红书图文选题，主题是效率提升",
+            "daily_time": "09:00",
+        },
     )
     assert llm.status_code == 200, llm.text
     llm_data = llm.json()["data"]
     assert llm_data["items"], "真实 LLM 拆解无条目"
     day_indexes = [it["day_index"] for it in llm_data["items"]]
-    assert sorted(day_indexes) == list(range(1, len(day_indexes) + 1)), f"day_index 不连续: {day_indexes}"
+    assert sorted(day_indexes) == list(
+        range(1, len(day_indexes) + 1)
+    ), f"day_index 不连续: {day_indexes}"
 
     created = client.post(
         "/api/task-plans",
@@ -529,7 +550,9 @@ def test_workspace_bind_file_ops_and_unbind(client):
     """
     tmp_dir = Path(tempfile.mkdtemp(prefix="e2e-ws-"))
     try:
-        bound = client.post("/api/workspace/bind", json={"local_path": str(tmp_dir), "name": "E2E 工作区"})
+        bound = client.post(
+            "/api/workspace/bind", json={"local_path": str(tmp_dir), "name": "E2E 工作区"}
+        )
         assert bound.status_code == 200, bound.text
         ws_id = bound.json()["data"]["id"]
 
@@ -571,7 +594,11 @@ def test_notifications_sse_is_authenticated_and_streamable(client):
     预期：200 + text/event-stream；无 token 时 401/403。
     文档依据：backend/app/api/routers/sse.py subscribe_notifications。
     """
-    with client.stream("GET", "/api/sse/notifications", timeout=httpx.Timeout(connect=10.0, read=8.0, write=10.0, pool=10.0)) as resp:
+    with client.stream(
+        "GET",
+        "/api/sse/notifications",
+        timeout=httpx.Timeout(connect=10.0, read=8.0, write=10.0, pool=10.0),
+    ) as resp:
         assert resp.status_code == 200, resp.read().decode("utf-8", "ignore")
         assert "text/event-stream" in resp.headers.get("content-type", "")
         try:

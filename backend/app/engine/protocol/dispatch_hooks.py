@@ -12,6 +12,7 @@
   由工厂/路由在构造 ReactorSession 时显式注入——内核 grep 不到业务工具名。
 - 钩子必须原地修改 args 并返回 (name, args)；禁止抛异常（内核包 try 兜底）。
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,11 +32,15 @@ class DispatchContext:
 
 
 class DispatchHook(Protocol):
-    async def pre_clarify(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_clarify(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         """返回澄清判定用的 (target, args)。默认恒等。"""
         ...
 
-    async def pre_execute(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_execute(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         """返回执行用的 (name, args)。默认恒等。"""
         ...
 
@@ -59,14 +64,18 @@ class SkillCallUnwrapHook:
       （SkillCallPrimitive 执行 skill 需要，SSE 归属也靠它）。
     """
 
-    async def pre_clarify(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_clarify(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         if name != "skill_call":
             return name, args
         target = str(args.get("skill") or "")
         nested = args.get("arguments")
         return target, (nested if isinstance(nested, dict) else {})
 
-    async def pre_execute(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_execute(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         if name != "skill_call":
             return name, args
         if not args.get("_user_id"):

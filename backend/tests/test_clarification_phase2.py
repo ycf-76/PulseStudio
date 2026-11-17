@@ -1,32 +1,34 @@
 """Phase 2 测试：后端流程 — 澄清前置检查 + 暂停/恢复 + API 端点。"""
 
 import json
+
 import pytest
 
-from app.agents.clarification_schema import (
-    ClarifyFieldMeta,
-    ClarifyWhen,
-    ClarifyOption,
-    ClarificationBatch,
-    ClarificationQuestion,
-    QuestionType,
-)
 from app.agents.clarification_graph import (
-    collect_clarify_fields,
     build_batches,
+    collect_clarify_fields,
     compile_clarification_result,
 )
-
+from app.agents.clarification_schema import (
+    ClarificationBatch,
+    ClarificationQuestion,
+    ClarifyFieldMeta,
+    ClarifyOption,
+    ClarifyWhen,
+    QuestionType,
+)
 
 # ============================================================
 # Step 0: Clarification 前置检查逻辑
 # ============================================================
+
 
 class TestClarificationPreCheck:
     """验证 _execute_tool_call 中 Step 0 的判断逻辑。"""
 
     def test_no_clarify_meta_passes_through(self):
         """Skill 无 clarify_meta → 不触发澄清。"""
+
         class NoMetaSkill:
             name = "search"
             clarify_meta = {}
@@ -95,6 +97,7 @@ class TestClarificationPreCheck:
 # Clarification break 输出格式
 # ============================================================
 
+
 class TestClarificationOutputFormat:
     """验证 loop.py 中澄清 break 时 final_output 的格式。"""
 
@@ -134,7 +137,10 @@ class TestClarificationOutputFormat:
         assert final_output["_awaiting_clarification"] is True
         assert final_output["_clarification_skill"] == "copywriting"
         assert len(final_output["_clarification_batches"]) == 1
-        assert final_output["_clarification_batches"][0]["questions"][0]["id"] == "clarify_writing_style"
+        assert (
+            final_output["_clarification_batches"][0]["questions"][0]["id"]
+            == "clarify_writing_style"
+        )
 
     def test_confirmation_output_unchanged(self):
         """确认（非澄清）的输出格式不应被修改。"""
@@ -160,6 +166,7 @@ class TestClarificationOutputFormat:
 # ============================================================
 # ChatResult status
 # ============================================================
+
 
 class TestChatResultStatus:
     """验证 ChatAgent 返回的 status 值。"""
@@ -201,6 +208,7 @@ class TestChatResultStatus:
 # ============================================================
 # Clarify API 端点逻辑
 # ============================================================
+
 
 class TestClarifyAPILogic:
     """验证 /clarify 端点的核心逻辑（不依赖 FastAPI）。"""
@@ -266,11 +274,13 @@ class TestClarifyAPILogic:
 # Loop state 扩展
 # ============================================================
 
+
 class TestLoopStateExtension:
     """验证 loop_state JSON 序列化支持新字段。"""
 
     def test_pending_clarification_serializable(self):
         import json
+
         state = {
             "messages": [],
             "iteration": 0,
@@ -297,4 +307,7 @@ class TestLoopStateExtension:
         deserialized = json.loads(serialized)
         assert deserialized["pending_clarification"]["_type"] == "clarification"
         assert deserialized["clarified_answers"]["writing_style"] == "lively"
-        assert deserialized["context_snapshot"]["extra"]["clarification_result"]["writing_style"] == "lively"
+        assert (
+            deserialized["context_snapshot"]["extra"]["clarification_result"]["writing_style"]
+            == "lively"
+        )

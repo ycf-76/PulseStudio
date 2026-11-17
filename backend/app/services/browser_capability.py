@@ -7,6 +7,7 @@
 - 向后兼容：toml 无 [browser] 段时仍读 Settings.browser_service_url。
 - 复用 grid_capability.py 的范式（核心下沉→服务注册→配置切换→双跑契约）。
 """
+
 from __future__ import annotations
 
 import base64

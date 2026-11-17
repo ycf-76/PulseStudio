@@ -21,8 +21,14 @@ _MAX_MSG_LEN = 1800
 
 
 class WeChatSendTextInput(BaseModel):
-    to_user_id: str = Field(default="", description="目标微信用户ID (wxid)。留空则自动发给绑定用户（即你自己）。也可以填好友wxid或群ID。")
-    text: str = Field(..., description="要发送的完整文本内容。必须包含完整文案，不要只发标题或摘要。如果内容很长，skill会自动分段发送。")
+    to_user_id: str = Field(
+        default="",
+        description="目标微信用户ID (wxid)。留空则自动发给绑定用户（即你自己）。也可以填好友wxid或群ID。",
+    )
+    text: str = Field(
+        ...,
+        description="要发送的完整文本内容。必须包含完整文案，不要只发标题或摘要。如果内容很长，skill会自动分段发送。",
+    )
     context_token: str = Field(default="", description="会话token（可选，自动获取）")
 
 
@@ -55,16 +61,27 @@ class WeChatSendTextSkill(Skill):
 
         ctx = inputs.get("_context")
         user_id = ctx.user_id if ctx and hasattr(ctx, "user_id") else "default"
-        logger.info(f"[WeChatSendTextSkill] user_id={user_id}, to_user_id={to_user_id}, text_len={len(text)}")
+        logger.info(
+            f"[WeChatSendTextSkill] user_id={user_id}, to_user_id={to_user_id}, text_len={len(text)}"
+        )
 
         engine = get_wechat_engine(user_id)
         if not engine.is_logged_in:
-            return {"ok": False, "error": "WeChat bot not logged in. Please go to Settings > 自动化办公 > 微信, click 去绑定 and scan QR code first."}
+            return {
+                "ok": False,
+                "error": "WeChat bot not logged in. Please go to Settings > 自动化办公 > 微信, click 去绑定 and scan QR code first.",
+            }
 
         if not to_user_id or to_user_id == "filehelper":
-            if engine._client and engine._client._credentials and engine._client._credentials.ilink_user_id:
+            if (
+                engine._client
+                and engine._client._credentials
+                and engine._client._credentials.ilink_user_id
+            ):
                 to_user_id = engine._client._credentials.ilink_user_id
-                logger.info(f"[WeChatSendTextSkill] 未指定目标或目标为filehelper，使用绑定用户: {to_user_id}")
+                logger.info(
+                    f"[WeChatSendTextSkill] 未指定目标或目标为filehelper，使用绑定用户: {to_user_id}"
+                )
             else:
                 to_user_id = "filehelper"
 
@@ -78,7 +95,7 @@ class WeChatSendTextSkill(Skill):
                 "error": (
                     "⚠️ 微信推送需要先激活会话\n\n"
                     "iLink 协议要求：对方必须先给机器人发一条消息，机器人才能回复/推送。\n\n"
-                    "激活方法：在微信上找到机器人（iLink助手），发送任意一条消息（如\"hi\"），即可建立会话。\n"
+                    '激活方法：在微信上找到机器人（iLink助手），发送任意一条消息（如"hi"），即可建立会话。\n'
                     "激活后重试推送即可成功。\n\n"
                     "注意：这是微信iLink协议的硬限制，无法绕过。"
                 ),
@@ -86,7 +103,9 @@ class WeChatSendTextSkill(Skill):
             }
 
         chunks = self._split_text(text)
-        logger.info(f"[WeChatSendTextSkill] context_token: (ok), 发送到 {to_user_id}, 分{len(chunks)}段发送")
+        logger.info(
+            f"[WeChatSendTextSkill] context_token: (ok), 发送到 {to_user_id}, 分{len(chunks)}段发送"
+        )
 
         sent_count = 0
         for i, chunk in enumerate(chunks):
@@ -100,7 +119,9 @@ class WeChatSendTextSkill(Skill):
                     sent_count += 1
                     logger.info(f"[WeChatSendTextSkill] 第{i+1}/{len(chunks)}段发送成功")
                 else:
-                    logger.error(f"[WeChatSendTextSkill] 第{i+1}/{len(chunks)}段发送失败 (iLink API error)")
+                    logger.error(
+                        f"[WeChatSendTextSkill] 第{i+1}/{len(chunks)}段发送失败 (iLink API error)"
+                    )
                     if sent_count == 0:
                         return {"ok": False, "error": f"第{i+1}段发送失败 (iLink API error)"}
             except Exception as e:

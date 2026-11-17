@@ -71,7 +71,8 @@ class TalkingHeadDemoSkill(Skill):
     input_schema = TalkingHeadDemoInput
 
     async def execute(
-        self, params: dict[str, Any],
+        self,
+        params: dict[str, Any],
     ) -> Any:  # async generator（框架按最后一个 yield 取结果）
         parsed = TalkingHeadDemoInput(**params)
         user_id, workflow_id = resolve_owner(params)
@@ -86,17 +87,21 @@ class TalkingHeadDemoSkill(Skill):
         if parsed.cut_enabled:
             try:
                 sc = SmartCutSkill()
-                plan = await sc.execute({
-                    "video_path": parsed.video_path,
-                    "detect_fluff": True,
-                    "chain_with_overlay": True,
-                })
-                if plan.get("mode") == "plan":
-                    cut = await sc.execute({
+                plan = await sc.execute(
+                    {
                         "video_path": parsed.video_path,
-                        "refine_candidates": plan["plan"]["candidates"],
+                        "detect_fluff": True,
                         "chain_with_overlay": True,
-                    })
+                    }
+                )
+                if plan.get("mode") == "plan":
+                    cut = await sc.execute(
+                        {
+                            "video_path": parsed.video_path,
+                            "refine_candidates": plan["plan"]["candidates"],
+                            "chain_with_overlay": True,
+                        }
+                    )
                     cut_path = cut.get("output_path")
                     kept_segments = cut.get("kept_segments")
             except Exception as e:
@@ -133,9 +138,7 @@ class TalkingHeadDemoSkill(Skill):
             if chunk.get("success") is False:
                 last_error = chunk.get("error")
             elif chunk.get("event", "").endswith("_error"):
-                last_error = (
-                    (chunk.get("data") or {}).get("error") or chunk.get("error")
-                )
+                last_error = (chunk.get("data") or {}).get("error") or chunk.get("error")
 
         # ── 3) 终态（框架取最后一个 yield）──
         if output_path:

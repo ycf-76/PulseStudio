@@ -14,6 +14,7 @@
 P0-2：验证码防暴力破解 — Redis 计数器限制验证频率（5次/15分钟）。
 P0-3：内存状态迁移 Redis — sse_token 和 email_code 迁移到 Redis 持久化存储。
 """
+
 from __future__ import annotations
 
 import logging
@@ -55,10 +56,6 @@ _CODE_TTL = 300
 _CODE_LEN = 6
 
 
-
-
-
-
 @router.get("/me")
 async def get_me(
     user_id: str = Depends(get_current_user),
@@ -69,13 +66,15 @@ async def get_me(
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    return StandardResponse(data={
-        "user_id": user.id,
-        "nickname": user.nickname or "",
-        "avatar_url": user.avatar_url or resolve_avatar_url(user.email),
-        "has_xhs_auth": False,
-        "login_method": "email",
-    })
+    return StandardResponse(
+        data={
+            "user_id": user.id,
+            "nickname": user.nickname or "",
+            "avatar_url": user.avatar_url or resolve_avatar_url(user.email),
+            "has_xhs_auth": False,
+            "login_method": "email",
+        }
+    )
 
 
 @router.post("/logout")
@@ -110,10 +109,12 @@ async def refresh_token(
     if nickname:
         new_access = create_jwt(user_id, extra_claims={"nickname": nickname})
 
-    return StandardResponse(data={
-        "token": new_access,
-        "refresh_token": new_refresh,
-    })
+    return StandardResponse(
+        data={
+            "token": new_access,
+            "refresh_token": new_refresh,
+        }
+    )
 
 
 @router.post("/sse-session")
@@ -148,14 +149,16 @@ async def validate_sse_token(token: str | None) -> bool:
 
 def _generate_code() -> str:
     import random
+
     return "".join(random.choices("0123456789", k=_CODE_LEN))
 
 
 def _send_email_smtp(to_addr: str, code: str) -> bool:
     """通过 SMTP 发送验证码邮件。成功返回 True，失败返回 False。"""
-    from app.config import get_settings
     import smtplib
     from email.mime.text import MIMEText
+
+    from app.config import get_settings
 
     settings = get_settings()
     smtp_host = settings.smtp_host
@@ -226,7 +229,9 @@ async def send_email_code(
     if sent_real:
         logger.info(f"email code sent to {email} via SMTP")
     else:
-        logger.info(f"[DEV-MODE] email code for {email}: {code}  (configure SMTP to send real emails)")
+        logger.info(
+            f"[DEV-MODE] email code for {email}: {code}  (configure SMTP to send real emails)"
+        )
 
     return StandardResponse(data={"email": email, "sent": True})
 
@@ -308,15 +313,17 @@ async def email_login(
 
     avatar = user.avatar_url or resolve_avatar_url(user.email)
 
-    return StandardResponse(data={
-        "token": token,
-        "refresh_token": refresh,
-        "user_id": user.id,
-        "nickname": user.nickname or _default_nickname(email),
-        "avatar_url": avatar,
-        "has_xhs_auth": False,
-        "login_method": "email",
-    })
+    return StandardResponse(
+        data={
+            "token": token,
+            "refresh_token": refresh,
+            "user_id": user.id,
+            "nickname": user.nickname or _default_nickname(email),
+            "avatar_url": avatar,
+            "has_xhs_auth": False,
+            "login_method": "email",
+        }
+    )
 
 
 @router.post("/dev-login")
@@ -362,12 +369,14 @@ async def dev_login(
     refresh = create_refresh_token(user.id)
     avatar = user.avatar_url or resolve_avatar_url(user.email)
 
-    return StandardResponse(data={
-        "token": token,
-        "refresh_token": refresh,
-        "user_id": user.id,
-        "nickname": user.nickname or _default_nickname(email),
-        "avatar_url": avatar,
-        "has_xhs_auth": False,
-        "login_method": "email",
-    })
+    return StandardResponse(
+        data={
+            "token": token,
+            "refresh_token": refresh,
+            "user_id": user.id,
+            "nickname": user.nickname or _default_nickname(email),
+            "avatar_url": avatar,
+            "has_xhs_auth": False,
+            "login_method": "email",
+        }
+    )

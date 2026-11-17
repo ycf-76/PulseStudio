@@ -75,8 +75,12 @@ def _draw_text_centered(
         x = (img_width - tw) // 2
         y = y_start + i * line_spacing
         draw.text(
-            (x, y), line, fill=_TEXT_COLOR, font=font,
-            stroke_width=_STROKE_WIDTH, stroke_fill=_STROKE_COLOR,
+            (x, y),
+            line,
+            fill=_TEXT_COLOR,
+            font=font,
+            stroke_width=_STROKE_WIDTH,
+            stroke_fill=_STROKE_COLOR,
         )
 
 

@@ -3,6 +3,7 @@
 基于 Scrapling Spider ABC，提供通用配置和入库回调。
 子类只需实现 parse() 和平台特定选择器。
 """
+
 from __future__ import annotations
 
 import logging
@@ -43,7 +44,9 @@ class BasePlatformSpider(Spider):
     concurrent_requests = 2
     max_blocked_retries = 3
 
-    def __init__(self, user_id: str = "", platform_uid: str = "", cookies: dict | None = None, **kwargs):
+    def __init__(
+        self, user_id: str = "", platform_uid: str = "", cookies: dict | None = None, **kwargs
+    ):
         self.user_id = user_id
         self.platform_uid = platform_uid
         self.cookies = cookies
@@ -53,16 +56,21 @@ class BasePlatformSpider(Spider):
     async def on_scraped_item(self, item: dict) -> dict | None:
         """每条结果实时入库 + 推送进度。"""
         from capabilities.scrapling.spiders.db_sink import save_scraped_item
+
         saved = await save_scraped_item(item, self.platform, self.user_id)
         if saved:
             self.saved_count += 1
             try:
                 from app.services.notification_bus import notification_bus
-                await notification_bus.publish("spider_item_scraped", {
-                    "platform": self.platform,
-                    "title": item.get("title", "")[:50],
-                    "spider_name": self.name,
-                })
+
+                await notification_bus.publish(
+                    "spider_item_scraped",
+                    {
+                        "platform": self.platform,
+                        "title": item.get("title", "")[:50],
+                        "spider_name": self.name,
+                    },
+                )
             except Exception:
                 pass
         return item
@@ -70,6 +78,7 @@ class BasePlatformSpider(Spider):
     async def on_close(self) -> None:
         """爬取完成后更新 PlatformAccount 同步状态。"""
         from capabilities.scrapling.spiders.db_sink import update_sync_status
+
         await update_sync_status(self.user_id, self.platform, "idle")
 
     def download_media(
@@ -86,6 +95,7 @@ class BasePlatformSpider(Spider):
         详见 capabilities.scrapling.spiders.media_downloader。
         """
         from capabilities.scrapling.spiders.media_downloader import download_media
+
         return download_media(
             url,
             platform=self.platform,

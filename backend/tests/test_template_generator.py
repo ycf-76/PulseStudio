@@ -53,6 +53,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         errors = validate_generated_html(GOOD_TEMPLATE)
         assert errors == []
 
@@ -60,24 +61,30 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         bad = GOOD_TEMPLATE.replace(
-            "window.seekTo = function(t)", "window.seek = function(t)",
+            "window.seekTo = function(t)",
+            "window.seek = function(t)",
         )
         errors = validate_generated_html(bad)
         assert any("seekTo" in e for e in errors)
 
-    @pytest.mark.parametrize("clock", [
-        "setInterval(foo, 16)",
-        "setTimeout(step, 100)",
-        "requestAnimationFrame(step)",
-        "new Date().getTime()",
-        "performance.now()",
-    ])
+    @pytest.mark.parametrize(
+        "clock",
+        [
+            "setInterval(foo, 16)",
+            "setTimeout(step, 100)",
+            "requestAnimationFrame(step)",
+            "new Date().getTime()",
+            "performance.now()",
+        ],
+    )
     def test_真实时钟_全部报错(self, clock):
         """确定性渲染铁律：动画只由 seekTo(t) 驱动。"""
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         bad = GOOD_TEMPLATE.replace(
             "const p = Math.min(1, t / 0.4);",
             f"const p = Math.min(1, t / 0.4); const __clk = {clock};",
@@ -90,6 +97,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         bad = GOOD_TEMPLATE.replace(
             "document.querySelector('.badge')",
             "document.querySelector('.ghost')",
@@ -101,8 +109,9 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         ok = GOOD_TEMPLATE.replace(
-            "<div class=\"badge\">{text}</div>",
+            '<div class="badge">{text}</div>',
             '<div class="badge">{text}</div><div class="sub" id="x"></div>',
         ).replace(
             "if (!el) return;",
@@ -117,6 +126,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         bad = GOOD_TEMPLATE.replace("background: {color};", "background: #FFE066;")
         errors = validate_generated_html(bad)
         assert any("color" in e for e in errors)
@@ -129,6 +139,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         bad = GOOD_TEMPLATE.replace(
             "background: {color}; color: #111;",
             "background: #ffffff; color: #999999;",  # 2.85:1, 64px 也不到 3.0
@@ -140,6 +151,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         ok = GOOD_TEMPLATE.replace(
             "background: {color}; color: #111;",
             "background: #111111; color: #ffffff;",  # 18.9:1
@@ -153,6 +165,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         large_ok = GOOD_TEMPLATE.replace(
             "background: {color}; color: #111;",
             "background: #FF4D4D; color: #ffffff;",
@@ -167,6 +180,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         ok = GOOD_TEMPLATE.replace(
             "background: {color}; color: #111;",
             "background: linear-gradient(90deg, #FF4D4D, #FFE066); color: #ffffff;",
@@ -178,6 +192,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         ok = GOOD_TEMPLATE.replace(
             "background: {color}; color: #111;",
             "background: rgba(255,255,255,0.4); color: #ffffff;",
@@ -189,6 +204,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         bad = GOOD_TEMPLATE.replace("{text}", "{magic_word}")
         errors = validate_generated_html(bad)
         assert any("magic_word" in e for e in errors)
@@ -198,6 +214,7 @@ class TestValidateGeneratedHtml:
         from capabilities.video.services.template_generator import (
             validate_generated_html,
         )
+
         errors = validate_generated_html(GOOD_TEMPLATE)
         assert not any("margin" in e for e in errors)
 
@@ -209,6 +226,7 @@ class TestGeneratedTemplate:
         from capabilities.video.services.template_generator import (
             GeneratedTemplate,
         )
+
         t = GeneratedTemplate("gen_test", GOOD_TEMPLATE)
         html = t(1080, 1920, 2.0, text="多喝水", color="#4ECDC4")
         assert "多喝水" in html
@@ -222,6 +240,7 @@ class TestGeneratedTemplate:
         from capabilities.video.services.template_generator import (
             GeneratedTemplate,
         )
+
         t = GeneratedTemplate("gen_test", GOOD_TEMPLATE)
         assert "标题" in t(1080, 1920, 2.0, title="标题")
         assert "副题" in t(1080, 1920, 2.0, sub="副题")
@@ -232,6 +251,7 @@ class TestGeneratedTemplate:
         from capabilities.video.services.template_generator import (
             GeneratedTemplate,
         )
+
         t = GeneratedTemplate("gen_test", GOOD_TEMPLATE)
         assert "#FFE066" in t(1080, 1920, 2.0, text="x")
 
@@ -239,6 +259,7 @@ class TestGeneratedTemplate:
         from capabilities.video.services.template_generator import (
             GeneratedTemplate,
         )
+
         t = GeneratedTemplate("gen_test", GOOD_TEMPLATE)
         html = t(1080, 1920, 2.0, text="x", whatever=1)
         assert "whatever" not in html  # 未知键被忽略，不出现在输出
@@ -248,6 +269,7 @@ class TestGeneratedTemplate:
         from capabilities.video.services.template_generator import (
             GeneratedTemplate,
         )
+
         t = GeneratedTemplate("gen_test", GOOD_TEMPLATE)
         html = t(1080, 1920, 2.0, text="<script>alert(1)</script>")
         assert "<script>alert" not in html
@@ -268,11 +290,13 @@ class TestGenerateTemplateFlow:
             async def chat(self, messages=None, **kw):
                 self.calls.append(messages[0]["content"])
                 return {"content": self._resp.pop(0)}
+
         return _L()
 
     @pytest.mark.asyncio
     async def test_一次成功_注册并可调用(self, tmp_path, monkeypatch):
         from capabilities.video.services import template_generator as tg
+
         tg.GENERATED.clear()
         monkeypatch.setattr(tg, "_STORE_DIR", tmp_path)
         llm = self._mock_llm([GOOD_TEMPLATE])
@@ -286,10 +310,12 @@ class TestGenerateTemplateFlow:
     @pytest.mark.asyncio
     async def test_失败反馈重试_第二次成功(self, tmp_path, monkeypatch):
         from capabilities.video.services import template_generator as tg
+
         tg.GENERATED.clear()
         monkeypatch.setattr(tg, "_STORE_DIR", tmp_path)
         bad = GOOD_TEMPLATE.replace(
-            "window.seekTo = function(t)", "window.x = function(t)",
+            "window.seekTo = function(t)",
+            "window.x = function(t)",
         )
         llm = self._mock_llm([bad, GOOD_TEMPLATE])
         t = await tg.generate_template(llm, "gen_badge", "角标弹出")
@@ -301,10 +327,12 @@ class TestGenerateTemplateFlow:
     @pytest.mark.asyncio
     async def test_重试上限_返回None降级(self, tmp_path, monkeypatch):
         from capabilities.video.services import template_generator as tg
+
         tg.GENERATED.clear()
         monkeypatch.setattr(tg, "_STORE_DIR", tmp_path)
         bad = GOOD_TEMPLATE.replace(
-            "window.seekTo = function(t)", "window.x = function(t)",
+            "window.seekTo = function(t)",
+            "window.x = function(t)",
         )
         llm = self._mock_llm([bad, bad, bad])
         t = await tg.generate_template(llm, "gen_badge", "角标弹出")
@@ -314,18 +342,21 @@ class TestGenerateTemplateFlow:
     @pytest.mark.asyncio
     async def test_LLM异常_返回None不炸(self, tmp_path, monkeypatch):
         from capabilities.video.services import template_generator as tg
+
         tg.GENERATED.clear()
         monkeypatch.setattr(tg, "_STORE_DIR", tmp_path)
 
         class _Boom:
             async def chat(self, prompt, **kw):
                 raise RuntimeError("api down")
+
         assert await tg.generate_template(_Boom(), "gen_x", "x") is None
 
     @pytest.mark.asyncio
     async def test_落盘加载_跨进程复用(self, tmp_path, monkeypatch):
         """计划书："生成后零边际成本" — 落盘 JSON 下次启动直接加载。"""
         from capabilities.video.services import template_generator as tg
+
         tg.GENERATED.clear()
         monkeypatch.setattr(tg, "_STORE_DIR", tmp_path)
         llm = self._mock_llm([GOOD_TEMPLATE])
@@ -339,7 +370,9 @@ class TestGenerateTemplateFlow:
     @pytest.mark.asyncio
     async def test_损坏落盘文件_跳过不炸(self, tmp_path, monkeypatch):
         import json
+
         from capabilities.video.services import template_generator as tg
+
         tg.GENERATED.clear()
         monkeypatch.setattr(tg, "_STORE_DIR", tmp_path)
         (tmp_path / "broken.json").write_text(
@@ -352,7 +385,9 @@ class TestGenerateTemplateFlow:
     def test_生成器永不exec_LLM代码(self):
         """安全红线：实现里不得出现 exec/eval — LLM 产出只是数据。"""
         import inspect
+
         from capabilities.video.services import template_generator as tg
+
         src = inspect.getsource(tg)
         for banned in ("exec(", "eval(", "__import__"):
             assert banned not in src, f"template_generator 禁用 {banned}"
@@ -367,6 +402,7 @@ class TestP1Integration:
         from capabilities.video.services.overlay_orchestrator import (
             OVERLAY_PLAN_PROMPT,
         )
+
         assert "全片最多提名 2 个" not in OVERLAY_PLAN_PROMPT
         assert "仅当 16 个模板都无法表达" not in OVERLAY_PLAN_PROMPT
         # 新指引仍在：gen_ 提名方式 + requirement 规格 + 内置优先的软引导
@@ -377,6 +413,7 @@ class TestP1Integration:
         """G1：预算是成本护栏（同片去重后按不同模板数计），不再是表达上限。
         8 个不同定制模板已远超真实单片需要。"""
         from capabilities.video.skills import talking_head_overlay as sk
+
         assert sk._GEN_BUDGET >= 8
 
     def test_规划解析_未知模板名保留为str(self):
@@ -385,6 +422,7 @@ class TestP1Integration:
             _parse_plan_output,
             template_name,
         )
+
         text = (
             '{"overlays": ['
             '{"segment_id": "o1", "time_start": 1.0, "time_end": 3.0, '
@@ -402,16 +440,26 @@ class TestP1Integration:
             OverlaySegment,
             resolve_overlay_conflicts,
         )
-        plan = OverlayPlan(video_id="", segments=[
-            OverlaySegment(
-                segment_id="o1", time_start=0, time_end=3,
-                template="gen_progress_bar", params={},
-            ),
-            OverlaySegment(
-                segment_id="o2", time_start=1, time_end=4,
-                template="stat_card", params={},
-            ),
-        ])
+
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                OverlaySegment(
+                    segment_id="o1",
+                    time_start=0,
+                    time_end=3,
+                    template="gen_progress_bar",
+                    params={},
+                ),
+                OverlaySegment(
+                    segment_id="o2",
+                    time_start=1,
+                    time_end=4,
+                    template="stat_card",
+                    params={},
+                ),
+            ],
+        )
         resolved = resolve_overlay_conflicts(plan)
         # 同 center 带 + 时间重叠 → 低优先级（gen=0）被 skip
         skipped = [s for s in resolved.segments if s.skipped]
@@ -423,21 +471,27 @@ class TestP1Integration:
         """端到端最小链路：gen 段 → generate_template（mock LLM）→
         GENERATED 注册 → 模板函数真渲染出 HTML。"""
         from capabilities.video.services import template_generator as tg
+        from capabilities.video.services.overlay_orchestrator import OverlayPlan, OverlaySegment
         from capabilities.video.skills.talking_head_overlay import (
             TalkingHeadOverlaySkill,
         )
-        from capabilities.video.services.overlay_orchestrator import OverlayPlan, OverlaySegment
 
         tg.GENERATED.clear()
         monkeypatch.setattr(tg, "_STORE_DIR", tmp_path)
 
         llm = TestGenerateTemplateFlow._mock_llm([GOOD_TEMPLATE])
-        plan = OverlayPlan(video_id="", segments=[
-            OverlaySegment(
-                segment_id="o1", time_start=0, time_end=2,
-                template="gen_badge", params={"text": "多喝水", "color": "#4ECDC4"},
-            ),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                OverlaySegment(
+                    segment_id="o1",
+                    time_start=0,
+                    time_end=2,
+                    template="gen_badge",
+                    params={"text": "多喝水", "color": "#4ECDC4"},
+                ),
+            ],
+        )
         # 只测模板解析段（不真跑 Playwright）：直接调 skill 内部逻辑等价物
         # — _render_previews 全链路需渲染器，此处验证生成+注册+可调用
         tpl = await tg.generate_template(llm, "gen_badge", "角标弹出")
@@ -445,9 +499,9 @@ class TestP1Integration:
 
         # skill 渲染入口的查找逻辑：TEMPLATES 无 → GENERATED 有
         from capabilities.video.adapters.overlay_templates import TEMPLATES
+
         tname = "gen_badge"
         fn = TEMPLATES.get(tname) or tg.GENERATED.get(tname)
         assert fn is not None
-        html = fn(width=1080, height=1920, duration=2.0,
-                  text="多喝水", color="#4ECDC4")
+        html = fn(width=1080, height=1920, duration=2.0, text="多喝水", color="#4ECDC4")
         assert "多喝水" in html and "#4ECDC4" in html

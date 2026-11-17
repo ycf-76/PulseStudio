@@ -149,9 +149,12 @@ def url_to_base64(url: str) -> str | None:
 
     suffix = p.suffix.lower()
     mime_map = {
-        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-        ".png": "image/png", ".gif": "image/gif",
-        ".webp": "image/webp", ".bmp": "image/bmp",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".bmp": "image/bmp",
         ".mp4": "video/mp4",
     }
     mime = mime_map.get(suffix, "application/octet-stream")

@@ -13,8 +13,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-from app.cards.schema import CardDeck, ImageBlock
 from app.cards.renderer import render_page
+from app.cards.schema import CardDeck, ImageBlock
 from app.services.asset_library import path_from_url
 
 
@@ -32,12 +32,14 @@ async def prepare_card_htmls(deck: CardDeck, user_id: str) -> list[dict[str, Any
         html = render_page(deck, card, index).replace(
             "<head>", '<head><base href="http://card.local/">', 1
         )
-        pages.append({
-            "html": html,
-            "width": deck.width,
-            "height": deck.height,
-            "has_images": any(isinstance(block, ImageBlock) for block in card.blocks),
-        })
+        pages.append(
+            {
+                "html": html,
+                "width": deck.width,
+                "height": deck.height,
+                "has_images": any(isinstance(block, ImageBlock) for block in card.blocks),
+            }
+        )
     return pages
 
 
@@ -52,7 +54,13 @@ async def render_htmls_to_pngs(
 
     browser_path = os.getenv("CARD_CHROMIUM_PATH", "").strip()
     if not browser_path:
-        bundled = Path(__file__).resolve().parents[3] / "pw-browsers " / "chromium-1228" / "chrome-win64" / "chrome.exe"
+        bundled = (
+            Path(__file__).resolve().parents[3]
+            / "pw-browsers "
+            / "chromium-1228"
+            / "chrome-win64"
+            / "chrome.exe"
+        )
         if bundled.is_file():
             browser_path = str(bundled)
     if browser_path and not Path(browser_path).is_file():
@@ -67,7 +75,8 @@ async def render_htmls_to_pngs(
             first_w = pages[0]["width"] if pages else 1080
             first_h = pages[0]["height"] if pages else 1440
             context = await browser.new_context(
-                viewport={"width": first_w, "height": first_h}, device_scale_factor=1,
+                viewport={"width": first_w, "height": first_h},
+                device_scale_factor=1,
             )
 
             async def serve_local_asset(route):
@@ -75,10 +84,15 @@ async def render_htmls_to_pngs(
                 if url.startswith("http://card.local/uploads/"):
                     path = path_from_url(url.removeprefix("http://card.local"))
                     if path is not None and path.is_file():
-                        await route.fulfill(body=path.read_bytes(), content_type={
-                            ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp",
-                            ".gif": "image/gif",
-                        }.get(path.suffix.lower(), "application/octet-stream"))
+                        await route.fulfill(
+                            body=path.read_bytes(),
+                            content_type={
+                                ".jpg": "image/jpeg",
+                                ".png": "image/png",
+                                ".webp": "image/webp",
+                                ".gif": "image/gif",
+                            }.get(path.suffix.lower(), "application/octet-stream"),
+                        )
                         return
                 await route.abort()
 

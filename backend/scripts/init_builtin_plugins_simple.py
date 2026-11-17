@@ -5,11 +5,10 @@
 """
 
 import json
-import sqlite3
 import os
-from pathlib import Path
+import sqlite3
 from datetime import datetime
-
+from pathlib import Path
 
 # 内置插件列表
 BUILTIN_PLUGINS = [
@@ -18,7 +17,7 @@ BUILTIN_PLUGINS = [
     "sentiment-analyzer",
     "rss-monitor",
     "weibo-publisher",
-    "notification-bot"
+    "notification-bot",
 ]
 
 
@@ -94,7 +93,7 @@ def load_plugin_json(plugin_name: str) -> dict:
         print(f"❌ Plugin file not found: {plugin_file}")
         return None
 
-    with open(plugin_file, 'r', encoding='utf-8') as f:
+    with open(plugin_file, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -103,13 +102,16 @@ def insert_plugin(cursor, plugin_data: dict) -> bool:
     try:
         # 提取作者信息
         author = plugin_data.get("author", {})
-        author_name = author.get("name", "Platform Team") if isinstance(author, dict) else str(author)
+        author_name = (
+            author.get("name", "Platform Team") if isinstance(author, dict) else str(author)
+        )
         author_email = author.get("email", "") if isinstance(author, dict) else ""
 
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
         # 插入或更新
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR REPLACE INTO plugins (
                 id, name, version, description, category, status,
                 author_name, author_email, entry_point, manifest_json,
@@ -118,43 +120,49 @@ def insert_plugin(cursor, plugin_data: dict) -> bool:
                 events_publishes, events_subscribes, dependencies,
                 is_builtin, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            plugin_data['id'],
-            plugin_data['name'],
-            plugin_data['version'],
-            plugin_data.get('description', ''),
-            plugin_data.get('category', 'workflow_node'),
-            'active',  # status
-            author_name,
-            author_email,
-            plugin_data.get('entry_point', 'main.py'),
-            json.dumps(plugin_data, ensure_ascii=False),  # manifest_json
-            json.dumps(plugin_data.get('capabilities', [])),  # capabilities
-            json.dumps(plugin_data.get('permissions_required', [])),  # permissions
-            json.dumps(plugin_data.get('config_schema', {})),  # config_schema
-            plugin_data.get('display_icon', '📦'),  # display_icon
-            '#6366f1',  # display_color (默认紫色)
-            plugin_data.get('pricing_model', 'free'),  # pricing_model
-            0.0,  # price_monthly
-            json.dumps(plugin_data.get('events_emits', [])),  # events_publishes
-            json.dumps(plugin_data.get('events_subscribes', [])),  # events_subscribes
-            json.dumps(plugin_data.get('dependencies', [])),  # dependencies
-            1,  # is_builtin = True
-            now,  # created_at
-            now   # updated_at
-        ))
+        """,
+            (
+                plugin_data["id"],
+                plugin_data["name"],
+                plugin_data["version"],
+                plugin_data.get("description", ""),
+                plugin_data.get("category", "workflow_node"),
+                "active",  # status
+                author_name,
+                author_email,
+                plugin_data.get("entry_point", "main.py"),
+                json.dumps(plugin_data, ensure_ascii=False),  # manifest_json
+                json.dumps(plugin_data.get("capabilities", [])),  # capabilities
+                json.dumps(plugin_data.get("permissions_required", [])),  # permissions
+                json.dumps(plugin_data.get("config_schema", {})),  # config_schema
+                plugin_data.get("display_icon", "📦"),  # display_icon
+                "#6366f1",  # display_color (默认紫色)
+                plugin_data.get("pricing_model", "free"),  # pricing_model
+                0.0,  # price_monthly
+                json.dumps(plugin_data.get("events_emits", [])),  # events_publishes
+                json.dumps(plugin_data.get("events_subscribes", [])),  # events_subscribes
+                json.dumps(plugin_data.get("dependencies", [])),  # dependencies
+                1,  # is_builtin = True
+                now,  # created_at
+                now,  # updated_at
+            ),
+        )
 
         # 初始化统计记录
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR IGNORE INTO plugin_stats (plugin_id, snapshot_at)
             VALUES (?, ?)
-        """, (plugin_data['id'], now))
+        """,
+            (plugin_data["id"], now),
+        )
 
         return True
 
     except Exception as e:
         print(f"❌ Error inserting plugin {plugin_data.get('id')}: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -208,6 +216,7 @@ def main():
         conn.rollback()
         print(f"\n❌ 发生错误，已回滚: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -222,7 +231,7 @@ def main():
     if success_count == len(BUILTIN_PLUGINS):
         print("\n🎉 所有内置插件已成功导入数据库！")
         print(f"\n📊 查看数据库: {db_path}")
-        print("   可用命令: sqlite3 plugins.db \"SELECT * FROM plugins;\"")
+        print('   可用命令: sqlite3 plugins.db "SELECT * FROM plugins;"')
         return True
     else:
         print("\n⚠️ 部分插件导入失败，请检查日志")
@@ -231,5 +240,6 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     success = main()
     sys.exit(0 if success else 1)

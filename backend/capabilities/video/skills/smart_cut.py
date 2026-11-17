@@ -41,6 +41,7 @@ VIDEO_FADE_FRAMES = 3
 
 class SmartCutInput(BaseModel):
     """智能剪辑输入参数。"""
+
     video_path: str = Field(description="视频文件路径")
 
     detect_silence: bool = Field(default=True, description="检测静音/长停顿")
@@ -49,8 +50,12 @@ class SmartCutInput(BaseModel):
     detect_fluff: bool = Field(default=False, description="LLM 检测废话/离题（需 LLM 调用）")
 
     silence_threshold_db: float = Field(default=-35, description="静音阈值 dB，对齐 cutlist")
-    silence_min_duration: float = Field(default=0.6, description="最短静音时长秒，对齐 cutlist GAP_CUT")
-    filler_pause: float = Field(default=0.35, description="指示词类填充词两侧最短停顿秒，对齐 cutlist FILLER_PAUSE")
+    silence_min_duration: float = Field(
+        default=0.6, description="最短静音时长秒，对齐 cutlist GAP_CUT"
+    )
+    filler_pause: float = Field(
+        default=0.35, description="指示词类填充词两侧最短停顿秒，对齐 cutlist FILLER_PAUSE"
+    )
     pad_seconds: float = Field(default=0.25, description="切口两侧缓冲秒，对齐 cutlist PAD")
     audio_fade: float = Field(default=0.08, description="音频淡入淡出时长秒")
 
@@ -59,11 +64,14 @@ class SmartCutInput(BaseModel):
         description="用户确认/修改后的删减列表（闸门确认信号）。None=首次调用走规划。",
     )
     force_final: bool = Field(default=False, description="跳过预览直接出片")
-    chain_with_overlay: bool = Field(default=False, description="串联模式：剪辑后自动调用 talking_head_overlay")
+    chain_with_overlay: bool = Field(
+        default=False, description="串联模式：剪辑后自动调用 talking_head_overlay"
+    )
 
 
 class SmartCutPlan(BaseModel):
     """删减规划 — 闸门产物。对齐 ossclip analyze 输出。"""
+
     video_id: str
     original_duration: float
     candidates: list[dict[str, Any]]
@@ -97,6 +105,7 @@ async def _run_ffmpeg(cmd: list[str], cwd: str | None = None) -> str:
     """
     if cmd and cmd[0] == "ffmpeg":
         from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+
         exe = resolve_ffmpeg()
         if exe:
             cmd = [exe, *cmd[1:]]
@@ -111,7 +120,10 @@ async def _run_ffmpeg(cmd: list[str], cwd: str | None = None) -> str:
         returncode = process.returncode
     except NotImplementedError:
         result = await asyncio.to_thread(
-            subprocess.run, cmd, capture_output=True, cwd=cwd,
+            subprocess.run,
+            cmd,
+            capture_output=True,
+            cwd=cwd,
         )
         stdout, stderr, returncode = result.stdout, result.stderr, result.returncode
 
@@ -177,12 +189,12 @@ class SmartCutSkill(Skill):
         from capabilities.video.services.cut_analyzer import (
             CutCandidate,
             CutType,
+            WordTimestamp,
             compute_kept_segments,
             detect_filler_candidates,
             detect_repeat_candidates,
             detect_silence_candidates,
             merge_candidates,
-            WordTimestamp,
         )
 
         all_candidates: list[CutCandidate] = []
@@ -194,9 +206,7 @@ class SmartCutSkill(Skill):
 
             # 10.28：自适应档位（默认 -35dB 对高底噪素材恒 0 检出）；
             # 用户显式改过 threshold_db 时走旧单档
-            if parsed.silence_threshold_db != -35 or (
-                parsed.silence_min_duration != 0.6
-            ):
+            if parsed.silence_threshold_db != -35 or (parsed.silence_min_duration != 0.6):
                 from capabilities.video.adapters.silence_detect import (
                     detect_silence,
                 )
@@ -345,7 +355,9 @@ class SmartCutSkill(Skill):
         expected = 0.0
         for i, (s, e) in enumerate(segs_sorted):
             gap_l = (s - segs_sorted[i - 1][1]) / 2 if i > 0 else parsed.pad_seconds
-            gap_r = (segs_sorted[i + 1][0] - e) / 2 if i + 1 < len(segs_sorted) else parsed.pad_seconds
+            gap_r = (
+                (segs_sorted[i + 1][0] - e) / 2 if i + 1 < len(segs_sorted) else parsed.pad_seconds
+            )
             p = max(0.0, min(parsed.pad_seconds, gap_l, gap_r))
             expected += min(e + p, total_duration) - max(0, s - p)
         result = {
@@ -400,25 +412,39 @@ class SmartCutSkill(Skill):
 
             video_fade_dur = VIDEO_FADE_FRAMES / 30.0
             vfade_in = f"fade=t=in:st=0:d={video_fade_dur:.4f}"
-            vfade_out = f"fade=t=out:st={max(0, duration - video_fade_dur):.4f}:d={video_fade_dur:.4f}"
+            vfade_out = (
+                f"fade=t=out:st={max(0, duration - video_fade_dur):.4f}:d={video_fade_dur:.4f}"
+            )
 
             afade_in = f"afade=t=in:st=0:d={audio_fade}"
             afade_out = f"afade=t=out:st={max(0, duration - audio_fade):.4f}:d={audio_fade}"
 
             cmd = [
                 "ffmpeg",
-                "-ss", f"{s:.3f}",
-                "-i", video_path,
-                "-t", f"{duration:.3f}",
-                "-vf", f"{vfade_in},{vfade_out}",
-                "-af", f"{afade_in},{afade_out}",
-                "-c:v", "libx264",
-                "-preset", "fast",
-                "-crf", "23",
-                "-c:a", "aac",
-                "-pix_fmt", "yuv420p",
-                "-fflags", "+genpts",
-                "-y", str(seg_path),
+                "-ss",
+                f"{s:.3f}",
+                "-i",
+                video_path,
+                "-t",
+                f"{duration:.3f}",
+                "-vf",
+                f"{vfade_in},{vfade_out}",
+                "-af",
+                f"{afade_in},{afade_out}",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-c:a",
+                "aac",
+                "-pix_fmt",
+                "yuv420p",
+                "-fflags",
+                "+genpts",
+                "-y",
+                str(seg_path),
             ]
             await _run_ffmpeg(cmd)
             segment_files.append(seg_path)
@@ -439,11 +465,19 @@ class SmartCutSkill(Skill):
         )
 
         cmd = [
-            "ffmpeg", "-f", "concat", "-safe", "0",
-            "-i", str(concat_file),
-            "-avoid_negative_ts", "make_zero",
-            "-c", "copy",
-            "-y", str(output_path),
+            "ffmpeg",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_file),
+            "-avoid_negative_ts",
+            "make_zero",
+            "-c",
+            "copy",
+            "-y",
+            str(output_path),
         ]
         await _run_ffmpeg(cmd)
 
@@ -509,6 +543,7 @@ class SmartCutSkill(Skill):
             # has_audio_track 同病）。对齐 talking_head_overlay._resolve_llm
             from app.adapters.deepseek import DeepSeekAdapter
             from app.config import Settings
+
             llm = DeepSeekAdapter(api_key=Settings().deepseek_api_key)
 
             return await detect_fluff_candidates(seg_dicts, llm)

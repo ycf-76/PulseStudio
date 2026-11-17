@@ -7,6 +7,7 @@
 用法：
     python scripts/gen_card_gallery.py
 """
+
 from __future__ import annotations
 
 import html
@@ -25,7 +26,7 @@ def _scaled_frame(srcdoc: str, scale: float = 0.42) -> str:
     h = int(1440 * scale)
     return (
         f'<div class="frame" style="width:{w}px;height:{h}px">'
-        f'<iframe srcdoc={html.escape(srcdoc)!r} '
+        f"<iframe srcdoc={html.escape(srcdoc)!r} "
         f'style="width:1080px;height:1440px;transform:scale({scale});'
         f'transform-origin:top left;border:0"></iframe></div>'
     )
@@ -55,13 +56,13 @@ def main() -> int:
         sections.append(
             f'<section class="theme">'
             f'<div class="meta"><h2>{html.escape(spec["label"])} '
-            f'<code>{html.escape(name)}</code></h2>'
+            f"<code>{html.escape(name)}</code></h2>"
             f'<p class="hint">{html.escape(spec.get("hint", ""))}</p>'
             f'<div class="swatches">{swatches}'
             f'<span class="cnt">{len(accents)} 个强调色</span></div></div>'
             f'<div class="cards">{"".join(frames)}</div>'
             f'<p class="note">左：默认强调色　右：accent-1（点缀轴切换）</p>'
-            f'</section>'
+            f"</section>"
         )
 
     doc = f"""<!doctype html>

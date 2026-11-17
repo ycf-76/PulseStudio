@@ -93,27 +93,28 @@ class StreamRetryState:
         err_type = type(error).__name__
 
         is_connection = any(
-            kw in err_str
-            for kw in ["connection", "timeout", "eof", "reset", "broken"]
-        ) or any(
-            kw in err_type.lower()
-            for kw in ["connection", "timeout"]
-        )
+            kw in err_str for kw in ["connection", "timeout", "eof", "reset", "broken"]
+        ) or any(kw in err_type.lower() for kw in ["connection", "timeout"])
 
-        is_rate_limit = (
-            "429" in err_str
-            or "rate" in err_str
-            or "ratelimit" in err_type.lower()
-        )
+        is_rate_limit = "429" in err_str or "rate" in err_str or "ratelimit" in err_type.lower()
 
         is_server_error = any(
-            kw in err_str
-            for kw in ["500", "502", "503", "504", "server error", "overloaded"]
+            kw in err_str for kw in ["500", "502", "503", "504", "server error", "overloaded"]
         )
 
         is_unrecoverable = any(
             kw in err_str
-            for kw in ["402", "401", "403", "payment", "insufficient balance", "unauthorized", "forbidden", "invalid api key", "authentication"]
+            for kw in [
+                "402",
+                "401",
+                "403",
+                "payment",
+                "insufficient balance",
+                "unauthorized",
+                "forbidden",
+                "invalid api key",
+                "authentication",
+            ]
         )
 
         if is_unrecoverable:
@@ -126,18 +127,14 @@ class StreamRetryState:
             if self.connection_retries < self.max_connection_retries:
                 self.connection_retries += 1
                 self.retries += 1
-                self._current_delay = min(
-                    self._current_delay * 2, self._max_delay
-                )
+                self._current_delay = min(self._current_delay * 2, self._max_delay)
                 logger.warning(
                     f"[stream-retry] connection error "
                     f"(conn_retry={self.connection_retries}/{self.max_connection_retries}), "
                     f"retrying in {self._current_delay:.1f}s: {error}"
                 )
                 return RetryAction.RETRY
-            logger.error(
-                f"[stream-retry] max connection retries exceeded, giving up"
-            )
+            logger.error(f"[stream-retry] max connection retries exceeded, giving up")
             return RetryAction.FALLBACK
 
         if is_rate_limit:
@@ -158,7 +155,7 @@ class StreamRetryState:
             if self.retries < self.max_retries:
                 self.retries += 1
                 self._current_delay = min(
-                    self._initial_delay * (2 ** self.retries),
+                    self._initial_delay * (2**self.retries),
                     self._max_delay,
                 )
                 logger.warning(

@@ -143,6 +143,4 @@ class RecoveryExhaustedError(Exception):
         self.node_id = node_id
         self.attempts = attempts
         self.last_error = last_error
-        super().__init__(
-            f"[{node_id}] recovery exhausted after {attempts} attempts: {last_error}"
-        )
+        super().__init__(f"[{node_id}] recovery exhausted after {attempts} attempts: {last_error}")

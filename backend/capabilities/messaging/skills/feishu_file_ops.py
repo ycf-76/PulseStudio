@@ -29,7 +29,9 @@ class FeishuFileOpsInput(BaseModel):
         description="文件夹token。留空或填 root 表示云盘根目录。list/create_folder/upload 用。",
     )
     name: str = Field(default="", description="create_folder 时新建文件夹的名称")
-    file_name: str = Field(default="", description="upload 时上传的文件名（含扩展名，如 report.pdf）")
+    file_name: str = Field(
+        default="", description="upload 时上传的文件名（含扩展名，如 report.pdf）"
+    )
     file_base64: str = Field(default="", description="upload 时上传文件的 base64 内容")
     file_token: str = Field(default="", description="download 时目标文件的 token")
 
@@ -45,7 +47,16 @@ class FeishuFileOpsSkill(Skill):
         "通常用于整理飞书云盘、归档素材、读取飞书里的文件。"
     )
     platform = "feishu"
-    trigger_words = ["飞书", "飞书云盘", "飞书文件", "feishu", "lark", "feishu drive", "lark drive", "云盘"]
+    trigger_words = [
+        "飞书",
+        "飞书云盘",
+        "飞书文件",
+        "feishu",
+        "lark",
+        "feishu drive",
+        "lark drive",
+        "云盘",
+    ]
     prompt_guidance = (
         "【飞书云盘操作】\n"
         "当用户消息包含「飞书云盘/云盘/飞书文件」时，必须用飞书工具，禁止使用 local_file_search 或 file_read。\n"
@@ -62,7 +73,7 @@ class FeishuFileOpsSkill(Skill):
 
         try:
             from app.config import get_settings
-            from capabilities.messaging.adapters.feishu import FeishuClient, FeishuAPIError
+            from capabilities.messaging.adapters.feishu import FeishuAPIError, FeishuClient
 
             settings = get_settings()
             if not (settings.feishu_app_id and settings.feishu_app_secret):
@@ -79,7 +90,9 @@ class FeishuFileOpsSkill(Skill):
 
         ctx = inputs.get("_context")
         user_id = ctx.user_id if ctx and hasattr(ctx, "user_id") else "default"
-        logger.info(f"[FeishuFileOpsSkill] user_id={user_id}, operation={operation}, folder_token={folder_token}")
+        logger.info(
+            f"[FeishuFileOpsSkill] user_id={user_id}, operation={operation}, folder_token={folder_token}"
+        )
 
         try:
             if operation == "list":
@@ -90,7 +103,10 @@ class FeishuFileOpsSkill(Skill):
                 return await self._upload(client, folder_token, inputs)
             if operation == "download":
                 return await self._download(client, inputs.get("file_token", ""))
-            return {"ok": False, "error": f"未知操作: {operation}，可用：list/create_folder/upload/download"}
+            return {
+                "ok": False,
+                "error": f"未知操作: {operation}，可用：list/create_folder/upload/download",
+            }
         except FeishuAPIError as e:
             logger.error(f"[FeishuFileOpsSkill] FeishuAPIError: {e}")
             return {"ok": False, "error": f"飞书API错误: {e.msg} (code={e.code})"}
@@ -116,7 +132,9 @@ class FeishuFileOpsSkill(Skill):
         created = await client.create_folder(name=name, folder_token=folder_token)
         return {"ok": True, "name": name, **created}
 
-    async def _upload(self, client: Any, folder_token: str, inputs: dict[str, Any]) -> dict[str, Any]:
+    async def _upload(
+        self, client: Any, folder_token: str, inputs: dict[str, Any]
+    ) -> dict[str, Any]:
         file_name = (inputs.get("file_name") or "").strip()
         file_base64 = (inputs.get("file_base64") or "").strip()
         if not file_name:

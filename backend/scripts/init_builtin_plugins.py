@@ -7,21 +7,22 @@
 import json
 import os
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # 添加项目根目录到路径
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
+# 读取.env文件获取数据库URL
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-# 读取.env文件获取数据库URL
-from dotenv import load_dotenv
-load_dotenv(backend_dir / '.env')
+load_dotenv(backend_dir / ".env")
 
 import os
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
 if DATABASE_URL.startswith("sqlite"):
@@ -37,7 +38,7 @@ BUILTIN_PLUGINS = [
     "sentiment-analyzer",
     "rss-monitor",
     "weibo-publisher",
-    "notification-bot"
+    "notification-bot",
 ]
 
 
@@ -50,7 +51,7 @@ def load_plugin_json(plugin_name: str) -> dict:
         print(f"❌ Plugin file not found: {plugin_file}")
         return None
 
-    with open(plugin_file, 'r', encoding='utf-8') as f:
+    with open(plugin_file, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -95,32 +96,34 @@ def insert_plugin_to_db(session, plugin_data: dict) -> bool:
 
         # 提取作者信息
         author = plugin_data.get("author", {})
-        author_name = author.get("name", "Platform Team") if isinstance(author, dict) else str(author)
+        author_name = (
+            author.get("name", "Platform Team") if isinstance(author, dict) else str(author)
+        )
         author_email = author.get("email", "") if isinstance(author, dict) else ""
 
         # 执行插入
         params = {
-            'id': plugin_data['id'],
-            'name': plugin_data['name'],
-            'version': plugin_data['version'],
-            'description': plugin_data.get('description', ''),
-            'category': plugin_data.get('category', 'workflow_node'),
-            'status': 'active',
-            'author_name': author_name,
-            'author_email': author_email,
-            'entry_point': plugin_data.get('entry_point', 'main.py'),
-            'manifest_json': json.dumps(plugin_data, ensure_ascii=False),
-            'capabilities': json.dumps(plugin_data.get('capabilities', [])),
-            'permissions': json.dumps(plugin_data.get('permissions_required', [])),
-            'config_schema': json.dumps(plugin_data.get('config_schema', {})),
-            'display_icon': plugin_data.get('display_icon', '📦'),
-            'display_color': '#6366f1',  # 默认紫色
-            'pricing_model': plugin_data.get('pricing_model', 'free'),
-            'price_monthly': 0.0,
-            'events_publishes': json.dumps(plugin_data.get('events_emits', [])),
-            'events_subscribes': json.dumps(plugin_data.get('events_subscribes', [])),
-            'dependencies': json.dumps(plugin_data.get('dependencies', [])),
-            'is_builtin': True
+            "id": plugin_data["id"],
+            "name": plugin_data["name"],
+            "version": plugin_data["version"],
+            "description": plugin_data.get("description", ""),
+            "category": plugin_data.get("category", "workflow_node"),
+            "status": "active",
+            "author_name": author_name,
+            "author_email": author_email,
+            "entry_point": plugin_data.get("entry_point", "main.py"),
+            "manifest_json": json.dumps(plugin_data, ensure_ascii=False),
+            "capabilities": json.dumps(plugin_data.get("capabilities", [])),
+            "permissions": json.dumps(plugin_data.get("permissions_required", [])),
+            "config_schema": json.dumps(plugin_data.get("config_schema", {})),
+            "display_icon": plugin_data.get("display_icon", "📦"),
+            "display_color": "#6366f1",  # 默认紫色
+            "pricing_model": plugin_data.get("pricing_model", "free"),
+            "price_monthly": 0.0,
+            "events_publishes": json.dumps(plugin_data.get("events_emits", [])),
+            "events_subscribes": json.dumps(plugin_data.get("events_subscribes", [])),
+            "dependencies": json.dumps(plugin_data.get("dependencies", [])),
+            "is_builtin": True,
         }
 
         session.execute(sql, params)
@@ -129,6 +132,7 @@ def insert_plugin_to_db(session, plugin_data: dict) -> bool:
     except Exception as e:
         print(f"❌ Error inserting plugin {plugin_data.get('id')}: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -142,7 +146,7 @@ def init_plugin_stats(session, plugin_id: str):
             INSERT IGNORE INTO plugin_stats (plugin_id)
             VALUES (:plugin_id)
         """)
-        session.execute(sql, {'plugin_id': plugin_id})
+        session.execute(sql, {"plugin_id": plugin_id})
 
     except Exception as e:
         print(f"⚠️ Warning: Could not init stats for {plugin_id}: {e}")
@@ -178,13 +182,14 @@ def main():
 
                 # 创建Session对象（使用连接）
                 from sqlalchemy.orm import sessionmaker
+
                 SessionLocal = sessionmaker(bind=connection)
                 session = SessionLocal()
 
                 # 插入到plugins表
                 if insert_plugin_to_db(session, plugin_data):
                     # 初始化统计记录
-                    init_plugin_stats(session, plugin_data['id'])
+                    init_plugin_stats(session, plugin_data["id"])
 
                     success_count += 1
                     print(f"   ✅ 成功导入")
@@ -203,6 +208,7 @@ def main():
             trans.rollback()
             print(f"\n❌ 发生错误，已回滚所有更改: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 

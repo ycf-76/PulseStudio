@@ -10,6 +10,7 @@
 产出：
     outputs/test-card-skill/<out>/  目录下每张卡片的 HTML + 合并预览页
 """
+
 from __future__ import annotations
 
 import argparse
@@ -157,15 +158,21 @@ asyncio.create_task() 把协程包装成 Task 立即调度，不等 await。多�
 
 async def run_single(style: str, topic: str, content: str, out_dir: str) -> int:
     from app.config import get_settings
+
     settings = get_settings()
 
     api_key = settings.deepseek_api_key
-    base_url = settings.deepseek_base_url if hasattr(settings, "deepseek_base_url") else "https://api.deepseek.com"
+    base_url = (
+        settings.deepseek_base_url
+        if hasattr(settings, "deepseek_base_url")
+        else "https://api.deepseek.com"
+    )
     if not api_key:
         print("ERROR: DEEPSEEK_API_KEY not set")
         return 1
 
     from app.adapters.deepseek import DeepSeekAdapter
+
     llm = DeepSeekAdapter(
         api_key=api_key,
         base_url=base_url,
@@ -174,9 +181,11 @@ async def run_single(style: str, topic: str, content: str, out_dir: str) -> int:
     )
 
     from app.core.prompt_skills import scan_and_register_prompt_skills
+
     scan_and_register_prompt_skills()
 
     from app.core.skill_registry import SkillRegistry
+
     registry = SkillRegistry.instance()
 
     skill_cls = registry.get("produce", "card_xiaohongshu")
@@ -190,13 +199,15 @@ async def run_single(style: str, topic: str, content: str, out_dir: str) -> int:
     print(f"Style: {style} | Topic: {topic}")
     print(f"{'='*60}")
 
-    result = await skill.execute({
-        "topic": topic,
-        "content": content.strip(),
-        "platform": "小红书",
-        "style": style,
-        "llm": llm,
-    })
+    result = await skill.execute(
+        {
+            "topic": topic,
+            "content": content.strip(),
+            "platform": "小红书",
+            "style": style,
+            "llm": llm,
+        }
+    )
 
     if "error" in result:
         print(f"ERROR: {result['error']}")
@@ -232,17 +243,18 @@ async def run_single(style: str, topic: str, content: str, out_dir: str) -> int:
 
 def _build_preview(pages: list[dict], title: str, style: str = "") -> str:
     import html as html_mod
+
     frames = ""
     for i, page in enumerate(pages):
         html = page.get("htmlContent", "")
         page_type = page.get("type", "content")
-        frames += f'''
+        frames += f"""
         <div class="card-frame">
             <div class="card-label">Card {i+1} ({page_type})</div>
             <iframe srcdoc="{html_mod.escape(html)}"
                     style="width:1080px;height:1440px;transform:scale(0.45);transform-origin:top left;border:0">
             </iframe>
-        </div>'''
+        </div>"""
 
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">

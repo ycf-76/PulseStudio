@@ -46,7 +46,9 @@ def test_search_builtin_platform_returns_results(client):
     预期：返回结果且 platform 字段标记来源。
     文档依据：capabilities/content_search 内置源。
     """
-    resp = client.get("/api/search", params={"keyword": "效率工具", "platform": "builtin", "limit": 5})
+    resp = client.get(
+        "/api/search", params={"keyword": "效率工具", "platform": "builtin", "limit": 5}
+    )
     assert resp.status_code == 200, resp.text
     data = resp.json()["data"]
     assert data["count"] > 0, f"内置源无结果: {data}"
@@ -59,7 +61,9 @@ def test_search_tavily_shape_and_fallback_flags(client):
     预期：200 + searched_platforms 含 tavily + fallback_used 布尔值。
     文档依据：backend/app/api/routers/search.py SearchResponse。
     """
-    resp = client.get("/api/search", params={"keyword": "notion ai", "platform": "tavily", "limit": 5})
+    resp = client.get(
+        "/api/search", params={"keyword": "notion ai", "platform": "tavily", "limit": 5}
+    )
     assert resp.status_code == 200, resp.text
     data = resp.json()["data"]
     assert "tavily" in (data.get("searched_platforms") or []), f"未标注实际搜索平台: {data}"
@@ -73,7 +77,9 @@ def test_search_xiaohongshu_degrades_gracefully(client):
     预期：200 有结果，或 503 且提示浏览器扩展未连接。
     文档依据：backend/app/api/routers/search.py L77-82。
     """
-    resp = client.get("/api/search", params={"keyword": "番茄工作法", "platform": "xiaohongshu", "limit": 5})
+    resp = client.get(
+        "/api/search", params={"keyword": "番茄工作法", "platform": "xiaohongshu", "limit": 5}
+    )
     assert resp.status_code in (200, 503), f"小红书搜索异常: {resp.status_code} {resp.text[:200]}"
     if resp.status_code == 503:
         assert "扩展" in resp.json().get("detail", ""), f"降级提示不明确: {resp.text[:200]}"
@@ -149,9 +155,9 @@ def test_topic_pool_fetch_hackernews_then_detail_and_summary(client):
     detail = client.get(f"/api/topic-pool/{item_id}")
     assert detail.status_code == 200, detail.text
     detail_payload = detail.json()["data"]
-    assert "detail" in detail_payload and "related" in detail_payload, (
-        f"详情响应结构异常: {list(detail_payload)[:6]}"
-    )
+    assert (
+        "detail" in detail_payload and "related" in detail_payload
+    ), f"详情响应结构异常: {list(detail_payload)[:6]}"
     assert detail_payload["detail"].get("title"), "详情缺少标题"
     assert isinstance(detail_payload["related"], list), "关联推荐不是列表"
 
@@ -179,7 +185,10 @@ def test_topic_pool_delete_missing_item_is_not_500(client):
     文档依据：topic_pool.py L279。
     """
     resp = client.delete("/api/topic-pool/not-exist-id")
-    assert resp.status_code in (200, 404), f"删除不存在条目返回 {resp.status_code}: {resp.text[:200]}"
+    assert resp.status_code in (
+        200,
+        404,
+    ), f"删除不存在条目返回 {resp.status_code}: {resp.text[:200]}"
 
 
 def test_my_works_list_facets_and_analysis(client):
@@ -237,7 +246,9 @@ def test_my_works_draft_lifecycle(client):
     assert detail.status_code == 200, detail.text
     assert detail.json()["data"]["content_status"] == "published"
 
-    bad_status = client.patch(f"/api/my-works/{record_id}/status", json={"content_status": "unknown"})
+    bad_status = client.patch(
+        f"/api/my-works/{record_id}/status", json={"content_status": "unknown"}
+    )
     assert bad_status.status_code == 422, f"非法状态未拦截: {bad_status.status_code}"
 
     deleted = client.delete(f"/api/my-works/{record_id}")
@@ -258,8 +269,22 @@ def test_my_works_csv_import(client):
         json={
             "platform": "xiaohongshu",
             "records": [
-                {"note_id": "e2e-csv-1", "title": "E2E CSV 1", "likes": 12, "collects": 3, "comments": 2, "shares": 1},
-                {"note_id": "e2e-csv-2", "title": "E2E CSV 2", "likes": 7, "collects": 1, "comments": 0, "shares": 0},
+                {
+                    "note_id": "e2e-csv-1",
+                    "title": "E2E CSV 1",
+                    "likes": 12,
+                    "collects": 3,
+                    "comments": 2,
+                    "shares": 1,
+                },
+                {
+                    "note_id": "e2e-csv-2",
+                    "title": "E2E CSV 2",
+                    "likes": 7,
+                    "collects": 1,
+                    "comments": 0,
+                    "shares": 0,
+                },
             ],
         },
     )

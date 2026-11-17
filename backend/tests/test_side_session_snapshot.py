@@ -21,8 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.db.models import Base, ChatMessage, ChatSession, SideSnapshot, User, generate_ulid
 from app.services import side_session
 
-
 # ---------- 纯函数：build_snapshot_content ----------
+
 
 def _msgs(*pairs: tuple[str, str]) -> list[dict]:
     return [{"id": generate_ulid(), "role": r, "content": c} for r, c in pairs]
@@ -79,6 +79,7 @@ def test_build_snapshot_filters_non_chat_roles():
 
 # ---------- 纯函数：token_level_of ----------
 
+
 def test_token_level_boundary():
     small = {"goal": "", "summary": "", "messages": [{"role": "user", "content": "a" * 5000}]}
     assert side_session.token_level_of(small) == "low"
@@ -90,11 +91,17 @@ def test_token_level_boundary():
 
 # ---------- DB：compute_expired_turns ----------
 
+
 @pytest.fixture()
 async def db_sessionmaker(monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite://", echo=False)
     async with engine.begin() as conn:
-        for t in [User.__table__, ChatSession.__table__, ChatMessage.__table__, SideSnapshot.__table__]:
+        for t in [
+            User.__table__,
+            ChatSession.__table__,
+            ChatMessage.__table__,
+            SideSnapshot.__table__,
+        ]:
             await conn.run_sync(t.create, checkfirst=True)
     sf = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
     monkeypatch.setattr(side_session, "AsyncSessionLocal", sf)

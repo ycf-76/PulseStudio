@@ -56,21 +56,26 @@ async def record_audit(
 ) -> None:
     """在当前事务里追加一条审计记录（flush，不 commit，由调用方提交）。"""
     try:
-        db.add(CredentialAuditLog(
-            id=generate_ulid(),
-            user_id=_clean(user_id, 128),
-            provider=_clean(provider, 32),
-            action=_clean(action, 32),
-            result=_clean(result, 16),
-            ip=_clean(ip, 64),
-            user_agent=_clean(user_agent, 256),
-            detail=_clean(detail, 512),
-        ))
+        db.add(
+            CredentialAuditLog(
+                id=generate_ulid(),
+                user_id=_clean(user_id, 128),
+                provider=_clean(provider, 32),
+                action=_clean(action, 32),
+                result=_clean(result, 16),
+                ip=_clean(ip, 64),
+                user_agent=_clean(user_agent, 256),
+                detail=_clean(detail, 512),
+            )
+        )
         await db.flush()
     except Exception:
         logger.warning(
             "[BYOK-AUDIT] 写入审计失败 user=%s provider=%s action=%s",
-            user_id, provider, action, exc_info=True,
+            user_id,
+            provider,
+            action,
+            exc_info=True,
         )
 
 

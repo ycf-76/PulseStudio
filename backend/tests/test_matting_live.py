@@ -10,6 +10,7 @@
   3. 成片探测（时长≈源 22s）
   4. 抽首/中/尾三帧供边缘质量人工+VLM 检查
 """
+
 import asyncio
 import json
 import sys
@@ -37,16 +38,18 @@ async def main() -> None:
 
     skill = TalkingHeadOverlaySkill()
     events = []
-    async for ev in skill.execute({
-        "video_path": str(VIDEO),
-        "gate_mode": "auto_confirm",
-        "pip": True,
-        "matting": True,
-        "deck_images": images,
-        "slide_duration": 4.0,
-        "pip_scale": 0.3,
-        "pip_position": "bottom_right",
-    }):
+    async for ev in skill.execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": "auto_confirm",
+            "pip": True,
+            "matting": True,
+            "deck_images": images,
+            "slide_duration": 4.0,
+            "pip_scale": 0.3,
+            "pip_position": "bottom_right",
+        }
+    ):
         events.append(ev)
         name = ev.get("event") or ("success" if ev.get("success") else "error")
         print(f"[live] event={name} message={ev.get('message', ev.get('error', ''))}")
@@ -74,10 +77,20 @@ async def main() -> None:
     out_dir = output.parent / f"{output.stem}_frames"
     out_dir.mkdir(exist_ok=True)
     for tag, t in (("first", 0.5), ("mid", out_dur / 2), ("end", out_dur - 0.5)):
-        subprocess.run([
-            ff, "-y", "-ss", f"{t:.2f}", "-i", str(output),
-            "-frames:v", "1", str(out_dir / f"{tag}.png"),
-        ], capture_output=True)
+        subprocess.run(
+            [
+                ff,
+                "-y",
+                "-ss",
+                f"{t:.2f}",
+                "-i",
+                str(output),
+                "-frames:v",
+                "1",
+                str(out_dir / f"{tag}.png"),
+            ],
+            capture_output=True,
+        )
     frames = sorted(out_dir.glob("*.png"))
     print(f"[live] 抽帧 {len(frames)}：{[f.name for f in frames]}")
     print("[live] PASS：10.20 真机验收完成（边缘质量看抽帧）")

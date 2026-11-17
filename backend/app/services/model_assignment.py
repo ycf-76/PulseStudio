@@ -81,9 +81,7 @@ async def load_all_assignments() -> None:
     logger.info(f"[model_assignment] warmed {len(rows)} assignment(s)")
 
 
-async def list_assignments(
-    db: AsyncSession, user_id: str
-) -> dict[tuple[str, str], str]:
+async def list_assignments(db: AsyncSession, user_id: str) -> dict[tuple[str, str], str]:
     """读取某用户全部分配（DB 为准）。"""
     stmt = select(UserModelAssignment).where(UserModelAssignment.user_id == user_id)
     result = await db.execute(stmt)
@@ -113,13 +111,15 @@ async def save_assignment(
     if existing is None:
         from app.db.models import generate_ulid
 
-        db.add(UserModelAssignment(
-            id=generate_ulid(),
-            user_id=user_id,
-            target_type=target_type,
-            target_key=target_key,
-            model=model,
-        ))
+        db.add(
+            UserModelAssignment(
+                id=generate_ulid(),
+                user_id=user_id,
+                target_type=target_type,
+                target_key=target_key,
+                model=model,
+            )
+        )
     else:
         existing.model = model
     await db.commit()

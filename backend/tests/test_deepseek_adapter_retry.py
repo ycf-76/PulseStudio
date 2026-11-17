@@ -134,12 +134,16 @@ async def test_chat_connection_error_recovers_on_second_attempt(no_sleep: None):
             if self.calls == 1:
                 raise _conn_error()
             return types.SimpleNamespace(
-                choices=[types.SimpleNamespace(
-                    message=types.SimpleNamespace(content="ok", reasoning_content=None),
-                    finish_reason="stop",
-                )],
+                choices=[
+                    types.SimpleNamespace(
+                        message=types.SimpleNamespace(content="ok", reasoning_content=None),
+                        finish_reason="stop",
+                    )
+                ],
                 usage=types.SimpleNamespace(
-                    prompt_tokens=1, completion_tokens=1, total_tokens=2,
+                    prompt_tokens=1,
+                    completion_tokens=1,
+                    total_tokens=2,
                 ),
             )
 

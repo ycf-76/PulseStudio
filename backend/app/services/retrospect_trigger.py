@@ -16,7 +16,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 
 from app.db.models import AgentMemory, FeedbackEvent, FeedbackEventType, MemoryType
 from app.db.session import AsyncSessionLocal
@@ -74,19 +74,24 @@ async def _is_duplicate(
     dimension: str | None,
 ) -> bool:
     since = datetime.now(UTC) - timedelta(hours=_DEDUP_HOURS)
-    stmt = select(AgentMemory).where(
-        and_(
-            AgentMemory.user_id == user_id,
-            AgentMemory.memory_type == MemoryType.RETROSPECT_INSIGHT,
-            AgentMemory.created_at >= since,
+    stmt = (
+        select(AgentMemory)
+        .where(
+            and_(
+                AgentMemory.user_id == user_id,
+                AgentMemory.memory_type == MemoryType.RETROSPECT_INSIGHT,
+                AgentMemory.created_at >= since,
+            )
         )
-    ).limit(1)
+        .limit(1)
+    )
     existing = await db.scalar(stmt)
     return existing is not None
 
 
 async def _load_session_messages(session_id: str) -> list[dict]:
     from app.services.chat_session import get_recent_messages
+
     return await get_recent_messages(session_id, limit=20)
 
 
@@ -99,6 +104,7 @@ async def _run_llm_retrospect(
     """让 LLM 分析对话轨迹，输出失败归因 + 改进建议。"""
     try:
         from app.engine.factory import get_deepseek_llm
+
         llm = get_deepseek_llm(temperature=0.3)
         if llm is None:
             logger.warning("[retrospect] no LLM available, skipping")
@@ -182,6 +188,7 @@ async def _save_insight(
     insight: dict,
 ) -> None:
     from app.services.agent_memory import save_memory
+
     await save_memory(
         user_id=user_id,
         memory_type=MemoryType.RETROSPECT_INSIGHT,

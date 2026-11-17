@@ -12,7 +12,6 @@ import pytest
 
 from capabilities.video.adapters.overlay_templates import TEMPLATES
 
-
 _WORDS = [
     {"text": "今天", "start": 0.0, "end": 0.4},
     {"text": "天气", "start": 0.4, "end": 0.8},
@@ -21,7 +20,11 @@ _WORDS = [
 
 
 # caption 类模板必传 text
-_CAPTION_ARGS = {"caption_pop": {"text": "测试文本"}, "caption_karaoke": {"text": "测试文本"}, "caption_typewriter": {"text": "测试文本"}}
+_CAPTION_ARGS = {
+    "caption_pop": {"text": "测试文本"},
+    "caption_karaoke": {"text": "测试文本"},
+    "caption_typewriter": {"text": "测试文本"},
+}
 
 
 def _render(name: str, **extra) -> str:
@@ -33,6 +36,7 @@ def _render(name: str, **extra) -> str:
 
 
 # ── 1. 全模板通用契约 ─────────────────────────────────────
+
 
 class TestTemplateContract:
     def test_所有模板_无绿幕色(self):
@@ -56,6 +60,7 @@ class TestTemplateContract:
 
 
 # ── 2. 字幕模板（A1 + A4 核心）────────────────────────────
+
 
 class TestCaptionTemplates:
     def test_caption_pop_词级数据注入(self):
@@ -93,11 +98,20 @@ class TestCaptionTemplates:
 
 # ── 3. 卡片/图形模板 ──────────────────────────────────────
 
+
 class TestCardTemplates:
-    @pytest.mark.parametrize("name", [
-        "title_card", "stat_card", "number_roll",
-        "keyword_icon", "keyword_highlight", "lower_third", "bar_chart_grow",
-    ])
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "title_card",
+            "stat_card",
+            "number_roll",
+            "keyword_icon",
+            "keyword_highlight",
+            "lower_third",
+            "bar_chart_grow",
+        ],
+    )
     def test_卡片模板_含seekTo和透明背景(self, name):
         html = TEMPLATES[name](duration=2.0)
         assert "window.seekTo" in html
@@ -116,6 +130,7 @@ class TestCardTemplates:
 
 # ── 4. v3 视觉冲击：亮色色块 / 新模板 ─────────────────────
 
+
 class TestV3AccentBlocks:
     _WORDS2 = [
         {"text": "防晒", "start": 0.0, "end": 0.5},
@@ -126,8 +141,10 @@ class TestV3AccentBlocks:
     def test_caption_pop_重音词亮色色块(self):
         """accent_words 命中词 → 亮色圆角色块弹出（CapCut 贴纸风）。"""
         html = TEMPLATES["caption_pop"](
-            text="防晒还能防老", words=self._WORDS2,
-            accent_words=["防老"], duration=2.0,
+            text="防晒还能防老",
+            words=self._WORDS2,
+            accent_words=["防老"],
+            duration=2.0,
         )
         low = html.lower()
         assert "#ffe066" in low
@@ -135,8 +152,10 @@ class TestV3AccentBlocks:
 
     def test_caption_pop_多重音词交替亮色(self):
         html = TEMPLATES["caption_pop"](
-            text="防晒还能防老", words=self._WORDS2,
-            accent_words=["防晒", "防老"], duration=2.0,
+            text="防晒还能防老",
+            words=self._WORDS2,
+            accent_words=["防晒", "防老"],
+            duration=2.0,
         )
         low = html.lower()
         assert "#ffe066" in low and "#ff4d4d" in low
@@ -146,8 +165,11 @@ class TestV3AccentBlocks:
         params.color 来自色盘，但 accent 块写死黄红循环无视 color →
         LLM 传 color="#4ECDC4" 时 accent 块必须用它（不再出现黄红）。"""
         html = TEMPLATES["caption_pop"](
-            text="防晒还能防老", words=self._WORDS2,
-            accent_words=["防晒", "防老"], color="#4ECDC4", duration=2.0,
+            text="防晒还能防老",
+            words=self._WORDS2,
+            accent_words=["防晒", "防老"],
+            color="#4ECDC4",
+            duration=2.0,
         )
         low = html.lower()
         assert "#4ecdc4" in low
@@ -157,15 +179,20 @@ class TestV3AccentBlocks:
         """2026-10-27 第七次 demo o23 实证：accent_words=['特别多'] 被
         分词成'特别'+'多'，黄红交替把语义单元拆成两个色块。修后同一
         accent 词命中的所有 word 必须同色（c 类一致）。"""
-        words = [{"text": "效果", "start": 0.0, "end": 0.4},
-                 {"text": "特别", "start": 0.4, "end": 0.7},
-                 {"text": "多", "start": 0.7, "end": 1.0}]
+        words = [
+            {"text": "效果", "start": 0.0, "end": 0.4},
+            {"text": "特别", "start": 0.4, "end": 0.7},
+            {"text": "多", "start": 0.7, "end": 1.0},
+        ]
         html = TEMPLATES["caption_pop"](
-            text="效果特别多", words=words,
-            accent_words=["特别多"], duration=1.2,
+            text="效果特别多",
+            words=words,
+            accent_words=["特别多"],
+            duration=1.2,
         )
         # '特别' 和 '多' 都是 accent，且同一 c 类（同色）
         import re as _re
+
         cls_special = _re.search(r'class="word accent (c\d)"[^>]*>特别', html)
         cls_duo = _re.search(r'class="word accent (c\d)"[^>]*>多', html)
         assert cls_special and cls_duo
@@ -176,7 +203,10 @@ class TestV3AccentBlocks:
         accent_color 默认黄，params.color 传红被无视 → color 非空时
         编号块必须用它。"""
         html = TEMPLATES["section_card"](
-            number="01", title="空调直吹", color="#FF4D4D", duration=2.0,
+            number="01",
+            title="空调直吹",
+            color="#FF4D4D",
+            duration=2.0,
         )
         low = html.lower()
         assert "#ff4d4d" in low
@@ -191,7 +221,9 @@ class TestV3AccentBlocks:
         修后长标题缩字号保持单行，不产生孤字行。"""
         html7 = TEMPLATES["section_card"](number="02", title="出汗别猛灌冰水", duration=2.0)
         html5 = TEMPLATES["section_card"](number="01", title="空调直吹", duration=2.0)
-        html10 = TEMPLATES["section_card"](number="03", title="长时间暴晒会加速皮肤老化", duration=2.0)
+        html10 = TEMPLATES["section_card"](
+            number="03", title="长时间暴晒会加速皮肤老化", duration=2.0
+        )
         # 短标题保持原字号
         assert "font-size: 54px" in html5
         # 长标题缩字号 + 禁止折行
@@ -240,7 +272,10 @@ class TestV3AccentBlocks:
     def test_keyword_icon_副标题渲染(self):
         """LLM 传 subtitle（如"帽子 · 防晒衣 · 防晒霜"）不能被丢弃。"""
         html = TEMPLATES["keyword_icon"](
-            keyword="防晒三件套", icon="🧢", subtitle="帽子 · 防晒衣 · 防晒霜", duration=2.0,
+            keyword="防晒三件套",
+            icon="🧢",
+            subtitle="帽子 · 防晒衣 · 防晒霜",
+            duration=2.0,
         )
         assert "帽子 · 防晒衣 · 防晒霜" in html
 
@@ -290,17 +325,21 @@ class TestV3NewTemplates:
 
 # ── 5. v4 画面互动 + 整屏冲击 + 微动 ──────────────────────
 
+
 class TestV4NewTemplates:
     def test_新模板已注册(self):
         for name in ("arrow_point", "circle_mark", "full_card", "split_compare"):
             assert name in TEMPLATES
 
-    @pytest.mark.parametrize("name,extra", [
-        ("arrow_point", {"label": "看这里"}),
-        ("circle_mark", {}),
-        ("full_card", {"text": "三秒记住"}),
-        ("split_compare", {"bad_text": "只涂一次", "good_text": "两小时补涂"}),
-    ])
+    @pytest.mark.parametrize(
+        "name,extra",
+        [
+            ("arrow_point", {"label": "看这里"}),
+            ("circle_mark", {}),
+            ("full_card", {"text": "三秒记住"}),
+            ("split_compare", {"bad_text": "只涂一次", "good_text": "两小时补涂"}),
+        ],
+    )
     def test_新模板_渲染契约(self, name, extra):
         html = _render(name, **extra)
         assert "window.seekTo" in html
@@ -352,22 +391,28 @@ class TestV4NewTemplates:
 
     def test_split_compare_左右分屏(self):
         html = TEMPLATES["split_compare"](
-            bad_text="熬夜追剧", good_text="早睡护肤", duration=2.5,
+            bad_text="熬夜追剧",
+            good_text="早睡护肤",
+            duration=2.5,
         )
         assert "熬夜追剧" in html and "早睡护肤" in html
         assert "❌" in html and "✅" in html
 
     def test_split_compare_兼容旧键名(self):
         html = TEMPLATES["split_compare"](
-            wrong_text="错误做法", right_text="正确做法", duration=2.5,
+            wrong_text="错误做法",
+            right_text="正确做法",
+            duration=2.5,
         )
         assert "错误做法" in html and "正确做法" in html
 
     def test_新模板_主题色参数兼容(self):
         """palette 透传 + color 参数均不报错且生效。"""
         html = TEMPLATES["full_card"](
-            text="A", color="#4ECDC4",
-            palette=["#4ECDC4", "#FFE066", "#FF4D4D"], duration=1.5,
+            text="A",
+            color="#4ECDC4",
+            palette=["#4ECDC4", "#FFE066", "#FF4D4D"],
+            duration=1.5,
         )
         assert "#4ecdc4" in html.lower()
 
@@ -383,6 +428,7 @@ class TestV4IdleMotion:
 
 # ── 6. LLM 键名习惯兼容（v4.1 修复：text/sub 别名） ────────
 
+
 class TestParamAliases:
     """LLM 常传 text/sub 键名，旧模板签名只收 keyword/label/title —
     别名缺失 → 文字为空 → 元素塌缩成小色块（v4 demo 实测事故）。"""
@@ -397,7 +443,9 @@ class TestParamAliases:
 
     def test_stat_card_收text_sub(self):
         html = TEMPLATES["stat_card"](
-            text="气温一直飙升", sub="正式入夏", duration=2.6,
+            text="气温一直飙升",
+            sub="正式入夏",
+            duration=2.6,
         )
         assert "气温一直飙升" in html
         assert "正式入夏" in html
@@ -405,7 +453,9 @@ class TestParamAliases:
     def test_stat_card_color为主题色进卡(self):
         """LLM color=盘内主题色 → 卡片主色，文字保持白（不红字配红卡）。"""
         html = TEMPLATES["stat_card"](
-            text="销量翻倍", color="#4ECDC4", duration=2.6,
+            text="销量翻倍",
+            color="#4ECDC4",
+            duration=2.6,
         )
         assert "#4ECDC4" in html
         assert "#FFFFFF" in html  # 文字仍白
@@ -429,12 +479,15 @@ class TestParamAliases:
 
     def test_keyword_highlight_color进标记笔(self):
         html = TEMPLATES["keyword_highlight"](
-            text="金句", color="#FFE066", duration=2.0,
+            text="金句",
+            color="#FFE066",
+            duration=2.0,
         )
         assert "#FFE066" in html
 
 
 # ── 7. JS 选择器目标审计（v4.2 回归：o17 title_card 崩溃事故） ──
+
 
 class TestJSSelectorTargets:
     """worker 逐帧调 window.seekTo(t) — JS 里 querySelector 到 null
@@ -453,7 +506,8 @@ class TestJSSelectorTargets:
         body = body_match.group(1)
         js = "".join(re.findall(r"<script>(.*?)</script>", html, re.S))
         selectors = re.findall(
-            r"querySelector(?:All)?\(\s*['\"]([^'\"]+)['\"]", js,
+            r"querySelector(?:All)?\(\s*['\"]([^'\"]+)['\"]",
+            js,
         )
         assert selectors, f"{name}: seekTo 未引用任何元素（微动丢失？）"
         for sel in selectors:
@@ -462,20 +516,18 @@ class TestJSSelectorTargets:
             # '.caption' → caption；'.half.bad' → half/bad；
             # '.ring ellipse' → 段 'ring ellipse' 取段首 \w+ = ring，
             # 空格后的后代 tag（ellipse）不是 class，天然不参与检查
-            parts = [
-                m.group(0)
-                for seg in sel.split(".")[1:]
-                if (m := re.match(r"\w+", seg))
-            ]
+            parts = [m.group(0) for seg in sel.split(".")[1:] if (m := re.match(r"\w+", seg))]
             # null guard 豁免：变量有 if (x) 保护时引用条件渲染元素合法
             # （v4.2 修复模式：if (sub) sub.style.opacity = p3;）
             var_match = re.search(
                 rf"const (\w+) = document\.querySelector(?:All)?\(\s*['\"]"
-                + re.escape(sel) + "['\"]",
+                + re.escape(sel)
+                + "['\"]",
                 js,
             )
             if var_match and re.search(
-                rf"if\s*\(\s*{var_match.group(1)}\s*\)", js,
+                rf"if\s*\(\s*{var_match.group(1)}\s*\)",
+                js,
             ):
                 continue
             for cls in parts:
@@ -492,11 +544,13 @@ class TestJSSelectorTargets:
     def test_极简参数_选择器齐全(self, name):
         """LLM 只传必填文案、缺 subtitle/label 等可选参数时的场景。"""
         self._assert_selectors_exist(
-            name, _render(name, text="测试文案", sub="副标题"),
+            name,
+            _render(name, text="测试文案", sub="副标题"),
         )
 
 
 # ── 8. text_color 显式色对比度防线（2026-10-28 G1 旁路收口） ──
+
 
 class TestTextColorContrastGuard:
     """G1 真机验证发现的对比度防线唯一漏洞：full_card 显式传 text_color
@@ -509,14 +563,20 @@ class TestTextColorContrastGuard:
     def test_显式达标色_保留(self):
         """深底白字 17:1，尊重 LLM 显式选择。"""
         html = TEMPLATES["full_card"](
-            text="深底白字", color="#1A1A2E", text_color="#FFFFFF", duration=1.5,
+            text="深底白字",
+            color="#1A1A2E",
+            text_color="#FFFFFF",
+            duration=1.5,
         )
         assert "#FFFFFF" in html
 
     def test_显式低对比_回退自动选色(self):
         """白字压橙底 #FF8A00 = 2.36:1（<3.0 大字下限）→ 回退黑字 8.9:1。"""
         html = TEMPLATES["full_card"](
-            text="橙底白字", color="#FF8A00", text_color="#FFFFFF", duration=1.5,
+            text="橙底白字",
+            color="#FF8A00",
+            text_color="#FFFFFF",
+            duration=1.5,
         )
         assert "#FFFFFF" not in html
         assert "#111111" in html
@@ -525,12 +585,18 @@ class TestTextColorContrastGuard:
         """白字压 #FF4D4D = 3.27:1：无 sub 走大字档 3.0 放行；
         有 sub 时 38px 副标题需 4.5 → 必须回退（同色同防线，不分大小字）。"""
         no_sub = TEMPLATES["full_card"](
-            text="仅大字", color="#FF4D4D", text_color="#FFFFFF", duration=1.5,
+            text="仅大字",
+            color="#FF4D4D",
+            text_color="#FFFFFF",
+            duration=1.5,
         )
         assert "#FFFFFF" in no_sub
         with_sub = TEMPLATES["full_card"](
-            text="大字", sub="副标题同色", color="#FF4D4D",
-            text_color="#FFFFFF", duration=1.5,
+            text="大字",
+            sub="副标题同色",
+            color="#FF4D4D",
+            text_color="#FFFFFF",
+            duration=1.5,
         )
         assert "#FFFFFF" not in with_sub
         assert "#111111" in with_sub
@@ -543,6 +609,9 @@ class TestTextColorContrastGuard:
     def test_非法显式色_回退自动选色(self):
         """非 6 位 hex 的显式色无法判定 → 回退自动选色，不盲信。"""
         html = TEMPLATES["full_card"](
-            text="非法色", color="#FFE066", text_color="不是颜色", duration=1.5,
+            text="非法色",
+            color="#FFE066",
+            text_color="不是颜色",
+            duration=1.5,
         )
         assert "#111111" in html

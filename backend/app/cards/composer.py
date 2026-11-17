@@ -96,20 +96,20 @@ async def _plan(topic: str, content: str, llm: Any, recipe_id: RecipeId | None =
             f"【强制约束】主力 kind：{'、'.join(recipe.preferred_kinds)}（每个页面优先用主力）"
             f"{('；允许补充 kind：' + '、'.join(recipe.aux_kinds) + '（仅当内容确实需要时才用）') if recipe.aux_kinds else ''}\n"
             "禁止使用上述以外的 kind。将用户内容拆成 2-4 个有实质信息的页面。\n"
-            "对象形状: {\"subtitle\":\"封面副标题\",\"sections\":[{\"kind\":\"list\","
-            "\"title\":\"标题\",\"text\":\"说明\","
-            "\"items\":[{\"text\":\"主行\",\"note\":\"副行补充说明\",\"tag\":\"右侧短标签\"}],"
-            "\"left_title\":\"之前\",\"right_title\":\"之后\","
-            "\"rows\":[[\"维度标签\",\"前\",\"后\"]],"
-            "\"cells\":[{\"kicker\":\"分类\",\"big\":\"数据\",\"unit\":\"单位\","
-            "\"note\":\"解读\",\"source\":\"来源\"}],"
-            "\"timeline_items\":[{\"date\":\"2024 Q1\",\"text\":\"标题\",\"note\":\"说明\"}],"
-            "\"quote_text\":\"金句正文\",\"quote_author\":\"作者\",\"quote_kicker\":\"日期\"}],"
-            "\"closing\":\"结尾句\"}。\n"
-            "items 的元素可以只写一个字符串（等价 {\"text\":...}），但**强烈建议写对象**：\n"
+            '对象形状: {"subtitle":"封面副标题","sections":[{"kind":"list",'
+            '"title":"标题","text":"说明",'
+            '"items":[{"text":"主行","note":"副行补充说明","tag":"右侧短标签"}],'
+            '"left_title":"之前","right_title":"之后",'
+            '"rows":[["维度标签","前","后"]],'
+            '"cells":[{"kicker":"分类","big":"数据","unit":"单位",'
+            '"note":"解读","source":"来源"}],'
+            '"timeline_items":[{"date":"2024 Q1","text":"标题","note":"说明"}],'
+            '"quote_text":"金句正文","quote_author":"作者","quote_kicker":"日期"}],'
+            '"closing":"结尾句"}。\n'
+            'items 的元素可以只写一个字符串（等价 {"text":...}），但**强烈建议写对象**：\n'
             "note 是主行下面的灰色小字，用来补一句「为什么 / 怎么用 / 举个例子」；\n"
             "tag 是右侧的短标签（≤6 字，如词性、年份、难度），没有就省略。\n"
-            "rows 的元素可以是 [\"前\",\"后\"]，也可以是 [\"这一行比什么\",\"前\",\"后\"]。\n"
+            'rows 的元素可以是 ["前","后"]，也可以是 ["这一行比什么","前","后"]。\n'
             "cells（bento / stat 共用）每个格子有 kicker/big/unit/note/source 五层：\n"
             "- bento：4-6 格矩阵，每格一个数据点；少于 4 格会被审计判 FAIL；\n"
             "- stat：1 格数据强调，巨数字必须配 note（这数字在说什么）和 source（数据来源），\n"
@@ -132,12 +132,17 @@ async def _plan(topic: str, content: str, llm: Any, recipe_id: RecipeId | None =
             f"\n主题：{topic[:80]}\n原文：{content[:4500]}"
         )
         _complex_kinds = {"bento", "stat", "compare", "timeline"}
-        _plan_max_tokens = 4096 if any(k in recipe.preferred_kinds for k in _complex_kinds) else 2800
+        _plan_max_tokens = (
+            4096 if any(k in recipe.preferred_kinds for k in _complex_kinds) else 2800
+        )
         try:
-            response = await llm.chat(messages=[
-                {"role": "system", "content": "只输出满足要求的 JSON；保留用户提供的事实。"},
-                {"role": "user", "content": prompt},
-            ], max_tokens=_plan_max_tokens)
+            response = await llm.chat(
+                messages=[
+                    {"role": "system", "content": "只输出满足要求的 JSON；保留用户提供的事实。"},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=_plan_max_tokens,
+            )
             raw = response.get("content", "") if isinstance(response, dict) else ""
             match = re.search(r"\{[\s\S]*\}", raw)
             if match:
@@ -148,11 +153,19 @@ async def _plan(topic: str, content: str, llm: Any, recipe_id: RecipeId | None =
             logger.warning("Structured card planning unavailable: %s", exc)
     if not content.strip():
         raise ValueError("缺少正文且无法完成内容规划，请先提供卡片文案")
-    lines = [part.strip(" \t\n-•1234567890.、") for part in re.split(r"[\n。；]+", content) if part.strip()]
+    lines = [
+        part.strip(" \t\n-•1234567890.、")
+        for part in re.split(r"[\n。；]+", content)
+        if part.strip()
+    ]
     items = [line[:75] for line in lines if line][:8]
     if len(items) >= 2:
-        return Plan(subtitle=content[:80], sections=[Section(kind="list", title=topic[:80], items=items)])
-    return Plan(subtitle=content[:80], sections=[Section(kind="text", title=topic[:80], text=content[:480])])
+        return Plan(
+            subtitle=content[:80], sections=[Section(kind="list", title=topic[:80], items=items)]
+        )
+    return Plan(
+        subtitle=content[:80], sections=[Section(kind="text", title=topic[:80], text=content[:480])]
+    )
 
 
 def _trim_item(item: Item) -> Item:
@@ -172,8 +185,11 @@ def _main_texts(items) -> list[str]:
 def _trim_cell(cell: Cell) -> Cell:
     """截断单元字段时也保留 kicker/note——这些是密度与可信度的关键。"""
     return Cell(
-        kicker=cell.kicker[:20], big=cell.big[:24], unit=cell.unit[:16],
-        note=cell.note[:80], source=cell.source[:40],
+        kicker=cell.kicker[:20],
+        big=cell.big[:24],
+        unit=cell.unit[:16],
+        note=cell.note[:80],
+        source=cell.source[:40],
     )
 
 
@@ -183,7 +199,9 @@ def _split_to_items(text: str, limit: int = 6) -> list[Item]:
     只在能拆出足够多实质条目时才拆；拆不动就维持原样，绝不为了填满而灌水。
     """
     # 逗号也参与拆分：小红书清单本来就是短语，长句拆开后信息量不变、密度更高。
-    parts = [part.strip(" \t\n-•，,、") for part in re.split(r"[\n；;。，,]+", text) if part.strip()]
+    parts = [
+        part.strip(" \t\n-•，,、") for part in re.split(r"[\n；;。，,]+", text) if part.strip()
+    ]
     return [Item(text=part[:90]) for part in parts if len(part) >= 4][:limit]
 
 
@@ -194,8 +212,9 @@ def _recap_points(pages: list[CardPage], limit: int = 5) -> list[str]:
     会被 `>=3` 守卫整段跳过 —— 退化路径（llm=None）实测收尾页最大空白带 60%+。
     清单条目同样是牌组里的真实内容，用它兜底。
     """
-    points = [b.text.strip() for p in pages for b in p.blocks
-              if isinstance(b, Heading) and b.text.strip()]
+    points = [
+        b.text.strip() for p in pages for b in p.blocks if isinstance(b, Heading) and b.text.strip()
+    ]
     if len(points) < limit:
         for p in pages:
             for b in p.blocks:
@@ -250,16 +269,24 @@ def _fill_thin_pages(deck: CardDeck) -> CardDeck:
 
 def _volume(section: Section) -> int:
     """一节内容的体量（字符数），用来判断"补内容"到底补没补。"""
-    return (len(section.text)
-            + sum(len(item.text) + len(item.note) + len(item.tag) for item in section.items)
-            + sum(len(row.label) + len(row.left) + len(row.right) for row in section.rows)
-            + sum(len(c.kicker) + len(c.big) + len(c.unit) + len(c.note) + len(c.source)
-                 for c in section.cells)
-            + sum(len(t.date) + len(t.text) + len(t.note) for t in section.timeline_items)
-            + len(section.quote_text) + len(section.quote_author) + len(section.quote_kicker))
+    return (
+        len(section.text)
+        + sum(len(item.text) + len(item.note) + len(item.tag) for item in section.items)
+        + sum(len(row.label) + len(row.left) + len(row.right) for row in section.rows)
+        + sum(
+            len(c.kicker) + len(c.big) + len(c.unit) + len(c.note) + len(c.source)
+            for c in section.cells
+        )
+        + sum(len(t.date) + len(t.text) + len(t.note) for t in section.timeline_items)
+        + len(section.quote_text)
+        + len(section.quote_author)
+        + len(section.quote_kicker)
+    )
 
 
-async def _repair_plan(plan: Plan, deck: CardDeck, topic: str, content: str, llm: Any) -> Plan | None:
+async def _repair_plan(
+    plan: Plan, deck: CardDeck, topic: str, content: str, llm: Any
+) -> Plan | None:
     """把密度审计的具体缺口回灌给模型，让它把欠填的章节补饱满。
 
     这是欠填修正阶梯的最后一阶：前两阶（换骨架、挂真实目录/回顾）都是确定性的、
@@ -291,7 +318,7 @@ async def _repair_plan(plan: Plan, deck: CardDeck, topic: str, content: str, llm
         return None
 
     brief = "\n".join(
-        f'- 第 {index + 1} 节「{plan.sections[index].title}」（kind={plan.sections[index].kind}）：'
+        f"- 第 {index + 1} 节「{plan.sections[index].title}」（kind={plan.sections[index].kind}）："
         f'当前填充率 {report["fill"]:.0%}。{report["hint"] or "内容不足以填满 3:4 画幅"}'
         for index, report in targets
     )
@@ -308,10 +335,13 @@ async def _repair_plan(plan: Plan, deck: CardDeck, topic: str, content: str, llm
         f"原文（从中提取更多真实信息来扩写；分页/排版等制作指令不是内容，禁止提取）：\n{_strip_layout_directives(content)[:3000]}"
     )
     try:
-        response = await llm.chat(messages=[
-            {"role": "system", "content": "只输出满足要求的 JSON；保留用户提供的事实。"},
-            {"role": "user", "content": prompt},
-        ], max_tokens=2600)
+        response = await llm.chat(
+            messages=[
+                {"role": "system", "content": "只输出满足要求的 JSON；保留用户提供的事实。"},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=2600,
+        )
         raw = response.get("content", "") if isinstance(response, dict) else ""
         match = re.search(r"\{[\s\S]*\}", raw)
         if not match:
@@ -344,7 +374,12 @@ def _asset_block(asset: dict, block_id: str) -> ImageBlock:
 
 
 def _build_deck(
-    plan: Plan, topic: str, images: list[dict], image_layout: str, theme_id: str, deck_id: str,
+    plan: Plan,
+    topic: str,
+    images: list[dict],
+    image_layout: str,
+    theme_id: str,
+    deck_id: str,
 ) -> CardDeck:
     """把语义规划落成 Deck。抽出来是因为「补内容」后要用同一套规则重建一次。
 
@@ -370,17 +405,25 @@ def _build_deck(
                 blocks.append(_asset_block(images.pop(0), f"image_{i}"))
         elif section.kind == "steps" and len(section.items) >= 2:
             layout = "steps_flow"
-            blocks.append(Steps(id=f"steps_{i}", items=[_trim_item(it) for it in section.items[:7]]))
+            blocks.append(
+                Steps(id=f"steps_{i}", items=[_trim_item(it) for it in section.items[:7]])
+            )
         elif section.kind == "compare" and len(section.rows) >= 2:
             layout = "compare_split"
-            blocks.append(Compare(id=f"compare_{i}", left_title=section.left_title,
-                                  right_title=section.right_title,
-                                  rows=[_trim_row(row) for row in section.rows]))
+            blocks.append(
+                Compare(
+                    id=f"compare_{i}",
+                    left_title=section.left_title,
+                    right_title=section.right_title,
+                    rows=[_trim_row(row) for row in section.rows],
+                )
+            )
         elif section.kind == "bento" and len(section.cells) >= 2:
             # 矩阵：2-6 格自适应，≥4 格才过最小密度线。
             layout = "bento_grid"
-            blocks.append(BentoGrid(id=f"bento_{i}",
-                                    cells=[_trim_cell(c) for c in section.cells[:6]]))
+            blocks.append(
+                BentoGrid(id=f"bento_{i}", cells=[_trim_cell(c) for c in section.cells[:6]])
+            )
         elif section.kind == "stat" and section.cells:
             layout = "stat_card"
             blocks.append(Stat(id=f"stat_{i}", cell=_trim_cell(section.cells[0])))
@@ -392,13 +435,24 @@ def _build_deck(
             # 金句页的 LAYOUTS 只含 quote、不含 heading（kicker 由块内承载），
             # 必须把前面 prepended 的 Heading 移除，否则 validate_layout 报"含有不允许的组件"。
             blocks = [b for b in blocks if not isinstance(b, Heading)]
-            blocks.append(Quote(
-                id=f"quote_{i}", text=section.quote_text.strip(),
-                author=section.quote_author.strip(), kicker=section.quote_kicker.strip(),
-            ))
+            blocks.append(
+                Quote(
+                    id=f"quote_{i}",
+                    text=section.quote_text.strip(),
+                    author=section.quote_author.strip(),
+                    kicker=section.quote_kicker.strip(),
+                )
+            )
         else:
             layout = "content_text"
-            blocks.append(Text(id=f"text_{i}", text=(section.text or "；".join(_main_texts(section.items)) or section.title)[:480]))
+            blocks.append(
+                Text(
+                    id=f"text_{i}",
+                    text=(section.text or "；".join(_main_texts(section.items)) or section.title)[
+                        :480
+                    ],
+                )
+            )
         if images and image_layout == "overlay":
             layout = "image_bg_overlay"
             blocks = [Heading(id=f"heading_{i}", text=section.title)]
@@ -409,15 +463,24 @@ def _build_deck(
             # Additional uploaded images should be used, not silently discarded.
             layout = "image_bg_overlay"
             summary = section.text or "；".join(_main_texts(section.items[:2])) or section.title
-            blocks = [Heading(id=f"heading_{i}", text=section.title),
-                      Text(id=f"text_{i}", text=summary[:160]),
-                      _asset_block(images.pop(0), f"image_{i}")]
+            blocks = [
+                Heading(id=f"heading_{i}", text=section.title),
+                Text(id=f"text_{i}", text=summary[:160]),
+                _asset_block(images.pop(0), f"image_{i}"),
+            ]
         pages.append(CardPage(id=f"page_{i:02}", role="body", layout_id=layout, blocks=blocks))
 
-    pages.append(CardPage(id=f"page_{len(pages) + 1:02}", role="ending", layout_id="end_cta", blocks=[
-        Heading(id="heading_end", text="回顾一下"),
-        Cta(id="cta_end", text=plan.closing or "收藏备用"),
-    ]))
+    pages.append(
+        CardPage(
+            id=f"page_{len(pages) + 1:02}",
+            role="ending",
+            layout_id="end_cta",
+            blocks=[
+                Heading(id="heading_end", text="回顾一下"),
+                Cta(id="cta_end", text=plan.closing or "收藏备用"),
+            ],
+        )
+    )
     return CardDeck(deck_id=deck_id, title=topic, theme_id=theme_id, pages=pages)
 
 
@@ -496,7 +559,10 @@ def _has_unterminated_fence(raw: str) -> bool:
 
 
 async def _render_free_form(
-    plan: Plan, topic: str, style_hint: str, llm: Any,
+    plan: Plan,
+    topic: str,
+    style_hint: str,
+    llm: Any,
     images: list[dict] | None = None,
 ) -> dict:
     """LLM 直出 HTML：用户描述的视觉风格不在标准 THEMES 中时自动触发。
@@ -532,14 +598,14 @@ async def _render_free_form(
         "- 画布固定 1080×1440px，overflow:hidden，所有内容必须在这个画布内\n"
         "- 字体只用系统字体：'Noto Sans SC','Microsoft YaHei',sans-serif 或 serif\n"
         "- 禁止 <script>、<iframe>、onclick 等可执行内容\n"
-        "- 图片只用 <img src=\"...\"> 且 src 必须是 /uploads/ 或 https:// 开头\n"
+        '- 图片只用 <img src="..."> 且 src 必须是 /uploads/ 或 https:// 开头\n'
         "- 所有文字必须来自下方规划，禁止编造\n"
         "- 每页 HTML 必须是完整的独立文档（<!doctype html>...）\n\n"
         "版面硬规则（违反任意一条即判不合格，会被退回重做）：\n"
         "- 根容器 height:1440px、display:flex、flex-direction:column，内容必须纵向铺满\n"
         "  ≥75% 画高；任何一段无理由空白带 >15% 画高 = 失败\n"
         "- 禁用 margin-top:auto 把页脚推到底（这正是底部大片空白的元凶）；页脚用 padding-top 固定间距\n"
-        "- 禁用 <div style=\"flex:1\"></div> 空盒子造间距，间距用 padding/margin/gap\n"
+        '- 禁用 <div style="flex:1"></div> 空盒子造间距，间距用 padding/margin/gap\n'
         "- 内容不够填满时：扩写描述、增加条目/子项，不要留白；宁可减少页数让内容集中\n"
         "- 大标题字重 w200-500（字越大越细），只有小字才用粗体；正文不用纯黑，用深灰/深墨\n"
         "- 禁止蓝紫科技渐变、渐变文字、玻璃拟态、emoji 当图标\n\n"
@@ -578,10 +644,13 @@ async def _render_free_form(
         missing = len(plan.sections) - len(html_blocks)
         logger.warning(
             "自由风格渲染疑似截断：规划 %d 页仅完整产出 %d 页，发起续写补 %d 页",
-            len(plan.sections), len(html_blocks), missing,
+            len(plan.sections),
+            len(html_blocks),
+            missing,
         )
         missing_titles = "、".join(
-            f"第{i + 1}页「{plan.sections[i].title}」" for i in range(len(html_blocks), len(plan.sections))
+            f"第{i + 1}页「{plan.sections[i].title}」"
+            for i in range(len(html_blocks), len(plan.sections))
         )
         continuation_prompt = (
             f"你上一次的输出被截断了。内容规划共 {len(plan.sections)} 页，目前只收到 "
@@ -611,7 +680,8 @@ async def _render_free_form(
         # 无截断痕迹（LLM 合并了过薄的页）→ 保留现有页，只告警
         logger.warning(
             "自由风格渲染产出 %d 页（规划 %d 页），无截断痕迹，按 LLM 合并页处理",
-            len(html_blocks), len(plan.sections),
+            len(html_blocks),
+            len(plan.sections),
         )
 
     pages = []
@@ -619,12 +689,16 @@ async def _render_free_form(
         html = html.strip()
         if not html or len(html) < 50:
             continue
-        pages.append({
-            "id": f"page_{i:02}",
-            "type": "cover" if i == 0 else ("ending" if i == len(html_blocks) - 1 else "content"),
-            "title": "",
-            "htmlContent": _fix_free_form_whitespace(_sanitize_html(html)),
-        })
+        pages.append(
+            {
+                "id": f"page_{i:02}",
+                "type": (
+                    "cover" if i == 0 else ("ending" if i == len(html_blocks) - 1 else "content")
+                ),
+                "title": "",
+                "htmlContent": _fix_free_form_whitespace(_sanitize_html(html)),
+            }
+        )
     if not pages:
         raise ValueError("自由风格渲染未产出任何有效页面")
     return {
@@ -639,7 +713,11 @@ async def _render_free_form(
 
 
 async def compose_deck(
-    *, topic: str, content: str, user_id: str, llm: Any = None,
+    *,
+    topic: str,
+    content: str,
+    user_id: str,
+    llm: Any = None,
     asset_ids: list[str] | None = None,
     theme_id: ThemeId = "inkwash",
     image_layout: Literal["top", "side", "overlay"] = "top",
@@ -658,7 +736,9 @@ async def compose_deck(
     selected_ids = asset_ids or []
     if len(selected_ids) > 3 or len(set(selected_ids)) != len(selected_ids):
         raise ValueError("一次最多使用 3 张不重复的上传图片")
-    available = {asset["asset_id"]: asset for asset in await list_assets(user_id)} if selected_ids else {}
+    available = (
+        {asset["asset_id"]: asset for asset in await list_assets(user_id)} if selected_ids else {}
+    )
     if any(asset_id not in available for asset_id in selected_ids):
         raise ValueError("图片不存在或不属于当前用户，请先通过素材库上传")
 
@@ -683,7 +763,8 @@ async def compose_deck(
     if repaired is not None:
         pending_repaired = list(images)
         candidate = _fill_thin_pages(
-            _build_deck(repaired, topic, pending_repaired, image_layout, theme_id, deck_id))
+            _build_deck(repaired, topic, pending_repaired, image_layout, theme_id, deck_id)
+        )
         if deck_density(candidate)["min_fill"] > deck_density(deck)["min_fill"]:
             deck, pending = candidate, pending_repaired
 

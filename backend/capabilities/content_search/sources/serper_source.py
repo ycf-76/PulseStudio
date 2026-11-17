@@ -62,6 +62,7 @@ class SerperSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             self._client = await create_async_client(
                 timeout=httpx.Timeout(self.timeout),
@@ -74,9 +75,7 @@ class SerperSource(ContentSource):
             )
         return self._client
 
-    async def _translate_results(
-        self, results: list[TrendingContent]
-    ) -> list[TrendingContent]:
+    async def _translate_results(self, results: list[TrendingContent]) -> list[TrendingContent]:
         if not results:
             return results
         client = await self._ensure_client()
@@ -189,7 +188,7 @@ class SerperSource(ContentSource):
             except httpx.HTTPStatusError as e:
                 status_code = e.response.status_code
                 if status_code == 429 and attempt < max_retries:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[serper] 429 rate limited (attempt {attempt+1}/{max_retries+1}), "
                         f"retrying in {wait}s"
@@ -209,7 +208,13 @@ class SerperSource(ContentSource):
         limit: int = 20,
         time_range: str = "week",
     ) -> list[TrendingContent]:
-        tbs_map = {"hour": "qdr:h", "day": "qdr:d", "week": "qdr:w", "month": "qdr:m", "year": "qdr:y"}
+        tbs_map = {
+            "hour": "qdr:h",
+            "day": "qdr:d",
+            "week": "qdr:w",
+            "month": "qdr:m",
+            "year": "qdr:y",
+        }
         tbs = tbs_map.get(time_range, "")
 
         data = await self._call_serper(keyword, limit, topic="general", tbs=tbs)

@@ -119,7 +119,9 @@ def validate_timeline(tl: dict) -> list[str]:
                 if tfield in seg and not _is_num(seg[tfield]):
                     errs.append(_type_err(f"{tag}.{tfield}", seg[tfield]))
             if _is_num(seg.get("start")) and _is_num(seg.get("end")) and seg["end"] <= seg["start"]:
-                errs.append(f"{tag}.end 必须 > start（实际 end={seg['end']}, start={seg['start']}）")
+                errs.append(
+                    f"{tag}.end 必须 > start（实际 end={seg['end']}, start={seg['start']}）"
+                )
             if "text" in seg and not isinstance(seg["text"], str):
                 errs.append(f"{tag}.text 应为字符串，实际为 {type(seg['text']).__name__}")
 
@@ -144,11 +146,23 @@ def validate_timeline(tl: dict) -> list[str]:
             for tfield in ("t_start", "t_end"):
                 if tfield in beat and not _is_num(beat[tfield]):
                     errs.append(_type_err(f"{tag}.{tfield}", beat[tfield]))
-            if _is_num(beat.get("t_start")) and _is_num(beat.get("t_end")) and beat["t_end"] <= beat["t_start"]:
-                errs.append(f"{tag}.t_end 必须 > t_start（实际 t_end={beat['t_end']}, t_start={beat['t_start']}）")
-            if (prev is not None and _is_num(prev.get("t_end")) and _is_num(beat.get("t_start"))
-                    and beat["t_start"] < prev["t_end"]):
-                errs.append(f"{tag}.t_start 与上一 beat 重叠（须按 t_start 升序且不重叠，上一 beat t_end={prev['t_end']}）")
+            if (
+                _is_num(beat.get("t_start"))
+                and _is_num(beat.get("t_end"))
+                and beat["t_end"] <= beat["t_start"]
+            ):
+                errs.append(
+                    f"{tag}.t_end 必须 > t_start（实际 t_end={beat['t_end']}, t_start={beat['t_start']}）"
+                )
+            if (
+                prev is not None
+                and _is_num(prev.get("t_end"))
+                and _is_num(beat.get("t_start"))
+                and beat["t_start"] < prev["t_end"]
+            ):
+                errs.append(
+                    f"{tag}.t_start 与上一 beat 重叠（须按 t_start 升序且不重叠，上一 beat t_end={prev['t_end']}）"
+                )
             _check_triggers(errs, i, beat)
             prev = beat if _is_num(beat.get("t_start")) else None
 

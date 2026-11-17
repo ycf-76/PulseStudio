@@ -58,9 +58,7 @@ async def create_file(
 async def list_files_for_session(session_id: str) -> list[dict[str, Any]]:
     async with AsyncSessionLocal() as db:
         stmt = (
-            select(ChatFile)
-            .where(ChatFile.session_id == session_id)
-            .order_by(ChatFile.created_at)
+            select(ChatFile).where(ChatFile.session_id == session_id).order_by(ChatFile.created_at)
         )
         result = await db.scalars(stmt)
         return [_file_to_dict(f) for f in result.all()]
@@ -69,6 +67,7 @@ async def list_files_for_session(session_id: str) -> list[dict[str, Any]]:
 async def list_files_for_user(user_id: str, limit: int = 200) -> list[dict[str, Any]]:
     async with AsyncSessionLocal() as db:
         from app.db.models import ChatSession
+
         stmt = (
             select(ChatFile)
             .join(ChatSession, ChatFile.session_id == ChatSession.id)
@@ -81,7 +80,8 @@ async def list_files_for_user(user_id: str, limit: int = 200) -> list[dict[str, 
 
 
 async def get_latest_copywrite(
-    user_id: str, session_id: str | None = None,
+    user_id: str,
+    session_id: str | None = None,
 ) -> dict[str, Any] | None:
     """返回用户最近一条可发送的完整文案。
 
@@ -92,6 +92,7 @@ async def get_latest_copywrite(
     memory_latest = None
     try:
         from app.services import agent_memory
+
         memory_latest = await agent_memory.get_latest_copywrite(user_id)
         if memory_latest and memory_latest.get("content"):
             if not session_id or memory_latest.get("workflow_id") == session_id:
@@ -110,7 +111,7 @@ async def get_latest_copywrite(
             content = str(f.content_text)
             prefix = f"# {title}"
             if content.startswith(prefix):
-                content = content[len(prefix):].lstrip()
+                content = content[len(prefix) :].lstrip()
             return {
                 "title": title,
                 "topic": str(meta.get("topic", "")),
@@ -168,6 +169,7 @@ async def get_file(file_id: str) -> dict[str, Any] | None:
 async def get_user_file(file_id: str, user_id: str) -> dict[str, Any] | None:
     async with AsyncSessionLocal() as db:
         from app.db.models import ChatSession
+
         stmt = (
             select(ChatFile)
             .join(ChatSession, ChatFile.session_id == ChatSession.id)

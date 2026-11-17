@@ -15,7 +15,7 @@ import pytest
 from app.core.skill_base import PromptDrivenSkill
 
 _DSML_RESIDUE = (
-    '<｜｜DSML｜｜ calls>\n'
+    "<｜｜DSML｜｜ calls>\n"
     '<｜｜DSML｜｜ invoke name="web_fetch">\n'
     '<｜｜DSML｜｜ parameter name="url" string="true">'
     "https://60s.crystelf.top/v2/weibo</｜｜DSML｜｜ parameter>\n"
@@ -46,7 +46,9 @@ def _make_skill(tmp_path, monkeypatch, content: str) -> _DummyPromptSkill:
     md.write_text("# 测试技能\n\n正文", encoding="utf-8")
     # _load_skill_md 是 classmethod：monkeypatch 类属性，避免读到真实 skills 目录
     monkeypatch.setattr(_DummyPromptSkill, "skill_md_path", str(md), raising=False)
-    monkeypatch.setattr(_DummyPromptSkill, "_md_cache", md.read_text(encoding="utf-8"), raising=False)
+    monkeypatch.setattr(
+        _DummyPromptSkill, "_md_cache", md.read_text(encoding="utf-8"), raising=False
+    )
     monkeypatch.setattr(_DummyPromptSkill, "reference_paths", [], raising=False)
     skill = _DummyPromptSkill()
     skill._llm = _ScriptedLLM(content)

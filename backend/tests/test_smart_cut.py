@@ -44,14 +44,14 @@ from capabilities.video.services.cut_analyzer import (
     merge_candidates,
 )
 from capabilities.video.skills.smart_cut import (
+    VIDEO_FADE_FRAMES,
     SmartCutInput,
     SmartCutPlan,
     SmartCutSkill,
-    VIDEO_FADE_FRAMES,
 )
 
-
 # ── 1. 输入模型 ────────────────────────────────────────────
+
 
 class TestSmartCutInput:
     def test_defaults_have_no_refine_signal(self):
@@ -69,7 +69,15 @@ class TestSmartCutInput:
     def test_refine_candidates_accepts_list(self):
         inp = SmartCutInput(
             video_path="test.mp4",
-            refine_candidates=[{"start": 1.0, "end": 2.0, "cut_type": "silence", "confidence": 0.95, "reason": "test"}],
+            refine_candidates=[
+                {
+                    "start": 1.0,
+                    "end": 2.0,
+                    "cut_type": "silence",
+                    "confidence": 0.95,
+                    "reason": "test",
+                }
+            ],
         )
         assert len(inp.refine_candidates) == 1
 
@@ -79,6 +87,7 @@ class TestSmartCutInput:
 
 
 # ── 2. silence_detect adapter ─────────────────────────────
+
 
 class TestParseSilenceOutput:
     def test_typical_output(self):
@@ -129,6 +138,7 @@ class TestSilenceSegment:
 
 # ── 3. cut_analyzer: 静音检测 ─────────────────────────────
 
+
 class TestDetectSilenceCandidates:
     def test_converts_segments_to_candidates(self):
         """10.28 收缩契约：>0.6s 静音段两端各保留 0.2s 呼吸缓冲。"""
@@ -149,6 +159,7 @@ class TestDetectSilenceCandidates:
 
 # ── 4. cut_analyzer: 填充词检测 ─────────────────────────────
 
+
 class TestDetectFillerCandidates:
     def test_strict_filler_words(self):
         """第一级：纯语气词直接标记"""
@@ -167,7 +178,9 @@ class TestDetectFillerCandidates:
         """第二级：指示词类有停顿才标记"""
         words = [
             WordTimestamp(text="我们", start=0.0, end=0.3),
-            WordTimestamp(text="那个", start=1.0, end=1.2),  # 前面有 0.8s 原始间隔，扣除误差后 0.6s > 0.35
+            WordTimestamp(
+                text="那个", start=1.0, end=1.2
+            ),  # 前面有 0.8s 原始间隔，扣除误差后 0.6s > 0.35
             WordTimestamp(text="项目", start=1.2, end=1.5),
         ]
         cands = detect_filler_candidates(words, filler_pause=0.35)
@@ -221,6 +234,7 @@ class TestDetectFillerCandidates:
 
 # ── 5. cut_analyzer: 重复检测 ─────────────────────────────
 
+
 class TestDetectRepeatCandidates:
     def test_single_word_repeat(self):
         """单词重复检测"""
@@ -258,6 +272,7 @@ class TestDetectRepeatCandidates:
 
 
 # ── 6. cut_analyzer: 合并与保留片段 ────────────────────────
+
 
 class TestMergeCandidates:
     def test_no_overlap(self):
@@ -333,6 +348,7 @@ class TestComputeKeptSegments:
 
 # ── 7. 隐患 #3: 误差容忍区间 ──────────────────────────────
 
+
 class TestEffectiveGap:
     def test_large_gap(self):
         """大间隔：有效间隔仍为正"""
@@ -351,6 +367,7 @@ class TestEffectiveGap:
 
 # ── 8. 隐患 #6: 视频 fade 帧数 ────────────────────────────
 
+
 class TestVideoFadeFrames:
     def test_fade_frames_is_3(self):
         """3 帧 @30fps = 0.1s，人眼几乎不可感知但消除跳变感"""
@@ -360,6 +377,7 @@ class TestVideoFadeFrames:
 
 
 # ── 9. SmartCutSkill 闸门契约 ─────────────────────────────
+
 
 class TestSmartCutSkillGate:
     @pytest.fixture
@@ -379,6 +397,7 @@ class TestSmartCutSkillGate:
 
 # ── 10. SmartCutPlan 序列化 ────────────────────────────────
 
+
 class TestSmartCutPlan:
     def test_plan_serialization(self):
         """规划可以序列化为 dict（给前端）"""
@@ -386,7 +405,15 @@ class TestSmartCutPlan:
             video_id="test_video",
             original_duration=60.0,
             candidates=[
-                {"start": 1.0, "end": 2.0, "cut_type": "silence", "confidence": 0.95, "reason": "silence -1.00s", "text": "", "removable": True},
+                {
+                    "start": 1.0,
+                    "end": 2.0,
+                    "cut_type": "silence",
+                    "confidence": 0.95,
+                    "reason": "silence -1.00s",
+                    "text": "",
+                    "removable": True,
+                },
             ],
             kept_segments=[[0.0, 1.0], [2.0, 60.0]],
             kept_duration=59.0,
@@ -400,6 +427,7 @@ class TestSmartCutPlan:
 
 
 # ── 11. 隐患 #13: 临时文件清理 ────────────────────────────
+
 
 class TestManagedTempDir:
     @pytest.mark.asyncio
@@ -433,6 +461,7 @@ class TestManagedTempDir:
 
 # ── 12. whisper_transcribe adapter ─────────────────────────
 
+
 class TestWhisperTranscribe:
     def test_transcribe_word_dataclass(self):
         w = TranscribeWord(text="你好", start=0.0, end=0.5, probability=0.98)
@@ -449,7 +478,8 @@ class TestWhisperTranscribe:
         segments = [
             TranscribeSegment(
                 text="你好世界",
-                start=0.0, end=1.0,
+                start=0.0,
+                end=1.0,
                 words=[
                     TranscribeWord(text="你好", start=0.0, end=0.5),
                     TranscribeWord(text="世界", start=0.5, end=1.0),
@@ -457,7 +487,8 @@ class TestWhisperTranscribe:
             ),
             TranscribeSegment(
                 text="再见",
-                start=1.0, end=1.5,
+                start=1.0,
+                end=1.5,
                 words=[TranscribeWord(text="再见", start=1.0, end=1.5)],
             ),
         ]
@@ -472,23 +503,27 @@ class TestWhisperTranscribe:
     def test_cuda_check_without_torch(self):
         """没装 torch 时 CUDA 检查不崩溃"""
         from capabilities.video.adapters.whisper_transcribe import check_cuda_available
+
         result = check_cuda_available()
         assert "cuda_available" in result
 
     def test_transcribe_no_engines(self):
         """没有转录引擎时返回空列表（零件可缺）"""
         from capabilities.video.adapters.whisper_transcribe import transcribe
+
         result = transcribe("nonexistent_file.mp4")
         assert result == []
 
 
 # ── 13. LLM fluff detection ──────────────────────────────
 
+
 class TestDetectFluffCandidates:
     @pytest.mark.asyncio
     async def test_no_llm_returns_empty(self):
         """LLM 为 None 时跳过"""
         from capabilities.video.services.cut_analyzer import detect_fluff_candidates
+
         cands, raw = await detect_fluff_candidates([], llm=None)
         assert cands == []
         assert raw == []
@@ -497,6 +532,7 @@ class TestDetectFluffCandidates:
     async def test_empty_segments_returns_empty(self):
         """空片段列表时跳过"""
         from capabilities.video.services.cut_analyzer import detect_fluff_candidates
+
         cands, raw = await detect_fluff_candidates([], llm=MagicMock())
         assert cands == []
 
@@ -551,6 +587,7 @@ class TestDetectFluffCandidates:
         segments = [{"index": 0, "start": 0.0, "end": 3.0, "text": "test"}]
 
         call_count = 0
+
         async def _mock_llm_call(llm, prompt):
             nonlocal call_count
             call_count += 1
@@ -587,6 +624,7 @@ class TestDetectFluffCandidates:
 
 
 # ── 14. TimeAxisMapper（隐患 #11 对策）────────────────────
+
 
 class TestTimeAxisMapper:
     def test_basic_mapping(self):
@@ -625,9 +663,7 @@ class TestHasAudioTrack:
 
         from capabilities.video.adapters.silence_detect import has_audio_track
 
-        video = Path(__file__).resolve().parent.parent / (
-            "uploads/videos/live_person_talk.mp4"
-        )
+        video = Path(__file__).resolve().parent.parent / ("uploads/videos/live_person_talk.mp4")
         if not video.is_file():
             pytest.skip("真机素材缺失")
         assert asyncio.run(has_audio_track(str(video))) is True
@@ -638,17 +674,17 @@ class TestHasAudioTrack:
 
         from capabilities.video.adapters.silence_detect import has_audio_track
 
-        video = Path(__file__).resolve().parent.parent / (
-            "uploads/videos/live_person_talk.mp4"
-        )
+        video = Path(__file__).resolve().parent.parent / ("uploads/videos/live_person_talk.mp4")
         if not video.is_file():
             pytest.skip("真机素材缺失")
 
         async def _boom(*a, **kw):
             raise OSError("ffprobe not found")
 
-        with patch("asyncio.create_subprocess_exec", side_effect=_boom), \
-                patch("subprocess.run", side_effect=_boom):
+        with (
+            patch("asyncio.create_subprocess_exec", side_effect=_boom),
+            patch("subprocess.run", side_effect=_boom),
+        ):
             assert asyncio.run(has_audio_track(str(video))) is True
 
     def test_all_layers_fail_returns_false(self):
@@ -656,17 +692,18 @@ class TestHasAudioTrack:
         import asyncio
 
         import av as _av
+
         from capabilities.video.adapters.silence_detect import has_audio_track
 
         async def _boom(*a, **kw):
             raise OSError("ffprobe not found")
 
-        with patch.object(_av, "open", side_effect=RuntimeError("av fail")), \
-                patch("asyncio.create_subprocess_exec", side_effect=_boom), \
-                patch("subprocess.run", side_effect=_boom):
-            assert asyncio.run(
-                has_audio_track("Z:/ghost/never_exists.mp4")
-            ) is False
+        with (
+            patch.object(_av, "open", side_effect=RuntimeError("av fail")),
+            patch("asyncio.create_subprocess_exec", side_effect=_boom),
+            patch("subprocess.run", side_effect=_boom),
+        ):
+            assert asyncio.run(has_audio_track("Z:/ghost/never_exists.mp4")) is False
 
 
 class TestPadMath:
@@ -690,13 +727,16 @@ class TestPadMath:
             return ""
 
         skill = SmartCutSkill()
-        with patch("capabilities.video.skills.smart_cut._run_ffmpeg",
-                   side_effect=fake_ff):
-            asyncio.run(skill._extract_segments(
-                "Z:/ghost.mp4",
-                [(0.0, 2.68), (3.48, 54.1)],
-                pad=0.25, audio_fade=0.08, tmp_dir=tmp_path,
-            ))
+        with patch("capabilities.video.skills.smart_cut._run_ffmpeg", side_effect=fake_ff):
+            asyncio.run(
+                skill._extract_segments(
+                    "Z:/ghost.mp4",
+                    [(0.0, 2.68), (3.48, 54.1)],
+                    pad=0.25,
+                    audio_fade=0.08,
+                    tmp_dir=tmp_path,
+                )
+            )
         d1 = captured[0][captured[0].index("-t") + 1]
         d2 = captured[1][captured[1].index("-t") + 1]
         assert d1 == "2.930", f"段1 应 [0, 2.68+0.25]=2.93s，实 {d1}"
@@ -713,10 +753,16 @@ class TestPadMath:
         skill = SmartCutSkill()
         inputs = SmartCutInput(
             video_path="Z:/ghost.mp4",
-            refine_candidates=[{
-                "start": 2.68, "end": 3.48, "cut_type": "repeat",
-                "confidence": 0.85, "reason": "repeat '紛紛'", "removable": True,
-            }],
+            refine_candidates=[
+                {
+                    "start": 2.68,
+                    "end": 3.48,
+                    "cut_type": "repeat",
+                    "confidence": 0.85,
+                    "reason": "repeat '紛紛'",
+                    "removable": True,
+                }
+            ],
             pad_seconds=0.25,
         )
 
@@ -727,11 +773,18 @@ class TestPadMath:
             out.write_bytes(b"x")  # 满足 is_file 检查
             return None
 
-        with patch.object(skill, "_extract_segments", side_effect=fake_extract), \
-                patch.object(skill, "_concat_segments", side_effect=fake_concat):
-            result = asyncio.run(skill._execute_cut(
-                inputs, "Z:/ghost.mp4", 54.1, "u1",
-            ))
+        with (
+            patch.object(skill, "_extract_segments", side_effect=fake_extract),
+            patch.object(skill, "_concat_segments", side_effect=fake_concat),
+        ):
+            result = asyncio.run(
+                skill._execute_cut(
+                    inputs,
+                    "Z:/ghost.mp4",
+                    54.1,
+                    "u1",
+                )
+            )
         assert "cut_duration" in result, result
         assert result["cut_duration"] == 53.8, result
         assert result["saved_seconds"] == 0.3, result
@@ -743,11 +796,10 @@ class TestAdaptiveSilence:
     三档实测：-35dB→0 段；-30dB→6 段；-28dB→13 段。
     """
 
-
     @staticmethod
     def _g(tmp_path):
-        f = tmp_path / 'g.mp4'
-        f.write_bytes(b'x')
+        f = tmp_path / "g.mp4"
+        f.write_bytes(b"x")
         return f
 
     @staticmethod
@@ -755,8 +807,9 @@ class TestAdaptiveSilence:
         lines = []
         for s, e in pairs:
             lines.append(f"[silencedetect @ 0x1] silence_start: {s}")
-            lines.append(f"[silencedetect @ 0x1] silence_end: {e} | "
-                         f"silence_duration: {e - s:.2f}")
+            lines.append(
+                f"[silencedetect @ 0x1] silence_end: {e} | " f"silence_duration: {e - s:.2f}"
+            )
         return "\n".join(lines)
 
     def test_adaptive_tier_fallback(self, tmp_path):
@@ -776,11 +829,10 @@ class TestAdaptiveSilence:
             dur = float(af.split("duration=")[1])
             calls.append((noise, dur))
             if noise == -35.0:
-                return ""          # 严格档 0 段
+                return ""  # 严格档 0 段
             return self._sil_out([(2.68, 3.48), (10.0, 11.2)])
 
-        with patch("capabilities.video.adapters.silence_detect._run",
-                   side_effect=fake_run):
+        with patch("capabilities.video.adapters.silence_detect._run", side_effect=fake_run):
             segs, tier = asyncio.run(detect_silence_adaptive(str(self._g(tmp_path))))
         assert [(-35.0, 0.6), (-32.0, 0.5), (-30.0, 0.35)][:2] == calls[:2]
         assert len(segs) == 2 and tier[0] == -32.0
@@ -797,8 +849,7 @@ class TestAdaptiveSilence:
         async def fake_run(cmd):
             return ""
 
-        with patch("capabilities.video.adapters.silence_detect._run",
-                   side_effect=fake_run):
+        with patch("capabilities.video.adapters.silence_detect._run", side_effect=fake_run):
             segs, tier = asyncio.run(detect_silence_adaptive(str(self._g(tmp_path))))
         assert segs == [] and tier is None
 
@@ -825,8 +876,7 @@ class TestAdaptiveSilence:
         import inspect
 
         src = inspect.getsource(
-            __import__("capabilities.video.skills.smart_cut",
-                       fromlist=["SmartCutSkill"])
+            __import__("capabilities.video.skills.smart_cut", fromlist=["SmartCutSkill"])
         )
         assert "detect_silence_adaptive" in src
 
@@ -851,13 +901,16 @@ class TestPadOverlap:
             return ""
 
         skill = SmartCutSkill()
-        with patch("capabilities.video.skills.smart_cut._run_ffmpeg",
-                   side_effect=fake_ff):
-            asyncio.run(skill._extract_segments(
-                "Z:/ghost.mp4",
-                [(0.0, 2.68), (3.48, 9.16), (9.40, 54.1)],
-                pad=0.25, audio_fade=0.08, tmp_dir=tmp_path,
-            ))
+        with patch("capabilities.video.skills.smart_cut._run_ffmpeg", side_effect=fake_ff):
+            asyncio.run(
+                skill._extract_segments(
+                    "Z:/ghost.mp4",
+                    [(0.0, 2.68), (3.48, 9.16), (9.40, 54.1)],
+                    pad=0.25,
+                    audio_fade=0.08,
+                    tmp_dir=tmp_path,
+                )
+            )
 
         def span(cmd):
             ss = float(cmd[cmd.index("-ss") + 1])

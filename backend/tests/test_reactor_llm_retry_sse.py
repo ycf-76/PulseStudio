@@ -41,13 +41,23 @@ class _FakeBus:
 
     async def publish(self, workflow_id, event_type, payload, turn_id=None):
         self.calls.append(
-            {"workflow_id": workflow_id, "event_type": event_type, "payload": payload, "turn_id": turn_id}
+            {
+                "workflow_id": workflow_id,
+                "event_type": event_type,
+                "payload": payload,
+                "turn_id": turn_id,
+            }
         )
         return "evt_fake"
 
 
 def _chunk(content: str = "", is_final: bool = True, token_usage: int = 1) -> dict:
-    return {"content": content, "reasoning_content": "", "is_final": is_final, "token_usage": token_usage}
+    return {
+        "content": content,
+        "reasoning_content": "",
+        "is_final": is_final,
+        "token_usage": token_usage,
+    }
 
 
 def _make_session(llm) -> tuple[ReactorSession, _FakeBus]:
@@ -76,7 +86,10 @@ class _FlakyThenOkLLM:
         yield _chunk(content='{"thought": "ok", "final": true, "output": {"done": true}}')
 
     async def chat(self, messages, **kwargs):
-        return {"content": '{"thought": "ok", "final": true, "output": {"done": true}}', "token_usage": 1}
+        return {
+            "content": '{"thought": "ok", "final": true, "output": {"done": true}}',
+            "token_usage": 1,
+        }
 
 
 class _AlwaysFailingLLM:
@@ -101,9 +114,9 @@ async def test_retry_emits_llm_retry_status_sse(no_sleep: None):
     assert "final" in content
     # 必须发射过 llm_retry_status 事件
     retry_events = [c for c in bus.calls if c["event_type"] == "llm_retry_status"]
-    assert len(retry_events) >= 1, (
-        f"LLM 重试时应发射 llm_retry_status SSE，实际事件: {[c['event_type'] for c in bus.calls]}"
-    )
+    assert (
+        len(retry_events) >= 1
+    ), f"LLM 重试时应发射 llm_retry_status SSE，实际事件: {[c['event_type'] for c in bus.calls]}"
     payload = retry_events[0]["payload"]
     assert payload.get("attempt") == 1
     assert payload.get("delay", 0) > 0
@@ -120,12 +133,11 @@ async def test_give_up_returns_friendly_chinese_error(no_sleep: None):
     data = json.loads(content)
     assert data.get("final") is True
     err_text = str(data.get("output", {}).get("error", ""))
-    assert "模型服务" in err_text or "暂时不可用" in err_text, (
-        f"重试耗尽后应返回中文友好错误，实际: {err_text!r}"
-    )
+    assert (
+        "模型服务" in err_text or "暂时不可用" in err_text
+    ), f"重试耗尽后应返回中文友好错误，实际: {err_text!r}"
     # 前端可展示的 SSE 错误提示也应发射（llm_retry_status 终态）
     fail_events = [
-        c for c in bus.calls
-        if c["event_type"] == "llm_retry_status" and c["payload"].get("final")
+        c for c in bus.calls if c["event_type"] == "llm_retry_status" and c["payload"].get("final")
     ]
     assert len(fail_events) >= 1, "重试耗尽后应发射一条 final 的 llm_retry_status 提示"

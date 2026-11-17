@@ -81,7 +81,9 @@ def _expand_env_placeholders(text: str) -> str:
 
 def _split_command(command: str) -> list[str]:
     """Split a command line without mangling Windows drive paths."""
-    argv = shlex.split(command, posix=False) if os.name == "nt" else shlex.split(command, posix=True)
+    argv = (
+        shlex.split(command, posix=False) if os.name == "nt" else shlex.split(command, posix=True)
+    )
     cleaned: list[str] = []
     for token in argv:
         if len(token) >= 2 and token[0] == token[-1] and token[0] in ("'", '"'):
@@ -131,7 +133,7 @@ class BashSkill(Skill):
         "grep/rg/glob/ffmpeg/ffprobe/piper/curl。其他命令（含 python/pip/node/npm）一律被拒。\n"
         "- ls/cat/head/tail/wc/find/grep/glob 由 Python 原生实现（不起子进程），"
         "Windows/Linux 行为一致，直接写 Unix 风格参数即可：ls -la、grep -rn 关键词 .、"
-        "find . -name \"*.md\"、head -n 20 文件。\n"
+        'find . -name "*.md"、head -n 20 文件。\n'
         "- stdout/stderr 各截断 4KB。预期输出很长时主动收窄：如 curl 加 "
         "per_page=5，或改用 grep 工具过滤关键行，不要先拉全量再截断。\n"
         "- 工作目录用 cwd 参数传，不要拼进 command。\n"
@@ -240,9 +242,7 @@ class BashSkill(Skill):
             return {"ok": False, "error": f"binary not found: {e}"}
 
         try:
-            stdout_b, stderr_b = await asyncio.wait_for(
-                proc.communicate(), timeout=in_.timeout
-            )
+            stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=in_.timeout)
         except asyncio.TimeoutError:
             try:
                 proc.kill()
@@ -282,7 +282,9 @@ class GlobSkill(Skill):
 
     node_type = "file"
     name = "glob"
-    description = "文件搜索：按模式匹配列出工作区内的文件。输入 pattern（如 **/*.md），返回文件路径列表"
+    description = (
+        "文件搜索：按模式匹配列出工作区内的文件。输入 pattern（如 **/*.md），返回文件路径列表"
+    )
     input_schema = GlobInput
     required_permissions = [Permission.FILE_READ]
 

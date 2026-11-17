@@ -7,6 +7,7 @@ start_requests() → parse() → on_scraped_item()（实时入库）。
 子进程通信方式：subprocess.Popen + stdout JSON 行协议，
 彻底绕开 Windows multiprocessing spawn 模式的 import 问题。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -34,6 +35,7 @@ def _sync_timeout() -> float:
     """子进程等待超时（秒）。逐条笔记都要拉详情页，笔记多时远超旧的 300s 硬编码。"""
     try:
         from app.config import get_settings
+
         return float(get_settings().spider_sync_timeout)
     except Exception:
         return 1800.0
@@ -50,6 +52,7 @@ def _detail_budget_arg(force: bool) -> str:
         return "0"
     try:
         from app.config import get_settings
+
         return str(int(get_settings().spider_detail_budget))
     except Exception:
         return "12"
@@ -97,9 +100,7 @@ async def _read_result_line(
             return None, False, skipped
 
         text = (
-            line.decode("utf-8", errors="replace")
-            if isinstance(line, bytes)
-            else str(line)
+            line.decode("utf-8", errors="replace") if isinstance(line, bytes) else str(line)
         ).strip()
         if not text:
             continue
@@ -115,9 +116,7 @@ async def _read_result_line(
         skipped.append(text)
 
 
-async def start_sync(
-    account_id: str, user_id: str, platform: str, force: bool = False
-) -> None:
+async def start_sync(account_id: str, user_id: str, platform: str, force: bool = False) -> None:
     """启动 Spider 同步任务（子进程运行）。"""
     from capabilities.scrapling.spiders.db_sink import update_sync_status
 
@@ -132,9 +131,16 @@ async def start_sync(
         cookies = account.cookies_json or {}
         platform_uid = account.platform_uid or ""
 
-        storage_path = Path(__file__).resolve().parent.parent.parent.parent / "app" / "storage_states" / f"{platform}.json"
+        storage_path = (
+            Path(__file__).resolve().parent.parent.parent.parent
+            / "app"
+            / "storage_states"
+            / f"{platform}.json"
+        )
         if not storage_path.exists():
-            logger.warning(f"Spider: no storageState for {platform}, login may not persist. User should re-login.")
+            logger.warning(
+                f"Spider: no storageState for {platform}, login may not persist. User should re-login."
+            )
 
         cookies_json = json.dumps(cookies, ensure_ascii=False)
 
@@ -143,7 +149,9 @@ async def start_sync(
         env["PYTHONIOENCODING"] = "utf-8"
         pythonpath = env.get("PYTHONPATH", "")
         if backend_dir not in pythonpath.split(os.pathsep):
-            env["PYTHONPATH"] = f"{backend_dir}{os.pathsep}{pythonpath}" if pythonpath else backend_dir
+            env["PYTHONPATH"] = (
+                f"{backend_dir}{os.pathsep}{pythonpath}" if pythonpath else backend_dir
+            )
 
         budget_arg = _detail_budget_arg(force)
         try:
@@ -219,11 +227,14 @@ async def start_sync(
                 f"累计 {total_works} 条；剩余详情页会在下次同步继续刷新"
             )
             await update_sync_status(user_id, platform, "idle", msg)
-            await _publish("spider_sync_timeout", {
-                "platform": platform,
-                "total_works": total_works,
-                "user_id": user_id,
-            })
+            await _publish(
+                "spider_sync_timeout",
+                {
+                    "platform": platform,
+                    "total_works": total_works,
+                    "user_id": user_id,
+                },
+            )
             logger.warning(
                 f"Spider sync timed out: platform={platform}, kept {total_works} works, "
                 f"stderr tail: {_last_stderr_line(stderr_output)}"
@@ -265,14 +276,17 @@ async def start_sync(
         # 还有多少条图集待刷新只走日志与通知事件，不占用错误通道。
         await update_sync_status(user_id, platform, "idle")
 
-        await _publish("spider_sync_completed", {
-            "platform": platform,
-            "total": len(items),
-            "saved": saved_count,
-            "deferred": deferred,
-            "total_works": total_works,
-            "user_id": user_id,
-        })
+        await _publish(
+            "spider_sync_completed",
+            {
+                "platform": platform,
+                "total": len(items),
+                "saved": saved_count,
+                "deferred": deferred,
+                "total_works": total_works,
+                "user_id": user_id,
+            },
+        )
 
         logger.info(
             f"Spider sync completed: platform={platform}, total={len(items)}, "
@@ -282,17 +296,21 @@ async def start_sync(
     except Exception as e:
         logger.error(f"Spider sync failed: platform={platform}, error={e}", exc_info=True)
         await update_sync_status(user_id, platform, "idle", str(e)[:500])
-        await _publish("spider_sync_failed", {
-            "platform": platform,
-            "error": str(e)[:200],
-            "user_id": user_id,
-        })
+        await _publish(
+            "spider_sync_failed",
+            {
+                "platform": platform,
+                "error": str(e)[:200],
+                "user_id": user_id,
+            },
+        )
 
 
 async def _publish(event: str, payload: dict) -> None:
     """推送同步进度事件（通知总线不可用时静默降级）。"""
     try:
         from app.services.notification_bus import notification_bus
+
         await notification_bus.publish(event, payload)
     except Exception as e:
         logger.debug(f"Spider: publish {event} failed: {e}")
@@ -305,6 +323,7 @@ async def _sync_works_count(user_id: str, platform: str) -> int:
             count_collected_works,
             update_works_count,
         )
+
         total = await count_collected_works(user_id, platform)
         await update_works_count(user_id, platform, total)
         return total
@@ -316,6 +335,4 @@ async def _sync_works_count(user_id: str, platform: str) -> int:
 async def _get_account(account_id: str) -> PlatformAccount | None:
     """获取 PlatformAccount。"""
     async with AsyncSessionLocal() as db:
-        return await db.scalar(
-            select(PlatformAccount).where(PlatformAccount.id == account_id)
-        )
+        return await db.scalar(select(PlatformAccount).where(PlatformAccount.id == account_id))

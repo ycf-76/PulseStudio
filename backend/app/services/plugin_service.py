@@ -5,30 +5,31 @@ Plugin Service Layer
 
 import sys
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any, Tuple
-from sqlalchemy import select, func, desc, and_, or_, update
+from typing import Any, Dict, List, Optional, Tuple
+
+from sqlalchemy import and_, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 sys.path.insert(0, "D:/My_Project/多智能体内容运营创作平台/backend")
 
+from app.api.schemas.plugin_schemas import (
+    PluginConfigRequest,
+    PluginCreate,
+    PluginInstallRequest,
+    PluginReviewCreate,
+    PluginSearchQuery,
+    PluginUpdate,
+)
 from app.db.plugin_models import (
     Plugin,
-    PluginVersion,
+    PluginCategory,
     PluginConfig,
     PluginReview,
     PluginStats,
-    PluginCategory,
     PluginStatus,
+    PluginVersion,
     PricingModel,
-)
-from app.api.schemas.plugin_schemas import (
-    PluginCreate,
-    PluginUpdate,
-    PluginSearchQuery,
-    PluginInstallRequest,
-    PluginConfigRequest,
-    PluginReviewCreate,
 )
 
 
@@ -114,7 +115,7 @@ class PluginService:
         sort_column = getattr(Plugin, query.sort_by, None)
         if sort_column is None:
             sort_column = Plugin.created_at
-            
+
         if query.sort_order.lower() == "asc":
             base_query = base_query.order_by(sort_column.asc())
         else:
@@ -125,9 +126,7 @@ class PluginService:
         base_query = base_query.offset(offset).limit(query.page_size)
 
         # 执行查询并加载关联数据
-        result = await self.session.execute(
-            base_query.options(selectinload(Plugin.stats))
-        )
+        result = await self.session.execute(base_query.options(selectinload(Plugin.stats)))
         plugins = result.scalars().all()
 
         return list(plugins), total
@@ -209,11 +208,11 @@ class PluginService:
                 value = PluginStatus(value.upper()).value
             elif field == "pricing_model" and value:
                 value = PricingModel(value.upper()).value
-            
+
             setattr(plugin, field, value)
 
         plugin.updated_at = datetime.utcnow()
-        
+
         await self.session.commit()
         await self.session.refresh(plugin)
 
@@ -259,7 +258,7 @@ class PluginService:
                 existing_config.config_json = request.config
                 existing_config.is_enabled = True
                 await self.session.commit()
-                
+
                 return {
                     "success": True,
                     "message": f"Plugin '{plugin_id}' reconfigured",
@@ -297,7 +296,7 @@ class PluginService:
 
         # 更新安装计数
         plugin.install_count += 1
-        
+
         await self.session.commit()
 
         return {
@@ -327,7 +326,7 @@ class PluginService:
             }
 
         await self.session.delete(config)
-        
+
         # 更新安装计数（确保不小于0）
         plugin = await self.get_plugin(plugin_id)
         if plugin and plugin.install_count > 0:
@@ -411,13 +410,11 @@ class PluginService:
         获取用户已安装的所有插件列表
         """
         query = select(PluginConfig).where(PluginConfig.user_id == user_id)
-        
+
         if only_enabled:
             query = query.where(PluginConfig.is_enabled == True)
 
-        result = await self.session.execute(
-            query.options(selectinload(PluginConfig.plugin))
-        )
+        result = await self.session.execute(query.options(selectinload(PluginConfig.plugin)))
         configs = result.scalars().all()
 
         user_plugins = []
@@ -543,18 +540,26 @@ class PluginService:
         elif sort_by == "oldest":
             base_query = base_query.order_by(asc(PluginReview.created_at))
         elif sort_by == "rating_high":
-            base_query = base_query.order_by(desc(PluginReview.rating), desc(PluginReview.created_at))
+            base_query = base_query.order_by(
+                desc(PluginReview.rating), desc(PluginReview.created_at)
+            )
         elif sort_by == "rating_low":
             base_query = base_query.order_by(asc(PluginReview.rating), asc(PluginReview.created_at))
         elif sort_by == "helpful":
-            base_query = base_query.order_by(desc(PluginReview.helpful_count), desc(PluginReview.created_at))
+            base_query = base_query.order_by(
+                desc(PluginReview.helpful_count), desc(PluginReview.created_at)
+            )
         else:
             base_query = base_query.order_by(desc(PluginReview.created_at))
 
         # 计算总数
-        count_query = select(func.count()).select_from(PluginReview).where(
-            PluginReview.plugin_id == plugin_id,
-            PluginReview.moderation_status == "approved",
+        count_query = (
+            select(func.count())
+            .select_from(PluginReview)
+            .where(
+                PluginReview.plugin_id == plugin_id,
+                PluginReview.moderation_status == "approved",
+            )
         )
         if rating_filter:
             count_query = count_query.where(PluginReview.rating == rating_filter)
@@ -705,9 +710,13 @@ class PluginService:
             PluginReview.plugin_id == plugin_id,
             PluginReview.moderation_status.in_(["approved", "pending"]),
         )
-        count_query = select(func.count()).select_from(PluginReview).where(
-            PluginReview.plugin_id == plugin_id,
-            PluginReview.moderation_status.in_(["approved", "pending"]),
+        count_query = (
+            select(func.count())
+            .select_from(PluginReview)
+            .where(
+                PluginReview.plugin_id == plugin_id,
+                PluginReview.moderation_status.in_(["approved", "pending"]),
+            )
         )
 
         avg_result = await self.session.execute(avg_query)
@@ -738,13 +747,13 @@ class PluginService:
         获取插件的所有版本
         """
         query = select(PluginVersion).where(PluginVersion.plugin_id == plugin_id)
-        
+
         if not include_deprecated:
             # 可以添加版本状态字段来过滤废弃版本
             pass
 
         query = query.order_by(desc(PluginVersion.version))
-        
+
         result = await self.session.execute(query)
         versions = result.scalars().all()
 
@@ -845,11 +854,13 @@ class PluginService:
                 else:
                     raise ValueError(f"Invalid action: {action}")
 
-                results.append({
-                    "plugin_id": plugin_id,
-                    "success": result["success"],
-                    "message": result["message"],
-                })
+                results.append(
+                    {
+                        "plugin_id": plugin_id,
+                        "success": result["success"],
+                        "message": result["message"],
+                    }
+                )
 
                 if result["success"]:
                     succeeded += 1
@@ -858,11 +869,13 @@ class PluginService:
 
             except Exception as e:
                 failed += 1
-                results.append({
-                    "plugin_id": plugin_id,
-                    "success": False,
-                    "message": str(e),
-                })
+                results.append(
+                    {
+                        "plugin_id": plugin_id,
+                        "success": False,
+                        "message": str(e),
+                    }
+                )
 
         return {
             "total_requested": len(plugin_ids),
@@ -933,6 +946,7 @@ class PluginService:
     ) -> PluginStats:
         """创建初始统计记录"""
         from app.db.plugin_models import create_initial_stats
+
         return create_initial_stats(plugin_id)
 
     async def _update_average_rating(self, plugin_id: str):

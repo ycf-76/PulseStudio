@@ -14,11 +14,11 @@ Covers:
 import pytest
 
 from app.engine.governance.guardian import (
+    _DEFAULT_POLICIES,
     Guardian,
     GuardianAction,
     GuardianDecision,
     GuardianPolicy,
-    _DEFAULT_POLICIES,
     _is_bash_media_safe,
 )
 
@@ -66,9 +66,18 @@ class TestDefaultPolicies:
         Guardian 决定能不能执行，创作类技能必须经用户确认）。
         """
         auto_allow_tools = [
-            "ask_user_question", "file_read", "glob", "grep",
-            "llm_generate", "viral_score", "content_check",
-            "spawn_agent", "wait_agent", "list_agents", "send_message", "interrupt_agent",
+            "ask_user_question",
+            "file_read",
+            "glob",
+            "grep",
+            "llm_generate",
+            "viral_score",
+            "content_check",
+            "spawn_agent",
+            "wait_agent",
+            "list_agents",
+            "send_message",
+            "interrupt_agent",
         ]
         for tool in auto_allow_tools:
             assert tool in _DEFAULT_POLICIES, tool
@@ -187,7 +196,9 @@ class TestGuardianArgumentValidation:
 
     @pytest.mark.asyncio
     async def test_path_traversal_denied(self, guardian):
-        decision = await guardian.check("file_write", {"path": "../../etc/passwd", "content": "hack"})
+        decision = await guardian.check(
+            "file_write", {"path": "../../etc/passwd", "content": "hack"}
+        )
         assert decision.action == GuardianAction.DENY
         assert "denied pattern" in decision.reason
 
@@ -259,7 +270,9 @@ class TestGuardianMediaWhitelist:
     async def test_ffprobe_always_allowed(self, guardian):
         decision = await guardian.check(
             "bash",
-            {"command": "ffprobe -hide_banner -v error -show_entries format=duration -of default=nw=1 D:/anywhere/video.mp4"},
+            {
+                "command": "ffprobe -hide_banner -v error -show_entries format=duration -of default=nw=1 D:/anywhere/video.mp4"
+            },
         )
         assert decision.action == GuardianAction.ALLOW
 
@@ -267,12 +280,16 @@ class TestGuardianMediaWhitelist:
     async def test_ffmpeg_relative_output_allowed(self, guardian):
         decision = await guardian.check(
             "bash",
-            {"command": "ffmpeg -hide_banner -y -i input.mp4 -vf select='not(between(t,1,2))' output.mp4"},
+            {
+                "command": "ffmpeg -hide_banner -y -i input.mp4 -vf select='not(between(t,1,2))' output.mp4"
+            },
         )
         assert decision.action == GuardianAction.ALLOW
 
     @pytest.mark.asyncio
-    async def test_ffmpeg_absolute_output_inside_workspace_allowed(self, guardian, tmp_path, monkeypatch):
+    async def test_ffmpeg_absolute_output_inside_workspace_allowed(
+        self, guardian, tmp_path, monkeypatch
+    ):
         monkeypatch.setenv("WORKSPACE_ROOT", str(tmp_path))
         out = tmp_path / "out.mp4"
         decision = await guardian.check(

@@ -38,8 +38,7 @@ _DB_FLOOR = -120.0  # astats -inf（数字静音）钉到的 dB 下限，保证 
 
 _FRAME_FILE_RE = re.compile(r"^frame_(\d+)\.(png|jpg)$")
 _SCENE_TEXT_SUFFIXES = {".html", ".js", ".css"}  # 素材使用检查扫描的 scene 文本后缀
-_REF_TOKEN_RE = re.compile(
-    r"\.\./(?:\.cache/(?:frames|render)|frames|assets)/[A-Za-z0-9_%\-\.\/]+")
+_REF_TOKEN_RE = re.compile(r"\.\./(?:\.cache/(?:frames|render)|frames|assets)/[A-Za-z0-9_%\-\.\/]+")
 _PATTERN_FIELD_RE = re.compile(r"%0(\d+)d")
 _DB_NUM = r"(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|-?inf|nan)"
 _RMS_RE = re.compile(r"RMS level dB:\s*" + _DB_NUM)  # 勿改成 "RMS.*dB"，会误匹配 RMS peak dB
@@ -62,7 +61,10 @@ def _run_ffmpeg(cmd: list[str]) -> tuple[int, str]:
         log = Path(td) / "ffmpeg.log"
         with open(log, "wb") as f:
             proc = subprocess.run(
-                cmd, stdout=f, stderr=f, check=False,
+                cmd,
+                stdout=f,
+                stderr=f,
+                check=False,
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
         return proc.returncode, log.read_text(encoding="utf-8", errors="replace")
@@ -99,7 +101,11 @@ def _nearest_frame(indices: list[int], target: int) -> int:
 
 
 def contact_sheet(
-    frames_dir: Path, times: list[float], fps: float, out_png: Path, cell: int = 360,
+    frames_dir: Path,
+    times: list[float],
+    fps: float,
+    out_png: Path,
+    cell: int = 360,
 ) -> Path:
     """按时间点取帧拼网格图：round(t*fps) 最近帧号，戳到存在文件。
 
@@ -130,20 +136,20 @@ def contact_sheet(
         font = ImageFont.load_default()
 
     row_h = [
-        max(im.height for _, im in cells[r * cols:(r + 1) * cols]) + _LABEL_H
-        for r in range(rows)
+        max(im.height for _, im in cells[r * cols : (r + 1) * cols]) + _LABEL_H for r in range(rows)
     ]
     canvas = Image.new("RGB", (cols * cell, sum(row_h)), (24, 24, 24))
     draw = ImageDraw.Draw(canvas)
     y = 0
     for r in range(rows):
-        for c, (t, im) in enumerate(cells[r * cols:(r + 1) * cols]):
+        for c, (t, im) in enumerate(cells[r * cols : (r + 1) * cols]):
             x = c * cell
             canvas.paste(im, (x, y))
             label = f"t={t:.2f}s"
             tw = draw.textlength(label, font=font)
-            draw.text((x + (cell - tw) / 2, y + im.height + 4), label,
-                      fill=(235, 235, 235), font=font)
+            draw.text(
+                (x + (cell - tw) / 2, y + im.height + 4), label, fill=(235, 235, 235), font=font
+            )
         y += row_h[r]
 
     out_png = Path(out_png)
@@ -165,17 +171,23 @@ def loudness_report(video_path: str) -> dict:
     if not ffmpeg:
         raise RuntimeError("ffmpeg not available (PATH / imageio-ffmpeg / FFMPEG_PATH)")
     cmd = [
-        ffmpeg, "-hide_banner", "-i", str(video_path),
-        "-af", "astats=metadata=1", "-f", "null", "-",
+        ffmpeg,
+        "-hide_banner",
+        "-i",
+        str(video_path),
+        "-af",
+        "astats=metadata=1",
+        "-f",
+        "null",
+        "-",
     ]
     rc, text = _run_ffmpeg(cmd)
 
-    seg = text[text.rfind("Overall"):] if "Overall" in text else text
+    seg = text[text.rfind("Overall") :] if "Overall" in text else text
     rms = _parse_db(_RMS_RE, seg)
     peak = _parse_db(_PEAK_RE, seg)
     if rms is None or peak is None:
-        raise RuntimeError(
-            f"loudness astats parse failed (rc={rc}, no dB values): {text[-400:]}")
+        raise RuntimeError(f"loudness astats parse failed (rc={rc}, no dB values): {text[-400:]}")
     return {"rms": rms, "peak": peak, "duration": probe_duration(str(video_path))}
 
 
@@ -241,7 +253,11 @@ def review_workspace(ws: dict, timeline: dict, video_path: str) -> dict:
 
 
 def _review_inner(
-    ws: dict, timeline: dict, video_path: str, result: dict, errors: list[str],
+    ws: dict,
+    timeline: dict,
+    video_path: str,
+    result: dict,
+    errors: list[str],
 ) -> None:
     if not isinstance(ws, dict):
         errors.append(f"ws 应为对象(dict)，实际为 {type(ws).__name__}")
@@ -250,7 +266,8 @@ def _review_inner(
     review_dir = ws.get("review")
     if frames_dir is None or review_dir is None:
         errors.append(
-            "ws 缺少 frames/review 目录键（应为 studio_workspace.create_workspace 产物），无法质检")
+            "ws 缺少 frames/review 目录键（应为 studio_workspace.create_workspace 产物），无法质检"
+        )
         return
     frames_dir = Path(frames_dir)
     review_dir = Path(review_dir)
@@ -285,7 +302,8 @@ def _review_inner(
                 safe_id = re.sub(r"[^0-9A-Za-z_-]+", "_", bid)
                 out = review_dir / f"beat_{safe_id}_{float(ts):.2f}.png"
                 result["contact_sheets"].append(
-                    str(contact_sheet(frames_dir, [ts, te], float(fps), out)))
+                    str(contact_sheet(frames_dir, [ts, te], float(fps), out))
+                )
             except Exception as exc:
                 errors.append(f"beats[{i}] contact sheet 失败: {exc}")
 
@@ -300,7 +318,8 @@ def _review_inner(
             errors.extend(completeness_check(frames_dir, expected))
     else:
         errors.append(
-            f"timeline duration/fps 无效（duration={duration!r}, fps={fps!r}），帧完整性检查跳过")
+            f"timeline duration/fps 无效（duration={duration!r}, fps={fps!r}），帧完整性检查跳过"
+        )
 
     # 3) 响度
     try:
@@ -316,7 +335,8 @@ def _review_inner(
             if abs(actual - float(duration)) > tol:
                 errors.append(
                     f"时长偏差超限: timeline.duration={duration}, 实测={actual:.3f}s, "
-                    f"容差={tol:.3f}s（1/fps+0.05）")
+                    f"容差={tol:.3f}s（1/fps+0.05）"
+                )
         except Exception as exc:
             errors.append(f"时长探测失败: {exc}")
 
@@ -356,15 +376,14 @@ def _verify_ref_token(scene_dir: Path, token: str) -> str:
     m = _PATTERN_FIELD_RE.search(filepart)
     if m:
         pat_re = re.compile(
-            _PATTERN_FIELD_RE.sub(lambda g: "[0-9]{%d}" % int(g.group(1)),
-                                  re.escape(filepart)) + r"\Z")
-        count = sum(1 for p in target.iterdir()
-                    if p.is_file() and pat_re.match(p.name))
+            _PATTERN_FIELD_RE.sub(lambda g: "[0-9]{%d}" % int(g.group(1)), re.escape(filepart))
+            + r"\Z"
+        )
+        count = sum(1 for p in target.iterdir() if p.is_file() and pat_re.match(p.name))
         if count == 0:
             return "broken"
         for i in {0, count - 1}:
-            name = _PATTERN_FIELD_RE.sub(
-                lambda g, i=i: f"{i:0{int(g.group(1))}d}", filepart)
+            name = _PATTERN_FIELD_RE.sub(lambda g, i=i: f"{i:0{int(g.group(1))}d}", filepart)
             if not (target / name).is_file():
                 return "broken"
         return "ok"
@@ -392,18 +411,21 @@ def _asset_usage_errors(ws: dict, errors: list[str]) -> None:
         return
     frames_src = Path(ws[".cache"]) / "frames" if ws.get(".cache") else None
     frames_ok = (bool(frames_src) and frames_src.is_dir()) or (
-        bool(ws.get("frames")) and Path(ws["frames"]).is_dir())
+        bool(ws.get("frames")) and Path(ws["frames"]).is_dir()
+    )
     assets_ok = bool(ws.get("assets")) and Path(ws["assets"]).is_dir()
     if not frames_ok and not assets_ok:
         errors.append(
             "未准备任何素材（抽帧/抠像目录均不存在）：口播源视频的真人画面"
-            "或抠像轨必须入画（先 prepare_assets(frames) 或 prepare_assets(matting)）")
+            "或抠像轨必须入画（先 prepare_assets(frames) 或 prepare_assets(matting)）"
+        )
         return
     tokens = _REF_TOKEN_RE.findall(_scene_text(Path(scene_dir)))
     if not tokens:
         errors.append(
             "场景未使用任何真实素材（frames/assets 均未引用）：口播源视频的"
-            "真人画面或抠像轨必须入画")
+            "真人画面或抠像轨必须入画"
+        )
         return
     verdicts = [_verify_ref_token(Path(scene_dir), tok) for tok in tokens]
     if "ok" in verdicts:
@@ -411,8 +433,10 @@ def _asset_usage_errors(ws: dict, errors: list[str]) -> None:
     if "broken" in verdicts:
         bad = [t for t, v in zip(tokens, verdicts) if v == "broken"][:3]
         errors.append(
-            "素材引用全部断链（可能命名不匹配）：" + "；".join(bad)
-            + " — 请使用 prepare_assets 返回的确切 pattern/example 重新引用")
+            "素材引用全部断链（可能命名不匹配）："
+            + "；".join(bad)
+            + " — 请使用 prepare_assets 返回的确切 pattern/example 重新引用"
+        )
 
 
 def _audio_pin_errors(video_path: str, errors: list[str]) -> None:
@@ -424,7 +448,8 @@ def _audio_pin_errors(video_path: str, errors: list[str]) -> None:
     has_audio, audio_dur = info
     if not has_audio:
         errors.append(
-            "视频无音轨（静音轨混流缺失？对照 studio_render._encode_video 的 -shortest 混音链路）")
+            "视频无音轨（静音轨混流缺失？对照 studio_render._encode_video 的 -shortest 混音链路）"
+        )
     elif audio_dur < 0.05:
         errors.append(f"音轨时长异常（≈0，实测 {audio_dur:.3f}s，疑似音轨被截断）")
 

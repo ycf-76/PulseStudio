@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from app.agents.prompts.scripts.tts_edge import synthesize, resolve_voice, VOICES_ZH, VOICES_EN
+from app.agents.prompts.scripts.tts_edge import VOICES_EN, VOICES_ZH, resolve_voice, synthesize
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
 
@@ -46,9 +46,9 @@ class TTSSkill(Skill):
     input_schema = TTSInput
 
     async def execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        params = TTSInput.model_validate({
-            k: v for k, v in inputs.items() if k in TTSInput.model_fields
-        })
+        params = TTSInput.model_validate(
+            {k: v for k, v in inputs.items() if k in TTSInput.model_fields}
+        )
 
         voice_id = resolve_voice(params.voice)
         # 产物隔离：每次合成独立文件名，避免多会话同时配音互相覆盖；
@@ -78,15 +78,17 @@ class TTSSkill(Skill):
             "card_draft": {
                 "title": "语音合成",
                 "template": "tts_edge",
-                "pages": [{
-                    "id": "page_tts",
-                    "type": "content",
-                    "mediaType": "audio",
-                    "title": "语音合成",
-                    "audioUrl": audio_url,
-                    "width": 800,
-                    "height": 200,
-                }],
+                "pages": [
+                    {
+                        "id": "page_tts",
+                        "type": "content",
+                        "mediaType": "audio",
+                        "title": "语音合成",
+                        "audioUrl": audio_url,
+                        "width": 800,
+                        "height": 200,
+                    }
+                ],
                 "pngUrls": [],
                 "htmlUrls": [],
             },

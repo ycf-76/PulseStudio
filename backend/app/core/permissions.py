@@ -67,6 +67,7 @@ class _PermissionGate:
         if not raw:
             try:
                 from app.config import get_settings
+
                 raw = (get_settings().permissions_allow or "").strip()
             except Exception:
                 raw = ""

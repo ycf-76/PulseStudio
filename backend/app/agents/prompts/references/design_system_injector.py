@@ -17,9 +17,9 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ def _summarize_reference(content: str, max_chars: int) -> str:
     kept: list[str] = []
     current_len = 0
 
-    _numeric_pattern = re.compile(r'\d+\.?\d*\s*(px|%|em|rem|pt|≥|≤|>|<|=)')
+    _numeric_pattern = re.compile(r"\d+\.?\d*\s*(px|%|em|rem|pt|≥|≤|>|<|=)")
 
     for line in lines:
         stripped = line.strip()

@@ -22,8 +22,7 @@ def _seg(words, start=0.0):
     ws = [TranscribeWord(text=t, start=s, end=e) for t, s, e in words]
     text = "".join(w.text for w in ws)
     if ws:
-        return TranscribeSegment(text=text, start=ws[0].start,
-                                 end=ws[-1].end, words=ws)
+        return TranscribeSegment(text=text, start=ws[0].start, end=ws[-1].end, words=ws)
     return TranscribeSegment(text=text, start=start, end=start, words=[])
 
 
@@ -52,8 +51,12 @@ def test_equal_length_maps_charwise_and_keeps_timestamps():
     out, corr, warns = apply_replacements([seg], [{"wrong": "入虾", "right": "入夏"}])
     assert corr == ["入虾→入夏"] and warns == []
     assert [w.text for w in out[0].words] == ["入", "夏", "之", "后"]
-    assert [(w.start, w.end) for w in out[0].words] == \
-        [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0)]
+    assert [(w.start, w.end) for w in out[0].words] == [
+        (0.0, 1.0),
+        (1.0, 2.0),
+        (2.0, 3.0),
+        (3.0, 4.0),
+    ]
     assert out[0].text == "入夏之后"  # segment.text 同步修正
     assert seg.text == "入虾之后" and seg.words[1].text == "虾"  # frozen 不被改动
 
@@ -62,14 +65,21 @@ def test_repeated_wrong_fixed_at_every_occurrence():
     """同一错字多处出现：逐条列出后每处都被修正（find 自动后移）。"""
     from capabilities.video.adapters.studio_transcript_fix import apply_replacements
 
-    seg = _seg([("入", 0.0, 1.0), ("虾", 1.0, 2.0), ("又", 2.0, 3.0),
-                ("入", 3.0, 4.0), ("虾", 4.0, 5.0)])
+    seg = _seg(
+        [("入", 0.0, 1.0), ("虾", 1.0, 2.0), ("又", 2.0, 3.0), ("入", 3.0, 4.0), ("虾", 4.0, 5.0)]
+    )
     out, corr, warns = apply_replacements(
-        [seg], [{"wrong": "入虾", "right": "入夏"}, {"wrong": "入虾", "right": "入夏"}])
+        [seg], [{"wrong": "入虾", "right": "入夏"}, {"wrong": "入虾", "right": "入夏"}]
+    )
     assert corr == ["入虾→入夏", "入虾→入夏"] and warns == []
     assert [w.text for w in out[0].words] == ["入", "夏", "又", "入", "夏"]
-    assert [(w.start, w.end) for w in out[0].words] == \
-        [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (4.0, 5.0)]
+    assert [(w.start, w.end) for w in out[0].words] == [
+        (0.0, 1.0),
+        (1.0, 2.0),
+        (2.0, 3.0),
+        (3.0, 4.0),
+        (4.0, 5.0),
+    ]
     assert out[0].text == "入夏又入夏"
 
 
@@ -78,12 +88,15 @@ def test_cross_token_span_maps_each_token():
     from capabilities.video.adapters.studio_transcript_fix import apply_replacements
 
     seg = _seg([("今", 0.0, 1.0), ("入", 1.0, 2.0), ("虾", 2.0, 3.0), ("气", 3.0, 4.0)])
-    out, corr, warns = apply_replacements(
-        [seg], [{"wrong": "入虾气", "right": "入夏起"}])
+    out, corr, warns = apply_replacements([seg], [{"wrong": "入虾气", "right": "入夏起"}])
     assert corr == ["入虾气→入夏起"] and warns == []
     assert [w.text for w in out[0].words] == ["今", "入", "夏", "起"]
-    assert [(w.start, w.end) for w in out[0].words] == \
-        [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0)]
+    assert [(w.start, w.end) for w in out[0].words] == [
+        (0.0, 1.0),
+        (1.0, 2.0),
+        (2.0, 3.0),
+        (3.0, 4.0),
+    ]
     assert out[0].text == "今入夏起"
 
 
@@ -92,13 +105,15 @@ def test_unequal_length_splits_proportionally():
     from capabilities.video.adapters.studio_transcript_fix import apply_replacements
 
     seg = _seg([("虾", 0.0, 1.0), ("之", 1.0, 2.0), ("后", 2.0, 3.0)])
-    out, corr, warns = apply_replacements(
-        [seg], [{"wrong": "虾之后", "right": "夏之后吧"}])
+    out, corr, warns = apply_replacements([seg], [{"wrong": "虾之后", "right": "夏之后吧"}])
     assert corr == ["虾之后→夏之后吧"] and warns == []
     assert len(out[0].words) == 3  # token 不丢
     assert "".join(w.text for w in out[0].words) == "夏之后吧"
-    assert [(w.start, w.end) for w in out[0].words] == \
-        [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]  # 时间戳一个不动
+    assert [(w.start, w.end) for w in out[0].words] == [
+        (0.0, 1.0),
+        (1.0, 2.0),
+        (2.0, 3.0),
+    ]  # 时间戳一个不动
 
 
 def test_unmatched_replacement_ignored_with_warning():
@@ -106,8 +121,7 @@ def test_unmatched_replacement_ignored_with_warning():
     from capabilities.video.adapters.studio_transcript_fix import apply_replacements
 
     seg = _seg([("入", 0.0, 1.0), ("虾", 1.0, 2.0)])
-    out, corr, warns = apply_replacements(
-        [seg], [{"wrong": "不存在的词", "right": "无所谓"}])
+    out, corr, warns = apply_replacements([seg], [{"wrong": "不存在的词", "right": "无所谓"}])
     assert corr == [] and warns and "未命中" in warns[0]
     assert [w.text for w in out[0].words] == ["入", "虾"]
 
@@ -118,8 +132,7 @@ def test_cross_segment_replacement_ignored_with_warning():
 
     s1 = _seg([("入", 0.0, 1.0), ("虾", 1.0, 2.0)])
     s2 = _seg([("之", 2.0, 3.0), ("后", 3.0, 4.0)])
-    out, corr, warns = apply_replacements(
-        [s1, s2], [{"wrong": "入虾之后", "right": "入夏之后"}])
+    out, corr, warns = apply_replacements([s1, s2], [{"wrong": "入虾之后", "right": "入夏之后"}])
     assert corr == [] and warns and "跨" in warns[0]
     assert out[0].text == "入虾" and out[1].text == "之后"
 
@@ -138,8 +151,7 @@ def test_malformed_replacement_defensive():
     from capabilities.video.adapters.studio_transcript_fix import apply_replacements
 
     seg = _seg([("入", 0.0, 1.0)])
-    out, corr, warns = apply_replacements(
-        [seg], ["not-a-dict", {}, {"wrong": "", "right": "x"}])
+    out, corr, warns = apply_replacements([seg], ["not-a-dict", {}, {"wrong": "", "right": "x"}])
     assert corr == [] and len(warns) == 3
     assert [w.text for w in out[0].words] == ["入"]
 
@@ -152,11 +164,13 @@ async def test_fix_applies_llm_replacements_and_emits():
     from capabilities.video.adapters.studio_transcript_fix import fix_homophones
 
     seg = _seg([("入", 0.0, 1.0), ("虾", 1.0, 2.0), ("之", 2.0, 3.0)])
-    llm = FakeLLM(json.dumps(
-        {"replacements": [{"wrong": "入虾", "right": "入夏"}]}, ensure_ascii=False))
+    llm = FakeLLM(
+        json.dumps({"replacements": [{"wrong": "入虾", "right": "入夏"}]}, ensure_ascii=False)
+    )
     events = []
     out, corr, warns = await fix_homophones(
-        [seg], llm, lambda phase, payload: events.append((phase, payload)))
+        [seg], llm, lambda phase, payload: events.append((phase, payload))
+    )
     assert llm.calls == 1
     assert corr == ["入虾→入夏"] and warns == []
     assert [w.text for w in out[0].words] == ["入", "夏", "之"]

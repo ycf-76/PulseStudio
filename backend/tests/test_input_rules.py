@@ -1,7 +1,7 @@
 ﻿import asyncio
 
-from app.engine.schemas import WorkflowContext
 from app.agents.input_rules import MAX_INPUT_LENGTH, ChatInputRule
+from app.engine.schemas import WorkflowContext
 
 
 def _context() -> WorkflowContext:

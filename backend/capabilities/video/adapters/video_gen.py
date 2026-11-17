@@ -114,7 +114,9 @@ async def _poll(
         if status in done:
             return result
         if status in bad:
-            raise VideoGenError(f"task_{status.lower()}", f"任务{status}：{json.dumps(result)[:300]}")
+            raise VideoGenError(
+                f"task_{status.lower()}", f"任务{status}：{json.dumps(result)[:300]}"
+            )
 
     raise VideoGenError("timeout", f"轮询超时 ({max_wait}s)")
 
@@ -150,6 +152,7 @@ class VideoGenError(Exception):
 
     依据：Pulse fail() → sys.exit()，拓展为结构化异常（与 WanxAdapter.last_error_type 同模式）。
     """
+
     def __init__(self, error_type: str, message: str):
         self.error_type = error_type
         self.message = message
@@ -292,8 +295,11 @@ class DashScopeVideoAdapter(VideoGenAdapter):
         poll_headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
             task = await _poll(
-                client, task_url, poll_headers,
-                self.poll_interval, self.poll_max_wait,
+                client,
+                task_url,
+                poll_headers,
+                self.poll_interval,
+                self.poll_max_wait,
                 on_progress=on_progress,
             )
         except VideoGenError:
@@ -337,7 +343,7 @@ class DashScopeVideoAdapter(VideoGenAdapter):
         params: dict[str, Any] = {}
         # wan2.1-t2v-turbo/plus 固定 5s；新模型（wan2.5/2.6）才支持其他时长，
         # 这里对已知模型钳到 5，未知模型按 int 传（由 API 侧校验）。
-        fixed_5s = ("turbo" in m or "plus" in m)
+        fixed_5s = "turbo" in m or "plus" in m
         params["duration"] = 5 if fixed_5s else max(2, int(round(duration)))
         params["size"] = _RATIO_TO_DASHSCOPE_T2V_SIZE.get(ratio, "7201280")
         payload = {"model": m, "input": {"prompt": prompt}, "parameters": params}
@@ -440,12 +446,15 @@ class KlingVideoAdapter(VideoGenAdapter):
     @staticmethod
     def _jwt(access_key: str, secret_key: str) -> str:
         """生成 Kling JWT token。依据：Pulse _kling_jwt()（ai_video.py L529-535）。"""
+
         def b64url(data: bytes) -> str:
             return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
         header = b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
         now = int(time.time())
-        payload = b64url(json.dumps({"iss": access_key, "exp": now + 1800, "nbf": now - 5}).encode())
+        payload = b64url(
+            json.dumps({"iss": access_key, "exp": now + 1800, "nbf": now - 5}).encode()
+        )
         signing_input = f"{header}.{payload}".encode()
         sig = hmac.new(secret_key.encode(), signing_input, hashlib.sha256).digest()
         return f"{header}.{payload}.{b64url(sig)}"
@@ -485,8 +494,11 @@ class KlingVideoAdapter(VideoGenAdapter):
         poll_url = f"{endpoint}/{task_id}"
         try:
             task = await _poll(
-                client, poll_url, headers,
-                self.poll_interval, self.poll_max_wait,
+                client,
+                poll_url,
+                headers,
+                self.poll_interval,
+                self.poll_max_wait,
                 status_path=("data", "task_status"),
                 done=("SUCCEED", "SUCCEEDED", "SUCCESS"),
                 on_progress=on_progress,
@@ -640,8 +652,11 @@ class ArkVideoAdapter(VideoGenAdapter):
         poll_url = f"{endpoint}/{task_id}"
         try:
             task = await _poll(
-                client, poll_url, headers,
-                self.poll_interval, self.poll_max_wait,
+                client,
+                poll_url,
+                headers,
+                self.poll_interval,
+                self.poll_max_wait,
                 status_path=("status",),
                 on_progress=on_progress,
             )
@@ -726,8 +741,7 @@ class ArkVideoAdapter(VideoGenAdapter):
                 except VideoGenError as e:
                     if last_frame and "flf2v" in str(e):
                         logger.warning(
-                            f"[ark] 端点模型 {m} 不支持 flf2v 首尾帧，"
-                            f"降级为单帧重试一次"
+                            f"[ark] 端点模型 {m} 不支持 flf2v 首尾帧，" f"降级为单帧重试一次"
                         )
                         continue
                     raise
@@ -748,7 +762,9 @@ class ArkVideoAdapter(VideoGenAdapter):
         content: list[dict[str, Any]] = [{"type": "text", "text": prompt or ""}]
         content.append({"type": "image_url", "image_url": {"url": image}, "role": "first_frame"})
         if last_frame_url:
-            content.append({"type": "image_url", "image_url": {"url": last_frame_url}, "role": "last_frame"})
+            content.append(
+                {"type": "image_url", "image_url": {"url": last_frame_url}, "role": "last_frame"}
+            )
         payload: dict[str, Any] = {"model": model, "content": content}
         if ratio:
             payload["ratio"] = ratio

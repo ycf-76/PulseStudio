@@ -8,6 +8,7 @@
         → patch 后强制过 resolve_overlay_conflicts + validate_plan_rhythm。
   DELETE 对齐冲突消解先例：skipped=True 可追溯，不真删。
 """
+
 import asyncio
 import json
 from pathlib import Path
@@ -32,7 +33,11 @@ def _plan(*segments, palette=("#FF4D4D", "#4D79FF", "#FFD84D")):
 
 def _seg(sid, s, e, template="caption_pop", **params):
     return OverlaySegment(
-        segment_id=sid, time_start=s, time_end=e, template=template, params=params,
+        segment_id=sid,
+        time_start=s,
+        time_end=e,
+        template=template,
+        params=params,
     )
 
 
@@ -54,6 +59,7 @@ def _by_id(plan, sid):
 
 # ── 1. parse_revision_intent — LLM 意图解析（三重锁第 1 层） ────
 
+
 class _FakeLLM:
     def __init__(self, response=None, error=None):
         self.response = response
@@ -67,23 +73,32 @@ class _FakeLLM:
         return {"content": self.response}
 
 
-_LOCAL_OK = json.dumps({
-    "scope": "local",
-    "instructions": [{
-        "segment_ids": ["seg2"],
-        "action": "update",
-        "params": {"text": "新卡片文案"},
-        "locate_hint": "那个 full_card 卡片",
-    }],
-})
+_LOCAL_OK = json.dumps(
+    {
+        "scope": "local",
+        "instructions": [
+            {
+                "segment_ids": ["seg2"],
+                "action": "update",
+                "params": {"text": "新卡片文案"},
+                "locate_hint": "那个 full_card 卡片",
+            }
+        ],
+    }
+)
 _GLOBAL_OK = json.dumps({"scope": "global", "reason": "整体风格调整"})
 
 
 class TestParseRevisionIntent:
     def _run(self, llm, plan=None):
-        return asyncio.run(parse_revision_intent(
-            llm, "把卡片文案改一下", plan or _sample_plan(), 22.0,
-        ))
+        return asyncio.run(
+            parse_revision_intent(
+                llm,
+                "把卡片文案改一下",
+                plan or _sample_plan(),
+                22.0,
+            )
+        )
 
     def test_local指令解析成功(self):
         result, problems = self._run(_FakeLLM(_LOCAL_OK))
@@ -113,20 +128,36 @@ class TestParseRevisionIntent:
         assert problems
 
     def test_越权action被拒(self):
-        bad = json.dumps({"scope": "local", "instructions": [{
-            "segment_ids": ["seg1"], "action": "add",
-            "params": {"template": "title_card"},
-        }]})
+        bad = json.dumps(
+            {
+                "scope": "local",
+                "instructions": [
+                    {
+                        "segment_ids": ["seg1"],
+                        "action": "add",
+                        "params": {"template": "title_card"},
+                    }
+                ],
+            }
+        )
         result, problems = self._run(_FakeLLM(bad))
         assert result.route == "local"
         assert result.instructions == []  # 越权指令剔除
         assert any("add" in p for p in problems)
 
     def test_定位不存在的段被拒并回显hint(self):
-        bad = json.dumps({"scope": "local", "instructions": [{
-            "segment_ids": ["seg99"], "action": "delete",
-            "locate_hint": "那个蓝色的卡片",
-        }]})
+        bad = json.dumps(
+            {
+                "scope": "local",
+                "instructions": [
+                    {
+                        "segment_ids": ["seg99"],
+                        "action": "delete",
+                        "locate_hint": "那个蓝色的卡片",
+                    }
+                ],
+            }
+        )
         result, problems = self._run(_FakeLLM(bad))
         assert result.instructions == []
         assert any("seg99" in p and "蓝色的卡片" in p for p in problems)
@@ -141,16 +172,23 @@ class TestParseRevisionIntent:
 
 # ── 2. apply_revision — patch 执行器（纯函数，三重锁第 2 层） ───
 
+
 class TestApplyRevision:
     def test_update_只动目标段其余逐字节一致(self):
         plan = _sample_plan()
         before = {s.segment_id: s.model_dump() for s in plan.segments}
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg2"], action=RevisionAction.UPDATE,
-                params={"text": "新文案", "font_size": 80}, raw_text="改卡片",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg2"],
+                    action=RevisionAction.UPDATE,
+                    params={"text": "新文案", "font_size": 80},
+                    raw_text="改卡片",
+                ),
+            ],
+            22.0,
+        )
         assert problems == []
         after = {s.segment_id: s.model_dump() for s in patched.segments}
         assert after["seg2"]["params"]["text"] == "新文案"
@@ -161,94 +199,144 @@ class TestApplyRevision:
 
     def test_update_禁改时间键(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg1"], action=RevisionAction.UPDATE,
-                params={"time_start": 9.0}, raw_text="挪时间",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg1"],
+                    action=RevisionAction.UPDATE,
+                    params={"time_start": 9.0},
+                    raw_text="挪时间",
+                ),
+            ],
+            22.0,
+        )
         assert patched.segments[0].skipped is False  # 未被动
         assert _by_id(patched, "seg1").time_start == 0.5  # 未被动
         assert any("time_start" in p for p in problems)
 
     def test_update_禁改template(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg1"], action=RevisionAction.UPDATE,
-                params={"template": "title_card"}, raw_text="换模板",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg1"],
+                    action=RevisionAction.UPDATE,
+                    params={"template": "title_card"},
+                    raw_text="换模板",
+                ),
+            ],
+            22.0,
+        )
         assert _by_id(patched, "seg1").template == "caption_pop"
         assert any("template" in p for p in problems)
 
     def test_update_非法颜色被拒(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg2"], action=RevisionAction.UPDATE,
-                params={"color": "红色"}, raw_text="改色",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg2"],
+                    action=RevisionAction.UPDATE,
+                    params={"color": "红色"},
+                    raw_text="改色",
+                ),
+            ],
+            22.0,
+        )
         assert _by_id(patched, "seg2").params["color"] == "#FF4D4D"
         assert any("color" in p for p in problems)
 
     def test_update_合法hex色放行(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg2"], action=RevisionAction.UPDATE,
-                params={"color": "#4D79FF"}, raw_text="改色",  # 盘内色（盘外色会被节奏自检如实上报）
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg2"],
+                    action=RevisionAction.UPDATE,
+                    params={"color": "#4D79FF"},
+                    raw_text="改色",  # 盘内色（盘外色会被节奏自检如实上报）
+                ),
+            ],
+            22.0,
+        )
         assert problems == []
         assert _by_id(patched, "seg2").params["color"] == "#4D79FF"
 
     def test_delete_标skipped保留可追溯(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg2"], action=RevisionAction.DELETE, raw_text="删掉",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg2"],
+                    action=RevisionAction.DELETE,
+                    raw_text="删掉",
+                ),
+            ],
+            22.0,
+        )
         assert problems == []
         assert len(patched.segments) == 5  # 保留不真删（对齐冲突消解先例）
         assert _by_id(patched, "seg2").skipped is True
 
     def test_move_绝对时间clamp(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg3"], action=RevisionAction.MOVE,
-                params={"time_start": -2.0, "time_end": 99.0}, raw_text="挪到结尾",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg3"],
+                    action=RevisionAction.MOVE,
+                    params={"time_start": -2.0, "time_end": 99.0},
+                    raw_text="挪到结尾",
+                ),
+            ],
+            22.0,
+        )
         assert problems == []
         assert _by_id(patched, "seg3").time_start == 0.0
         assert _by_id(patched, "seg3").time_end == 22.0
 
     def test_move_缺end被拒(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg3"], action=RevisionAction.MOVE,
-                params={"time_start": 11.0}, raw_text="挪",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg3"],
+                    action=RevisionAction.MOVE,
+                    params={"time_start": 11.0},
+                    raw_text="挪",
+                ),
+            ],
+            22.0,
+        )
         assert _by_id(patched, "seg3").time_start == 10.0
         assert problems
 
     def test_定位失败_该指令拒绝其余执行(self):
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg99"], action=RevisionAction.DELETE, raw_text="删",
-            ),
-            RevisionInstruction(
-                segment_ids=["seg1"], action=RevisionAction.UPDATE,
-                params={"text": "改到了"}, raw_text="改",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg99"],
+                    action=RevisionAction.DELETE,
+                    raw_text="删",
+                ),
+                RevisionInstruction(
+                    segment_ids=["seg1"],
+                    action=RevisionAction.UPDATE,
+                    params={"text": "改到了"},
+                    raw_text="改",
+                ),
+            ],
+            22.0,
+        )
         assert any("seg99" in p for p in problems)
         assert _by_id(patched, "seg1").params["text"] == "改到了"  # 好指令照常执行
         assert _by_id(patched, "seg2").skipped is False
@@ -256,17 +344,24 @@ class TestApplyRevision:
     def test_patch后过冲突消解与节奏自检(self):
         # patch 造成同带重叠 → resolve_overlay_conflicts 裁决 skipped
         plan = _sample_plan()
-        patched, problems = apply_revision(plan, [
-            RevisionInstruction(
-                segment_ids=["seg3"], action=RevisionAction.MOVE,
-                params={"time_start": 4.5, "time_end": 8.5}, raw_text="挪到seg2同带",
-            ),
-        ], 22.0)
+        patched, problems = apply_revision(
+            plan,
+            [
+                RevisionInstruction(
+                    segment_ids=["seg3"],
+                    action=RevisionAction.MOVE,
+                    params={"time_start": 4.5, "time_end": 8.5},
+                    raw_text="挪到seg2同带",
+                ),
+            ],
+            22.0,
+        )
         moved = next(s for s in patched.segments if s.segment_id == "seg3")
         assert moved.time_start == 4.5
         # 冲突消解跑过（低优先级一方被标 skipped，具体哪方由优先级定）：
-        overlapped = [s for s in patched.segments
-                      if s.time_start < 8.5 and s.time_end > 4.5 and s.skipped]
+        overlapped = [
+            s for s in patched.segments if s.time_start < 8.5 and s.time_end > 4.5 and s.skipped
+        ]
         assert overlapped, "同带重叠必须被裁决"
 
     def test_空指令列表原样返回(self):
@@ -278,9 +373,11 @@ class TestApplyRevision:
 
 # ── 3. skill 路由 — revision 进修改路径 / global / 护栏 / 反问 ──
 
+
 class TestSkillRevisionRoute:
     def _skill(self):
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
+
         return TalkingHeadOverlaySkill()
 
     def _collect(self, gen):
@@ -309,7 +406,8 @@ class TestSkillRevisionRoute:
         gen_mock = AsyncMock()
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay.generate_overlay_plan",
-            gen_mock, raising=False,
+            gen_mock,
+            raising=False,
         )
         from capabilities.video.services.overlay_orchestrator import RevisionResult
 
@@ -317,33 +415,56 @@ class TestSkillRevisionRoute:
             "capabilities.video.skills.talking_head_overlay.parse_revision_intent",
             # 注意：必须返回 (result, problems) 二元组 — pydantic BaseModel
             # 自身可迭代（产出字段对），单值会被 `result, problems = ...` 静默解包错
-            AsyncMock(return_value=(RevisionResult(
-                route="local",
-                instructions=[RevisionInstruction(
-                    segment_ids=["seg1"], action=RevisionAction.UPDATE,
-                    params={"text": "新文案"}, raw_text="改文案",
-                )],
-            ), [])),
+            AsyncMock(
+                return_value=(
+                    RevisionResult(
+                        route="local",
+                        instructions=[
+                            RevisionInstruction(
+                                segment_ids=["seg1"],
+                                action=RevisionAction.UPDATE,
+                                params={"text": "新文案"},
+                                raw_text="改文案",
+                            )
+                        ],
+                    ),
+                    [],
+                )
+            ),
             raising=False,
         )
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay.apply_revision",
-            MagicMock(return_value=(_sample_plan(), [])), raising=False,
+            MagicMock(return_value=(_sample_plan(), [])),
+            raising=False,
         )
         # 跳过 whisper/timed_words 重建
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay."
             "TalkingHeadOverlaySkill._build_timed_words",
-            AsyncMock(return_value=([], [])), raising=False,
+            AsyncMock(return_value=([], [])),
+            raising=False,
         )
-        events = self._collect(skill.execute({
-            "video_path": str(video),
-            "transcript": [{"start": 0, "end": 2, "text": "hi",
-                            "words": [{"text": "hi", "start": 0, "end": 2}]}],
-            "revision": {"raw_text": "把开场文案改一下",
-                         "current_plan": _sample_plan().model_dump(),
-                         "revision_round": 1},
-        }))
+        events = self._collect(
+            skill.execute(
+                {
+                    "video_path": str(video),
+                    "transcript": [
+                        {
+                            "start": 0,
+                            "end": 2,
+                            "text": "hi",
+                            "words": [{"text": "hi", "start": 0, "end": 2}],
+                        }
+                    ],
+                    "revision": {
+                        "raw_text": "把开场文案改一下",
+                        "current_plan": _sample_plan().model_dump(),
+                        "revision_round": 1,
+                    },
+                }
+            )
+        )
         ready = [e for e in events if e.get("event") == "overlay_plan_ready"]
         assert ready, events
         assert ready[0]["data"].get("revision", {}).get("route") == "local"
@@ -355,35 +476,56 @@ class TestSkillRevisionRoute:
         gen_mock = AsyncMock(return_value=(_sample_plan(), ""))
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay.generate_overlay_plan",
-            gen_mock, raising=False,
+            gen_mock,
+            raising=False,
         )
         from capabilities.video.services.overlay_orchestrator import RevisionResult
 
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay.parse_revision_intent",
-            AsyncMock(return_value=(RevisionResult(
-                route="global", instructions=[],
-            ), [])),
+            AsyncMock(
+                return_value=(
+                    RevisionResult(
+                        route="global",
+                        instructions=[],
+                    ),
+                    [],
+                )
+            ),
             raising=False,
         )
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay."
             "TalkingHeadOverlaySkill._build_timed_words",
-            AsyncMock(return_value=([], [])), raising=False,
+            AsyncMock(return_value=([], [])),
+            raising=False,
         )
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay."
             "TalkingHeadOverlaySkill._apply_constraints",
-            MagicMock(side_effect=lambda p, plan: plan), raising=False,
+            MagicMock(side_effect=lambda p, plan: plan),
+            raising=False,
         )
-        events = self._collect(skill.execute({
-            "video_path": str(video),
-            "transcript": [{"start": 0, "end": 2, "text": "hi",
-                            "words": [{"text": "hi", "start": 0, "end": 2}]}],
-            "revision": {"raw_text": "整体再活泼一点",
-                         "current_plan": _sample_plan().model_dump(),
-                         "revision_round": 2},
-        }))
+        events = self._collect(
+            skill.execute(
+                {
+                    "video_path": str(video),
+                    "transcript": [
+                        {
+                            "start": 0,
+                            "end": 2,
+                            "text": "hi",
+                            "words": [{"text": "hi", "start": 0, "end": 2}],
+                        }
+                    ],
+                    "revision": {
+                        "raw_text": "整体再活泼一点",
+                        "current_plan": _sample_plan().model_dump(),
+                        "revision_round": 2,
+                    },
+                }
+            )
+        )
         ready = [e for e in events if e.get("event") == "overlay_plan_ready"]
         assert ready and ready[0]["data"].get("revision", {}).get("route") == "global"
         gen_mock.assert_awaited_once()
@@ -392,11 +534,18 @@ class TestSkillRevisionRoute:
     def test_轮数超限拒绝(self, monkeypatch, tmp_path):
         skill = self._skill()
         video = self._patch_common(monkeypatch, tmp_path)
-        events = self._collect(skill.execute({
-            "video_path": str(video),
-            "revision": {"raw_text": "再改", "revision_round": 6,
-                         "current_plan": _sample_plan().model_dump()},
-        }))
+        events = self._collect(
+            skill.execute(
+                {
+                    "video_path": str(video),
+                    "revision": {
+                        "raw_text": "再改",
+                        "revision_round": 6,
+                        "current_plan": _sample_plan().model_dump(),
+                    },
+                }
+            )
+        )
         assert events[0].get("event") == "revision_rejected"
         assert events[0]["data"]["error"]
 
@@ -407,13 +556,26 @@ class TestSkillRevisionRoute:
             "capabilities.video.skills.talking_head_overlay.parse_revision_intent",
             AsyncMock(return_value=(None, ["输出不是合法 JSON"]), raising=False),
         )
-        events = self._collect(skill.execute({
-            "video_path": str(video),
-            "transcript": [{"start": 0, "end": 2, "text": "hi",
-                            "words": [{"text": "hi", "start": 0, "end": 2}]}],
-            "revision": {"raw_text": "那个改一下", "revision_round": 1,
-                         "current_plan": _sample_plan().model_dump()},
-        }))
+        events = self._collect(
+            skill.execute(
+                {
+                    "video_path": str(video),
+                    "transcript": [
+                        {
+                            "start": 0,
+                            "end": 2,
+                            "text": "hi",
+                            "words": [{"text": "hi", "start": 0, "end": 2}],
+                        }
+                    ],
+                    "revision": {
+                        "raw_text": "那个改一下",
+                        "revision_round": 1,
+                        "current_plan": _sample_plan().model_dump(),
+                    },
+                }
+            )
+        )
         clarify = [e for e in events if e.get("event") == "revision_clarify"]
         assert clarify, events
         assert clarify[0]["needs_confirmation"] is True
@@ -425,13 +587,21 @@ class TestSkillRevisionRoute:
 
         monkeypatch.setattr(
             "capabilities.video.skills.talking_head_overlay.parse_revision_intent",
-            AsyncMock(return_value=(RevisionResult(
-                route="local",
-                instructions=[RevisionInstruction(
-                    segment_ids=["seg99"], action=RevisionAction.DELETE,
-                    raw_text="删",
-                )],
-            ), [])),
+            AsyncMock(
+                return_value=(
+                    RevisionResult(
+                        route="local",
+                        instructions=[
+                            RevisionInstruction(
+                                segment_ids=["seg99"],
+                                action=RevisionAction.DELETE,
+                                raw_text="删",
+                            )
+                        ],
+                    ),
+                    [],
+                )
+            ),
             raising=False,
         )
         monkeypatch.setattr(
@@ -439,18 +609,32 @@ class TestSkillRevisionRoute:
             MagicMock(return_value=(_sample_plan(), ["seg99 不在当前规划中"])),
             raising=False,
         )
-        events = self._collect(skill.execute({
-            "video_path": str(video),
-            "transcript": [{"start": 0, "end": 2, "text": "hi",
-                            "words": [{"text": "hi", "start": 0, "end": 2}]}],
-            "revision": {"raw_text": "删掉那个", "revision_round": 1,
-                         "current_plan": _sample_plan().model_dump()},
-        }))
+        events = self._collect(
+            skill.execute(
+                {
+                    "video_path": str(video),
+                    "transcript": [
+                        {
+                            "start": 0,
+                            "end": 2,
+                            "text": "hi",
+                            "words": [{"text": "hi", "start": 0, "end": 2}],
+                        }
+                    ],
+                    "revision": {
+                        "raw_text": "删掉那个",
+                        "revision_round": 1,
+                        "current_plan": _sample_plan().model_dump(),
+                    },
+                }
+            )
+        )
         clarify = [e for e in events if e.get("event") == "revision_clarify"]
         assert clarify and "seg99" in clarify[0]["data"]["problems"][0]
 
 
 # ── 10.23-B：update 数值型字段类型校验（font_size='larger' 类无效值） ──
+
 
 class TestUpdateNumericValidation:
     """UPDATE 段数值键必须数值且在像素合理域，否则拒整个指令

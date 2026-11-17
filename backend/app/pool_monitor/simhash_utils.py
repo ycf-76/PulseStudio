@@ -7,6 +7,7 @@
 4. 归一化符号（>0 取1，否则取0）得到 64 位指纹
 5. 汉明距离 ≤ 阈值（默认 8）视为相似，对应相似度 > 85%
 """
+
 from __future__ import annotations
 
 import hashlib

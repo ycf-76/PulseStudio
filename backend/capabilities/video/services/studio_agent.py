@@ -48,10 +48,10 @@ from capabilities.video.services.studio_workspace import save_timeline, validate
 
 logger = logging.getLogger(__name__)
 
-_FEEDBACK_LIMIT = 4096      # 回喂结果截断目标（字符数，约 4KB）
-_MAX_RENDER_ATTEMPTS = 3    # 渲染尝试硬顶
-_MAX_REWORK_ROUNDS = 3      # render→review→fix 修复轮硬顶
-_FRAME_FPS = 24.0           # prepare_assets("frames") 的抽帧帧率（计划规定）
+_FEEDBACK_LIMIT = 4096  # 回喂结果截断目标（字符数，约 4KB）
+_MAX_RENDER_ATTEMPTS = 3  # 渲染尝试硬顶
+_MAX_REWORK_ROUNDS = 3  # render→review→fix 修复轮硬顶
+_FRAME_FPS = 24.0  # prepare_assets("frames") 的抽帧帧率（计划规定）
 
 _SFX_DIR = Path(__file__).resolve().parent.parent / "assets" / "sfx"
 _DRIVE_RE = re.compile(r"^[A-Za-z]:")
@@ -60,8 +60,8 @@ _DRIVE_RE = re.compile(r"^[A-Za-z]:")
 _IMAGE_RATIO_SIZE = {"1:1": "1024*1024", "16:9": "1280*720", "9:16": "720*1280"}
 _GEN_NAME_RE = re.compile(r"^[a-z][a-z0-9_-]{0,47}$")
 
-_MIX_GAIN_DEFAULT = 0.9     # SFX 单次命中默认增益（避免压过口播）
-_MIX_T_MAX = 7200.0         # 无 timeline 时的时间上界（秒）
+_MIX_GAIN_DEFAULT = 0.9  # SFX 单次命中默认增益（避免压过口播）
+_MIX_T_MAX = 7200.0  # 无 timeline 时的时间上界（秒）
 
 
 def _mix_sfx_sync(video_path: str, events: list[dict], out_path: Path) -> None:
@@ -81,10 +81,18 @@ def _mix_sfx_sync(video_path: str, events: list[dict], out_path: Path) -> None:
         g = ev["gain"]
         filters.append(f"[{i}:a]volume={g:.3f},adelay={ms}|{ms}[sfx{i}]")
     mix_in = "[0:a]" + "".join(f"[sfx{i}]" for i in range(1, len(events) + 1))
-    filters.append(
-        f"{mix_in}amix=inputs={len(events) + 1}:duration=first:normalize=0[aout]")
-    cmd += ["-filter_complex", ";".join(filters), "-map", "[aout]",
-            "-c:a", "aac", "-b:a", "128k", str(out_path)]
+    filters.append(f"{mix_in}amix=inputs={len(events) + 1}:duration=first:normalize=0[aout]")
+    cmd += [
+        "-filter_complex",
+        ";".join(filters),
+        "-map",
+        "[aout]",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        str(out_path),
+    ]
     creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
     proc = subprocess.run(cmd, capture_output=True, creationflags=creationflags)
     if proc.returncode != 0:
@@ -103,6 +111,7 @@ def _get_image_adapter():
         raise RuntimeError("dashscope_api_key 未配置（backend/.env），生图工具不可用")
     model = getattr(settings, "wanx_model", "") or "wanx2.1-t2i-turbo"
     return WanxAdapter(api_key=api_key, model=model)
+
 
 _SYSTEM_PROMPT = """\
 你是「视频工作室」创作 agent：在固定工作区内，通过工具循环把一支口播原片
@@ -195,7 +204,8 @@ scene/index.html 必须定义全局函数 window.seekTo(t)：给定秒数 t，�
 
 
 _SPEECH_PUNCT_RE = re.compile(
-    r"[\s，。！？、；：·…\u201c\u201d\u2018\u2019「」『』（）,.!?;:()\[\]{}\-—]")
+    r"[\s，。！？、；：·…\u201c\u201d\u2018\u2019「」『』（）,.!?;:()\[\]{}\-—]"
+)
 
 
 def _norm_speech_text(s) -> str:
@@ -233,25 +243,27 @@ def _check_speech_texts(tl_speech, segs):
         if best is None or best_ov <= 0:
             continue
         if not _speech_text_matches(s.get("text", ""), best.get("text", "")):
-            mism.append({
-                "t": f"{t0:.1f}-{t1:.1f}",
-                "got": _norm_speech_text(s.get("text", ""))[:18],
-                "want": _norm_speech_text(best.get("text", ""))[:24],
-            })
+            mism.append(
+                {
+                    "t": f"{t0:.1f}-{t1:.1f}",
+                    "got": _norm_speech_text(s.get("text", ""))[:18],
+                    "want": _norm_speech_text(best.get("text", ""))[:24],
+                }
+            )
     return mism
 
 
 # ── required_fx：视觉效果强度申报校验 ─────────────────────────────────────
 
-_FX_TEAR_MIN_DX = 40.0     # 撕裂两侧位移下限（px）——低于此肉眼不可见
-_FX_TEAR_MIN_ROT = 2.5     # 撕裂两侧旋转下限（度，绝对值）
+_FX_TEAR_MIN_DX = 40.0  # 撕裂两侧位移下限（px）——低于此肉眼不可见
+_FX_TEAR_MIN_ROT = 2.5  # 撕裂两侧旋转下限（度，绝对值）
 _FX_TEAR_DUR = (0.3, 0.5)  # 撕裂时长窗口（s）：太短一闪而过，太长拖节奏
-_FX_TEAR_N = (2, 4)        # 全片撕裂次数
-_FX_TEAR_GAP = 5.0         # 相邻撕裂最小间隔（s）
+_FX_TEAR_N = (2, 4)  # 全片撕裂次数
+_FX_TEAR_GAP = 5.0  # 相邻撕裂最小间隔（s）
 _FX_SHAKE_AMP = (2.0, 4.0)  # 震动幅度窗口（px，brief 硬性要求）
-_FX_SHAKE_DUR_MAX = 0.3    # 单次震动最长时长（s）
-_FX_SHAKE_GAP = 7.5        # 相邻震动最小间隔（s，brief：每 8-10s 至多一次）
-_FX_FX_SEP = 0.5           # 撕裂点与震动点最小错开（s）
+_FX_SHAKE_DUR_MAX = 0.3  # 单次震动最长时长（s）
+_FX_SHAKE_GAP = 7.5  # 相邻震动最小间隔（s，brief：每 8-10s 至多一次）
+_FX_FX_SEP = 0.5  # 撕裂点与震动点最小错开（s）
 
 
 def _num(v) -> float | None:
@@ -269,17 +281,19 @@ def _check_required_fx(tl) -> str | None:
     """
     fx = tl.get("effects")
     if not isinstance(fx, dict):
-        return ("timeline 缺少 effects 视觉效果申报（required_fx 硬性要求）。"
-                "必须申报："
-                'effects.tears=[{"t","duration","dx_px","rot_deg"},...] '
-                f"（全片 {_FX_TEAR_N[0]}–{_FX_TEAR_N[1]} 次撕裂，两侧位移 dx_px ≥ "
-                f"{_FX_TEAR_MIN_DX:g}px、|rot_deg| ≥ {_FX_TEAR_MIN_ROT:g}°、duration "
-                f"{_FX_TEAR_DUR[0]:g}–{_FX_TEAR_DUR[1]:g}s、相邻间隔 ≥ "
-                f"{_FX_TEAR_GAP:g}s）；"
-                'effects.shakes=[{"t","duration","amplitude_px"},...] '
-                f"（amplitude_px {_FX_SHAKE_AMP[0]:g}–{_FX_SHAKE_AMP[1]:g}px、"
-                f"duration ≤ {_FX_SHAKE_DUR_MAX:g}s、相邻间隔 ≥ {_FX_SHAKE_GAP:g}s）。"
-                "撕裂点与震动点错开 ≥ 0.5s；scene 必须按申报参数实际实现效果")
+        return (
+            "timeline 缺少 effects 视觉效果申报（required_fx 硬性要求）。"
+            "必须申报："
+            'effects.tears=[{"t","duration","dx_px","rot_deg"},...] '
+            f"（全片 {_FX_TEAR_N[0]}–{_FX_TEAR_N[1]} 次撕裂，两侧位移 dx_px ≥ "
+            f"{_FX_TEAR_MIN_DX:g}px、|rot_deg| ≥ {_FX_TEAR_MIN_ROT:g}°、duration "
+            f"{_FX_TEAR_DUR[0]:g}–{_FX_TEAR_DUR[1]:g}s、相邻间隔 ≥ "
+            f"{_FX_TEAR_GAP:g}s）；"
+            'effects.shakes=[{"t","duration","amplitude_px"},...] '
+            f"（amplitude_px {_FX_SHAKE_AMP[0]:g}–{_FX_SHAKE_AMP[1]:g}px、"
+            f"duration ≤ {_FX_SHAKE_DUR_MAX:g}s、相邻间隔 ≥ {_FX_SHAKE_GAP:g}s）。"
+            "撕裂点与震动点错开 ≥ 0.5s；scene 必须按申报参数实际实现效果"
+        )
     tears = [e for e in (fx.get("tears") or []) if isinstance(e, dict)]
     shakes = [e for e in (fx.get("shakes") or []) if isinstance(e, dict)]
     errs = []
@@ -289,15 +303,23 @@ def _check_required_fx(tl) -> str | None:
         errs.append("shakes 应申报至少 1 次震动")
     tear_ts, shake_ts = [], []
     for i, e in enumerate(tears):
-        dx, rot, d, t = (_num(e.get("dx_px")), _num(e.get("rot_deg")),
-                         _num(e.get("duration")), _num(e.get("t")))
+        dx, rot, d, t = (
+            _num(e.get("dx_px")),
+            _num(e.get("rot_deg")),
+            _num(e.get("duration")),
+            _num(e.get("t")),
+        )
         if dx is None or dx < _FX_TEAR_MIN_DX:
             errs.append(f"tears[{i}].dx_px 应 ≥ {_FX_TEAR_MIN_DX:g}px（实际 {e.get('dx_px')}）")
         if rot is None or abs(rot) < _FX_TEAR_MIN_ROT:
-            errs.append(f"tears[{i}].rot_deg 绝对值应 ≥ {_FX_TEAR_MIN_ROT:g}°（实际 {e.get('rot_deg')}）")
+            errs.append(
+                f"tears[{i}].rot_deg 绝对值应 ≥ {_FX_TEAR_MIN_ROT:g}°（实际 {e.get('rot_deg')}）"
+            )
         if d is None or not (_FX_TEAR_DUR[0] <= d <= _FX_TEAR_DUR[1]):
-            errs.append(f"tears[{i}].duration 应在 {_FX_TEAR_DUR[0]:g}–{_FX_TEAR_DUR[1]:g}s"
-                        f"（实际 {e.get('duration')}）")
+            errs.append(
+                f"tears[{i}].duration 应在 {_FX_TEAR_DUR[0]:g}–{_FX_TEAR_DUR[1]:g}s"
+                f"（实际 {e.get('duration')}）"
+            )
         if t is not None:
             tear_ts.append(t)
         else:
@@ -306,14 +328,17 @@ def _check_required_fx(tl) -> str | None:
         if b - a < _FX_TEAR_GAP:
             errs.append(f"相邻撕裂间隔应 ≥ {_FX_TEAR_GAP:g}s（{a:g}s→{b:g}s）")
     for i, e in enumerate(shakes):
-        amp, d, t = (_num(e.get("amplitude_px")), _num(e.get("duration")),
-                     _num(e.get("t")))
+        amp, d, t = (_num(e.get("amplitude_px")), _num(e.get("duration")), _num(e.get("t")))
         if amp is None or not (_FX_SHAKE_AMP[0] <= amp <= _FX_SHAKE_AMP[1]):
-            errs.append(f"shakes[{i}].amplitude_px 应在 {_FX_SHAKE_AMP[0]:g}–"
-                        f"{_FX_SHAKE_AMP[1]:g}px（实际 {e.get('amplitude_px')}）")
+            errs.append(
+                f"shakes[{i}].amplitude_px 应在 {_FX_SHAKE_AMP[0]:g}–"
+                f"{_FX_SHAKE_AMP[1]:g}px（实际 {e.get('amplitude_px')}）"
+            )
         if d is None or not (0 < d <= _FX_SHAKE_DUR_MAX):
-            errs.append(f"shakes[{i}].duration 应 >0 且 ≤ {_FX_SHAKE_DUR_MAX:g}s"
-                        f"（实际 {e.get('duration')}）")
+            errs.append(
+                f"shakes[{i}].duration 应 >0 且 ≤ {_FX_SHAKE_DUR_MAX:g}s"
+                f"（实际 {e.get('duration')}）"
+            )
         if t is not None:
             shake_ts.append(t)
         else:
@@ -327,8 +352,10 @@ def _check_required_fx(tl) -> str | None:
                 errs.append(f"撕裂点 {tt:g}s 与震动点 {st:g}s 错开应 ≥ {_FX_FX_SEP:g}s")
     if errs:
         detail = "; ".join(errs[:6])
-        return (f"effects 视觉效果申报未达标（{len(errs)} 项）：{detail}。"
-                "请修正申报参数（并让 scene 实际按参数实现效果）后重新 save_timeline")
+        return (
+            f"effects 视觉效果申报未达标（{len(errs)} 项）：{detail}。"
+            "请修正申报参数（并让 scene 实际按参数实现效果）后重新 save_timeline"
+        )
     return None
 
 
@@ -339,8 +366,17 @@ _SIG_PARAMLESS = frozenset({"transcribe", "start_preview"})
 class StudioToolLoop:
     """闭包绑定 workspace 的轻量工具循环（构造注入 llm，skill 层负责 resolve）。"""
 
-    def __init__(self, ws, llm, method_text, video_path, emit_progress,
-                 max_turns=90, required_canvas=None, required_fx=False):
+    def __init__(
+        self,
+        ws,
+        llm,
+        method_text,
+        video_path,
+        emit_progress,
+        max_turns=90,
+        required_canvas=None,
+        required_fx=False,
+    ):
         self._ws = {k: Path(v) for k, v in ws.items()}
         self._llm = llm
         self._method_text = method_text or ""
@@ -351,8 +387,8 @@ class StudioToolLoop:
         # 匹配。LLM 对复杂多约束 brief 的遵从度不稳定（实测违令出 720x1280），
         # 画幅属确定性验收项，平台侧硬校验而非靠提示。
         self._required_canvas = (
-            (int(required_canvas[0]), int(required_canvas[1]))
-            if required_canvas else None)
+            (int(required_canvas[0]), int(required_canvas[1])) if required_canvas else None
+        )
         # 视觉效果强度申报：save_timeline 校验 effects.tears/shakes 参数下限。
         # 实测 agent 写的撕裂 ±16px/1.1° 肉眼不可见——prompt 恳求无效，改用
         # 确定性校验强制申报（位移/旋转/时长/次数），scene 必须照参数实现。
@@ -361,10 +397,10 @@ class StudioToolLoop:
         self._turns = 0
         self._timeline: dict | None = None
         self._render_ok = False
-        self._stale = False           # 成功 render 后又改了场景/时间轴 → 成片过期
-        self._seq = 0                 # render/review 成功事件共用单调序号
-        self._sig_counts = {}         # 同签名重复调用拦截状态（全局累计）
-        self._render_seq = 0          # 最近一次成功 render 的序号
+        self._stale = False  # 成功 render 后又改了场景/时间轴 → 成片过期
+        self._seq = 0  # render/review 成功事件共用单调序号
+        self._sig_counts = {}  # 同签名重复调用拦截状态（全局累计）
+        self._render_seq = 0  # 最近一次成功 render 的序号
         self._review_seq: int | None = None  # 最近一次成功 review 的序号
         self._render_attempts = 0
         self._rework_rounds = 0
@@ -386,8 +422,9 @@ class StudioToolLoop:
             self._stop_preview()
             self._cleanup_render_frames()
         if not result.get("ok"):
-            self._safe_emit("fail", {"tool": "fail", "error": result.get("error"),
-                                     "turns": result.get("turns")})
+            self._safe_emit(
+                "fail", {"tool": "fail", "error": result.get("error"), "turns": result.get("turns")}
+            )
         return result
 
     async def _loop(self) -> dict:
@@ -399,11 +436,11 @@ class StudioToolLoop:
             prompt += (
                 "\n# 视觉效果申报契约（required_fx）\n"
                 "save_timeline 的 timeline 必须带 effects 字段（否则被拒）：\n"
-                "  \"effects\": {\n"
-                "    \"tears\":  [{\"t\":<s>, \"duration\":<s>, \"dx_px\":<px>, "
-                "\"rot_deg\":<deg>}, ...],\n"
-                "    \"shakes\": [{\"t\":<s>, \"duration\":<s>, "
-                "\"amplitude_px\":<px>}, ...]\n"
+                '  "effects": {\n'
+                '    "tears":  [{"t":<s>, "duration":<s>, "dx_px":<px>, '
+                '"rot_deg":<deg>}, ...],\n'
+                '    "shakes": [{"t":<s>, "duration":<s>, '
+                '"amplitude_px":<px>}, ...]\n'
                 "  }\n"
                 f"- tears：全片 {_FX_TEAR_N[0]}–{_FX_TEAR_N[1]} 次画面撕裂（用在"
                 "夸张词/金句爆发点），两侧位移 dx_px ≥ "
@@ -424,8 +461,7 @@ class StudioToolLoop:
         ]
         while True:
             if self._turns >= self._max_turns:
-                return self._fail_result(
-                    f"轮数超限（max_turns={self._max_turns}），循环如实终止")
+                return self._fail_result(f"轮数超限（max_turns={self._max_turns}），循环如实终止")
             try:
                 raw = await self._llm.chat(messages, response_format={"type": "json_object"})
             except Exception as exc:
@@ -436,8 +472,9 @@ class StudioToolLoop:
             assistant = {"role": "assistant", "content": reply}
             if err is not None:
                 messages.append(assistant)
-                messages.append({"role": "user",
-                                 "content": self._feedback(action, False, {"error": err})})
+                messages.append(
+                    {"role": "user", "content": self._feedback(action, False, {"error": err})}
+                )
                 continue
             kind, payload = await self._execute(action, args)
             if kind == "stop":
@@ -451,8 +488,7 @@ class StudioToolLoop:
             # 签名归一化：无参幂等工具忽略 args——LLM 会塞幻觉参数抖动签名
             # （lang/model/foo 各不相同），让拦截失效，60 轮全烧在重复转录上。
             sig_args = {} if action in _SIG_PARAMLESS else args
-            sig = json.dumps({"tool": action, "args": sig_args},
-                             sort_keys=True, ensure_ascii=False)
+            sig = json.dumps({"tool": action, "args": sig_args}, sort_keys=True, ensure_ascii=False)
             self._sig_counts[sig] = self._sig_counts.get(sig, 0) + 1
             sig_n = self._sig_counts[sig]
             feedback_content = self._feedback(action, ok, result)
@@ -461,20 +497,24 @@ class StudioToolLoop:
                 # 重复注入完整结果——实测同参数 transcribe 重复回喂词级时间戳
                 # （单次数千 token）反复进上下文，是预算黑洞。失败（ok=False）
                 # 不占位化：错误信息可能变化，且有诊断价值。
-                result = {"repeated": True,
-                          "note": "结果与第 1 次调用完全一致（已省略以省预算），请直接使用首次结果"}
+                result = {
+                    "repeated": True,
+                    "note": "结果与第 1 次调用完全一致（已省略以省预算），请直接使用首次结果",
+                }
                 feedback_content = self._feedback(action, True, result)
             if sig_n >= 2:
                 feedback_content += (
                     f"\n[系统提示] 你已用完全相同的参数第 {sig_n} 次调用同一工具，"
                     "结果不会再变。禁止再次重复调用；请立即推进到下一阶段"
-                    "（plan → scene → render → review → deliver）。")
+                    "（plan → scene → render → review → deliver）。"
+                )
             if sig_n >= 4:
                 sig_head = sig[:300]
                 return self._fail_result(
                     f"同一工具同参数累计重复调用 {sig_n} 次，"
                     f"循环如实终止（疑似陷入重复，止损以省预算）。"
-                    f"重复的调用签名：{sig_head}")
+                    f"重复的调用签名：{sig_head}"
+                )
             messages.append({"role": "user", "content": feedback_content})
 
     # ── 协议解析与分发 ────────────────────────────────────────────────
@@ -499,8 +539,14 @@ class StudioToolLoop:
         try:
             obj = json.loads(reply)
         except (json.JSONDecodeError, ValueError):
-            return None, None, ("输出不是合法 JSON。每轮必须只输出一个 JSON 对象："
-                                '{"action": "...", "args": {...}}')
+            return (
+                None,
+                None,
+                (
+                    "输出不是合法 JSON。每轮必须只输出一个 JSON 对象："
+                    '{"action": "...", "args": {...}}'
+                ),
+            )
         if not isinstance(obj, dict):
             return None, None, f"输出 JSON 应为对象(dict)，实际为 {type(obj).__name__}"
         action = obj.get("action")
@@ -519,14 +565,15 @@ class StudioToolLoop:
             return self._finish(args)
         if action == "fail":
             return ("stop", self._fail_action(args))
-        if action == "render" and (self._render_attempts >= _MAX_RENDER_ATTEMPTS
-                                   or self._rework_rounds >= _MAX_REWORK_ROUNDS):
+        if action == "render" and (
+            self._render_attempts >= _MAX_RENDER_ATTEMPTS
+            or self._rework_rounds >= _MAX_REWORK_ROUNDS
+        ):
             return ("stop", self._budget_stop_result())
         handler = _TOOL_HANDLERS.get(action)
         if handler is None:
             known = "、".join(sorted(_TOOL_HANDLERS)) + "、finish、fail"
-            return ("feedback", (False,
-                                 {"error": f"未知 action：{action}（可用：{known}）"}))
+            return ("feedback", (False, {"error": f"未知 action：{action}（可用：{known}）"}))
         try:
             ok, result, extra = await handler(self, args)
         except Exception as exc:  # 工具实现兜底：任何异常都不崩循环
@@ -540,35 +587,76 @@ class StudioToolLoop:
     def _finish(self, args):
         summary = args.get("summary")
         if summary is not None and not isinstance(summary, (str, dict)):
-            return ("feedback", (False,
-                                 {"error": f"summary 应为字符串或对象，实际为 {type(summary).__name__}"}))
+            return (
+                "feedback",
+                (False, {"error": f"summary 应为字符串或对象，实际为 {type(summary).__name__}"}),
+            )
         if not self._render_ok:
-            return ("feedback", (False,
-                                 {"error": "finish 被拒绝：尚未成功 render（先 write_scene_file → render）"}))
+            return (
+                "feedback",
+                (
+                    False,
+                    {"error": "finish 被拒绝：尚未成功 render（先 write_scene_file → render）"},
+                ),
+            )
         if self._stale:
-            return ("feedback", (False,
-                                 {"error": "finish 被拒绝：最近一次成功 render 之后场景/时间轴又被修改"
-                                           "（write_scene_file / save_timeline），out/final.mp4 已过期，"
-                                           "需重新 render → review 后再 finish"}))
+            return (
+                "feedback",
+                (
+                    False,
+                    {
+                        "error": "finish 被拒绝：最近一次成功 render 之后场景/时间轴又被修改"
+                        "（write_scene_file / save_timeline），out/final.mp4 已过期，"
+                        "需重新 render → review 后再 finish"
+                    },
+                ),
+            )
         if self._review_seq is None:
-            return ("feedback", (False,
-                                 {"error": "finish 被拒绝：尚未 review（render 后必须 review 且 errors 为空）"}))
+            return (
+                "feedback",
+                (
+                    False,
+                    {"error": "finish 被拒绝：尚未 review（render 后必须 review 且 errors 为空）"},
+                ),
+            )
         if self._review_seq <= self._render_seq:
-            return ("feedback", (False,
-                                 {"error": "finish 被拒绝：最近一次 review 发生在最近一次成功 render 之前，"
-                                           "当前成片未经质检（需重新 review）"}))
+            return (
+                "feedback",
+                (
+                    False,
+                    {
+                        "error": "finish 被拒绝：最近一次 review 发生在最近一次成功 render 之前，"
+                        "当前成片未经质检（需重新 review）"
+                    },
+                ),
+            )
         errs = self._last_review.get("errors") or []
         if errs:
-            return ("feedback", (False,
-                                 {"error": f"finish 被拒绝：最近 review 仍有 {len(errs)} 个错误，须修复后重试",
-                                  "errors": errs[:5]}))
+            return (
+                "feedback",
+                (
+                    False,
+                    {
+                        "error": f"finish 被拒绝：最近 review 仍有 {len(errs)} 个错误，须修复后重试",
+                        "errors": errs[:5],
+                    },
+                ),
+            )
         video_path = self._ws["out"] / "final.mp4"
         extra = {"video_path": str(video_path)}
         if self._preview_url:
             extra["preview_url"] = self._preview_url
         self._safe_emit("deliver", {"tool": "finish", **extra})
-        return ("stop", {"ok": True, "video_path": str(video_path),
-                         "review": self._last_review, "turns": self._turns, "error": None})
+        return (
+            "stop",
+            {
+                "ok": True,
+                "video_path": str(video_path),
+                "review": self._last_review,
+                "turns": self._turns,
+                "error": None,
+            },
+        )
 
     def _fail_action(self, args) -> dict:
         reason = args.get("reason")
@@ -576,20 +664,35 @@ class StudioToolLoop:
             reason = "agent 未提供原因"
         elif not isinstance(reason, str):
             reason = json.dumps(reason, ensure_ascii=False)
-        return {"ok": False, "video_path": None, "review": self._last_review,
-                "turns": self._turns, "error": f"agent 主动终止：{reason}"}
+        return {
+            "ok": False,
+            "video_path": None,
+            "review": self._last_review,
+            "turns": self._turns,
+            "error": f"agent 主动终止：{reason}",
+        }
 
     def _budget_stop_result(self) -> dict:
         err = "预算超限：渲染 ≤3 次、render→review→fix ≤3 轮已用尽，循环如实终止（不宣称完成）"
         errs = (self._last_review or {}).get("errors") or []
         if errs:
             err += "。最近 review 错误：" + "；".join(str(e) for e in errs[:8])
-        return {"ok": False, "video_path": None, "review": self._last_review,
-                "turns": self._turns, "error": err}
+        return {
+            "ok": False,
+            "video_path": None,
+            "review": self._last_review,
+            "turns": self._turns,
+            "error": err,
+        }
 
     def _fail_result(self, error: str) -> dict:
-        return {"ok": False, "video_path": None, "review": self._last_review,
-                "turns": self._turns, "error": error}
+        return {
+            "ok": False,
+            "video_path": None,
+            "review": self._last_review,
+            "turns": self._turns,
+            "error": error,
+        }
 
     # ── 回喂消息（截断至 ~4KB，保持 JSON 可解析） ─────────────────────
 
@@ -606,10 +709,15 @@ class StudioToolLoop:
         total = len(text.encode("utf-8"))
 
         def build(n: int) -> str:
-            return json.dumps({"turn": self._turns, "action": action, "ok": ok,
-                               "result": {"truncated": True, "dropped_bytes": total,
-                                          "preview": text[:n]}},
-                              ensure_ascii=False)
+            return json.dumps(
+                {
+                    "turn": self._turns,
+                    "action": action,
+                    "ok": ok,
+                    "result": {"truncated": True, "dropped_bytes": total, "preview": text[:n]},
+                },
+                ensure_ascii=False,
+            )
 
         lo, hi = 0, len(text)
         while lo < hi:
@@ -670,6 +778,7 @@ class StudioToolLoop:
         每次数百至数千张 PNG，不删会把工作区磁盘撑爆。尽力而为不抛。
         """
         import shutil
+
         shutil.rmtree(Path(self._ws["frames"]), ignore_errors=True)
 
     def _ensure_rules_installed(self) -> None:
@@ -738,8 +847,7 @@ class StudioToolLoop:
         rules = self._ws["inputs"] / "rules"
         if not rules.is_dir():
             return False, {"error": f"rules 目录不存在: {rules}"}, {}
-        files = sorted(p.relative_to(rules).as_posix()
-                       for p in rules.rglob("*") if p.is_file())
+        files = sorted(p.relative_to(rules).as_posix() for p in rules.rglob("*") if p.is_file())
         return True, {"files": files, "count": len(files)}, {"count": len(files)}
 
     async def _t_read_rules_file(self, args):
@@ -750,9 +858,11 @@ class StudioToolLoop:
         if not resolved.is_file():
             return False, {"error": f"文件不存在或不是文件: {args.get('path')}（位于 {rules}）"}, {}
         text = resolved.read_text(encoding="utf-8", errors="replace")
-        return (True,
-                {"path": args.get("path"), "bytes": len(text.encode("utf-8")), "content": text},
-                {"path": args.get("path")})
+        return (
+            True,
+            {"path": args.get("path"), "bytes": len(text.encode("utf-8")), "content": text},
+            {"path": args.get("path")},
+        )
 
     async def _t_transcribe(self, args):
         cached = self._load_speech_cache()
@@ -766,7 +876,8 @@ class StudioToolLoop:
         # 同音字纠错 pass（P2 验收回灌）：尽力而为，失败原样落盘 + warning，
         # 不阻塞 transcribe；corrections 随工具结果透出（agent 可见纠了什么）
         segments, corrections, fix_warnings = await fix_homophones(
-            segments, self._llm, self._safe_emit)
+            segments, self._llm, self._safe_emit
+        )
         for w in fix_warnings:
             logger.warning("transcribe fix: %s", w)
         data = {
@@ -774,16 +885,23 @@ class StudioToolLoop:
             "cached": False,
             "corrections": corrections,
             "segments": [
-                {"text": s.text, "start": s.start, "end": s.end,
-                 "words": [{"text": w.text, "start": w.start, "end": w.end} for w in s.words]}
+                {
+                    "text": s.text,
+                    "start": s.start,
+                    "end": s.end,
+                    "words": [{"text": w.text, "start": w.start, "end": w.end} for w in s.words],
+                }
                 for s in segments
             ],
         }
         out = self._ws["analysis"] / "speech.json"
         out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         self._speech_cache = data
-        return (True, self._slim_speech({**data, "speech_file": str(out)}),
-                {"segments": len(data["segments"]), "duration": duration})
+        return (
+            True,
+            self._slim_speech({**data, "speech_file": str(out)}),
+            {"segments": len(data["segments"]), "duration": duration},
+        )
 
     @staticmethod
     def _slim_speech(data: dict) -> dict:
@@ -796,8 +914,10 @@ class StudioToolLoop:
         """
         slim = {k: v for k, v in data.items() if k != "segments"}
         slim["segments"] = [
-            {**seg, "words": " ".join(
-                f"{w['text']}@{w['start']:.2f}" for w in seg.get("words", []))}
+            {
+                **seg,
+                "words": " ".join(f"{w['text']}@{w['start']:.2f}" for w in seg.get("words", [])),
+            }
             for seg in data.get("segments", [])
         ]
         return slim
@@ -805,38 +925,53 @@ class StudioToolLoop:
     async def _t_prepare_assets(self, args):
         kind = args.get("kind")
         if kind not in ("frames", "matting", "sfx_list"):
-            return False, {"error": f"kind 非法：{kind!r}（只允许 frames / matting / sfx_list）"}, {}
+            return (
+                False,
+                {"error": f"kind 非法：{kind!r}（只允许 frames / matting / sfx_list）"},
+                {},
+            )
         if kind == "frames":
             frames_src = self._ws[".cache"] / "frames"
             try:
                 info = await asyncio.to_thread(
-                    extract_frames, self._video_path, frames_src, _FRAME_FPS)
+                    extract_frames, self._video_path, frames_src, _FRAME_FPS
+                )
             except Exception as exc:
                 return False, {"error": f"抽帧失败: {exc}"}, {}
             # 底部烧录元素探测（36.9s 实跑回灌：源片自带字幕与 karaoke 字幕打架）。
             # 尽力而为：probe 任何失败返回 error 字段不抛，不阻塞 prepare_assets。
             bottom = await asyncio.to_thread(probe_bottom_elements, str(info.frame_dir))
             if bottom.get("suspected"):
-                self._safe_emit("prepare", {
-                    "tool": "prepare_assets",
-                    "message": "源素材底部疑似带烧录字幕/水印/台标：叠加文字请避开"
-                               "底部 18% 区域，或用全宽暗色渐变压条压住底层文字。",
-                })
-            return (True,
-                    {"kind": "frames", "count": info.count, "fps": info.fps,
-                     "width": info.width, "height": info.height,
-                     "frame_dir": str(info.frame_dir),
-                     "pattern": info.pattern,
-                     "example": "../.cache/frames/" + (info.pattern % 0),
-                     "bottom_elements": bottom,
-                     "hint": "scene 引用素材必须逐字使用此 pattern 与 ../.cache/frames/ 前缀"
-                             "（.cache/ 是隐藏缓存目录：抽帧 jpg 与渲染器截图 png 都在"
-                             "里面，禁止引用 .cache/render 下的 png），"
-                             "禁止猜测其他命名；review 会对断链引用报 error"
-                             "；若 bottom_elements.suspected=true，说明源素材底部"
-                             "可能带烧录字幕/水印/台标，你的叠加文字必须避开底部"
-                             " 18% 区域，或采用全宽暗色渐变压条确保可读性压住底层文字"},
-                    {"count": info.count})
+                self._safe_emit(
+                    "prepare",
+                    {
+                        "tool": "prepare_assets",
+                        "message": "源素材底部疑似带烧录字幕/水印/台标：叠加文字请避开"
+                        "底部 18% 区域，或用全宽暗色渐变压条压住底层文字。",
+                    },
+                )
+            return (
+                True,
+                {
+                    "kind": "frames",
+                    "count": info.count,
+                    "fps": info.fps,
+                    "width": info.width,
+                    "height": info.height,
+                    "frame_dir": str(info.frame_dir),
+                    "pattern": info.pattern,
+                    "example": "../.cache/frames/" + (info.pattern % 0),
+                    "bottom_elements": bottom,
+                    "hint": "scene 引用素材必须逐字使用此 pattern 与 ../.cache/frames/ 前缀"
+                    "（.cache/ 是隐藏缓存目录：抽帧 jpg 与渲染器截图 png 都在"
+                    "里面，禁止引用 .cache/render 下的 png），"
+                    "禁止猜测其他命名；review 会对断链引用报 error"
+                    "；若 bottom_elements.suspected=true，说明源素材底部"
+                    "可能带烧录字幕/水印/台标，你的叠加文字必须避开底部"
+                    " 18% 区域，或采用全宽暗色渐变压条确保可读性压住底层文字",
+                },
+                {"count": info.count},
+            )
         if kind == "matting":
             try:
                 res = await matte_person(self._video_path, self._ws["assets"])
@@ -845,24 +980,37 @@ class StudioToolLoop:
                 logger.warning("matte_person raised: %s", exc)
             if res is None:
                 return False, {"error": "人物抠像失败（RVM 降级），assets/ 无透明帧轨"}, {}
-            return (True,
-                    {"kind": "matting", "count": res.count, "fps": res.fps,
-                     "width": res.width, "height": res.height,
-                     "frame_dir": str(res.frame_dir),
-                     "pattern": res.pattern,
-                     "example": "../assets/frames/" + (res.pattern % 0),
-                     "hint": "scene 引用素材必须逐字使用此 pattern 与 "
-                             "../assets/frames/ 前缀，禁止猜测其他命名；"
-                             "review 会对断链引用报 error"},
-                    {"count": res.count})
+            return (
+                True,
+                {
+                    "kind": "matting",
+                    "count": res.count,
+                    "fps": res.fps,
+                    "width": res.width,
+                    "height": res.height,
+                    "frame_dir": str(res.frame_dir),
+                    "pattern": res.pattern,
+                    "example": "../assets/frames/" + (res.pattern % 0),
+                    "hint": "scene 引用素材必须逐字使用此 pattern 与 "
+                    "../assets/frames/ 前缀，禁止猜测其他命名；"
+                    "review 会对断链引用报 error",
+                },
+                {"count": res.count},
+            )
         # sfx_list：只枚举 SFX 库文件名，不做任何风格筛选
         if not _SFX_DIR.is_dir():
-            return True, {"kind": "sfx_list", "files": [], "count": 0,
-                          "note": "SFX 库目录不存在"}, {"count": 0}
+            return (
+                True,
+                {"kind": "sfx_list", "files": [], "count": 0, "note": "SFX 库目录不存在"},
+                {"count": 0},
+            )
         files = sorted(p.name for p in _SFX_DIR.iterdir() if p.is_file())
         names = [Path(f).stem for f in files]
-        return (True, {"kind": "sfx_list", "files": files, "names": names,
-                       "count": len(files)}, {"count": len(files)})
+        return (
+            True,
+            {"kind": "sfx_list", "files": files, "names": names, "count": len(files)},
+            {"count": len(files)},
+        )
 
     async def _t_generate_image(self, args):
         prompt = args.get("prompt")
@@ -870,9 +1018,14 @@ class StudioToolLoop:
             return False, {"error": "prompt 应为非空字符串"}, {}
         name = args.get("name")
         if not isinstance(name, str) or not _GEN_NAME_RE.fullmatch(name):
-            return (False,
-                    {"error": f"name 非法：{name!r}（小写字母开头，仅 [a-z0-9_-]，"
-                              "≤48 字符；如 avocado-cut）"}, {})
+            return (
+                False,
+                {
+                    "error": f"name 非法：{name!r}（小写字母开头，仅 [a-z0-9_-]，"
+                    "≤48 字符；如 avocado-cut）"
+                },
+                {},
+            )
         ratio = args.get("ratio", "1:1")
         size = _IMAGE_RATIO_SIZE.get(str(ratio))
         if size is None:
@@ -888,14 +1041,20 @@ class StudioToolLoop:
         gen_dir.mkdir(parents=True, exist_ok=True)
         out = gen_dir / f"{name}.png"
         out.write_bytes(images[0])
-        return (True,
-                {"path": str(out), "bytes": len(images[0]), "size": size,
-                 "pattern": "assets/gen/<name>.png",
-                 "example": f"../assets/gen/{name}.png",
-                 "hint": "scene 引用必须逐字使用 example 的相对路径"
-                         "（相对 scene/index.html）；同一 name 重复生成会覆盖旧图；"
-                         "review 会对断链引用报 error"},
-                {"path": str(out)})
+        return (
+            True,
+            {
+                "path": str(out),
+                "bytes": len(images[0]),
+                "size": size,
+                "pattern": "assets/gen/<name>.png",
+                "example": f"../assets/gen/{name}.png",
+                "hint": "scene 引用必须逐字使用 example 的相对路径"
+                "（相对 scene/index.html）；同一 name 重复生成会覆盖旧图；"
+                "review 会对断链引用报 error",
+            },
+            {"path": str(out)},
+        )
 
     async def _t_save_timeline(self, args):
         tl = args.get("timeline")
@@ -908,11 +1067,18 @@ class StudioToolLoop:
             c = tl.get("canvas") or {}
             got = (int(c.get("w", 0)), int(c.get("h", 0)))
             if got != self._required_canvas:
-                return False, {"error": (
-                    f"canvas 必须为 {self._required_canvas[0]}x"
-                    f"{self._required_canvas[1]}（brief 硬性画幅要求），"
-                    f"实际 {got[0]}x{got[1]}。请按此画幅重新设计全部构图后再 "
-                    "save_timeline")}, {}
+                return (
+                    False,
+                    {
+                        "error": (
+                            f"canvas 必须为 {self._required_canvas[0]}x"
+                            f"{self._required_canvas[1]}（brief 硬性画幅要求），"
+                            f"实际 {got[0]}x{got[1]}。请按此画幅重新设计全部构图后再 "
+                            "save_timeline"
+                        )
+                    },
+                    {},
+                )
         # 视觉效果强度申报（required_fx）：与画幅同理，确定性验收项平台侧硬
         # 校验——prompt 恳求"撕裂要夸张"实测无效（±16px 肉眼不可见）。
         if self._required_fx:
@@ -928,36 +1094,57 @@ class StudioToolLoop:
             tl_speech = tl.get("speech") or []
             last_tl = max((float(s.get("end", 0)) for s in tl_speech), default=0.0)
             if last_tl < last_src * 0.95:
-                missing = [s for s in segs
-                           if float(s["end"]) > last_tl + 0.5]
+                missing = [s for s in segs if float(s["end"]) > last_tl + 0.5]
                 heads = "; ".join(
                     f"[{float(s['start']):.1f}-{float(s['end']):.1f}]"
-                    f"{str(s.get('text', ''))[:14]}" for s in missing[:4])
-                return False, {"error": (
-                    f"timeline.speech 未覆盖全部转录段：最后编排到 "
-                    f"{last_tl:.1f}s，但转录到 {last_src:.1f}s，缺失 "
-                    f"{len(missing)} 段：{heads}。每一段口播都必须有字幕与"
-                    "词级编排（可合并但不能丢弃）；真正无语音的片段除外")}, {}
+                    f"{str(s.get('text', ''))[:14]}"
+                    for s in missing[:4]
+                )
+                return (
+                    False,
+                    {
+                        "error": (
+                            f"timeline.speech 未覆盖全部转录段：最后编排到 "
+                            f"{last_tl:.1f}s，但转录到 {last_src:.1f}s，缺失 "
+                            f"{len(missing)} 段：{heads}。每一段口播都必须有字幕与"
+                            "词级编排（可合并但不能丢弃）；真正无语音的片段除外"
+                        )
+                    },
+                    {},
+                )
             # 台词忠实性：timeline.speech 文本必须对得上转录原文——时间覆盖
             # 校验只管"何时说"，拦不住"编造台词"（实测 agent 前 6 段照抄、
             # 后半段自由创作填满时间轴，成片字幕与口播完全对不上）。
             mism = _check_speech_texts(tl.get("speech") or [], segs)
             if mism:
                 detail = "; ".join(
-                    f"[{m['t']}]编排「{m['got']}」≠原文「{m['want']}」"
-                    for m in mism[:4])
-                return False, {"error": (
-                    f"timeline.speech 有 {len(mism)} 段与转录原文不符（台词"
-                    "必须是转录原文的忠实编排，禁止改写/创作）："
-                    f"{detail}。请逐字使用 speech.json segments 的原文"
-                    "（只允许拆段/合并/增删标点）后重新 save_timeline")}, {}
+                    f"[{m['t']}]编排「{m['got']}」≠原文「{m['want']}」" for m in mism[:4]
+                )
+                return (
+                    False,
+                    {
+                        "error": (
+                            f"timeline.speech 有 {len(mism)} 段与转录原文不符（台词"
+                            "必须是转录原文的忠实编排，禁止改写/创作）："
+                            f"{detail}。请逐字使用 speech.json segments 的原文"
+                            "（只允许拆段/合并/增删标点）后重新 save_timeline"
+                        )
+                    },
+                    {},
+                )
         p = save_timeline(self._ws, tl)
         self._timeline = tl
         self._stale = True  # 时间轴已变：此前若有成片即告过期，须重渲重检
-        return (True,
-                {"path": str(p), "beats": len(tl.get("beats") or []),
-                 "duration": tl.get("duration"), "fps": tl.get("fps")},
-                {"beats": len(tl.get("beats") or [])})
+        return (
+            True,
+            {
+                "path": str(p),
+                "beats": len(tl.get("beats") or []),
+                "duration": tl.get("duration"),
+                "fps": tl.get("fps"),
+            },
+            {"beats": len(tl.get("beats") or [])},
+        )
 
     async def _t_write_scene_file(self, args):
         scene = self._ws["scene"]
@@ -966,8 +1153,14 @@ class StudioToolLoop:
             return False, {"error": err}, {}
         scene_r = scene.resolve()
         if resolved == scene_r or scene_r not in resolved.parents:
-            return False, {"error": f"路径被拒绝：{args.get('path')}"
-                                    f"（write 仅限 scene/ 下，如 scene/index.html）"}, {}
+            return (
+                False,
+                {
+                    "error": f"路径被拒绝：{args.get('path')}"
+                    f"（write 仅限 scene/ 下，如 scene/index.html）"
+                },
+                {},
+            )
         content = args.get("content")
         if not isinstance(content, str):
             return False, {"error": f"content 应为字符串，实际为 {type(content).__name__}"}, {}
@@ -977,8 +1170,11 @@ class StudioToolLoop:
         data = content.encode("utf-8")
         resolved.write_bytes(data)
         self._stale = True  # 场景已变：此前若有成片即告过期，须重渲重检
-        return (True, {"path": args.get("path"), "bytes": len(data)},
-                {"path": args.get("path"), "bytes": len(data)})
+        return (
+            True,
+            {"path": args.get("path"), "bytes": len(data)},
+            {"path": args.get("path"), "bytes": len(data)},
+        )
 
     async def _t_mix_sfx(self, args):
         """定点音效混音：口播轨 + SFX 事件（[{file,t,gain?},...]）→ 混合音轨。
@@ -988,13 +1184,15 @@ class StudioToolLoop:
         """
         events = args.get("events")
         if not isinstance(events, list) or not events:
-            return False, {"error": "events 应为非空列表，如 "
-                                    '[{"file":"impact.wav","t":2.44,"gain":0.8}]'}, {}
+            return (
+                False,
+                {"error": "events 应为非空列表，如 " '[{"file":"impact.wav","t":2.44,"gain":0.8}]'},
+                {},
+            )
         if not _SFX_DIR.is_dir():
             return False, {"error": f"SFX 库目录不存在：{_SFX_DIR}"}, {}
         names = {p.name for p in _SFX_DIR.iterdir() if p.is_file()}
-        t_max = (float(self._timeline["duration"])
-                 if self._timeline else _MIX_T_MAX)
+        t_max = float(self._timeline["duration"]) if self._timeline else _MIX_T_MAX
         norm = []
         for ev in events:
             if not isinstance(ev, dict):
@@ -1003,15 +1201,22 @@ class StudioToolLoop:
             t = ev.get("t")
             g = ev.get("gain", _MIX_GAIN_DEFAULT)
             if not isinstance(f, str) or f not in names:
-                return False, {"error": f"file 必须是 SFX 库中的文件名"
-                                        f"（prepare_assets('sfx_list') 获取），实际 {f!r}"}, {}
-            if not isinstance(t, (int, float)) or isinstance(t, bool) \
-                    or not (0 <= t <= t_max):
+                return (
+                    False,
+                    {
+                        "error": f"file 必须是 SFX 库中的文件名"
+                        f"（prepare_assets('sfx_list') 获取），实际 {f!r}"
+                    },
+                    {},
+                )
+            if not isinstance(t, (int, float)) or isinstance(t, bool) or not (0 <= t <= t_max):
                 return False, {"error": f"t 应为 0 ≤ t ≤ {t_max}s 的数值，实际 {t!r}"}, {}
-            if not isinstance(g, (int, float)) or isinstance(g, bool) \
-                    or not (0 < g <= 1):
-                return False, {"error": f"gain 应为 (0,1] 数值（默认 {_MIX_GAIN_DEFAULT}），"
-                                        f"实际 {g!r}"}, {}
+            if not isinstance(g, (int, float)) or isinstance(g, bool) or not (0 < g <= 1):
+                return (
+                    False,
+                    {"error": f"gain 应为 (0,1] 数值（默认 {_MIX_GAIN_DEFAULT}），" f"实际 {g!r}"},
+                    {},
+                )
             norm.append({"file": f, "t": float(t), "gain": float(g)})
         out_path = Path(self._ws["out"]) / "audio_mixed.m4a"
         try:
@@ -1019,9 +1224,15 @@ class StudioToolLoop:
         except Exception as exc:
             return False, {"error": f"混音失败: {exc}"}, {}
         self._seq += 1
-        return (True, {"path": str(out_path), "events": len(norm),
-                       "note": 'render 时传 {"audio":"mixed"} 使用此音轨'},
-                {"events": len(norm)})
+        return (
+            True,
+            {
+                "path": str(out_path),
+                "events": len(norm),
+                "note": 'render 时传 {"audio":"mixed"} 使用此音轨',
+            },
+            {"events": len(norm)},
+        )
 
     async def _t_render(self, args):
         audio = args.get("audio", "original")
@@ -1029,14 +1240,23 @@ class StudioToolLoop:
         if audio == "mixed":
             mixed = Path(self._ws["out"]) / "audio_mixed.m4a"
             if not mixed.is_file():
-                return False, {"error": 'audio="mixed" 但混音轨不存在'
-                                        "（先调 mix_sfx 生成 audio_mixed.m4a）"}, {}
+                return (
+                    False,
+                    {
+                        "error": 'audio="mixed" 但混音轨不存在'
+                        "（先调 mix_sfx 生成 audio_mixed.m4a）"
+                    },
+                    {},
+                )
             audio_path = str(mixed)
         elif audio != "original":
-            return False, {"error": f'audio 仅支持 "original" / "mixed"，'
-                                    f"实际为 {audio!r}"}, {}
+            return False, {"error": f'audio 仅支持 "original" / "mixed"，' f"实际为 {audio!r}"}, {}
         if self._timeline is None:
-            return False, {"error": "尚未 save_timeline（render 的 duration/fps/canvas 取自 timeline）"}, {}
+            return (
+                False,
+                {"error": "尚未 save_timeline（render 的 duration/fps/canvas 取自 timeline）"},
+                {},
+            )
         scene_html = self._ws["scene"] / "index.html"
         if not scene_html.is_file():
             return False, {"error": f"场景未写入：{scene_html} 不存在（先 write_scene_file）"}, {}
@@ -1047,23 +1267,38 @@ class StudioToolLoop:
         out_video = self._ws["out"] / "final.mp4"
         try:
             res = await asyncio.to_thread(
-                render_scene, scene_html, self._ws["frames"],
-                float(tl["duration"]), int(tl["fps"]),
-                int(tl["canvas"]["w"]), int(tl["canvas"]["h"]),
-                audio_path, out_video,
+                render_scene,
+                scene_html,
+                self._ws["frames"],
+                float(tl["duration"]),
+                int(tl["fps"]),
+                int(tl["canvas"]["w"]),
+                int(tl["canvas"]["h"]),
+                audio_path,
+                out_video,
             )
         except Exception as exc:
-            return (False,
-                    {"error": f"render 失败（第 {self._render_attempts}/{_MAX_RENDER_ATTEMPTS} 次尝试）: {exc}"},
-                    {"attempt": self._render_attempts})
+            return (
+                False,
+                {
+                    "error": f"render 失败（第 {self._render_attempts}/{_MAX_RENDER_ATTEMPTS} 次尝试）: {exc}"
+                },
+                {"attempt": self._render_attempts},
+            )
         self._render_ok = True
         self._seq += 1
         self._render_seq = self._seq
         self._stale = False  # 新成片落盘：覆盖场景/时间轴的过期标记
-        return (True,
-                {"video_path": str(out_video), "frames": res.count, "fps": res.fps,
-                 "elapsed_s": round(res.elapsed, 2)},
-                {"attempt": self._render_attempts})
+        return (
+            True,
+            {
+                "video_path": str(out_video),
+                "frames": res.count,
+                "fps": res.fps,
+                "elapsed_s": round(res.elapsed, 2),
+            },
+            {"attempt": self._render_attempts},
+        )
 
     async def _t_review(self, args):
         if self._timeline is None:
@@ -1076,15 +1311,23 @@ class StudioToolLoop:
         self._seq += 1
         self._review_seq = self._seq  # 供 finish 校验「review 晚于最近成功 render」
         errs = res.get("errors") or []
-        return (True,
-                {"errors": errs, "loudness": res.get("loudness") or {},
-                 "contact_sheets": res.get("contact_sheets") or []},
-                {"error_count": len(errs)})
+        return (
+            True,
+            {
+                "errors": errs,
+                "loudness": res.get("loudness") or {},
+                "contact_sheets": res.get("contact_sheets") or [],
+            },
+            {"error_count": len(errs)},
+        )
 
     async def _t_start_preview(self, args):
         if self._preview_url:
-            return (True, {"preview_url": self._preview_url, "already_running": True},
-                    {"preview_url": self._preview_url})
+            return (
+                True,
+                {"preview_url": self._preview_url, "already_running": True},
+                {"preview_url": self._preview_url},
+            )
         try:
             server = StudioPreviewServer(self._ws)
             url = await asyncio.to_thread(server.start)

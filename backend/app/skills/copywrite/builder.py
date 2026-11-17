@@ -25,9 +25,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.agents.clarification_schema import (
+    ClarifyDepends,
+    ClarifyFieldMeta,
+    ClarifyOption,
+    ClarifyWhen,
+)
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
-from app.agents.clarification_schema import ClarifyFieldMeta, ClarifyOption, ClarifyWhen, ClarifyDepends
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +54,16 @@ def _date_guard() -> str:
 
 class CopywriteInput(BaseModel):
     topic: str = Field(description="The topic/keyword for the copywrite, e.g. 'AI教育'")
-    analysis: dict | None = Field(default=None, description="Viral analysis results from viral_analysis tool (optional, enriches copywriting)")
-    style: str | None = Field(default=None, description="Writing style hint, e.g. '活泼可爱', '知性优雅'")
-    target_audience: str | None = Field(default=None, description="Target audience description, e.g. '20-30岁女性'")
+    analysis: dict | None = Field(
+        default=None,
+        description="Viral analysis results from viral_analysis tool (optional, enriches copywriting)",
+    )
+    style: str | None = Field(
+        default=None, description="Writing style hint, e.g. '活泼可爱', '知性优雅'"
+    )
+    target_audience: str | None = Field(
+        default=None, description="Target audience description, e.g. '20-30岁女性'"
+    )
 
 
 # ============================================================================
@@ -256,14 +268,18 @@ class CopywriteSkillBase(Skill):
         auto_tags = inputs.get("auto_tags", True)
 
         if not llm:
-            logger.warning(
-                f"[{self.__class__.__name__}] LLM unavailable, using fallback"
-            )
+            logger.warning(f"[{self.__class__.__name__}] LLM unavailable, using fallback")
             return self.fallback(topic, insights, image_details)
 
         prompt = self.build_prompt(
-            topic, insights, patterns, execution_brief,
-            image_details, image_style, reference, user_memory,
+            topic,
+            insights,
+            patterns,
+            execution_brief,
+            image_details,
+            image_style,
+            reference,
+            user_memory,
             content_length=content_length,
             auto_emoji=auto_emoji,
             auto_tags=auto_tags,
@@ -274,6 +290,7 @@ class CopywriteSkillBase(Skill):
 
         try:
             from app.engine.governance.skill_hooks import skill_governance
+
             await skill_governance.pre_llm_call(estimated_tokens=2000)
 
             resp = await llm.chat(
@@ -290,9 +307,7 @@ class CopywriteSkillBase(Skill):
 
             result = self.parse_response(raw)
             if result is None:
-                logger.warning(
-                    f"[{self.__class__.__name__}] LLM JSON parse failed, fallback"
-                )
+                logger.warning(f"[{self.__class__.__name__}] LLM JSON parse failed, fallback")
                 return self.fallback(topic, insights, image_details)
             return result
         except Exception as e:
@@ -308,8 +323,9 @@ class CopywriteSkillBase(Skill):
         - 每个 chunk 直接推送给前端显示（用户看到的是可读文案）
         - 收集完整文本后，后处理解析为结构化字段用于卡片渲染
         """
-        from app.services.sse_bus import sse_bus
         import re as _re
+
+        from app.services.sse_bus import sse_bus
 
         llm = inputs.get("llm")
         topic = inputs.get("topic", "")
@@ -332,8 +348,14 @@ class CopywriteSkillBase(Skill):
             return self.fallback(topic, insights, image_details)
 
         prompt = self._build_streaming_prompt(
-            topic, insights, patterns, execution_brief,
-            image_details, image_style, reference, user_memory,
+            topic,
+            insights,
+            patterns,
+            execution_brief,
+            image_details,
+            image_style,
+            reference,
+            user_memory,
             content_length=content_length,
             auto_emoji=auto_emoji,
             auto_tags=auto_tags,
@@ -344,6 +366,7 @@ class CopywriteSkillBase(Skill):
 
         try:
             from app.engine.governance.skill_hooks import skill_governance
+
             await skill_governance.pre_llm_call(estimated_tokens=2000)
 
             raw_parts: list[str] = []
@@ -354,10 +377,15 @@ class CopywriteSkillBase(Skill):
                 if content:
                     raw_parts.append(content)
                     if workflow_id:
-                        await sse_bus.publish(workflow_id, "agent_thinking", {
-                            "node_id": node_id,
-                            "chunk": {"content": content},
-                        }, turn_id=_turn_id or None)
+                        await sse_bus.publish(
+                            workflow_id,
+                            "agent_thinking",
+                            {
+                                "node_id": node_id,
+                                "chunk": {"content": content},
+                            },
+                            turn_id=_turn_id or None,
+                        )
                     _observer = inputs.get("_observer")
                     if _observer and hasattr(_observer, "emit_agent_message_delta"):
                         await _observer.emit_agent_message_delta(node_id, content)
@@ -406,7 +434,9 @@ class CopywriteSkillBase(Skill):
         tag_instruction = _build_tag_instruction(auto_tags)
 
         content_type_hint = execution_brief.get("content_type", "叙事型") or "叙事型"
-        structure_hint = ", ".join(execution_brief.get("recommended_structure", []) or ["引入", "主体内容", "总结"])
+        structure_hint = ", ".join(
+            execution_brief.get("recommended_structure", []) or ["引入", "主体内容", "总结"]
+        )
         title_style_hint = execution_brief.get("title_style", "利益型") or "利益型"
         tone_hint = execution_brief.get("tone", "自然口语化") or "自然口语化"
 
@@ -455,7 +485,7 @@ class CopywriteSkillBase(Skill):
         title_match = _re.search(r"[📌｜]*\s*标题[：:]\s*(.+?)(?:\n|$)", cleaned)
         if title_match:
             result["title"] = title_match.group(1).strip()
-            cleaned = cleaned[title_match.end():].strip()
+            cleaned = cleaned[title_match.end() :].strip()
 
         tags_matches = _re.findall(r"#([\w\u4e00-\u9fff]+)", cleaned)
         if tags_matches:
@@ -558,9 +588,7 @@ class CopywriteSkillBase(Skill):
             except json.JSONDecodeError:
                 pass
 
-        logger.warning(
-            f"[{self.__class__.__name__}] JSON parse failed, raw[:200]={raw[:200]}"
-        )
+        logger.warning(f"[{self.__class__.__name__}] JSON parse failed, raw[:200]={raw[:200]}")
         return None
 
     def fallback(
@@ -615,8 +643,7 @@ class LivelyGirlCopywriteSkill(CopywriteSkillBase):
     description = "生成文案。仅在用户明确要求写/生成文案时调用。不要在分析/追问/闲聊场景调用。如果用户已有参考文案且要求基于它写，可以调用但不要先搜热点"
     input_schema = CopywriteInput
     style_instruction = (
-        "活泼少女风：语气可爱俏皮，多用感叹号和 emoji（2-3个），"
-        "有少女感，像闺蜜聊天"
+        "活泼少女风：语气可爱俏皮，多用感叹号和 emoji（2-3个），" "有少女感，像闺蜜聊天"
     )
     fallback_template = (
         "{topic}也太可爱了吧！✨\n\n"
@@ -638,8 +665,7 @@ class ElegantCopywriteSkill(CopywriteSkillBase):
     description = "语气从容得体，措辞考究，像杂志专栏"
     input_schema = CopywriteInput
     style_instruction = (
-        "知性优雅风：语气从容得体，措辞考究，少用 emoji（最多1个），"
-        "有沉淀感，像杂志专栏"
+        "知性优雅风：语气从容得体，措辞考究，少用 emoji（最多1个），" "有沉淀感，像杂志专栏"
     )
     fallback_template = (
         "关于{topic}，一些沉淀的思考。\n\n"
@@ -661,8 +687,7 @@ class ProfessionalCopywriteSkill(CopywriteSkillBase):
     description = "语气专业克制，逻辑清晰，分点论述，像行业分享"
     input_schema = CopywriteInput
     style_instruction = (
-        "专业干货风：语气专业克制，逻辑清晰，分点论述，"
-        "几乎不用 emoji，像行业分享"
+        "专业干货风：语气专业克制，逻辑清晰，分点论述，" "几乎不用 emoji，像行业分享"
     )
     fallback_template = (
         "{topic}｜核心要点整理\n\n"
@@ -683,10 +708,7 @@ class CasualCopywriteSkill(CopywriteSkillBase):
     display_name = "慵懒随性风"
     description = "语气松弛随性，口语化，偶尔吐槽，像周末下午的闲聊"
     input_schema = CopywriteInput
-    style_instruction = (
-        "慵懒随性风：语气松弛随性，口语化，偶尔吐槽，"
-        "像周末下午的闲聊"
-    )
+    style_instruction = "慵懒随性风：语气松弛随性，口语化，偶尔吐槽，" "像周末下午的闲聊"
     fallback_template = (
         "今天想聊聊{topic}～\n\n"
         "{direction}这事儿吧，说难也不难。\n\n"
@@ -725,7 +747,7 @@ def _build_execution_brief_section(brief: dict) -> str:
         return (
             "（无执行指令，请基于主题自由判断内容类型和结构）\n"
             "- content_type: 叙事型\n"
-            "- recommended_structure: [\"引入\", \"主体内容\", \"总结\"]\n"
+            '- recommended_structure: ["引入", "主体内容", "总结"]\n'
             "- tone: 自然口语化\n"
             "- title_style: 利益型\n"
             "- visual_suggestion: 简洁排版"
@@ -840,7 +862,9 @@ def _build_insights_summary(insights: dict) -> str:
         strength = trend_signals.get("trend_strength", "")
         basis = trend_signals.get("trend_basis", "")
         if is_trend is not None:
-            parts.append(f"趋势信号: {'是话题型趋势' if is_trend else '非话题型趋势'}, 强度={strength}")
+            parts.append(
+                f"趋势信号: {'是话题型趋势' if is_trend else '非话题型趋势'}, 强度={strength}"
+            )
             if basis:
                 parts.append(f"  依据: {basis[:100]}")
 
@@ -884,7 +908,14 @@ def _load_copywriting_knowledge() -> str:
     Falls back to inline content if file not found (e.g. during tests).
     """
     from pathlib import Path
-    p = Path(__file__).resolve().parent.parent / "agents" / "prompts" / "references" / "copy-frameworks.md"
+
+    p = (
+        Path(__file__).resolve().parent.parent
+        / "agents"
+        / "prompts"
+        / "references"
+        / "copy-frameworks.md"
+    )
     if p.exists():
         return p.read_text(encoding="utf-8").strip()
     logger.warning(f"[copywrite] copy-frameworks.md not found at {p}, using inline fallback")
@@ -907,7 +938,10 @@ def _build_reference_summary(reference: dict) -> str:
     始终注入文案框架/标题公式/去AI感等领域知识（来自 Pulse references）。
     有外部参考素材时，额外追加选题池参考段落。
     """
-    parts: list[str] = ["", f"**领域知识参考**:\n{_COPYWRITING_KNOWLEDGE or _load_copywriting_knowledge()}"]
+    parts: list[str] = [
+        "",
+        f"**领域知识参考**:\n{_COPYWRITING_KNOWLEDGE or _load_copywriting_knowledge()}",
+    ]
 
     if reference:
         parts.append("")
@@ -1112,11 +1146,7 @@ def _validate_copywrite_json(parsed: dict) -> dict | None:
     # key_points 校验：必须是字符串列表，每个不超过 30 字
     if not isinstance(key_points, list):
         key_points = []
-    key_points = [
-        str(p).strip()[:30]
-        for p in key_points
-        if str(p).strip()
-    ][:5]
+    key_points = [str(p).strip()[:30] for p in key_points if str(p).strip()][:5]
     # structured_items 校验：知识清单型主题的结构化数据，供卡片精确排版
     if not isinstance(structured_items, list):
         structured_items = []
@@ -1168,13 +1198,15 @@ async def build_copywrite(
     skill_cls = registry.get("copywrite", skill_name) or LivelyGirlCopywriteSkill
 
     skill = skill_cls()  # type: ignore[assignment]
-    result = await skill.execute({
-        "llm": llm,
-        "topic": topic,
-        "insights": insights,
-        "image_details": image_details,
-        "image_style": image_style,
-    })
+    result = await skill.execute(
+        {
+            "llm": llm,
+            "topic": topic,
+            "insights": insights,
+            "image_details": image_details,
+            "image_style": image_style,
+        }
+    )
     result["_skill"] = skill.name
     return result
 

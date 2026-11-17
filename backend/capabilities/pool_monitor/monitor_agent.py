@@ -9,6 +9,7 @@
 
 异常容错：单条数据解析失败不影响整体，捕获异常记日志后继续下一条。
 """
+
 from __future__ import annotations
 
 import logging
@@ -189,9 +190,7 @@ class MonitorAgent:
         #    用付费检索源会把额度烧光。付费源只在用户主动搜索 / Agent 调用时使用。
         platforms, skipped_billable = auto_crawl_platforms(self.source_manager)
         if skipped_billable:
-            logger.info(
-                f"MonitorAgent: 跳过付费源 {skipped_billable}（仅用户主动搜索时使用）"
-            )
+            logger.info(f"MonitorAgent: 跳过付费源 {skipped_billable}（仅用户主动搜索时使用）")
         if not platforms:
             logger.warning("MonitorAgent: source_manager 无可用平台，跳过抓取")
             await session.commit()
@@ -216,6 +215,7 @@ class MonitorAgent:
         pref_fetched = 0
         if user_id is not None:
             from app.services import agent_memory
+
             kws = await agent_memory.get_search_keywords(user_id, limit=3)
             if kws:
                 pref_limit = max(per_platform // 2, 2)
@@ -295,6 +295,7 @@ class MonitorAgent:
                     if local_cover:
                         try:
                             from app.services.image_store import cache_cover_image
+
                             local_cover = await cache_cover_image(tc.content_id, local_cover)
                         except Exception as img_err:
                             logger.warning(f"MonitorAgent 封面图下载失败: {img_err}")
@@ -343,6 +344,7 @@ class MonitorAgent:
         if new_count > 0:
             try:
                 from app.services.notification_bus import notification_bus
+
                 await notification_bus.publish(
                     "topic_pool_monitor",
                     {
@@ -428,5 +430,7 @@ class MonitorAgent:
             "comments": tc.comments,
             "shares": tc.shares,
         }
-        obj.heat_score = self.scorer.compute_heat_score(raw_metrics, published_at, platform=obj.platform)
+        obj.heat_score = self.scorer.compute_heat_score(
+            raw_metrics, published_at, platform=obj.platform
+        )
         obj.heat_status = self.scorer.decide_heat_status(obj.heat_score, published_at)

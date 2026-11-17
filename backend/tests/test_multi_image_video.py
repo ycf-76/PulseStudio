@@ -19,15 +19,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from capabilities.video.skills.multi_image_video import (
+    _STORYBOARD_PROMPT,
+    _VL_SCENE_PROMPT,
     MultiImageVideoInput,
     MultiImageVideoSkill,
-    _VL_SCENE_PROMPT,
-    _STORYBOARD_PROMPT,
-    _generate_shot_frames,
+    _compose_final,
     _generate_shot_clips,
+    _generate_shot_frames,
     _generate_storyboard,
     _vl_understand_images,
-    _compose_final,
 )
 
 
@@ -44,6 +44,7 @@ def _bypass_asset_guard():
 
 
 # ── 1. MultiImageVideoInput validation ──────────────────────
+
 
 class TestMultiImageVideoInput:
     def test_minimal_valid(self):
@@ -125,6 +126,7 @@ class TestMultiImageVideoInput:
 
 # ── 2. _vl_understand_images — 降级测试 ────────────────────
 
+
 def _mock_tier_router():
     router = MagicMock()
     router.resolve.return_value = "qwen-vl-max"
@@ -176,14 +178,23 @@ class TestVLUnderstandImages:
 
             mock_adapter = AsyncMock()
             mock_adapter.chat.return_value = {
-                "content": json.dumps({
-                    "scenes": [{"image_index": 1, "location": "咖啡馆"}],
-                    "cross_scene": {"shared_subjects": [], "visual_style": "暖色调", "color_system": "棕色系"},
-                }),
+                "content": json.dumps(
+                    {
+                        "scenes": [{"image_index": 1, "location": "咖啡馆"}],
+                        "cross_scene": {
+                            "shared_subjects": [],
+                            "visual_style": "暖色调",
+                            "color_system": "棕色系",
+                        },
+                    }
+                ),
             }
 
             with patch("app.services.model_tier.get_tier_router", return_value=_mock_tier_router()):
-                with patch("capabilities.image_gen.adapters.qwen_vl.QwenVLAdapter", return_value=mock_adapter):
+                with patch(
+                    "capabilities.image_gen.adapters.qwen_vl.QwenVLAdapter",
+                    return_value=mock_adapter,
+                ):
                     result = await _vl_understand_images(["http://example.com/img1.jpg"])
                     assert result is not None
                     assert "scenes" in result
@@ -200,12 +211,16 @@ class TestVLUnderstandImages:
             mock_adapter.chat.return_value = {"content": "这是普通文本，不是JSON"}
 
             with patch("app.services.model_tier.get_tier_router", return_value=_mock_tier_router()):
-                with patch("capabilities.image_gen.adapters.qwen_vl.QwenVLAdapter", return_value=mock_adapter):
+                with patch(
+                    "capabilities.image_gen.adapters.qwen_vl.QwenVLAdapter",
+                    return_value=mock_adapter,
+                ):
                     result = await _vl_understand_images(["http://example.com/img1.jpg"])
                     assert result is None
 
 
 # ── 3. _generate_storyboard — LLM 降级测试 ─────────────────
+
 
 class TestGenerateStoryboard:
     @pytest.mark.asyncio
@@ -225,15 +240,41 @@ class TestGenerateStoryboard:
 
     @pytest.mark.asyncio
     async def test_llm_returns_valid_json(self):
-        storyboard_json = json.dumps({
-            "title": "咖啡馆的一天",
-            "total_shots": 3,
-            "shots": [
-                {"shot_index": 1, "caption": "清晨咖啡馆", "image_prompt": "A cozy cafe in morning light", "motion_prompt": "缓慢推进", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                {"shot_index": 2, "caption": "咖啡特写", "image_prompt": "Close-up of latte art", "motion_prompt": "从左摇到右", "reference_images": [2], "duration": 5.0, "transition": "dissolve"},
-                {"shot_index": 3, "caption": "窗外街景", "image_prompt": "Street view through window", "motion_prompt": "俯拍拉远", "reference_images": [3], "duration": 5.0, "transition": "cut"},
-            ],
-        })
+        storyboard_json = json.dumps(
+            {
+                "title": "咖啡馆的一天",
+                "total_shots": 3,
+                "shots": [
+                    {
+                        "shot_index": 1,
+                        "caption": "清晨咖啡馆",
+                        "image_prompt": "A cozy cafe in morning light",
+                        "motion_prompt": "缓慢推进",
+                        "reference_images": [1],
+                        "duration": 5.0,
+                        "transition": "cut",
+                    },
+                    {
+                        "shot_index": 2,
+                        "caption": "咖啡特写",
+                        "image_prompt": "Close-up of latte art",
+                        "motion_prompt": "从左摇到右",
+                        "reference_images": [2],
+                        "duration": 5.0,
+                        "transition": "dissolve",
+                    },
+                    {
+                        "shot_index": 3,
+                        "caption": "窗外街景",
+                        "image_prompt": "Street view through window",
+                        "motion_prompt": "俯拍拉远",
+                        "reference_images": [3],
+                        "duration": 5.0,
+                        "transition": "cut",
+                    },
+                ],
+            }
+        )
 
         mock_llm = AsyncMock()
         mock_llm.chat.return_value = {"content": storyboard_json}
@@ -286,6 +327,7 @@ class TestGenerateStoryboard:
 
 # ── 4. _generate_shot_frames — 无 API key 降级 ─────────────
 
+
 class TestGenerateShotFrames:
     @pytest.mark.asyncio
     async def test_no_api_key_uses_reference_images(self):
@@ -326,13 +368,18 @@ class TestGenerateShotFrames:
 
 # ── 5. _generate_shot_clips — adapter 不可用降级 ────────────
 
+
 class TestGenerateShotClips:
     @pytest.mark.asyncio
     async def test_adapter_not_available_ken_burns_fallback(self):
         from capabilities.video.adapters.video_gen import VideoGenError
 
         shots = [
-            {"shot_index": 1, "frame_url": "http://example.com/frame1.jpg", "motion_prompt": "推进"},
+            {
+                "shot_index": 1,
+                "frame_url": "http://example.com/frame1.jpg",
+                "motion_prompt": "推进",
+            },
         ]
 
         with patch("capabilities.video.skills.video_gen._resolve_adapter") as mock_resolve:
@@ -360,6 +407,7 @@ class TestGenerateShotClips:
                 mock_settings.return_value = settings
 
                 import sys
+
                 mock_asset_lib = MagicMock()
                 mock_asset_lib.save_video_asset = AsyncMock()
                 with patch.dict(sys.modules, {"app.services.asset_library": mock_asset_lib}):
@@ -374,15 +422,23 @@ class TestGenerateShotClips:
 
 # ── 6. _compose_final — 降级测试 ───────────────────────────
 
+
 class TestComposeFinal:
     @pytest.mark.asyncio
     async def test_all_ken_burns_tries_compose_video(self):
         shots = [
-            {"shot_index": 1, "clip_mode": "ken_burns", "frame_url": "http://example.com/frame1.jpg", "caption": "测试", "duration": 5.0},
+            {
+                "shot_index": 1,
+                "clip_mode": "ken_burns",
+                "frame_url": "http://example.com/frame1.jpg",
+                "caption": "测试",
+                "duration": 5.0,
+            },
         ]
 
         with patch("capabilities.video.adapters.video_compose.compose_video") as mock_compose:
             from pathlib import Path
+
             mock_compose.return_value = Path("/tmp/test_output.mp4")
 
             with patch.object(Path, "read_bytes", return_value=b"fake_mp4_data"):
@@ -396,6 +452,7 @@ class TestComposeFinal:
 
 
 # ── 7. Skill 注册和元数据 ──────────────────────────────────
+
 
 class TestMultiImageVideoSkillMeta:
     def test_skill_metadata(self):
@@ -421,13 +478,18 @@ class TestMultiImageVideoSkillMeta:
         assert "降级" in desc
 
     def test_registered_in_registry(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
         cls = get_skill_class_by_name("multi_image_video")
         assert cls is MultiImageVideoSkill
 
 
 # ── 8. Prompt 常量 ─────────────────────────────────────────
+
 
 class TestPromptConstants:
     def test_vl_prompt_requests_json(self):
@@ -449,25 +511,34 @@ class TestPromptConstants:
 
 # ── 9. compose_video_concat 边界 ───────────────────────────
 
+
 class TestComposeVideoConcat:
     def test_empty_clips_raises(self):
         from capabilities.video.adapters.video_compose import ComposeError, compose_video_concat
+
         with pytest.raises(ComposeError) as exc_info:
             import asyncio
+
             # 2026-10-13：get_event_loop().run_until_complete() 在 Python 3.12
             # 主线程无事件循环时直接 RuntimeError，根本跑不到被测函数。
             asyncio.run(compose_video_concat([]))
         assert exc_info.value.error_type == "empty_clips"
 
     def test_simple_concat_empty_clips_raises(self):
-        from capabilities.video.adapters.video_compose import ComposeError, compose_video_concat_simple
+        from capabilities.video.adapters.video_compose import (
+            ComposeError,
+            compose_video_concat_simple,
+        )
+
         with pytest.raises(ComposeError) as exc_info:
             import asyncio
+
             asyncio.run(compose_video_concat_simple([]))
         assert exc_info.value.error_type == "empty_clips"
 
 
 # ── 10. 全链路降级 ─────────────────────────────────────────
+
 
 class TestFullPipelineDegradation:
     @pytest.mark.asyncio
@@ -487,7 +558,15 @@ class TestFullPipelineDegradation:
     @pytest.mark.asyncio
     async def test_every_step_degradable(self):
         shots = [
-            {"shot_index": 1, "caption": "测试", "image_prompt": "test prompt", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"},
+            {
+                "shot_index": 1,
+                "caption": "测试",
+                "image_prompt": "test prompt",
+                "motion_prompt": "推进",
+                "reference_images": [1],
+                "duration": 5.0,
+                "transition": "cut",
+            },
         ]
         image_urls = ["http://example.com/ref1.jpg"]
 
@@ -505,23 +584,85 @@ class TestFullPipelineDegradation:
         skill = MultiImageVideoSkill()
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/test.mp4", "asset_id": "a1", "id": "a1"})
 
-        with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img.jpg"], [""])):
-            with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={"title": "降级测试", "shots": [{"shot_index": 1, "caption": "测试", "image_prompt": "test", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}]}):
-                    with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[{"shot_index": 1, "frame_url": "http://frame.jpg", "frame_source": "reference"}]):
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[{"shot_index": 1, "clip_mode": "ken_burns", "frame_url": "http://frame.jpg", "caption": "测试", "duration": 5.0}]):
-                            with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(b"fake_mp4_bytes", ["降级提示"])):
-                                with patch.dict(sys.modules, {"app.services.asset_library": mock_asset_lib}):
-                                    result = await skill.execute({
-                                        "image_asset_ids": ["asset_001"],
-                                        "prompt": "全降级测试",
-                                        "refine_shots": [{"shot_index": 1, "caption": "测试", "image_prompt": "test", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}],
-                                        "_context": MagicMock(user_id="user1"),
-                                        "_workflow_id": None,
-                                    })
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={"original_url": "/uploads/test.mp4", "asset_id": "a1", "id": "a1"}
+        )
+
+        with patch(
+            "capabilities.video.skills.multi_image_video._resolve_image_urls",
+            return_value=(["http://img.jpg"], [""]),
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._vl_understand_images",
+                return_value=None,
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_storyboard",
+                    return_value={
+                        "title": "降级测试",
+                        "shots": [
+                            {
+                                "shot_index": 1,
+                                "caption": "测试",
+                                "image_prompt": "test",
+                                "motion_prompt": "推进",
+                                "reference_images": [1],
+                                "duration": 5.0,
+                                "transition": "cut",
+                            }
+                        ],
+                    },
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                        return_value=[
+                            {
+                                "shot_index": 1,
+                                "frame_url": "http://frame.jpg",
+                                "frame_source": "reference",
+                            }
+                        ],
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                            return_value=[
+                                {
+                                    "shot_index": 1,
+                                    "clip_mode": "ken_burns",
+                                    "frame_url": "http://frame.jpg",
+                                    "caption": "测试",
+                                    "duration": 5.0,
+                                }
+                            ],
+                        ):
+                            with patch(
+                                "capabilities.video.skills.multi_image_video._compose_final",
+                                return_value=(b"fake_mp4_bytes", ["降级提示"]),
+                            ):
+                                with patch.dict(
+                                    sys.modules, {"app.services.asset_library": mock_asset_lib}
+                                ):
+                                    result = await skill.execute(
+                                        {
+                                            "image_asset_ids": ["asset_001"],
+                                            "prompt": "全降级测试",
+                                            "refine_shots": [
+                                                {
+                                                    "shot_index": 1,
+                                                    "caption": "测试",
+                                                    "image_prompt": "test",
+                                                    "motion_prompt": "推进",
+                                                    "reference_images": [1],
+                                                    "duration": 5.0,
+                                                    "transition": "cut",
+                                                }
+                                            ],
+                                            "_context": MagicMock(user_id="user1"),
+                                            "_workflow_id": None,
+                                        }
+                                    )
                                     assert result["success"] is True
                                     assert "degradation" in result
                                     assert result["shots_count"] == 1
@@ -531,24 +672,81 @@ class TestFullPipelineDegradation:
     async def test_execute_compose_failure_returns_clips(self):
         skill = MultiImageVideoSkill()
 
-        with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img.jpg"], [""])):
-            with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={"title": "拼接失败测试", "shots": [{"shot_index": 1, "caption": "测试", "image_prompt": "test", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}]}):
-                    with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[{"shot_index": 1, "frame_url": "http://frame.jpg", "frame_source": "reference"}]):
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[{"shot_index": 1, "clip_mode": "video", "clip_url": "http://clip.mp4", "frame_url": "http://frame.jpg"}]):
-                            with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(None, ["拼接失败"])):
-                                result = await skill.execute({
-                                    "image_asset_ids": ["asset_001"],
-                                    "prompt": "拼接失败测试",
-                                    "refine_shots": [{"shot_index": 1, "caption": "测试", "image_prompt": "test", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}],
-                                    "_context": MagicMock(user_id="user1"),
-                                    "_workflow_id": None,
-                                })
+        with patch(
+            "capabilities.video.skills.multi_image_video._resolve_image_urls",
+            return_value=(["http://img.jpg"], [""]),
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._vl_understand_images",
+                return_value=None,
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_storyboard",
+                    return_value={
+                        "title": "拼接失败测试",
+                        "shots": [
+                            {
+                                "shot_index": 1,
+                                "caption": "测试",
+                                "image_prompt": "test",
+                                "motion_prompt": "推进",
+                                "reference_images": [1],
+                                "duration": 5.0,
+                                "transition": "cut",
+                            }
+                        ],
+                    },
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                        return_value=[
+                            {
+                                "shot_index": 1,
+                                "frame_url": "http://frame.jpg",
+                                "frame_source": "reference",
+                            }
+                        ],
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                            return_value=[
+                                {
+                                    "shot_index": 1,
+                                    "clip_mode": "video",
+                                    "clip_url": "http://clip.mp4",
+                                    "frame_url": "http://frame.jpg",
+                                }
+                            ],
+                        ):
+                            with patch(
+                                "capabilities.video.skills.multi_image_video._compose_final",
+                                return_value=(None, ["拼接失败"]),
+                            ):
+                                result = await skill.execute(
+                                    {
+                                        "image_asset_ids": ["asset_001"],
+                                        "prompt": "拼接失败测试",
+                                        "refine_shots": [
+                                            {
+                                                "shot_index": 1,
+                                                "caption": "测试",
+                                                "image_prompt": "test",
+                                                "motion_prompt": "推进",
+                                                "reference_images": [1],
+                                                "duration": 5.0,
+                                                "transition": "cut",
+                                            }
+                                        ],
+                                        "_context": MagicMock(user_id="user1"),
+                                        "_workflow_id": None,
+                                    }
+                                )
                                 assert result["success"] is False
                                 assert "clip_urls" in result
 
 
 # ── 11. 全链路集成测试（不用真实 token，mock 外部依赖） ──────
+
 
 class TestFullPipelineIntegration:
     """端到端走一遍 6 步流水线，验证：
@@ -565,62 +763,232 @@ class TestFullPipelineIntegration:
         sse_events: list[dict] = []
 
         mock_sse_bus = MagicMock()
-        mock_sse_bus.publish = AsyncMock(side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append({"event": evt, "payload": payload}))
+        mock_sse_bus.publish = AsyncMock(
+            side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append(
+                {"event": evt, "payload": payload}
+            )
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/final.mp4", "asset_id": "vid_001", "id": "vid_001"})
-        mock_asset_lib.save_asset = AsyncMock(return_value={"original_url": "/uploads/frame.png", "id": "frame_001"})
 
-        with patch.dict(sys.modules, {
-            "app.services.asset_library": mock_asset_lib,
-            "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
-        }):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(
-                ["http://img1.jpg", "http://img2.jpg", "http://img3.jpg"], ["", "", ""]
-            )):
-                with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value={
-                    "scenes": [
-                        {"image_index": 1, "location": "咖啡厅", "subjects": ["咖啡杯"], "props": ["书"], "lighting": "暖光", "color_tone": "暖棕", "composition": "中景", "mood": "安静"},
-                        {"image_index": 2, "location": "街道", "subjects": ["行人"], "props": ["伞"], "lighting": "自然光", "color_tone": "灰蓝", "composition": "全景", "mood": "匆忙"},
-                        {"image_index": 3, "location": "公园", "subjects": ["狗"], "props": ["飞盘"], "lighting": "夕阳", "color_tone": "金橙", "composition": "低角度", "mood": "欢快"},
-                    ],
-                    "cross_scene": {"shared_subjects": [], "visual_style": "日常纪实", "color_system": "暖色系"},
-                }):
-                    with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={
-                        "title": "日常三幕",
-                        "total_shots": 3,
-                        "shots": [
-                            {"shot_index": 1, "caption": "咖啡厅安静午后", "image_prompt": "coffee shop afternoon, warm light", "motion_prompt": "缓慢推进", "reference_images": [1], "duration": 5.0, "transition": "dissolve"},
-                            {"shot_index": 2, "caption": "街头匆匆行人", "image_prompt": "street pedestrians, natural light", "motion_prompt": "从左摇到右", "reference_images": [2], "duration": 5.0, "transition": "dissolve"},
-                            {"shot_index": 3, "caption": "公园夕阳飞盘", "image_prompt": "park sunset dog frisbee, golden", "motion_prompt": "俯拍拉远", "reference_images": [3], "duration": 5.0, "transition": "cut"},
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={
+                "original_url": "/uploads/final.mp4",
+                "asset_id": "vid_001",
+                "id": "vid_001",
+            }
+        )
+        mock_asset_lib.save_asset = AsyncMock(
+            return_value={"original_url": "/uploads/frame.png", "id": "frame_001"}
+        )
+
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+                "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(
+                    ["http://img1.jpg", "http://img2.jpg", "http://img3.jpg"],
+                    ["", "", ""],
+                ),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._vl_understand_images",
+                    return_value={
+                        "scenes": [
+                            {
+                                "image_index": 1,
+                                "location": "咖啡厅",
+                                "subjects": ["咖啡杯"],
+                                "props": ["书"],
+                                "lighting": "暖光",
+                                "color_tone": "暖棕",
+                                "composition": "中景",
+                                "mood": "安静",
+                            },
+                            {
+                                "image_index": 2,
+                                "location": "街道",
+                                "subjects": ["行人"],
+                                "props": ["伞"],
+                                "lighting": "自然光",
+                                "color_tone": "灰蓝",
+                                "composition": "全景",
+                                "mood": "匆忙",
+                            },
+                            {
+                                "image_index": 3,
+                                "location": "公园",
+                                "subjects": ["狗"],
+                                "props": ["飞盘"],
+                                "lighting": "夕阳",
+                                "color_tone": "金橙",
+                                "composition": "低角度",
+                                "mood": "欢快",
+                            },
                         ],
-                    }):
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[
-                            {"shot_index": 1, "caption": "咖啡厅安静午后", "image_prompt": "coffee shop afternoon", "motion_prompt": "缓慢推进", "reference_images": [1], "duration": 5.0, "transition": "dissolve", "frame_url": "http://frame1.png", "frame_source": "ai_generated"},
-                            {"shot_index": 2, "caption": "街头匆匆行人", "image_prompt": "street pedestrians", "motion_prompt": "从左摇到右", "reference_images": [2], "duration": 5.0, "transition": "dissolve", "frame_url": "http://frame2.png", "frame_source": "ai_generated"},
-                            {"shot_index": 3, "caption": "公园夕阳飞盘", "image_prompt": "park sunset dog", "motion_prompt": "俯拍拉远", "reference_images": [3], "duration": 5.0, "transition": "cut", "frame_url": "http://frame3.png", "frame_source": "ai_generated"},
-                        ]):
-                            with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[
-                                {"shot_index": 1, "caption": "咖啡厅安静午后", "frame_url": "http://frame1.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip1.mp4", "clip_asset_id": "ca1"},
-                                {"shot_index": 2, "caption": "街头匆匆行人", "frame_url": "http://frame2.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip2.mp4", "clip_asset_id": "ca2"},
-                                {"shot_index": 3, "caption": "公园夕阳飞盘", "frame_url": "http://frame3.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip3.mp4", "clip_asset_id": "ca3"},
-                            ]):
-                                with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(
-                                    b"\x00\x00\x00\x20ftypisom",
-                                    [],
-                                )):
-                                    result = await skill.execute({
-                                        "image_asset_ids": ["a1", "a2", "a3"],
-                                        "prompt": "日常三幕：咖啡厅、街道、公园",
-                                        "refine_shots": [
-                                            {"shot_index": 1, "caption": "咖啡厅安静午后", "image_prompt": "coffee shop afternoon, warm light", "motion_prompt": "缓慢推进", "reference_images": [1], "duration": 5.0, "transition": "dissolve"},
-                                            {"shot_index": 2, "caption": "街头匆匆行人", "image_prompt": "street pedestrians, natural light", "motion_prompt": "从左摇到右", "reference_images": [2], "duration": 5.0, "transition": "dissolve"},
-                                            {"shot_index": 3, "caption": "公园夕阳飞盘", "image_prompt": "park sunset dog frisbee, golden", "motion_prompt": "俯拍拉远", "reference_images": [3], "duration": 5.0, "transition": "cut"},
-                                        ],
-                                        "_context": MagicMock(user_id="user1"),
-                                        "_workflow_id": "wf_001",
-                                    })
+                        "cross_scene": {
+                            "shared_subjects": [],
+                            "visual_style": "日常纪实",
+                            "color_system": "暖色系",
+                        },
+                    },
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_storyboard",
+                        return_value={
+                            "title": "日常三幕",
+                            "total_shots": 3,
+                            "shots": [
+                                {
+                                    "shot_index": 1,
+                                    "caption": "咖啡厅安静午后",
+                                    "image_prompt": "coffee shop afternoon, warm light",
+                                    "motion_prompt": "缓慢推进",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "dissolve",
+                                },
+                                {
+                                    "shot_index": 2,
+                                    "caption": "街头匆匆行人",
+                                    "image_prompt": "street pedestrians, natural light",
+                                    "motion_prompt": "从左摇到右",
+                                    "reference_images": [2],
+                                    "duration": 5.0,
+                                    "transition": "dissolve",
+                                },
+                                {
+                                    "shot_index": 3,
+                                    "caption": "公园夕阳飞盘",
+                                    "image_prompt": "park sunset dog frisbee, golden",
+                                    "motion_prompt": "俯拍拉远",
+                                    "reference_images": [3],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                },
+                            ],
+                        },
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                            return_value=[
+                                {
+                                    "shot_index": 1,
+                                    "caption": "咖啡厅安静午后",
+                                    "image_prompt": "coffee shop afternoon",
+                                    "motion_prompt": "缓慢推进",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "dissolve",
+                                    "frame_url": "http://frame1.png",
+                                    "frame_source": "ai_generated",
+                                },
+                                {
+                                    "shot_index": 2,
+                                    "caption": "街头匆匆行人",
+                                    "image_prompt": "street pedestrians",
+                                    "motion_prompt": "从左摇到右",
+                                    "reference_images": [2],
+                                    "duration": 5.0,
+                                    "transition": "dissolve",
+                                    "frame_url": "http://frame2.png",
+                                    "frame_source": "ai_generated",
+                                },
+                                {
+                                    "shot_index": 3,
+                                    "caption": "公园夕阳飞盘",
+                                    "image_prompt": "park sunset dog",
+                                    "motion_prompt": "俯拍拉远",
+                                    "reference_images": [3],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                    "frame_url": "http://frame3.png",
+                                    "frame_source": "ai_generated",
+                                },
+                            ],
+                        ):
+                            with patch(
+                                "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                                return_value=[
+                                    {
+                                        "shot_index": 1,
+                                        "caption": "咖啡厅安静午后",
+                                        "frame_url": "http://frame1.png",
+                                        "duration": 5.0,
+                                        "clip_mode": "video",
+                                        "clip_url": "http://clip1.mp4",
+                                        "clip_asset_id": "ca1",
+                                    },
+                                    {
+                                        "shot_index": 2,
+                                        "caption": "街头匆匆行人",
+                                        "frame_url": "http://frame2.png",
+                                        "duration": 5.0,
+                                        "clip_mode": "video",
+                                        "clip_url": "http://clip2.mp4",
+                                        "clip_asset_id": "ca2",
+                                    },
+                                    {
+                                        "shot_index": 3,
+                                        "caption": "公园夕阳飞盘",
+                                        "frame_url": "http://frame3.png",
+                                        "duration": 5.0,
+                                        "clip_mode": "video",
+                                        "clip_url": "http://clip3.mp4",
+                                        "clip_asset_id": "ca3",
+                                    },
+                                ],
+                            ):
+                                with patch(
+                                    "capabilities.video.skills.multi_image_video._compose_final",
+                                    return_value=(
+                                        b"\x00\x00\x00\x20ftypisom",
+                                        [],
+                                    ),
+                                ):
+                                    result = await skill.execute(
+                                        {
+                                            "image_asset_ids": ["a1", "a2", "a3"],
+                                            "prompt": "日常三幕：咖啡厅、街道、公园",
+                                            "refine_shots": [
+                                                {
+                                                    "shot_index": 1,
+                                                    "caption": "咖啡厅安静午后",
+                                                    "image_prompt": "coffee shop afternoon, warm light",
+                                                    "motion_prompt": "缓慢推进",
+                                                    "reference_images": [1],
+                                                    "duration": 5.0,
+                                                    "transition": "dissolve",
+                                                },
+                                                {
+                                                    "shot_index": 2,
+                                                    "caption": "街头匆匆行人",
+                                                    "image_prompt": "street pedestrians, natural light",
+                                                    "motion_prompt": "从左摇到右",
+                                                    "reference_images": [2],
+                                                    "duration": 5.0,
+                                                    "transition": "dissolve",
+                                                },
+                                                {
+                                                    "shot_index": 3,
+                                                    "caption": "公园夕阳飞盘",
+                                                    "image_prompt": "park sunset dog frisbee, golden",
+                                                    "motion_prompt": "俯拍拉远",
+                                                    "reference_images": [3],
+                                                    "duration": 5.0,
+                                                    "transition": "cut",
+                                                },
+                                            ],
+                                            "_context": MagicMock(user_id="user1"),
+                                            "_workflow_id": "wf_001",
+                                        }
+                                    )
 
         assert result["success"] is True
         assert result["asset_id"] == "vid_001"
@@ -650,36 +1018,74 @@ class TestFullPipelineIntegration:
         sse_events: list[dict] = []
 
         mock_sse_bus = MagicMock()
-        mock_sse_bus.publish = AsyncMock(side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append({"event": evt, "payload": payload}))
+        mock_sse_bus.publish = AsyncMock(
+            side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append(
+                {"event": evt, "payload": payload}
+            )
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/final.mp4", "asset_id": "vid_002", "id": "vid_002"})
 
-        with patch.dict(sys.modules, {
-            "app.services.asset_library": mock_asset_lib,
-            "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
-        }):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img1.jpg"], [""])):
-                with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                    with patch("capabilities.video.skills.multi_image_video._generate_storyboard") as mock_sb:
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={
+                "original_url": "/uploads/final.mp4",
+                "asset_id": "vid_002",
+                "id": "vid_002",
+            }
+        )
+
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+                "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img1.jpg"], [""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._vl_understand_images",
+                    return_value=None,
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_storyboard"
+                    ) as mock_sb:
                         mock_sb.return_value = {
                             "title": "默认分镜",
                             "total_shots": 3,
                             "shots": [
-                                {"shot_index": i + 1, "caption": f"第{i+1}镜", "image_prompt": f"scene {i+1}", "motion_prompt": "缓慢推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}
+                                {
+                                    "shot_index": i + 1,
+                                    "caption": f"第{i+1}镜",
+                                    "image_prompt": f"scene {i+1}",
+                                    "motion_prompt": "缓慢推进",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                }
                                 for i in range(3)
                             ],
                         }
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_frames") as mock_frames:
-                            with patch("capabilities.video.skills.multi_image_video._generate_shot_clips") as mock_clips:
-                                with patch("capabilities.video.skills.multi_image_video._compose_final") as mock_compose:
-                                    result = await skill.execute({
-                                        "image_asset_ids": ["a1"],
-                                        "prompt": "简单测试视频",
-                                        "_context": MagicMock(user_id="user1"),
-                                        "_workflow_id": "wf_002",
-                                    })
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_frames"
+                        ) as mock_frames:
+                            with patch(
+                                "capabilities.video.skills.multi_image_video._generate_shot_clips"
+                            ) as mock_clips:
+                                with patch(
+                                    "capabilities.video.skills.multi_image_video._compose_final"
+                                ) as mock_compose:
+                                    result = await skill.execute(
+                                        {
+                                            "image_asset_ids": ["a1"],
+                                            "prompt": "简单测试视频",
+                                            "_context": MagicMock(user_id="user1"),
+                                            "_workflow_id": "wf_002",
+                                        }
+                                    )
 
         assert result["mode"] == "preview"
         assert result["needs_confirmation"] is True
@@ -702,42 +1108,130 @@ class TestFullPipelineIntegration:
         skill = MultiImageVideoSkill()
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/clip.mp4", "asset_id": "vid_003", "id": "vid_003"})
 
-        with patch.dict(sys.modules, {
-            "app.services.asset_library": mock_asset_lib,
-            "app.services.sse_bus": MagicMock(sse_bus=MagicMock(publish=AsyncMock())),
-        }):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img1.jpg"], [""])):
-                with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                    with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={
-                        "title": "拼接失败",
-                        "total_shots": 2,
-                        "shots": [
-                            {"shot_index": 1, "caption": "镜1", "image_prompt": "s1", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                            {"shot_index": 2, "caption": "镜2", "image_prompt": "s2", "motion_prompt": "拉远", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                        ],
-                    }):
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[
-                            {"shot_index": 1, "caption": "镜1", "frame_url": "http://f1.png", "frame_source": "reference", "duration": 5.0},
-                            {"shot_index": 2, "caption": "镜2", "frame_url": "http://f2.png", "frame_source": "reference", "duration": 5.0},
-                        ]):
-                            with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[
-                                {"shot_index": 1, "caption": "镜1", "frame_url": "http://f1.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip1.mp4"},
-                                {"shot_index": 2, "caption": "镜2", "frame_url": "http://f2.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip2.mp4"},
-                            ]):
-                                with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(None, ["xfade 拼接失败", "简单拼接也失败"])):
-                                    result = await skill.execute({
-                                        "image_asset_ids": ["a1"],
-                                        "prompt": "拼接失败测试",
-                                        "refine_shots": [
-                                            {"shot_index": 1, "caption": "镜1", "image_prompt": "s1", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                                            {"shot_index": 2, "caption": "镜2", "image_prompt": "s2", "motion_prompt": "拉远", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                                        ],
-                                        "_context": MagicMock(user_id="user1"),
-                                        "_workflow_id": None,
-                                    })
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={
+                "original_url": "/uploads/clip.mp4",
+                "asset_id": "vid_003",
+                "id": "vid_003",
+            }
+        )
+
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+                "app.services.sse_bus": MagicMock(sse_bus=MagicMock(publish=AsyncMock())),
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img1.jpg"], [""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._vl_understand_images",
+                    return_value=None,
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_storyboard",
+                        return_value={
+                            "title": "拼接失败",
+                            "total_shots": 2,
+                            "shots": [
+                                {
+                                    "shot_index": 1,
+                                    "caption": "镜1",
+                                    "image_prompt": "s1",
+                                    "motion_prompt": "推进",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                },
+                                {
+                                    "shot_index": 2,
+                                    "caption": "镜2",
+                                    "image_prompt": "s2",
+                                    "motion_prompt": "拉远",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                },
+                            ],
+                        },
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                            return_value=[
+                                {
+                                    "shot_index": 1,
+                                    "caption": "镜1",
+                                    "frame_url": "http://f1.png",
+                                    "frame_source": "reference",
+                                    "duration": 5.0,
+                                },
+                                {
+                                    "shot_index": 2,
+                                    "caption": "镜2",
+                                    "frame_url": "http://f2.png",
+                                    "frame_source": "reference",
+                                    "duration": 5.0,
+                                },
+                            ],
+                        ):
+                            with patch(
+                                "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                                return_value=[
+                                    {
+                                        "shot_index": 1,
+                                        "caption": "镜1",
+                                        "frame_url": "http://f1.png",
+                                        "duration": 5.0,
+                                        "clip_mode": "video",
+                                        "clip_url": "http://clip1.mp4",
+                                    },
+                                    {
+                                        "shot_index": 2,
+                                        "caption": "镜2",
+                                        "frame_url": "http://f2.png",
+                                        "duration": 5.0,
+                                        "clip_mode": "video",
+                                        "clip_url": "http://clip2.mp4",
+                                    },
+                                ],
+                            ):
+                                with patch(
+                                    "capabilities.video.skills.multi_image_video._compose_final",
+                                    return_value=(None, ["xfade 拼接失败", "简单拼接也失败"]),
+                                ):
+                                    result = await skill.execute(
+                                        {
+                                            "image_asset_ids": ["a1"],
+                                            "prompt": "拼接失败测试",
+                                            "refine_shots": [
+                                                {
+                                                    "shot_index": 1,
+                                                    "caption": "镜1",
+                                                    "image_prompt": "s1",
+                                                    "motion_prompt": "推进",
+                                                    "reference_images": [1],
+                                                    "duration": 5.0,
+                                                    "transition": "cut",
+                                                },
+                                                {
+                                                    "shot_index": 2,
+                                                    "caption": "镜2",
+                                                    "image_prompt": "s2",
+                                                    "motion_prompt": "拉远",
+                                                    "reference_images": [1],
+                                                    "duration": 5.0,
+                                                    "transition": "cut",
+                                                },
+                                            ],
+                                            "_context": MagicMock(user_id="user1"),
+                                            "_workflow_id": None,
+                                        }
+                                    )
 
         assert result["success"] is False
         assert result["error"] == "成片拼接失败"
@@ -751,36 +1245,99 @@ class TestFullPipelineIntegration:
         skill = MultiImageVideoSkill()
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/final.mp4", "asset_id": "vid_004", "id": "vid_004"})
 
-        with patch.dict(sys.modules, {
-            "app.services.asset_library": mock_asset_lib,
-        }):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img.jpg"], [""])):
-                with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                    with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={
-                        "title": "无SSE",
-                        "total_shots": 1,
-                        "shots": [{"shot_index": 1, "caption": "测试", "image_prompt": "test", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}],
-                    }):
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[
-                            {"shot_index": 1, "caption": "测试", "frame_url": "http://frame.png", "frame_source": "reference", "duration": 5.0},
-                        ]):
-                            with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[
-                                {"shot_index": 1, "caption": "测试", "frame_url": "http://frame.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip.mp4"},
-                            ]):
-                                with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(
-                                    b"\x00\x00\x00\x20ftypisom",
-                                    [],
-                                )):
-                                    result = await skill.execute({
-                                        "image_asset_ids": ["a1"],
-                                        "prompt": "无SSE测试",
-                                        "refine_shots": [{"shot_index": 1, "caption": "测试", "image_prompt": "test", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}],
-                                        "_context": MagicMock(user_id="user1"),
-                                        "_workflow_id": None,
-                                    })
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={
+                "original_url": "/uploads/final.mp4",
+                "asset_id": "vid_004",
+                "id": "vid_004",
+            }
+        )
+
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img.jpg"], [""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._vl_understand_images",
+                    return_value=None,
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_storyboard",
+                        return_value={
+                            "title": "无SSE",
+                            "total_shots": 1,
+                            "shots": [
+                                {
+                                    "shot_index": 1,
+                                    "caption": "测试",
+                                    "image_prompt": "test",
+                                    "motion_prompt": "推进",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                }
+                            ],
+                        },
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                            return_value=[
+                                {
+                                    "shot_index": 1,
+                                    "caption": "测试",
+                                    "frame_url": "http://frame.png",
+                                    "frame_source": "reference",
+                                    "duration": 5.0,
+                                },
+                            ],
+                        ):
+                            with patch(
+                                "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                                return_value=[
+                                    {
+                                        "shot_index": 1,
+                                        "caption": "测试",
+                                        "frame_url": "http://frame.png",
+                                        "duration": 5.0,
+                                        "clip_mode": "video",
+                                        "clip_url": "http://clip.mp4",
+                                    },
+                                ],
+                            ):
+                                with patch(
+                                    "capabilities.video.skills.multi_image_video._compose_final",
+                                    return_value=(
+                                        b"\x00\x00\x00\x20ftypisom",
+                                        [],
+                                    ),
+                                ):
+                                    result = await skill.execute(
+                                        {
+                                            "image_asset_ids": ["a1"],
+                                            "prompt": "无SSE测试",
+                                            "refine_shots": [
+                                                {
+                                                    "shot_index": 1,
+                                                    "caption": "测试",
+                                                    "image_prompt": "test",
+                                                    "motion_prompt": "推进",
+                                                    "reference_images": [1],
+                                                    "duration": 5.0,
+                                                    "transition": "cut",
+                                                }
+                                            ],
+                                            "_context": MagicMock(user_id="user1"),
+                                            "_workflow_id": None,
+                                        }
+                                    )
 
         assert result["success"] is True
         assert result["shots_count"] == 1
@@ -793,48 +1350,108 @@ class TestFullPipelineIntegration:
         sse_events: list[dict] = []
 
         mock_sse_bus = MagicMock()
-        mock_sse_bus.publish = AsyncMock(side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append({"event": evt, "payload": payload}))
+        mock_sse_bus.publish = AsyncMock(
+            side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append(
+                {"event": evt, "payload": payload}
+            )
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/final.mp4", "asset_id": "vid_005", "id": "vid_005"})
 
-        with patch.dict(sys.modules, {
-            "app.services.asset_library": mock_asset_lib,
-            "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
-        }):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img.jpg"], [""])):
-                with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                    with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={
-                        "title": "进度测试",
-                        "total_shots": 1,
-                        "shots": [{"shot_index": 1, "caption": "测试", "image_prompt": "test", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}],
-                    }):
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[
-                            {"shot_index": 1, "caption": "测试", "frame_url": "http://frame.png", "frame_source": "reference", "duration": 5.0},
-                        ]):
-                            with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[
-                                {"shot_index": 1, "caption": "测试", "frame_url": "http://frame.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip.mp4"},
-                            ]):
-                                with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(
-                                    b"\x00\x00\x00\x20ftypisom",
-                                    [],
-                                )):
-                                    result = await skill.execute({
-                                        "image_asset_ids": ["a1"],
-                                        "prompt": "进度测试视频",
-                                        "_context": MagicMock(user_id="user1"),
-                                        "_workflow_id": "wf_005",
-                                    })
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={
+                "original_url": "/uploads/final.mp4",
+                "asset_id": "vid_005",
+                "id": "vid_005",
+            }
+        )
+
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+                "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img.jpg"], [""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._vl_understand_images",
+                    return_value=None,
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_storyboard",
+                        return_value={
+                            "title": "进度测试",
+                            "total_shots": 1,
+                            "shots": [
+                                {
+                                    "shot_index": 1,
+                                    "caption": "测试",
+                                    "image_prompt": "test",
+                                    "motion_prompt": "推进",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                }
+                            ],
+                        },
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                            return_value=[
+                                {
+                                    "shot_index": 1,
+                                    "caption": "测试",
+                                    "frame_url": "http://frame.png",
+                                    "frame_source": "reference",
+                                    "duration": 5.0,
+                                },
+                            ],
+                        ):
+                            with patch(
+                                "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                                return_value=[
+                                    {
+                                        "shot_index": 1,
+                                        "caption": "测试",
+                                        "frame_url": "http://frame.png",
+                                        "duration": 5.0,
+                                        "clip_mode": "video",
+                                        "clip_url": "http://clip.mp4",
+                                    },
+                                ],
+                            ):
+                                with patch(
+                                    "capabilities.video.skills.multi_image_video._compose_final",
+                                    return_value=(
+                                        b"\x00\x00\x00\x20ftypisom",
+                                        [],
+                                    ),
+                                ):
+                                    result = await skill.execute(
+                                        {
+                                            "image_asset_ids": ["a1"],
+                                            "prompt": "进度测试视频",
+                                            "_context": MagicMock(user_id="user1"),
+                                            "_workflow_id": "wf_005",
+                                        }
+                                    )
 
         progress_events = [e for e in sse_events if e["event"] == "multi_image_video_progress"]
         percents = [e["payload"]["percent"] for e in progress_events]
         for i in range(1, len(percents)):
-            assert percents[i] > percents[i - 1], f"Step {i+1} percent {percents[i]} should > step {i} percent {percents[i-1]}"
+            assert (
+                percents[i] > percents[i - 1]
+            ), f"Step {i+1} percent {percents[i]} should > step {i} percent {percents[i-1]}"
         assert percents[-1] == 100
 
 
 # ── 12. Seedance 首尾帧连贯策略测试 ──────────────────────
+
 
 class TestSeedanceFirstLastFrame:
     """验证 Seedance (provider=ark) 的首尾帧连贯策略：
@@ -855,16 +1472,24 @@ class TestSeedanceFirstLastFrame:
         call_log: list[dict] = []
 
         mock_adapter = AsyncMock()
-        mock_adapter.image2video = AsyncMock(side_effect=lambda **kwargs: (
-            call_log.append(kwargs),
-            b"\x00\x00\x00\x20ftypisom",
-        )[1])
+        mock_adapter.image2video = AsyncMock(
+            side_effect=lambda **kwargs: (
+                call_log.append(kwargs),
+                b"\x00\x00\x00\x20ftypisom",
+            )[1]
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"})
 
-        with patch("capabilities.video.skills.video_gen._resolve_adapter", return_value=(mock_adapter, "ark")):
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"}
+        )
+
+        with patch(
+            "capabilities.video.skills.video_gen._resolve_adapter",
+            return_value=(mock_adapter, "ark"),
+        ):
             with patch.dict(sys.modules, {"app.services.asset_library": mock_asset_lib}):
                 with patch("app.config.get_settings") as mock_settings:
                     settings = MagicMock()
@@ -899,16 +1524,24 @@ class TestSeedanceFirstLastFrame:
         call_log: list[dict] = []
 
         mock_adapter = AsyncMock()
-        mock_adapter.image2video = AsyncMock(side_effect=lambda **kwargs: (
-            call_log.append(kwargs),
-            b"\x00\x00\x00\x20ftypisom",
-        )[1])
+        mock_adapter.image2video = AsyncMock(
+            side_effect=lambda **kwargs: (
+                call_log.append(kwargs),
+                b"\x00\x00\x00\x20ftypisom",
+            )[1]
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"})
 
-        with patch("capabilities.video.skills.video_gen._resolve_adapter", return_value=(mock_adapter, "dashscope")):
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"}
+        )
+
+        with patch(
+            "capabilities.video.skills.video_gen._resolve_adapter",
+            return_value=(mock_adapter, "dashscope"),
+        ):
             with patch.dict(sys.modules, {"app.services.asset_library": mock_asset_lib}):
                 with patch("app.config.get_settings") as mock_settings:
                     settings = MagicMock()
@@ -938,16 +1571,24 @@ class TestSeedanceFirstLastFrame:
         call_log: list[dict] = []
 
         mock_adapter = AsyncMock()
-        mock_adapter.image2video = AsyncMock(side_effect=lambda **kwargs: (
-            call_log.append(kwargs),
-            b"\x00\x00\x00\x20ftypisom",
-        )[1])
+        mock_adapter.image2video = AsyncMock(
+            side_effect=lambda **kwargs: (
+                call_log.append(kwargs),
+                b"\x00\x00\x00\x20ftypisom",
+            )[1]
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"})
 
-        with patch("capabilities.video.skills.video_gen._resolve_adapter", return_value=(mock_adapter, "ark")):
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"}
+        )
+
+        with patch(
+            "capabilities.video.skills.video_gen._resolve_adapter",
+            return_value=(mock_adapter, "ark"),
+        ):
             with patch.dict(sys.modules, {"app.services.asset_library": mock_asset_lib}):
                 with patch("app.config.get_settings") as mock_settings:
                     settings = MagicMock()
@@ -977,16 +1618,24 @@ class TestSeedanceFirstLastFrame:
         call_log: list[dict] = []
 
         mock_adapter = AsyncMock()
-        mock_adapter.image2video = AsyncMock(side_effect=lambda **kwargs: (
-            call_log.append(kwargs),
-            b"\x00\x00\x00\x20ftypisom",
-        )[1])
+        mock_adapter.image2video = AsyncMock(
+            side_effect=lambda **kwargs: (
+                call_log.append(kwargs),
+                b"\x00\x00\x00\x20ftypisom",
+            )[1]
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"})
 
-        with patch("capabilities.video.skills.video_gen._resolve_adapter", return_value=(mock_adapter, "ark")):
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={"original_url": "/uploads/clip.mp4", "asset_id": "a1", "id": "a1"}
+        )
+
+        with patch(
+            "capabilities.video.skills.video_gen._resolve_adapter",
+            return_value=(mock_adapter, "ark"),
+        ):
             with patch.dict(sys.modules, {"app.services.asset_library": mock_asset_lib}):
                 with patch("app.config.get_settings") as mock_settings:
                     settings = MagicMock()
@@ -1008,6 +1657,7 @@ class TestSeedanceFirstLastFrame:
 
 # ── 13. 预览 + 微调模式测试 ─────────────────────────────
 
+
 class TestPreviewAndRefine:
     """验证两阶段交互式微调：
     - preview_only=True → 只走 VL+LLM，返回分镜草稿，不生成视频
@@ -1021,27 +1671,59 @@ class TestPreviewAndRefine:
         sse_events: list[dict] = []
 
         mock_sse_bus = MagicMock()
-        mock_sse_bus.publish = AsyncMock(side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append({"event": evt, "payload": payload}))
+        mock_sse_bus.publish = AsyncMock(
+            side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append(
+                {"event": evt, "payload": payload}
+            )
+        )
 
         import sys
+
         with patch.dict(sys.modules, {"app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus)}):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img1.jpg", "http://img2.jpg"], ["", ""])):
-                with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value={"scenes": [], "cross_scene": {}}):
-                    with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={
-                        "title": "预览测试",
-                        "total_shots": 2,
-                        "shots": [
-                            {"shot_index": 1, "caption": "镜1", "image_prompt": "scene 1", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                            {"shot_index": 2, "caption": "镜2", "image_prompt": "scene 2", "motion_prompt": "拉远", "reference_images": [2], "duration": 5.0, "transition": "dissolve"},
-                        ],
-                    }):
-                        result = await skill.execute({
-                            "image_asset_ids": ["a1", "a2"],
-                            "prompt": "预览测试视频",
-                            "preview_only": True,
-                            "_context": MagicMock(user_id="user1"),
-                            "_workflow_id": "wf_preview",
-                        })
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img1.jpg", "http://img2.jpg"], ["", ""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._vl_understand_images",
+                    return_value={"scenes": [], "cross_scene": {}},
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_storyboard",
+                        return_value={
+                            "title": "预览测试",
+                            "total_shots": 2,
+                            "shots": [
+                                {
+                                    "shot_index": 1,
+                                    "caption": "镜1",
+                                    "image_prompt": "scene 1",
+                                    "motion_prompt": "推进",
+                                    "reference_images": [1],
+                                    "duration": 5.0,
+                                    "transition": "cut",
+                                },
+                                {
+                                    "shot_index": 2,
+                                    "caption": "镜2",
+                                    "image_prompt": "scene 2",
+                                    "motion_prompt": "拉远",
+                                    "reference_images": [2],
+                                    "duration": 5.0,
+                                    "transition": "dissolve",
+                                },
+                            ],
+                        },
+                    ):
+                        result = await skill.execute(
+                            {
+                                "image_asset_ids": ["a1", "a2"],
+                                "prompt": "预览测试视频",
+                                "preview_only": True,
+                                "_context": MagicMock(user_id="user1"),
+                                "_workflow_id": "wf_preview",
+                            }
+                        )
 
         assert result["mode"] == "preview"
         assert result["title"] == "预览测试"
@@ -1065,20 +1747,41 @@ class TestPreviewAndRefine:
         """preview_only + 无 workflow_id → 不发 SSE 但正常返回"""
         skill = MultiImageVideoSkill()
 
-        with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img1.jpg"], [""])):
-            with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                with patch("capabilities.video.skills.multi_image_video._generate_storyboard", return_value={
-                    "title": "无SSE预览",
-                    "total_shots": 1,
-                    "shots": [{"shot_index": 1, "caption": "镜1", "image_prompt": "s1", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"}],
-                }):
-                    result = await skill.execute({
-                        "image_asset_ids": ["a1"],
-                        "prompt": "无SSE预览测试",
-                        "preview_only": True,
-                        "_context": MagicMock(user_id="user1"),
-                        "_workflow_id": None,
-                    })
+        with patch(
+            "capabilities.video.skills.multi_image_video._resolve_image_urls",
+            return_value=(["http://img1.jpg"], [""]),
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._vl_understand_images",
+                return_value=None,
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_storyboard",
+                    return_value={
+                        "title": "无SSE预览",
+                        "total_shots": 1,
+                        "shots": [
+                            {
+                                "shot_index": 1,
+                                "caption": "镜1",
+                                "image_prompt": "s1",
+                                "motion_prompt": "推进",
+                                "reference_images": [1],
+                                "duration": 5.0,
+                                "transition": "cut",
+                            }
+                        ],
+                    },
+                ):
+                    result = await skill.execute(
+                        {
+                            "image_asset_ids": ["a1"],
+                            "prompt": "无SSE预览测试",
+                            "preview_only": True,
+                            "_context": MagicMock(user_id="user1"),
+                            "_workflow_id": None,
+                        }
+                    )
 
         assert result["mode"] == "preview"
         assert result["total_shots"] == 1
@@ -1091,36 +1794,85 @@ class TestPreviewAndRefine:
         sse_events: list[dict] = []
 
         mock_sse_bus = MagicMock()
-        mock_sse_bus.publish = AsyncMock(side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append({"event": evt, "payload": payload}))
+        mock_sse_bus.publish = AsyncMock(
+            side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append(
+                {"event": evt, "payload": payload}
+            )
+        )
 
         import sys
-        mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/refine.mp4", "asset_id": "vid_refine", "id": "vid_refine"})
 
-        with patch.dict(sys.modules, {
-            "app.services.asset_library": mock_asset_lib,
-            "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
-        }):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", return_value=(["http://img1.jpg"], [""])):
-                with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[
-                    {"shot_index": 1, "caption": "编辑后镜1", "frame_url": "http://frame1.png", "frame_source": "ai_generated", "duration": 5.0},
-                ]):
-                    with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[
-                        {"shot_index": 1, "caption": "编辑后镜1", "frame_url": "http://frame1.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip1.mp4"},
-                    ]):
-                        with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(
-                            b"\x00\x00\x00\x20ftypisom",
-                            [],
-                        )):
-                            result = await skill.execute({
-                                "image_asset_ids": ["a1"],
-                                "prompt": "微调测试视频",
-                                "refine_shots": [
-                                    {"shot_index": 1, "caption": "编辑后镜1", "image_prompt": "edited scene", "motion_prompt": "俯拍", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                                ],
-                                "_context": MagicMock(user_id="user1"),
-                                "_workflow_id": "wf_refine",
-                            })
+        mock_asset_lib = MagicMock()
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={
+                "original_url": "/uploads/refine.mp4",
+                "asset_id": "vid_refine",
+                "id": "vid_refine",
+            }
+        )
+
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+                "app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus),
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img1.jpg"], [""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                    return_value=[
+                        {
+                            "shot_index": 1,
+                            "caption": "编辑后镜1",
+                            "frame_url": "http://frame1.png",
+                            "frame_source": "ai_generated",
+                            "duration": 5.0,
+                        },
+                    ],
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                        return_value=[
+                            {
+                                "shot_index": 1,
+                                "caption": "编辑后镜1",
+                                "frame_url": "http://frame1.png",
+                                "duration": 5.0,
+                                "clip_mode": "video",
+                                "clip_url": "http://clip1.mp4",
+                            },
+                        ],
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._compose_final",
+                            return_value=(
+                                b"\x00\x00\x00\x20ftypisom",
+                                [],
+                            ),
+                        ):
+                            result = await skill.execute(
+                                {
+                                    "image_asset_ids": ["a1"],
+                                    "prompt": "微调测试视频",
+                                    "refine_shots": [
+                                        {
+                                            "shot_index": 1,
+                                            "caption": "编辑后镜1",
+                                            "image_prompt": "edited scene",
+                                            "motion_prompt": "俯拍",
+                                            "reference_images": [1],
+                                            "duration": 5.0,
+                                            "transition": "cut",
+                                        },
+                                    ],
+                                    "_context": MagicMock(user_id="user1"),
+                                    "_workflow_id": "wf_refine",
+                                }
+                            )
 
         assert result["success"] is True
         assert result["mode"] == "refine"
@@ -1142,12 +1894,14 @@ class TestPreviewAndRefine:
         """refine_shots=[] → 返回错误"""
         skill = MultiImageVideoSkill()
 
-        result = await skill.execute({
-            "image_asset_ids": ["a1"],
-            "prompt": "空微调测试视频",
-            "refine_shots": [],
-            "_context": MagicMock(user_id="user1"),
-        })
+        result = await skill.execute(
+            {
+                "image_asset_ids": ["a1"],
+                "prompt": "空微调测试视频",
+                "refine_shots": [],
+                "_context": MagicMock(user_id="user1"),
+            }
+        )
 
         assert "error" in result
 
@@ -1157,8 +1911,15 @@ class TestPreviewAndRefine:
         skill = MultiImageVideoSkill()
 
         import sys
+
         mock_asset_lib = MagicMock()
-        mock_asset_lib.save_video_asset = AsyncMock(return_value={"original_url": "/uploads/refine2.mp4", "asset_id": "vid_r2", "id": "vid_r2"})
+        mock_asset_lib.save_video_asset = AsyncMock(
+            return_value={
+                "original_url": "/uploads/refine2.mp4",
+                "asset_id": "vid_r2",
+                "id": "vid_r2",
+            }
+        )
 
         resolve_calls: list[list[str]] = []
 
@@ -1167,28 +1928,66 @@ class TestPreviewAndRefine:
             urls = [f"http://img_{aid}.jpg" for aid in asset_ids]
             return (urls, [""] * len(urls))
 
-        with patch.dict(sys.modules, {"app.services.asset_library": mock_asset_lib, "app.services.sse_bus": MagicMock(sse_bus=MagicMock(publish=AsyncMock()))}):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls", side_effect=_mock_resolve):
-                with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[
-                    {"shot_index": 1, "frame_url": "http://frame.png", "frame_source": "reference", "duration": 5.0},
-                ]):
-                    with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[
-                        {"shot_index": 1, "frame_url": "http://frame.png", "duration": 5.0, "clip_mode": "video", "clip_url": "http://clip.mp4"},
-                    ]):
-                        with patch("capabilities.video.skills.multi_image_video._compose_final", return_value=(
-                            b"\x00\x00\x00\x20ftypisom",
-                            [],
-                        )):
-                            result = await skill.execute({
-                                "image_asset_ids": ["a1"],
-                                "prompt": "换图微调测试视频",
-                                "refine_shots": [
-                                    {"shot_index": 1, "image_prompt": "new scene", "motion_prompt": "推进", "reference_images": [1], "duration": 5.0, "transition": "cut"},
-                                ],
-                                "refine_image_asset_ids": ["b1", "b2"],
-                                "_context": MagicMock(user_id="user1"),
-                                "_workflow_id": None,
-                            })
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+                "app.services.sse_bus": MagicMock(sse_bus=MagicMock(publish=AsyncMock())),
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                side_effect=_mock_resolve,
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                    return_value=[
+                        {
+                            "shot_index": 1,
+                            "frame_url": "http://frame.png",
+                            "frame_source": "reference",
+                            "duration": 5.0,
+                        },
+                    ],
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                        return_value=[
+                            {
+                                "shot_index": 1,
+                                "frame_url": "http://frame.png",
+                                "duration": 5.0,
+                                "clip_mode": "video",
+                                "clip_url": "http://clip.mp4",
+                            },
+                        ],
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._compose_final",
+                            return_value=(
+                                b"\x00\x00\x00\x20ftypisom",
+                                [],
+                            ),
+                        ):
+                            result = await skill.execute(
+                                {
+                                    "image_asset_ids": ["a1"],
+                                    "prompt": "换图微调测试视频",
+                                    "refine_shots": [
+                                        {
+                                            "shot_index": 1,
+                                            "image_prompt": "new scene",
+                                            "motion_prompt": "推进",
+                                            "reference_images": [1],
+                                            "duration": 5.0,
+                                            "transition": "cut",
+                                        },
+                                    ],
+                                    "refine_image_asset_ids": ["b1", "b2"],
+                                    "_context": MagicMock(user_id="user1"),
+                                    "_workflow_id": None,
+                                }
+                            )
 
         assert result["success"] is True
         assert result["mode"] == "refine"
@@ -1196,6 +1995,7 @@ class TestPreviewAndRefine:
 
 
 # ── 13b. 确认闸门测试（2026-10-17 接入） ─────────────────
+
 
 class TestConfirmGate:
     """确认闸门：生成视频只能由「用户确认过的分镜」（refine_shots）触发。
@@ -1206,12 +2006,24 @@ class TestConfirmGate:
     """
 
     SHOTS = [
-        {"shot_index": 1, "caption": "镜1", "image_prompt": "scene 1",
-         "motion_prompt": "推进", "reference_images": [1], "duration": 5.0,
-         "transition": "cut"},
-        {"shot_index": 2, "caption": "镜2", "image_prompt": "scene 2",
-         "motion_prompt": "拉远", "reference_images": [2], "duration": 5.0,
-         "transition": "dissolve"},
+        {
+            "shot_index": 1,
+            "caption": "镜1",
+            "image_prompt": "scene 1",
+            "motion_prompt": "推进",
+            "reference_images": [1],
+            "duration": 5.0,
+            "transition": "cut",
+        },
+        {
+            "shot_index": 2,
+            "caption": "镜2",
+            "image_prompt": "scene 2",
+            "motion_prompt": "拉远",
+            "reference_images": [2],
+            "duration": 5.0,
+            "transition": "dissolve",
+        },
     ]
 
     def _storyboard(self):
@@ -1229,20 +2041,34 @@ class TestConfirmGate:
         frames = AsyncMock()
         clips = AsyncMock()
 
-        with patch("capabilities.video.skills.multi_image_video._resolve_image_urls",
-                   return_value=(["http://img1.jpg", "http://img2.jpg"], ["", ""])):
-            with patch("capabilities.video.skills.multi_image_video._vl_understand_images",
-                       return_value={"scenes": [], "cross_scene": {}}):
-                with patch("capabilities.video.skills.multi_image_video._generate_storyboard",
-                           return_value=self._storyboard()):
-                    with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", new=frames):
-                        with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", new=clips):
-                            result = await skill.execute({
-                                "image_asset_ids": ["a1", "a2"],
-                                "prompt": "闸门测试视频",
-                                "_context": MagicMock(user_id="user1"),
-                                "_workflow_id": None,
-                            })
+        with patch(
+            "capabilities.video.skills.multi_image_video._resolve_image_urls",
+            return_value=(["http://img1.jpg", "http://img2.jpg"], ["", ""]),
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._vl_understand_images",
+                return_value={"scenes": [], "cross_scene": {}},
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_storyboard",
+                    return_value=self._storyboard(),
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                        new=frames,
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                            new=clips,
+                        ):
+                            result = await skill.execute(
+                                {
+                                    "image_asset_ids": ["a1", "a2"],
+                                    "prompt": "闸门测试视频",
+                                    "_context": MagicMock(user_id="user1"),
+                                    "_workflow_id": None,
+                                }
+                            )
 
         assert result["mode"] == "preview"
         assert result["needs_confirmation"] is True
@@ -1255,17 +2081,26 @@ class TestConfirmGate:
         """confirm_hint 必须把 Agent 引到「确认后用 refine_shots 回传」这一步"""
         skill = MultiImageVideoSkill()
 
-        with patch("capabilities.video.skills.multi_image_video._resolve_image_urls",
-                   return_value=(["http://img1.jpg"], [""])):
-            with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                with patch("capabilities.video.skills.multi_image_video._generate_storyboard",
-                           return_value={"title": "提示测试", "shots": self.SHOTS[:1]}):
-                    result = await skill.execute({
-                        "image_asset_ids": ["a1"],
-                        "prompt": "提示测试视频",
-                        "_context": MagicMock(user_id="user1"),
-                        "_workflow_id": None,
-                    })
+        with patch(
+            "capabilities.video.skills.multi_image_video._resolve_image_urls",
+            return_value=(["http://img1.jpg"], [""]),
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._vl_understand_images",
+                return_value=None,
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_storyboard",
+                    return_value={"title": "提示测试", "shots": self.SHOTS[:1]},
+                ):
+                    result = await skill.execute(
+                        {
+                            "image_asset_ids": ["a1"],
+                            "prompt": "提示测试视频",
+                            "_context": MagicMock(user_id="user1"),
+                            "_workflow_id": None,
+                        }
+                    )
 
         hint = result["confirm_hint"]
         assert "refine_shots" in hint
@@ -1279,23 +2114,35 @@ class TestConfirmGate:
         sse_events: list[dict] = []
 
         import sys
+
         mock_sse_bus = MagicMock()
         mock_sse_bus.publish = AsyncMock(
-            side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append({"event": evt, "payload": payload})
+            side_effect=lambda wid, evt, payload, turn_id=None: sse_events.append(
+                {"event": evt, "payload": payload}
+            )
         )
 
         with patch.dict(sys.modules, {"app.services.sse_bus": MagicMock(sse_bus=mock_sse_bus)}):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls",
-                       return_value=(["http://img1.jpg"], [""])):
-                with patch("capabilities.video.skills.multi_image_video._vl_understand_images", return_value=None):
-                    with patch("capabilities.video.skills.multi_image_video._generate_storyboard",
-                               return_value={"title": "草稿推送", "shots": self.SHOTS[:1]}):
-                        result = await skill.execute({
-                            "image_asset_ids": ["a1"],
-                            "prompt": "草稿推送测试",
-                            "_context": MagicMock(user_id="user1"),
-                            "_workflow_id": "wf_gate",
-                        })
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img1.jpg"], [""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._vl_understand_images",
+                    return_value=None,
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_storyboard",
+                        return_value={"title": "草稿推送", "shots": self.SHOTS[:1]},
+                    ):
+                        result = await skill.execute(
+                            {
+                                "image_asset_ids": ["a1"],
+                                "prompt": "草稿推送测试",
+                                "_context": MagicMock(user_id="user1"),
+                                "_workflow_id": "wf_gate",
+                            }
+                        )
 
         assert result["needs_confirmation"] is True
         card_events = [e for e in sse_events if e["event"] == "card_draft_ready"]
@@ -1308,33 +2155,63 @@ class TestConfirmGate:
         skill = MultiImageVideoSkill()
 
         import sys
+
         mock_asset_lib = MagicMock()
         mock_asset_lib.save_video_asset = AsyncMock(
-            return_value={"original_url": "/uploads/gate.mp4", "asset_id": "vid_gate", "id": "vid_gate"}
+            return_value={
+                "original_url": "/uploads/gate.mp4",
+                "asset_id": "vid_gate",
+                "id": "vid_gate",
+            }
         )
 
-        with patch.dict(sys.modules, {
-            "app.services.asset_library": mock_asset_lib,
-            "app.services.sse_bus": MagicMock(sse_bus=MagicMock(publish=AsyncMock())),
-        }):
-            with patch("capabilities.video.skills.multi_image_video._resolve_image_urls",
-                       return_value=(["http://img1.jpg"], [""])):
-                with patch("capabilities.video.skills.multi_image_video._generate_shot_frames", return_value=[
-                    {"shot_index": 1, "frame_url": "http://f.png", "frame_source": "ai_generated", "duration": 5.0},
-                ]):
-                    with patch("capabilities.video.skills.multi_image_video._generate_shot_clips", return_value=[
-                        {"shot_index": 1, "frame_url": "http://f.png", "duration": 5.0,
-                         "clip_mode": "video", "clip_url": "http://c.mp4"},
-                    ]):
-                        with patch("capabilities.video.skills.multi_image_video._compose_final",
-                                   return_value=(b"\x00\x00\x00\x20ftypisom", [])):
-                            result = await skill.execute({
-                                "image_asset_ids": ["a1"],
-                                "prompt": "确认后生成测试",
-                                "refine_shots": [dict(self.SHOTS[0])],
-                                "_context": MagicMock(user_id="user1"),
-                                "_workflow_id": None,
-                            })
+        with patch.dict(
+            sys.modules,
+            {
+                "app.services.asset_library": mock_asset_lib,
+                "app.services.sse_bus": MagicMock(sse_bus=MagicMock(publish=AsyncMock())),
+            },
+        ):
+            with patch(
+                "capabilities.video.skills.multi_image_video._resolve_image_urls",
+                return_value=(["http://img1.jpg"], [""]),
+            ):
+                with patch(
+                    "capabilities.video.skills.multi_image_video._generate_shot_frames",
+                    return_value=[
+                        {
+                            "shot_index": 1,
+                            "frame_url": "http://f.png",
+                            "frame_source": "ai_generated",
+                            "duration": 5.0,
+                        },
+                    ],
+                ):
+                    with patch(
+                        "capabilities.video.skills.multi_image_video._generate_shot_clips",
+                        return_value=[
+                            {
+                                "shot_index": 1,
+                                "frame_url": "http://f.png",
+                                "duration": 5.0,
+                                "clip_mode": "video",
+                                "clip_url": "http://c.mp4",
+                            },
+                        ],
+                    ):
+                        with patch(
+                            "capabilities.video.skills.multi_image_video._compose_final",
+                            return_value=(b"\x00\x00\x00\x20ftypisom", []),
+                        ):
+                            result = await skill.execute(
+                                {
+                                    "image_asset_ids": ["a1"],
+                                    "prompt": "确认后生成测试",
+                                    "refine_shots": [dict(self.SHOTS[0])],
+                                    "_context": MagicMock(user_id="user1"),
+                                    "_workflow_id": None,
+                                }
+                            )
 
         assert result["success"] is True
         assert result["mode"] == "refine"
@@ -1343,16 +2220,20 @@ class TestConfirmGate:
     def test_images_required_when_no_refine_shots(self):
         """既无参考图又不带 refine_shots → 参数校验直接拒绝"""
         with pytest.raises(Exception):
-            MultiImageVideoInput.model_validate({
-                "prompt": "没有图的视频",
-            })
+            MultiImageVideoInput.model_validate(
+                {
+                    "prompt": "没有图的视频",
+                }
+            )
 
     def test_images_optional_in_refine_mode(self):
         """refine_shots 模式下 image_asset_ids 可省略（确认轮不必重复传图）"""
-        inp = MultiImageVideoInput.model_validate({
-            "prompt": "确认后的视频",
-            "refine_shots": [dict(self.SHOTS[0])],
-        })
+        inp = MultiImageVideoInput.model_validate(
+            {
+                "prompt": "确认后的视频",
+                "refine_shots": [dict(self.SHOTS[0])],
+            }
+        )
         assert inp.image_asset_ids == []
         assert len(inp.refine_shots) == 1
 
@@ -1361,11 +2242,13 @@ class TestConfirmGate:
         """refine 模式下两手都空 → 明确报错，不静默产出空素材视频"""
         skill = MultiImageVideoSkill()
 
-        result = await skill.execute({
-            "prompt": "空素材微调测试",
-            "refine_shots": [dict(self.SHOTS[0])],
-            "_context": MagicMock(user_id="user1"),
-        })
+        result = await skill.execute(
+            {
+                "prompt": "空素材微调测试",
+                "refine_shots": [dict(self.SHOTS[0])],
+                "_context": MagicMock(user_id="user1"),
+            }
+        )
 
         assert "参考图" in result["error"]
         assert "image_asset_ids" in result["hint"]

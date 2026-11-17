@@ -179,10 +179,12 @@ def test_parse_results_drops_homepage():
     预期: 首页被剔除，只留真实文章
     文档依据: 旧路线 deepseek_search_source._is_homepage 同类策略
     """
-    items = parse_results(_payload(
-        _item(url="https://news.ifeng.com/?mid=1"),
-        _item(url="https://example.com/article/1"),
-    ))
+    items = parse_results(
+        _payload(
+            _item(url="https://news.ifeng.com/?mid=1"),
+            _item(url="https://example.com/article/1"),
+        )
+    )
 
     assert items is not None
     assert [i["url"] for i in items] == ["https://example.com/article/1"]
@@ -275,10 +277,12 @@ async def test_retry_on_5xx_then_success(source: DeepSeekApiSource, no_sleep: No
     预期: 自动重试并最终返回结果
     文档依据: 旧路线 deepseek_search_source 同类重试策略（429/5xx 退避重试）
     """
-    client = _FakeClient([
-        _FakeResponse(503, None, "service unavailable"),
-        _FakeResponse(200, _payload(*_items(1))),
-    ])
+    client = _FakeClient(
+        [
+            _FakeResponse(503, None, "service unavailable"),
+            _FakeResponse(200, _payload(*_items(1))),
+        ]
+    )
     source._client = client
 
     results = await source.search_trending("露营装备", limit=5)
@@ -506,7 +510,10 @@ async def test_fetch_rejects_shorter_anti_bot_page():
     故 200 也可能是反爬/登录墙，用它覆盖更长的服务端摘要会让正文质量断崖式下降
     """
     src = DeepSeekApiSource(
-        api_key="k", count=20, cache_ttl=0, fetch_min_chars=1000,
+        api_key="k",
+        count=20,
+        cache_ttl=0,
+        fetch_min_chars=1000,
     )
     client = _RouteClient(
         _payload(_short_item("https://example.com/a/1", chars=500)),
@@ -534,11 +541,13 @@ async def test_fetch_max_urls_limits_requests():
     文档依据: 成本控制——补全条数由配置决定
     """
     src = DeepSeekApiSource(
-        api_key="k", count=20, cache_ttl=0, fetch_min_chars=200, fetch_max_urls=2,
+        api_key="k",
+        count=20,
+        cache_ttl=0,
+        fetch_min_chars=200,
+        fetch_max_urls=2,
     )
-    client = _RouteClient(_payload(*[
-        _short_item(f"https://example.com/a/{i}") for i in range(3)
-    ]))
+    client = _RouteClient(_payload(*[_short_item(f"https://example.com/a/{i}") for i in range(3)]))
     src._client = client
 
     results = await src.search_trending("露营装备", limit=5)
@@ -546,7 +555,8 @@ async def test_fetch_max_urls_limits_requests():
     fetch_reqs = client.fetch_requests()
     assert len(fetch_reqs) == 2
     assert [r["json"]["url"] for r in fetch_reqs] == [
-        "https://example.com/a/0", "https://example.com/a/1",
+        "https://example.com/a/0",
+        "https://example.com/a/1",
     ]
     assert results[2].raw.get("fetched") is None
 
@@ -559,7 +569,11 @@ async def test_fetch_truncates_to_max_chars():
     文档依据: 成本控制——单条正文上限由配置决定
     """
     src = DeepSeekApiSource(
-        api_key="k", count=20, cache_ttl=0, fetch_min_chars=200, fetch_max_chars=4000,
+        api_key="k",
+        count=20,
+        cache_ttl=0,
+        fetch_min_chars=200,
+        fetch_max_chars=4000,
     )
     long_md = "字" * 6000
     client = _RouteClient(

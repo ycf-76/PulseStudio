@@ -10,6 +10,7 @@
 
 全部离线 mock，不碰真机 LLM。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,11 +18,11 @@ from pathlib import Path
 import pytest
 
 from app.engine.protocol.events import (
-    EventType,
-    EndedReason,
-    LoopTermination,
     SCHEMA_VERSION,
     TERMINAL_EVENTS,
+    EndedReason,
+    EventType,
+    LoopTermination,
     validate_ended_reason,
 )
 from app.engine.reactor import session as session_module
@@ -48,9 +49,11 @@ class _QueuedLLM:
 
     async def stream_chat(self, messages):
         self.calls += 1
-        chunks = self._responses.pop(0) if self._responses else [
-            {"content": "", "is_final": True, "token_usage": 0}
-        ]
+        chunks = (
+            self._responses.pop(0)
+            if self._responses
+            else [{"content": "", "is_final": True, "token_usage": 0}]
+        )
         for c in chunks:
             yield c
 
@@ -70,7 +73,9 @@ def _text_chunks() -> list[dict]:
 def _tool_call_chunks() -> list[dict]:
     """带未知工具调用的 ReAct JSON（dispatch 报 unknown tool，循环继续）。"""
     return [
-        {"content": '{"thought": "调工具", "tool_calls": [{"name": "no_such_tool", "arguments": {}}]}'},
+        {
+            "content": '{"thought": "调工具", "tool_calls": [{"name": "no_such_tool", "arguments": {}}]}'
+        },
         {"content": "", "is_final": True, "token_usage": 1},
     ]
 
@@ -89,6 +94,7 @@ def _event_names(bus: _FakeBus) -> set[str]:
 
 # ---------- 1. 枚举契约 ----------
 
+
 def test_ended_reason_members_frozen():
     """前端渲染依赖这组值：只许加，不许删/改。
 
@@ -97,10 +103,18 @@ def test_ended_reason_members_frozen():
     分支，其余值按普通终态渲染，故新增该值不影响既有渲染路径。
     """
     assert {r.value for r in EndedReason} == {
-        "completed", "max_iterations", "token_budget", "nudge_exhausted",
-        "duplicate_calls", "fake_final", "clarification_paused",
-        "guardian_paused", "storyboard_paused", "cut_plan_paused",
-        "side_write_paused", "error",
+        "completed",
+        "max_iterations",
+        "token_budget",
+        "nudge_exhausted",
+        "duplicate_calls",
+        "fake_final",
+        "clarification_paused",
+        "guardian_paused",
+        "storyboard_paused",
+        "cut_plan_paused",
+        "side_write_paused",
+        "error",
     }
 
 
@@ -114,6 +128,7 @@ def test_validate_ended_reason_falls_back():
 
 
 # ---------- 2. 出口路径 ----------
+
 
 @pytest.mark.asyncio
 async def test_completed_path():
@@ -137,7 +152,8 @@ async def test_nudge_exhausted_path():
     bus = _FakeBus()
     session = ReactorSession(
         llm=_QueuedLLM([_text_chunks(), _text_chunks(), _text_chunks()]),
-        workflow_id="wf_n1", sse_bus=bus,
+        workflow_id="wf_n1",
+        sse_bus=bus,
     )
     output = await session.run("写一篇手冲咖啡笔记")
 
@@ -151,7 +167,9 @@ async def test_max_iterations_path():
     bus = _FakeBus()
     session = ReactorSession(
         llm=_QueuedLLM([_tool_call_chunks()]),
-        workflow_id="wf_m1", sse_bus=bus, max_iterations=1,
+        workflow_id="wf_m1",
+        sse_bus=bus,
+        max_iterations=1,
     )
     output = await session.run("写一篇手冲咖啡笔记")
 
@@ -162,7 +180,9 @@ async def test_max_iterations_path():
 @pytest.mark.asyncio
 async def test_token_budget_path():
     bus = _FakeBus()
-    session = ReactorSession(llm=_QueuedLLM([_big_token_chunks()]), workflow_id="wf_t1", sse_bus=bus)
+    session = ReactorSession(
+        llm=_QueuedLLM([_big_token_chunks()]), workflow_id="wf_t1", sse_bus=bus
+    )
     output = await session.run("写一篇手冲咖啡笔记")
 
     assert output["ended_reason"] == "token_budget"
@@ -170,6 +190,7 @@ async def test_token_budget_path():
 
 
 # ---------- 3. 输出白名单契约 ----------
+
 
 def test_format_final_output_whitelist():
     output = {
@@ -197,6 +218,7 @@ def test_format_final_output_defaults_completed():
 
 # ---------- 4. 事件名全登记 ----------
 
+
 @pytest.mark.asyncio
 async def test_all_sse_events_registered():
     bus = _FakeBus()
@@ -217,12 +239,14 @@ def test_terminal_events_carry_ended_reason():
 
 # ---------- 5. 源码级插桩完整性 ----------
 
+
 def test_all_reasons_have_exit_annotations():
     """静态锁：除 ERROR（上层捕获路径赋值）外，每个 reason 在 session.py
     都有 EndedReason.X 出口赋值点——防止未来加出口忘记标原因。"""
     src = Path(session_module.__file__).read_text(encoding="utf-8")
     missing = [
-        r.name for r in EndedReason
+        r.name
+        for r in EndedReason
         if r is not EndedReason.ERROR and f"EndedReason.{r.name}" not in src
     ]
     assert not missing, f"session.py 缺少出口插桩: {missing}"

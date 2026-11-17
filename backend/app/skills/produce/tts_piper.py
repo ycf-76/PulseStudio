@@ -14,6 +14,7 @@ _generate_narration 两级降级链的第二级。
   4. RTF≈0.09：4.7s 音频 0.4s 推理完，比实时快 10 倍
   5. 输出：pcm_s16le / 22050Hz / 单声道 wav（compose_video 内有 aresample）
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -41,6 +42,7 @@ def _resolve_piper_paths(binary: str | None, model_path: str | None) -> tuple[st
     if not b or not m:
         try:
             from app.config import get_settings
+
             s = get_settings()
             b = b or getattr(s, "piper_binary", "") or _DEFAULT_PIPER_BINARY
             m = m or getattr(s, "piper_model_path", "") or _DEFAULT_PIPER_MODEL
@@ -80,8 +82,10 @@ async def synthesize_piper(
     try:
         proc = await asyncio.create_subprocess_exec(
             str(bin_p),
-            "-m", str(model_p),
-            "-f", str(out_p),
+            "-m",
+            str(model_p),
+            "-f",
+            str(out_p),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -98,9 +102,7 @@ async def synthesize_piper(
         _stdout, stderr, returncode = result.stdout, result.stderr, result.returncode
     if returncode != 0:
         tail = (stderr or b"").decode("utf-8", "ignore").splitlines()[-8:]
-        raise RuntimeError(
-            f"piper 推理失败（rc={returncode}）：\n" + "\n".join(tail)
-        )
+        raise RuntimeError(f"piper 推理失败（rc={returncode}）：\n" + "\n".join(tail))
     if not (out_p.is_file() and out_p.stat().st_size > 0):
         raise RuntimeError(f"piper 未产出有效音频：{out_p}")
     return str(out_p)
@@ -126,9 +128,9 @@ class PiperTTSSkill(Skill):
     input_schema = PiperTTSInput
 
     async def execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        params = PiperTTSInput.model_validate({
-            k: v for k, v in inputs.items() if k in PiperTTSInput.model_fields
-        })
+        params = PiperTTSInput.model_validate(
+            {k: v for k, v in inputs.items() if k in PiperTTSInput.model_fields}
+        )
         # 产物隔离：每次合成用独立文件名。此前固定写 outputs/tts_piper_output.wav，
         # 两个会话同时配音会互相覆盖，且 /outputs 未挂载、前端根本取不到音频。
         _UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "uploads")) / "tts"
@@ -145,12 +147,18 @@ class PiperTTSSkill(Skill):
             "card_draft": {
                 "title": "离线语音合成",
                 "template": "piper_tts",
-                "pages": [{
-                    "id": "page_piper_tts", "type": "content", "mediaType": "audio",
-                    "title": "离线语音合成",
-                    "audioUrl": f"/uploads/tts/{Path(result_path).name}",
-                    "width": 800, "height": 200,
-                }],
-                "pngUrls": [], "htmlUrls": [],
+                "pages": [
+                    {
+                        "id": "page_piper_tts",
+                        "type": "content",
+                        "mediaType": "audio",
+                        "title": "离线语音合成",
+                        "audioUrl": f"/uploads/tts/{Path(result_path).name}",
+                        "width": 800,
+                        "height": 200,
+                    }
+                ],
+                "pngUrls": [],
+                "htmlUrls": [],
             },
         }

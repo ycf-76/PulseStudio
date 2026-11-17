@@ -83,8 +83,11 @@ class TestV3VisualDiversity:
 class TestOverlayCoverage:
     def _seg(self, sid: str, s: float, e: float) -> OverlaySegment:
         return OverlaySegment(
-            segment_id=sid, time_start=s, time_end=e,
-            template=OverlayTemplate.CAPTION_POP, params={},
+            segment_id=sid,
+            time_start=s,
+            time_end=e,
+            template=OverlayTemplate.CAPTION_POP,
+            params={},
         )
 
     def test_空规划_覆盖为零(self):
@@ -97,25 +100,41 @@ class TestOverlayCoverage:
 
     def test_重叠叠加_按并集计算(self):
         """重叠窗口不重复计数。"""
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0, 4), self._seg("o2", 2, 6),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0, 4),
+                self._seg("o2", 2, 6),
+            ],
+        )
         assert abs(overlay_coverage(plan, 10.0) - 0.6) < 1e-9
 
     def test_skipped段不计入(self):
         seg = self._seg("o1", 0, 5)
-        plan = OverlayPlan(video_id="", segments=[
-            seg, OverlaySegment(
-                segment_id="o2", time_start=5, time_end=10,
-                template=OverlayTemplate.CAPTION_POP, params={}, skipped=True,
-            ),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                seg,
+                OverlaySegment(
+                    segment_id="o2",
+                    time_start=5,
+                    time_end=10,
+                    template=OverlayTemplate.CAPTION_POP,
+                    params={},
+                    skipped=True,
+                ),
+            ],
+        )
         assert abs(overlay_coverage(plan, 10.0) - 0.5) < 1e-9
 
     def test_越界时长clamp到1(self):
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0, 10), self._seg("o2", 5, 10),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0, 10),
+                self._seg("o2", 5, 10),
+            ],
+        )
         assert overlay_coverage(plan, 10.0) == 1.0
 
     def test_零时长_不崩溃(self):
@@ -132,8 +151,11 @@ class TestLargestOverlayGap:
 
     def _seg(self, sid: str, s: float, e: float) -> OverlaySegment:
         return OverlaySegment(
-            segment_id=sid, time_start=s, time_end=e,
-            template=OverlayTemplate.CAPTION_POP, params={},
+            segment_id=sid,
+            time_start=s,
+            time_end=e,
+            template=OverlayTemplate.CAPTION_POP,
+            params={},
         )
 
     def test_空规划_空白等于全片(self):
@@ -141,16 +163,24 @@ class TestLargestOverlayGap:
         assert (gap, s, e) == (10.0, 0.0, 10.0)
 
     def test_连续覆盖_零空白(self):
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0, 5), self._seg("o2", 5, 10),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0, 5),
+                self._seg("o2", 5, 10),
+            ],
+        )
         assert largest_overlay_gap(plan, 10.0)[0] == 0.0
 
     def test_长尾空白_被识别(self):
         """180s 伪影场景：13 个叠加全挤在前 26s → 154s 空白。"""
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0, 13), self._seg("o2", 13, 26),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0, 13),
+                self._seg("o2", 13, 26),
+            ],
+        )
         gap, s, e = largest_overlay_gap(plan, 180.0)
         assert gap == 154.0 and (s, e) == (26.0, 180.0)
 
@@ -160,28 +190,44 @@ class TestLargestOverlayGap:
         assert gap == 4.0 and (s, e) == (0.0, 4.0)
 
     def test_中间空档_取最大者(self):
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0, 2), self._seg("o2", 4, 6), self._seg("o3", 12, 20),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0, 2),
+                self._seg("o2", 4, 6),
+                self._seg("o3", 12, 20),
+            ],
+        )
         gap, s, e = largest_overlay_gap(plan, 20.0)
         assert gap == 6.0 and (s, e) == (6.0, 12.0)
 
     def test_重叠段合并后计算(self):
         """o1 0-4 与 o2 2-8 并集 0-8 → 空白只有片尾 2s。"""
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0, 4), self._seg("o2", 2, 8),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0, 4),
+                self._seg("o2", 2, 8),
+            ],
+        )
         gap, s, e = largest_overlay_gap(plan, 10.0)
         assert gap == 2.0 and (s, e) == (8.0, 10.0)
 
     def test_skipped段不计入(self):
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0, 5),
-            OverlaySegment(
-                segment_id="o2", time_start=5, time_end=10,
-                template=OverlayTemplate.CAPTION_POP, params={}, skipped=True,
-            ),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0, 5),
+                OverlaySegment(
+                    segment_id="o2",
+                    time_start=5,
+                    time_end=10,
+                    template=OverlayTemplate.CAPTION_POP,
+                    params={},
+                    skipped=True,
+                ),
+            ],
+        )
         gap, s, e = largest_overlay_gap(plan, 10.0)
         assert gap == 5.0 and (s, e) == (5.0, 10.0)
 
@@ -191,9 +237,13 @@ class TestLargestOverlayGap:
 
     def test_真实合格产物_远低于阈值(self):
         """run12 实测最大空白 1.9~3.4s — 6s 阈值不误报。"""
-        plan = OverlayPlan(video_id="", segments=[
-            self._seg("o1", 0.0, 6.4), self._seg("o2", 8.28, 20.0),
-        ])
+        plan = OverlayPlan(
+            video_id="",
+            segments=[
+                self._seg("o1", 0.0, 6.4),
+                self._seg("o2", 8.28, 20.0),
+            ],
+        )
         gap, _, _ = largest_overlay_gap(plan, 22.0)
         assert gap < 6.0
 
@@ -213,17 +263,44 @@ class TestDensitySelfCheckWithGap:
         prompts: list[str] = []
         replies = [
             # 第一次：覆盖 0-10s（覆盖率 17% < 30%，分布也有 50s 空白）
-            json.dumps({"palette": ["#FF4D4D"], "overlays": [
-                {"segment_id": "o1", "time_start": 0.0, "time_end": 10.0,
-                 "template": "full_card", "params": {"text": "开场", "color": "#FF4D4D"}},
-            ]}, ensure_ascii=False),
+            json.dumps(
+                {
+                    "palette": ["#FF4D4D"],
+                    "overlays": [
+                        {
+                            "segment_id": "o1",
+                            "time_start": 0.0,
+                            "time_end": 10.0,
+                            "template": "full_card",
+                            "params": {"text": "开场", "color": "#FF4D4D"},
+                        },
+                    ],
+                },
+                ensure_ascii=False,
+            ),
             # 第二次：覆盖全片
-            json.dumps({"palette": ["#FF4D4D"], "overlays": [
-                {"segment_id": "o1", "time_start": 0.0, "time_end": 30.0,
-                 "template": "full_card", "params": {"text": "开场", "color": "#FF4D4D"}},
-                {"segment_id": "o2", "time_start": 30.0, "time_end": 60.0,
-                 "template": "stat_card", "params": {"label": "收束", "value": "3"}},
-            ]}, ensure_ascii=False),
+            json.dumps(
+                {
+                    "palette": ["#FF4D4D"],
+                    "overlays": [
+                        {
+                            "segment_id": "o1",
+                            "time_start": 0.0,
+                            "time_end": 30.0,
+                            "template": "full_card",
+                            "params": {"text": "开场", "color": "#FF4D4D"},
+                        },
+                        {
+                            "segment_id": "o2",
+                            "time_start": 30.0,
+                            "time_end": 60.0,
+                            "template": "stat_card",
+                            "params": {"label": "收束", "value": "3"},
+                        },
+                    ],
+                },
+                ensure_ascii=False,
+            ),
         ]
 
         async def _fake(llm, prompt, max_tokens=None):
@@ -236,8 +313,8 @@ class TestDensitySelfCheckWithGap:
 
         assert len(prompts) == 2  # 第一次被自检拦下 → 重试一次
         assert "分布不均" in prompts[1]
-        assert "10s~60s" in prompts[1]          # 点名空白区间
-        assert len(plan.segments) == 2          # 第二次（合格）结果被采纳
+        assert "10s~60s" in prompts[1]  # 点名空白区间
+        assert len(plan.segments) == 2  # 第二次（合格）结果被采纳
 
     @pytest.mark.asyncio
     async def test_仅分布不合格也重试(self):
@@ -250,10 +327,21 @@ class TestDensitySelfCheckWithGap:
         )
 
         prompts: list[str] = []
-        bad = json.dumps({"palette": ["#FF4D4D"], "overlays": [
-            {"segment_id": "o1", "time_start": 0.0, "time_end": 40.0,
-             "template": "full_card", "params": {"text": "开场", "color": "#FF4D4D"}},
-        ]}, ensure_ascii=False)  # 覆盖率 40/60 = 67% 达标，但 40-60s 空白 20s > 6s
+        bad = json.dumps(
+            {
+                "palette": ["#FF4D4D"],
+                "overlays": [
+                    {
+                        "segment_id": "o1",
+                        "time_start": 0.0,
+                        "time_end": 40.0,
+                        "template": "full_card",
+                        "params": {"text": "开场", "color": "#FF4D4D"},
+                    },
+                ],
+            },
+            ensure_ascii=False,
+        )  # 覆盖率 40/60 = 67% 达标，但 40-60s 空白 20s > 6s
 
         async def _fake(llm, prompt, max_tokens=None):
             prompts.append(prompt)
@@ -269,6 +357,7 @@ class TestDensitySelfCheckWithGap:
 
 
 # ── v4 节奏 + 主题色 ─────────────────────────────────────
+
 
 class TestV4RhythmPalettePrompt:
     def test_新模板枚举与注册(self):
@@ -295,6 +384,7 @@ class TestV4RhythmPalettePrompt:
 class TestParsePlanOutput:
     def test_新格式_含palette(self):
         from capabilities.video.services.overlay_orchestrator import _parse_plan_output
+
         text = (
             '{"palette": ["#ff4d4d", "#FFE066", "#4ECDC4"], '
             '"overlays": [{"segment_id": "o1", "time_start": 0, "time_end": 2, '
@@ -307,6 +397,7 @@ class TestParsePlanOutput:
 
     def test_旧格式_数组兼容(self):
         from capabilities.video.services.overlay_orchestrator import _parse_plan_output
+
         text = (
             '[{"segment_id": "o1", "time_start": 0, "time_end": 2, '
             '"template": "caption_pop", "params": {}}]'
@@ -317,12 +408,14 @@ class TestParsePlanOutput:
 
     def test_非法色剔除(self):
         from capabilities.video.services.overlay_orchestrator import _parse_plan_output
+
         text = '{"palette": ["red", "#GGGGGG", "#FF4D4D"], "overlays": []}'
         _, palette, _ = _parse_plan_output(text, 10.0)
         assert palette == ["#FF4D4D"]
 
     def test_shorthand色归一化(self):
         from capabilities.video.services.overlay_orchestrator import _parse_plan_output
+
         text = '{"palette": ["#4ec"], "overlays": []}'
         _, palette, _ = _parse_plan_output(text, 10.0)
         assert palette == ["#44EECC"]
@@ -333,6 +426,7 @@ class TestParsePlanOutput:
         keyword_highlight 时间窗空屏 + VLM 被覆盖后的内容误导。
         修后重复段号必须重编号（保内容，换 id），渲染不串。"""
         from capabilities.video.services.overlay_orchestrator import _parse_plan_output
+
         text = (
             '{"overlays": ['
             '{"segment_id": "o20", "time_start": 5.0, "time_end": 7.0, '
@@ -347,6 +441,7 @@ class TestParsePlanOutput:
         assert ids[1] != "o20"
         # 重编号段内容不丢：模板/时间窗原样保留
         from capabilities.video.services.overlay_orchestrator import template_name
+
         assert template_name(segs[1].template) == "title_card"
         assert segs[1].time_start == 7.0
 
@@ -354,14 +449,17 @@ class TestParsePlanOutput:
 class TestEnsurePalette:
     def test_空盘_fallback第一组(self):
         from capabilities.video.services.overlay_orchestrator import _ensure_palette
+
         assert _ensure_palette([]) == ["#FF4D4D", "#FFE066", "#4ECDC4"]
 
     def test_不足3色_补齐且去重(self):
         from capabilities.video.services.overlay_orchestrator import _ensure_palette
+
         assert _ensure_palette(["#FF4D4D"]) == ["#FF4D4D", "#FFE066", "#4ECDC4"]
 
     def test_足3色_原样(self):
         from capabilities.video.services.overlay_orchestrator import _ensure_palette
+
         p = ["#AABBCC", "#DDEEFF", "#123456"]
         assert _ensure_palette(p) == p
 
@@ -375,10 +473,14 @@ class TestValidatePlanRhythm:
             OverlayPlan,
             OverlaySegment,
         )
+
         segs = [
             OverlaySegment(
-                segment_id=f"o{i}", time_start=s, time_end=e,
-                template=OverlayTemplate(tpl), params=params,
+                segment_id=f"o{i}",
+                time_start=s,
+                time_end=e,
+                template=OverlayTemplate(tpl),
+                params=params,
             )
             for i, (s, e, tpl, params) in enumerate(specs)
         ]
@@ -386,16 +488,20 @@ class TestValidatePlanRhythm:
 
     def test_合规规划_无问题(self):
         from capabilities.video.services.overlay_orchestrator import validate_plan_rhythm
+
         plan = self._plan(
-            [(0.0, 1.5, "full_card", {}),
-             (1.8, 3.5, "caption_pop", {}),
-             (9.0, 12.0, "full_card", {})],
+            [
+                (0.0, 1.5, "full_card", {}),
+                (1.8, 3.5, "caption_pop", {}),
+                (9.0, 12.0, "full_card", {}),
+            ],
             palette=self._PAL,
         )
         assert validate_plan_rhythm(plan, 12.0) == []
 
     def test_开场不足2个(self):
         from capabilities.video.services.overlay_orchestrator import validate_plan_rhythm
+
         plan = self._plan(
             [(5.0, 7.0, "caption_pop", {}), (9.0, 12.0, "full_card", {})],
             palette=self._PAL,
@@ -404,29 +510,38 @@ class TestValidatePlanRhythm:
 
     def test_缺收束卡(self):
         from capabilities.video.services.overlay_orchestrator import validate_plan_rhythm
+
         plan = self._plan(
-            [(0.0, 1.0, "caption_pop", {}),
-             (1.5, 3.0, "caption_pop", {}),
-             (10.5, 12.0, "keyword_icon", {})],
+            [
+                (0.0, 1.0, "caption_pop", {}),
+                (1.5, 3.0, "caption_pop", {}),
+                (10.5, 12.0, "keyword_icon", {}),
+            ],
             palette=self._PAL,
         )
         assert any("收束" in i for i in validate_plan_rhythm(plan, 12.0))
 
     def test_palette缺失(self):
         from capabilities.video.services.overlay_orchestrator import validate_plan_rhythm
+
         plan = self._plan(
-            [(0.0, 1.5, "full_card", {}),
-             (1.8, 3.5, "caption_pop", {}),
-             (9.0, 12.0, "full_card", {})],
+            [
+                (0.0, 1.5, "full_card", {}),
+                (1.8, 3.5, "caption_pop", {}),
+                (9.0, 12.0, "full_card", {}),
+            ],
         )
         assert any("palette" in i for i in validate_plan_rhythm(plan, 12.0))
 
     def test_用色不在盘内(self):
         from capabilities.video.services.overlay_orchestrator import validate_plan_rhythm
+
         plan = self._plan(
-            [(0.0, 1.5, "full_card", {"text": "A", "color": "#123456"}),
-             (1.8, 3.5, "caption_pop", {}),
-             (9.0, 12.0, "full_card", {})],
+            [
+                (0.0, 1.5, "full_card", {"text": "A", "color": "#123456"}),
+                (1.8, 3.5, "caption_pop", {}),
+                (9.0, 12.0, "full_card", {}),
+            ],
             palette=self._PAL,
         )
         assert any("盘内" in i for i in validate_plan_rhythm(plan, 12.0))
@@ -479,8 +594,11 @@ class TestResolveOverlayConflicts:
     def _plan(specs):
         segs = [
             OverlaySegment(
-                segment_id=f"o{i + 1}", time_start=s, time_end=e,
-                template=OverlayTemplate(tpl), params=params or {},
+                segment_id=f"o{i + 1}",
+                time_start=s,
+                time_end=e,
+                template=OverlayTemplate(tpl),
+                params=params or {},
             )
             for i, (s, e, tpl, *rest) in enumerate(specs)
             for params in [rest[0] if rest else None]
@@ -489,19 +607,26 @@ class TestResolveOverlayConflicts:
 
     def test_无重叠_原样返回(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (0, 3, "caption_pop"), (3, 6, "stat_card"),
-        ])
+
+        plan = self._plan(
+            [
+                (0, 3, "caption_pop"),
+                (3, 6, "stat_card"),
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         assert all(not s.skipped for s in out.segments)
 
     def test_o6事故复现_中部两卡同屏_低优先级被跳过(self):
         """section_card(8) vs keyword_highlight(5) 同刻同带 → highlight skipped。"""
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (12.46, 15.22, "section_card"),
-            (13.80, 17.00, "keyword_highlight"),
-        ])
+
+        plan = self._plan(
+            [
+                (12.46, 15.22, "section_card"),
+                (13.80, 17.00, "keyword_highlight"),
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         by_id = {s.segment_id: s for s in out.segments}
         assert not by_id["o1"].skipped
@@ -509,26 +634,37 @@ class TestResolveOverlayConflicts:
 
     def test_首尾相接不算冲突(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (0, 3, "caption_pop"), (3, 6, "caption_karaoke"),
-        ])
+
+        plan = self._plan(
+            [
+                (0, 3, "caption_pop"),
+                (3, 6, "caption_karaoke"),
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         assert all(not s.skipped for s in out.segments)
 
     def test_不同带_字幕与中部卡共存(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (0, 5, "caption_pop"), (0, 5, "stat_card"),
-        ])
+
+        plan = self._plan(
+            [
+                (0, 5, "caption_pop"),
+                (0, 5, "stat_card"),
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         assert all(not s.skipped for s in out.segments)
 
     def test_全屏卡覆盖一切_与中部卡同刻则中部卡让位(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (0, 5, "stat_card"),
-            (2, 3.5, "full_card"),  # 优先级 11 > 8，胜出
-        ])
+
+        plan = self._plan(
+            [
+                (0, 5, "stat_card"),
+                (2, 3.5, "full_card"),  # 优先级 11 > 8，胜出
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         by_id = {s.segment_id: s for s in out.segments}
         assert not by_id["o2"].skipped
@@ -536,10 +672,13 @@ class TestResolveOverlayConflicts:
 
     def test_两个全屏卡重叠_先开始的胜出(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (2, 3.5, "full_card"),
-            (0, 5, "full_card"),  # 同为 11，先开始者胜
-        ])
+
+        plan = self._plan(
+            [
+                (2, 3.5, "full_card"),
+                (0, 5, "full_card"),  # 同为 11，先开始者胜
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         by_id = {s.segment_id: s for s in out.segments}
         assert not by_id["o2"].skipped
@@ -548,18 +687,25 @@ class TestResolveOverlayConflicts:
     def test_自由层与中部卡共存(self):
         """arrow_point 绝对定位小标注，与中部卡不强制互斥。"""
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (0, 5, "stat_card"), (1, 4, "arrow_point"),
-        ])
+
+        plan = self._plan(
+            [
+                (0, 5, "stat_card"),
+                (1, 4, "arrow_point"),
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         assert all(not s.skipped for s in out.segments)
 
     def test_同优先级_先开始者胜出(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (2, 6, "section_card"),
-            (0, 4, "stat_card"),  # 同为 8，0s 先开始
-        ])
+
+        plan = self._plan(
+            [
+                (2, 6, "section_card"),
+                (0, 4, "stat_card"),  # 同为 8，0s 先开始
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         by_id = {s.segment_id: s for s in out.segments}
         assert not by_id["o2"].skipped
@@ -567,10 +713,13 @@ class TestResolveOverlayConflicts:
 
     def test_只标记不删除_其余字段不变(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (0, 5, "title_card", {"title": "A"}),
-            (1, 4, "section_card", {"number": "01", "title": "B"}),
-        ])
+
+        plan = self._plan(
+            [
+                (0, 5, "title_card", {"title": "A"}),
+                (1, 4, "section_card", {"number": "01", "title": "B"}),
+            ]
+        )
         out = resolve_overlay_conflicts(plan)
         assert len(out.segments) == 2
         assert out.segments[0].params == {"title": "A"}
@@ -578,14 +727,21 @@ class TestResolveOverlayConflicts:
 
     def test_已跳过片段不参与裁决(self):
         from capabilities.video.services.overlay_orchestrator import resolve_overlay_conflicts
-        plan = self._plan([
-            (0, 5, "caption_pop"),
-            (0, 5, "caption_karaoke"),
-        ])
-        plan = plan.model_copy(update={"segments": [
-            s.model_copy(update={"skipped": True}) if s.segment_id == "o1" else s
-            for s in plan.segments
-        ]})
+
+        plan = self._plan(
+            [
+                (0, 5, "caption_pop"),
+                (0, 5, "caption_karaoke"),
+            ]
+        )
+        plan = plan.model_copy(
+            update={
+                "segments": [
+                    s.model_copy(update={"skipped": True}) if s.segment_id == "o1" else s
+                    for s in plan.segments
+                ]
+            }
+        )
         out = resolve_overlay_conflicts(plan)
         by_id = {s.segment_id: s for s in out.segments}
         assert by_id["o1"].skipped  # 保持原状

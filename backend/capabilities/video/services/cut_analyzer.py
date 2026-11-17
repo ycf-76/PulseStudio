@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class CutType(str, Enum):
     """待删片段类型 — 对齐 ossclip marker 颜色编码。"""
+
     SILENCE = "silence"
     FILLER = "filler"
     REPEAT = "repeat"
@@ -36,6 +37,7 @@ class CutType(str, Enum):
 
 class CutCandidate(BaseModel):
     """一个待删减的候选片段。对齐 ossclip marker 格式。"""
+
     start: float = Field(ge=0, description="开始时间（秒）")
     end: float = Field(ge=0, description="结束时间（秒）")
     cut_type: CutType = Field(description="删减类型")
@@ -51,6 +53,7 @@ class CutCandidate(BaseModel):
 
 class WordTimestamp(BaseModel):
     """逐词时间戳 — 对齐 WhisperX/whisper-cpp 输出格式。"""
+
     text: str
     start: float = Field(ge=0)
     end: float = Field(ge=0)
@@ -60,20 +63,47 @@ class WordTimestamp(BaseModel):
 TIMESTAMP_TOLERANCE_MS = 100
 MIN_WORD_DURATION_MS = 200
 
-FILLER_WORDS_STRICT: frozenset[str] = frozenset({
-    "嗯", "啊", "呃", "额", "哦",
-    "um", "uh", "hmm", "mm",
-})
+FILLER_WORDS_STRICT: frozenset[str] = frozenset(
+    {
+        "嗯",
+        "啊",
+        "呃",
+        "额",
+        "哦",
+        "um",
+        "uh",
+        "hmm",
+        "mm",
+    }
+)
 
-FILLER_WORDS_CONTEXTUAL: frozenset[str] = frozenset({
-    "那个", "这个", "就是说", "怎么说呢", "你知道吗",
-    "like", "you know", "basically", "actually", "right",
-})
+FILLER_WORDS_CONTEXTUAL: frozenset[str] = frozenset(
+    {
+        "那个",
+        "这个",
+        "就是说",
+        "怎么说呢",
+        "你知道吗",
+        "like",
+        "you know",
+        "basically",
+        "actually",
+        "right",
+    }
+)
 
-FILLER_PHRASES: frozenset[str] = frozenset({
-    "那个那个", "这个这个", "然后呢", "你知道吗",
-    "you know", "I mean", "like like", "basically basically",
-})
+FILLER_PHRASES: frozenset[str] = frozenset(
+    {
+        "那个那个",
+        "这个这个",
+        "然后呢",
+        "你知道吗",
+        "you know",
+        "I mean",
+        "like like",
+        "basically basically",
+    }
+)
 
 
 def _effective_gap(prev_end: float, next_start: float) -> float:
@@ -109,14 +139,16 @@ def detect_silence_candidates(
         s, e = start + 0.2, end - 0.2
         if e - s < 0.15:
             continue
-        candidates.append(CutCandidate(
-            start=s,
-            end=e,
-            cut_type=CutType.SILENCE,
-            confidence=0.95,
-            reason=f"silence -{duration:.2f}s",
-            text="",
-        ))
+        candidates.append(
+            CutCandidate(
+                start=s,
+                end=e,
+                cut_type=CutType.SILENCE,
+                confidence=0.95,
+                reason=f"silence -{duration:.2f}s",
+                text="",
+            )
+        )
     return candidates
 
 
@@ -144,14 +176,16 @@ def detect_filler_candidates(
             if round(duration_ms) < MIN_WORD_DURATION_MS:
                 confidence = max(0.3, confidence - 0.3)
 
-            candidates.append(CutCandidate(
-                start=word.start,
-                end=word.end,
-                cut_type=CutType.FILLER,
-                confidence=confidence,
-                reason=f"filler '{word.text}'",
-                text=word.text,
-            ))
+            candidates.append(
+                CutCandidate(
+                    start=word.start,
+                    end=word.end,
+                    cut_type=CutType.FILLER,
+                    confidence=confidence,
+                    reason=f"filler '{word.text}'",
+                    text=word.text,
+                )
+            )
             continue
 
         if text in FILLER_WORDS_CONTEXTUAL:
@@ -163,14 +197,16 @@ def detect_filler_candidates(
                 if round(duration_ms) < MIN_WORD_DURATION_MS:
                     confidence = max(0.3, confidence - 0.3)
 
-                candidates.append(CutCandidate(
-                    start=word.start,
-                    end=word.end,
-                    cut_type=CutType.FILLER,
-                    confidence=confidence,
-                    reason=f"filler '{word.text}' (contextual)",
-                    text=word.text,
-                ))
+                candidates.append(
+                    CutCandidate(
+                        start=word.start,
+                        end=word.end,
+                        cut_type=CutType.FILLER,
+                        confidence=confidence,
+                        reason=f"filler '{word.text}' (contextual)",
+                        text=word.text,
+                    )
+                )
 
     candidates.extend(_detect_filler_phrases(words))
 
@@ -190,25 +226,22 @@ def _detect_filler_phrases(words: list[WordTimestamp]) -> list[CutCandidate]:
 
         for window_size in range(1, min(len(words) + 1, phrase_len + 1)):
             for i in range(len(words) - window_size + 1):
-                window_text = "".join(
-                    w.text.strip().lower() for w in words[i:i + window_size]
-                )
+                window_text = "".join(w.text.strip().lower() for w in words[i : i + window_size])
                 if window_text == phrase_lower:
                     start = words[i].start
                     end = words[i + window_size - 1].end
-                    already_covered = any(
-                        c.start <= start and c.end >= end
-                        for c in candidates
-                    )
+                    already_covered = any(c.start <= start and c.end >= end for c in candidates)
                     if not already_covered:
-                        candidates.append(CutCandidate(
-                            start=start,
-                            end=end,
-                            cut_type=CutType.FILLER,
-                            confidence=0.8,
-                            reason=f"filler phrase '{phrase}'",
-                            text=phrase,
-                        ))
+                        candidates.append(
+                            CutCandidate(
+                                start=start,
+                                end=end,
+                                cut_type=CutType.FILLER,
+                                confidence=0.8,
+                                reason=f"filler phrase '{phrase}'",
+                                text=phrase,
+                            )
+                        )
     return candidates
 
 
@@ -226,28 +259,34 @@ def detect_repeat_candidates(
     for i in range(len(words) - 1):
         if words[i].text.strip().lower() == words[i + 1].text.strip().lower():
             text = words[i].text
-            candidates.append(CutCandidate(
-                start=words[i].start,
-                end=words[i + 1].end,
-                cut_type=CutType.REPEAT,
-                confidence=0.85,
-                reason=f"repeat '{text}{text}'",
-                text=text + text,
-            ))
+            candidates.append(
+                CutCandidate(
+                    start=words[i].start,
+                    end=words[i + 1].end,
+                    cut_type=CutType.REPEAT,
+                    confidence=0.85,
+                    reason=f"repeat '{text}{text}'",
+                    text=text + text,
+                )
+            )
 
     for window_size in range(2, min(5, len(words) // 2 + 1)):
         for i in range(len(words) - window_size * 2 + 1):
-            phrase_a = "".join(w.text.strip() for w in words[i:i + window_size]).lower()
-            phrase_b = "".join(w.text.strip() for w in words[i + window_size:i + window_size * 2]).lower()
+            phrase_a = "".join(w.text.strip() for w in words[i : i + window_size]).lower()
+            phrase_b = "".join(
+                w.text.strip() for w in words[i + window_size : i + window_size * 2]
+            ).lower()
             if phrase_a == phrase_b and phrase_a.strip():
-                candidates.append(CutCandidate(
-                    start=words[i].start,
-                    end=words[i + window_size * 2 - 1].end,
-                    cut_type=CutType.REPEAT,
-                    confidence=0.8,
-                    reason=f"repeat '{phrase_a} {phrase_b}'",
-                    text=phrase_a + " " + phrase_b,
-                ))
+                candidates.append(
+                    CutCandidate(
+                        start=words[i].start,
+                        end=words[i + window_size * 2 - 1].end,
+                        cut_type=CutType.REPEAT,
+                        confidence=0.8,
+                        reason=f"repeat '{phrase_a} {phrase_b}'",
+                        text=phrase_a + " " + phrase_b,
+                    )
+                )
 
     return candidates
 
@@ -295,6 +334,7 @@ def merge_candidates(
 
 class LLMFluffResult(BaseModel):
     """LLM 语义分析的单个结果。"""
+
     index: int = Field(ge=0, description="片段索引")
     verdict: Literal["keep", "cut", "uncertain"] = Field(description="判定结果")
     type: Literal["false_start", "fluff", "connector_filler", "maybe_filler"] = Field(
@@ -305,6 +345,7 @@ class LLMFluffResult(BaseModel):
 
 class LLMFluffResponse(BaseModel):
     """LLM 语义分析的完整响应。"""
+
     results: list[LLMFluffResult] = Field(default_factory=list)
 
 
@@ -387,21 +428,27 @@ async def detect_fluff_candidates(
 
                 confidence = 0.6 if verdict == "cut" else 0.4
 
-                candidates.append(CutCandidate(
-                    start=seg.get("start", 0),
-                    end=seg.get("end", 0),
-                    cut_type=cut_type,
-                    confidence=confidence,
-                    reason=f"llm: {item.get('reason', verdict)}",
-                    text=seg.get("text", ""),
-                    removable=True,
-                ))
+                candidates.append(
+                    CutCandidate(
+                        start=seg.get("start", 0),
+                        end=seg.get("end", 0),
+                        cut_type=cut_type,
+                        confidence=confidence,
+                        reason=f"llm: {item.get('reason', verdict)}",
+                        text=seg.get("text", ""),
+                        removable=True,
+                    )
+                )
 
-            logger.info(f"LLM fluff analysis: {len(candidates)} candidates from {len(raw_results)} results")
+            logger.info(
+                f"LLM fluff analysis: {len(candidates)} candidates from {len(raw_results)} results"
+            )
             return candidates, raw_results
 
         except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"LLM output format invalid (attempt {attempt + 1}/{MAX_LLM_RETRIES + 1}): {e}")
+            logger.warning(
+                f"LLM output format invalid (attempt {attempt + 1}/{MAX_LLM_RETRIES + 1}): {e}"
+            )
             prompt = (
                 f"上次输出格式有误：{e}\n"
                 "请严格按 JSON 数组格式重新输出，不要添加任何额外文字。\n"

@@ -44,53 +44,73 @@ _GOOD_NARRATIVE = {
     "palette": ["#FF4D4D", "#FFE066", "#4ECDC4"],
     "sections": [
         {
-            "section_id": "s1", "role": "opening",
-            "time_start": 0.0, "time_end": 4.1,
-            "summary": "警告开场", "visual_intent": "full_card 冲击开场",
+            "section_id": "s1",
+            "role": "opening",
+            "time_start": 0.0,
+            "time_end": 4.1,
+            "summary": "警告开场",
+            "visual_intent": "full_card 冲击开场",
             "key_points": ["三件事"],
         },
         {
-            "section_id": "s2", "role": "argument",
-            "time_start": 4.1, "time_end": 40.0,
-            "summary": "三个论点", "visual_intent": "section_card 分段推进",
+            "section_id": "s2",
+            "role": "argument",
+            "time_start": 4.1,
+            "time_end": 40.0,
+            "summary": "三个论点",
+            "visual_intent": "section_card 分段推进",
             "key_points": ["空调", "冰水", "防晒"],
         },
         {
-            "section_id": "s3", "role": "closing",
-            "time_start": 40.0, "time_end": 54.0,
-            "summary": "收束", "visual_intent": "full_card 收尾",
+            "section_id": "s3",
+            "role": "closing",
+            "time_start": 40.0,
+            "time_end": 54.0,
+            "summary": "收束",
+            "visual_intent": "full_card 收尾",
             "key_points": [],
         },
     ],
 }
 
-_PLAN_JSON = json.dumps({
-    "palette": ["#FF4D4D", "#FFE066", "#4ECDC4"],
-    "overlays": [
-        # 连续覆盖全片 0-54s — 密度自检（覆盖率 ≥30% + 任意空档 ≤6s）
-        # 双项均通过（单测聚焦两步链编排，不测重试）
-        {
-            "segment_id": "o1", "time_start": 0.0, "time_end": 27.0,
-            "template": "full_card",
-            "params": {"text": "夏天千万别大意", "color": "#FF4D4D"},
-        },
-        {
-            "segment_id": "o2", "time_start": 27.0, "time_end": 54.0,
-            "template": "section_card",
-            "params": {"number": "01", "title": "空调直吹", "color": "#FFE066"},
-        },
-    ],
-}, ensure_ascii=False)
+_PLAN_JSON = json.dumps(
+    {
+        "palette": ["#FF4D4D", "#FFE066", "#4ECDC4"],
+        "overlays": [
+            # 连续覆盖全片 0-54s — 密度自检（覆盖率 ≥30% + 任意空档 ≤6s）
+            # 双项均通过（单测聚焦两步链编排，不测重试）
+            {
+                "segment_id": "o1",
+                "time_start": 0.0,
+                "time_end": 27.0,
+                "template": "full_card",
+                "params": {"text": "夏天千万别大意", "color": "#FF4D4D"},
+            },
+            {
+                "segment_id": "o2",
+                "time_start": 27.0,
+                "time_end": 54.0,
+                "template": "section_card",
+                "params": {"number": "01", "title": "空调直吹", "color": "#FFE066"},
+            },
+        ],
+    },
+    ensure_ascii=False,
+)
 
 _SEGS = [
     {
-        "index": 0, "start": 0.0, "end": 4.1, "text": "夏天千万别大意",
+        "index": 0,
+        "start": 0.0,
+        "end": 4.1,
+        "text": "夏天千万别大意",
         "words": [{"text": "夏天", "start": 0.0, "end": 0.5}],
     },
 ]
 
 
 # ── 1. _parse_narrative_output（防御式解析）──────────────
+
 
 class TestParseNarrative:
     def test_合法JSON_解析成功(self):
@@ -166,6 +186,7 @@ class TestParseNarrative:
 
 # ── 2. generate_narrative（第一步）───────────────────────
 
+
 class TestGenerateNarrative:
     @pytest.mark.asyncio
     async def test_成功返回叙事结构(self):
@@ -200,10 +221,12 @@ class TestGenerateNarrative:
         class _Boom:
             async def chat(self, **kw):
                 raise RuntimeError("网络炸了")
+
         assert await generate_narrative(_Boom(), _SEGS, 54.0) is None
 
 
 # ── 3. generate_overlay_plan 两步链编排 ──────────────────
+
 
 class TestTwoStepPlan:
     @pytest.mark.asyncio
@@ -260,7 +283,11 @@ class TestTwoStepPlan:
             _PLAN_JSON,
         )
         await generate_overlay_plan(
-            _SEGS, 54.0, llm, feedback="o1 配色刺眼", use_two_step=True,
+            _SEGS,
+            54.0,
+            llm,
+            feedback="o1 配色刺眼",
+            use_two_step=True,
         )
         assert "o1 配色刺眼" in llm.calls[0]  # 叙事 prompt
         assert "o1 配色刺眼" in llm.calls[1]  # 规划 prompt
@@ -285,11 +312,11 @@ class TestTwoStepPlan:
 
 # ── 4. NARRATIVE_PROMPT 内容契约 ─────────────────────────
 
+
 class TestNarrativePrompt:
     def test_角色枚举齐全(self):
         """计划书 P2：开场/论点/转折/收束 四角色。"""
-        for kw in ("opening", "argument", "transition", "closing",
-                   "开场", "论点", "转折", "收束"):
+        for kw in ("opening", "argument", "transition", "closing", "开场", "论点", "转折", "收束"):
             assert kw in NARRATIVE_PROMPT, f"叙事 prompt 缺角色 {kw}"
 
     def test_要求输出theme与key_points(self):

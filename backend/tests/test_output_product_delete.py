@@ -5,6 +5,7 @@
 预期: 只删该目录直属媒体与编辑覆盖层，子目录里的其它产物保留
 文档依据: docs/FEATURE_平台账号管理与作品数据回收.md#15.2（产物目录归属「平台生成」）
 """
+
 from __future__ import annotations
 
 import pytest

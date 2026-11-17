@@ -19,8 +19,20 @@ THEME_PREVIEW_BASE = "/static/recipe-preview/theme"
 
 def _theme_options() -> list[ClarifyOption]:
     """主题直接由 THEMES 编译 —— 加主题只改 schema.py，这里不用动。"""
-    preferred = ["inkwash", "cream", "luxe_noir", "botanical", "journal",
-                 "forest", "dune", "dopamine", "warm", "swiss", "ink", "terminal"]
+    preferred = [
+        "inkwash",
+        "cream",
+        "luxe_noir",
+        "botanical",
+        "journal",
+        "forest",
+        "dune",
+        "dopamine",
+        "warm",
+        "swiss",
+        "ink",
+        "terminal",
+    ]
     ordered = [n for n in preferred if n in THEMES] + [n for n in THEMES if n not in preferred]
     return [
         ClarifyOption(
@@ -35,15 +47,29 @@ def _theme_options() -> list[ClarifyOption]:
 
 class CardComposeInput(BaseModel):
     topic: str = Field(min_length=1, max_length=80, description="卡片主题")
-    content: str = Field(default="", max_length=6000, description="用户提供的正文/要点；有现成文案应完整传入。只放内容本身，分页/排版/渲染要求等制作指令不要写进来")
-    platform: str = Field(default="", max_length=20, description="发布平台（xiaohongshu/douyin/bilibili等）；只作记录，视觉仍由 theme_id/style_hint 决定")
-    asset_ids: list[str] = Field(default_factory=list, max_length=3, description="用户已上传的素材 asset_id；不传则不使用图片")
+    content: str = Field(
+        default="",
+        max_length=6000,
+        description="用户提供的正文/要点；有现成文案应完整传入。只放内容本身，分页/排版/渲染要求等制作指令不要写进来",
+    )
+    platform: str = Field(
+        default="",
+        max_length=20,
+        description="发布平台（xiaohongshu/douyin/bilibili等）；只作记录，视觉仍由 theme_id/style_hint 决定",
+    )
+    asset_ids: list[str] = Field(
+        default_factory=list,
+        max_length=3,
+        description="用户已上传的素材 asset_id；不传则不使用图片",
+    )
     # 之前只写了 ["ink","warm"]，另外 7 套主题 LLM 根本选不到。统一走 schema.ThemeId。
     theme_id: ThemeId = Field(
         default="ink",
         description="视觉风格：杂志编辑/暖卡纸/瑞士极简/新中式墨韵/奶油温柔/极客终端/多巴胺Y2K/高奢黑金/手账贴纸",
     )
-    image_layout: Literal["top", "side", "overlay"] = Field(default="top", description="图片布局：顶图封面、右图正文、全图覆字")
+    image_layout: Literal["top", "side", "overlay"] = Field(
+        default="top", description="图片布局：顶图封面、右图正文、全图覆字"
+    )
     recipe_id: RecipeId = Field(
         default=DEFAULT_RECIPE,
         description="整套骨架序列：干货清单/步骤教程/数据解读/观点金句/对比选购/时间线叙事",
@@ -79,8 +105,18 @@ class ComposeCardDeckSkill(Skill):
     )
     skill_category = "create"
     skill_priority = "hot"
-    trigger_words = ["做图文卡片", "知识卡片", "制作图文", "结构化卡片", "图文排版",
-                      "做封面", "封面图", "封面卡片", "图文卡片", "小红书图文"]
+    trigger_words = [
+        "做图文卡片",
+        "知识卡片",
+        "制作图文",
+        "结构化卡片",
+        "图文排版",
+        "做封面",
+        "封面图",
+        "封面卡片",
+        "图文卡片",
+        "小红书图文",
+    ]
     input_schema = CardComposeInput
 
     # 提示词只能「劝」LLM 别发明字段，劝不住的就用这里兜底（2026-11-07 实测
@@ -94,7 +130,8 @@ class ComposeCardDeckSkill(Skill):
         只动能确定性判断的字段；返回新 dict，不修改入参。
         """
         cleaned = {
-            key: value for key, value in inputs.items()
+            key: value
+            for key, value in inputs.items()
             if key in CardComposeInput.model_fields and key != "_context"
         }
 
@@ -158,9 +195,15 @@ class ComposeCardDeckSkill(Skill):
             default="top",
             auto_default=True,
             options=[
-                ClarifyOption(label="顶图封面", value="top", description="图片放封面顶部，正文用排版页"),
-                ClarifyOption(label="右图正文", value="side", description="正文页左侧清单、右侧配图"),
-                ClarifyOption(label="全图覆字", value="overlay", description="整页大图 + 底部压字，氛围感强"),
+                ClarifyOption(
+                    label="顶图封面", value="top", description="图片放封面顶部，正文用排版页"
+                ),
+                ClarifyOption(
+                    label="右图正文", value="side", description="正文页左侧清单、右侧配图"
+                ),
+                ClarifyOption(
+                    label="全图覆字", value="overlay", description="整页大图 + 底部压字，氛围感强"
+                ),
             ],
         ),
     }
@@ -174,10 +217,15 @@ class ComposeCardDeckSkill(Skill):
             # 归一化兜底在前：标签→id、发明的风格字段→style_hint，再走 schema 校验
             args = CardComposeInput.model_validate(self._normalize_compose_inputs(inputs))
             draft = await compose_deck(
-                topic=args.topic, content=args.content, user_id=str(user_id),
-                llm=inputs.get("llm"), asset_ids=args.asset_ids,
-                theme_id=args.theme_id, image_layout=args.image_layout,
-                recipe_id=args.recipe_id, style_hint=args.style_hint,
+                topic=args.topic,
+                content=args.content,
+                user_id=str(user_id),
+                llm=inputs.get("llm"),
+                asset_ids=args.asset_ids,
+                theme_id=args.theme_id,
+                image_layout=args.image_layout,
+                recipe_id=args.recipe_id,
+                style_hint=args.style_hint,
             )
         except ValueError as exc:
             return {"error": str(exc), "_source": "structured_cards"}

@@ -73,11 +73,13 @@ class TavilySiteSource(ContentSource):
     ) -> list[TrendingContent]:
         """站内搜索：query 拼接 site:domain 限定来源。多域名分别搜索合并。"""
         all_results = await self._search_multi_domain(
-            keyword, limit, topic="general", days=None,
+            keyword,
+            limit,
+            topic="general",
+            days=None,
         )
         logger.info(
-            f"[{self._platform_name}] search '{keyword}': "
-            f"got {len(all_results)} results"
+            f"[{self._platform_name}] search '{keyword}': " f"got {len(all_results)} results"
         )
         return all_results[:limit]
 
@@ -88,11 +90,12 @@ class TavilySiteSource(ContentSource):
     ) -> list[TrendingContent]:
         """获取平台热门（用 site 搜索 + 热门通用词兜底）。"""
         all_results = await self._search_multi_domain(
-            category or "热门", limit, topic="news", days=7,
+            category or "热门",
+            limit,
+            topic="news",
+            days=7,
         )
-        logger.info(
-            f"[{self._platform_name}] get_trending: got {len(all_results)} results"
-        )
+        logger.info(f"[{self._platform_name}] get_trending: got {len(all_results)} results")
         return all_results[:limit]
 
     async def _search_multi_domain(

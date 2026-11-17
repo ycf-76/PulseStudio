@@ -7,6 +7,7 @@
 - 向后兼容：toml 无 [spider] 段时仍读 Settings.spider_service_url。
 - 复用 grid_capability.py / media_capability.py 的范式。
 """
+
 from __future__ import annotations
 
 import logging

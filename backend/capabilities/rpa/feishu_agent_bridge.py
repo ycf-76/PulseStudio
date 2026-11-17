@@ -50,10 +50,22 @@ class BlockKitBuilder:
     """
 
     @staticmethod
-    def collect_result_card(title: str, platform: str, likes: int, collects: int, score: float, url: str = "") -> dict:
+    def collect_result_card(
+        title: str, platform: str, likes: int, collects: int, score: float, url: str = ""
+    ) -> dict:
         """构建链接采集结果卡片。"""
-        platform_emoji = {"xiaohongshu": "📕", "douyin": "🎵", "bilibili": "📺", "instagram": "📸"}.get(platform, "🔗")
-        platform_label = {"xiaohongshu": "小红书", "douyin": "抖音", "bilibili": "B站", "instagram": "Instagram"}.get(platform, platform)
+        platform_emoji = {
+            "xiaohongshu": "📕",
+            "douyin": "🎵",
+            "bilibili": "📺",
+            "instagram": "📸",
+        }.get(platform, "🔗")
+        platform_label = {
+            "xiaohongshu": "小红书",
+            "douyin": "抖音",
+            "bilibili": "B站",
+            "instagram": "Instagram",
+        }.get(platform, platform)
 
         elements = [
             {"tag": "markdown", "content": f"**{platform_emoji} 标题**: {title[:50]}"},
@@ -67,58 +79,54 @@ class BlockKitBuilder:
                         "tag": "column",
                         "width": "weighted",
                         "weight": 1,
-                        "elements": [
-                            {"tag": "markdown", "content": f"**👍 点赞**\n{likes}"}
-                        ]
+                        "elements": [{"tag": "markdown", "content": f"**👍 点赞**\n{likes}"}],
                     },
                     {
                         "tag": "column",
                         "width": "weighted",
                         "weight": 1,
-                        "elements": [
-                            {"tag": "markdown", "content": f"**⭐ 收藏**\n{collects}"}
-                        ]
+                        "elements": [{"tag": "markdown", "content": f"**⭐ 收藏**\n{collects}"}],
                     },
                     {
                         "tag": "column",
                         "width": "weighted",
                         "weight": 1,
-                        "elements": [
-                            {"tag": "markdown", "content": f"**📊 性能分**\n{score:.1f}"}
-                        ]
-                    }
-                ]
-            }
+                        "elements": [{"tag": "markdown", "content": f"**📊 性能分**\n{score:.1f}"}],
+                    },
+                ],
+            },
         ]
 
         if url:
-            elements.append({
-                "tag": "action",
-                "actions": [
-                    {
-                        "tag": "button",
-                        "text": {"tag": "plain_text", "content": "🔗 查看原文"},
-                        "url": url,
-                        "type": "primary"
-                    }
-                ]
-            })
+            elements.append(
+                {
+                    "tag": "action",
+                    "actions": [
+                        {
+                            "tag": "button",
+                            "text": {"tag": "plain_text", "content": "🔗 查看原文"},
+                            "url": url,
+                            "type": "primary",
+                        }
+                    ],
+                }
+            )
 
         return {
             "config": {"wide_screen_mode": True},
             "header": {
                 "title": {"tag": "plain_text", "content": f"{platform_emoji} 采集成功"},
-                "template": "blue"
+                "template": "blue",
             },
-            "elements": elements
+            "elements": elements,
         }
 
     @staticmethod
-    def creation_result_card(title: str, content: str, word_count: int = 0, tags: list[str] | None = None) -> dict:
+    def creation_result_card(
+        title: str, content: str, word_count: int = 0, tags: list[str] | None = None
+    ) -> dict:
         """构建文案创作结果卡片。"""
-        elements = [
-            {"tag": "markdown", "content": f"**📝 标题**\n{title}"}
-        ]
+        elements = [{"tag": "markdown", "content": f"**📝 标题**\n{title}"}]
 
         if content:
             preview = content[:200] + ("..." if len(content) > 200 else "")
@@ -130,51 +138,61 @@ class BlockKitBuilder:
             meta_items.append(f"🏷️ {' '.join(tags[:3])}")
 
         elements.append({"tag": "hr"})
-        elements.append({
-            "tag": "column_set",
-            "flex_mode": "none",
-            "background_style": "grey",
-            "columns": [
-                {
-                    "tag": "column",
-                    "width": "weighted",
-                    "weight": 1,
-                    "elements": [{"tag": "markdown", "content": meta_items[0]}]
-                },
-                *([{
-                    "tag": "column",
-                    "width": "weighted",
-                    "weight": 1,
-                    "elements": [{"tag": "markdown", "content": meta_items[1]}]
-                }] if len(meta_items) > 1 else [])
-            ]
-        })
+        elements.append(
+            {
+                "tag": "column_set",
+                "flex_mode": "none",
+                "background_style": "grey",
+                "columns": [
+                    {
+                        "tag": "column",
+                        "width": "weighted",
+                        "weight": 1,
+                        "elements": [{"tag": "markdown", "content": meta_items[0]}],
+                    },
+                    *(
+                        [
+                            {
+                                "tag": "column",
+                                "width": "weighted",
+                                "weight": 1,
+                                "elements": [{"tag": "markdown", "content": meta_items[1]}],
+                            }
+                        ]
+                        if len(meta_items) > 1
+                        else []
+                    ),
+                ],
+            }
+        )
 
-        elements.append({
-            "tag": "action",
-            "actions": [
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "✅ 确认发布"},
-                    "value": json.dumps({"action": "approve", "title": title}),
-                    "type": "primary"
-                },
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "🔄 重新生成"},
-                    "value": json.dumps({"action": "regenerate"}),
-                    "type": "default"
-                }
-            ]
-        })
+        elements.append(
+            {
+                "tag": "action",
+                "actions": [
+                    {
+                        "tag": "button",
+                        "text": {"tag": "plain_text", "content": "✅ 确认发布"},
+                        "value": json.dumps({"action": "approve", "title": title}),
+                        "type": "primary",
+                    },
+                    {
+                        "tag": "button",
+                        "text": {"tag": "plain_text", "content": "🔄 重新生成"},
+                        "value": json.dumps({"action": "regenerate"}),
+                        "type": "default",
+                    },
+                ],
+            }
+        )
 
         return {
             "config": {"wide_screen_mode": True},
             "header": {
                 "title": {"tag": "plain_text", "content": "✨ 文案已生成"},
-                "template": "green"
+                "template": "green",
             },
-            "elements": elements
+            "elements": elements,
         }
 
     @staticmethod
@@ -184,24 +202,25 @@ class BlockKitBuilder:
             "chat": "💬",
             "workflow_started": "⚙️",
             "awaiting_confirmation": "⏳",
-            "error": "❌"
+            "error": "❌",
         }
         template_map = {
             "chat": "blue",
             "workflow_started": "orange",
             "awaiting_confirmation": "yellow",
-            "error": "red"
+            "error": "red",
         }
 
         return {
             "config": {"wide_screen_mode": False},
             "header": {
-                "title": {"tag": "plain_text", "content": f"{emoji_map.get(status, '💬')} 创作助手"},
-                "template": template_map.get(status, "blue")
+                "title": {
+                    "tag": "plain_text",
+                    "content": f"{emoji_map.get(status, '💬')} 创作助手",
+                },
+                "template": template_map.get(status, "blue"),
             },
-            "elements": [
-                {"tag": "markdown", "content": reply_text[:2000]}
-            ]
+            "elements": [{"tag": "markdown", "content": reply_text[:2000]}],
         }
 
     @staticmethod
@@ -209,10 +228,7 @@ class BlockKitBuilder:
         """构建错误提示卡片。"""
         return {
             "config": {"wide_screen_mode": False},
-            "header": {
-                "title": {"tag": "plain_text", "content": "❌ 操作失败"},
-                "template": "red"
-            },
+            "header": {"title": {"tag": "plain_text", "content": "❌ 操作失败"}, "template": "red"},
             "elements": [
                 {"tag": "markdown", "content": error_msg[:500]},
                 {
@@ -222,13 +238,12 @@ class BlockKitBuilder:
                             "tag": "button",
                             "text": {"tag": "plain_text", "content": "🔄 重试"},
                             "value": json.dumps({"action": "retry"}),
-                            "type": "primary"
+                            "type": "primary",
                         }
-                    ]
-                }
-            ]
+                    ],
+                },
+            ],
         }
-
 
     @staticmethod
     def task_confirm_card(
@@ -261,29 +276,35 @@ class BlockKitBuilder:
         if content_preview:
             elements.append({"tag": "markdown", "content": f"**正文预览**\n{content_preview}"})
 
-        elements.append({
-            "tag": "action",
-            "actions": [
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "确认发布"},
-                    "value": json.dumps({**base_value, "action": "approve"}, ensure_ascii=False),
-                    "type": "primary",
-                },
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "打回重做"},
-                    "value": json.dumps({**base_value, "action": "regenerate"}, ensure_ascii=False),
-                    "type": "default",
-                },
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "跳过本条"},
-                    "value": json.dumps({**base_value, "action": "skip"}, ensure_ascii=False),
-                    "type": "danger",
-                },
-            ],
-        })
+        elements.append(
+            {
+                "tag": "action",
+                "actions": [
+                    {
+                        "tag": "button",
+                        "text": {"tag": "plain_text", "content": "确认发布"},
+                        "value": json.dumps(
+                            {**base_value, "action": "approve"}, ensure_ascii=False
+                        ),
+                        "type": "primary",
+                    },
+                    {
+                        "tag": "button",
+                        "text": {"tag": "plain_text", "content": "打回重做"},
+                        "value": json.dumps(
+                            {**base_value, "action": "regenerate"}, ensure_ascii=False
+                        ),
+                        "type": "default",
+                    },
+                    {
+                        "tag": "button",
+                        "text": {"tag": "plain_text", "content": "跳过本条"},
+                        "value": json.dumps({**base_value, "action": "skip"}, ensure_ascii=False),
+                        "type": "danger",
+                    },
+                ],
+            }
+        )
 
         return {
             "config": {"wide_screen_mode": True},
@@ -430,9 +451,7 @@ class FeishuAgentBridge:
         finally:
             self._processing = False
 
-    async def _process_message(
-        self, text: str, chat_id: str, sender_id: str
-    ) -> BridgeResult:
+    async def _process_message(self, text: str, chat_id: str, sender_id: str) -> BridgeResult:
         action, params = _classify_intent(text)
 
         logger.info(
@@ -448,9 +467,7 @@ class FeishuAgentBridge:
 
         return BridgeResult(action=BridgeAction.PLAIN_REPLY, reply="")
 
-    async def _handle_collect(
-        self, params: dict[str, Any], chat_id: str
-    ) -> BridgeResult:
+    async def _handle_collect(self, params: dict[str, Any], chat_id: str) -> BridgeResult:
         url = params.get("url", "")
         platform = params.get("platform", "auto")
 
@@ -461,16 +478,17 @@ class FeishuAgentBridge:
             )
 
         try:
+            from datetime import UTC, datetime
+
+            from app.db.models import PublishedContentPerformance
+            from app.db.session import AsyncSessionLocal
+            from app.services.performance_collector import compute_performance_score
             from app.services.work_collector import (
+                _clean_share_text,
                 collect_from_url,
                 detect_platform,
                 get_last_collect_errors,
-                _clean_share_text,
             )
-            from app.services.performance_collector import compute_performance_score
-            from app.db.session import AsyncSessionLocal
-            from app.db.models import PublishedContentPerformance
-            from datetime import UTC, datetime
 
             cleaned_url = _clean_share_text(url)
             if platform == "auto" or not platform:
@@ -489,13 +507,15 @@ class FeishuAgentBridge:
                     data={"url": url, "errors": errors},
                 )
 
-            score = compute_performance_score({
-                "likes": result.get("likes", 0),
-                "collects": result.get("collects", 0),
-                "comments": result.get("comments", 0),
-                "shares": result.get("shares", 0),
-                "author_fans": result.get("author_fans", 1),
-            })
+            score = compute_performance_score(
+                {
+                    "likes": result.get("likes", 0),
+                    "collects": result.get("collects", 0),
+                    "comments": result.get("comments", 0),
+                    "shares": result.get("shares", 0),
+                    "author_fans": result.get("author_fans", 1),
+                }
+            )
 
             async with AsyncSessionLocal() as db:
                 record = PublishedContentPerformance(
@@ -524,7 +544,15 @@ class FeishuAgentBridge:
             title = result.get("title", "无标题")
             likes = result.get("likes", 0)
             collects = result.get("collects", 0)
-            platform_label = {"xiaohongshu": "小红书", "douyin": "抖音", "bilibili": "B站", "wechat_mp": "微信公众号", "instagram": "Instagram", "threads": "Threads", "web": "网页"}.get(platform, platform)
+            platform_label = {
+                "xiaohongshu": "小红书",
+                "douyin": "抖音",
+                "bilibili": "B站",
+                "wechat_mp": "微信公众号",
+                "instagram": "Instagram",
+                "threads": "Threads",
+                "web": "网页",
+            }.get(platform, platform)
 
             reply = (
                 f"已采集到AI数据分析中\n"
@@ -535,12 +563,7 @@ class FeishuAgentBridge:
             )
 
             card = BlockKitBuilder.collect_result_card(
-                title=title,
-                platform=platform,
-                likes=likes,
-                collects=collects,
-                score=score,
-                url=url
+                title=title, platform=platform, likes=likes, collects=collects, score=score, url=url
             )
 
             return BridgeResult(
@@ -557,9 +580,7 @@ class FeishuAgentBridge:
                 reply=f"采集出错: {str(e)[:100]}",
             )
 
-    async def _handle_agent_chat(
-        self, text: str, chat_id: str, sender_id: str
-    ) -> BridgeResult:
+    async def _handle_agent_chat(self, text: str, chat_id: str, sender_id: str) -> BridgeResult:
         try:
             from app.agents.chat_agent import ChatAgent
             from app.db.session import AsyncSessionLocal
@@ -635,23 +656,31 @@ class FeishuAgentBridge:
                     return f"标题: {output['title']}"
 
                 skip_keys = {
-                    "_awaiting_confirmation", "_confirmation_prompt",
-                    "_workflow_started", "_loop_state_path",
-                    "_last_thought", "_thinking_process", "thought",
+                    "_awaiting_confirmation",
+                    "_confirmation_prompt",
+                    "_workflow_started",
+                    "_loop_state_path",
+                    "_last_thought",
+                    "_thinking_process",
+                    "thought",
                 }
-                parts = [
-                    f"{k}: {v}"
-                    for k, v in output.items()
-                    if v and k not in skip_keys
-                ]
+                parts = [f"{k}: {v}" for k, v in output.items() if v and k not in skip_keys]
 
                 if parts:
                     result_text = "\n".join(parts[:5])
 
                     thought_patterns = [
-                        "用户只是", "简单回应", "这是一个", "我需要",
-                        "应该调用", "判断为", "识别到", "分析结果",
-                        "根据上下文", "从消息来看", "这看起来",
+                        "用户只是",
+                        "简单回应",
+                        "这是一个",
+                        "我需要",
+                        "应该调用",
+                        "判断为",
+                        "识别到",
+                        "分析结果",
+                        "根据上下文",
+                        "从消息来看",
+                        "这看起来",
                     ]
 
                     is_thought = any(pattern in result_text for pattern in thought_patterns)
@@ -695,6 +724,7 @@ class FeishuAgentBridge:
             content = resp.get("content", "")
             if content:
                 import json
+
                 try:
                     data = json.loads(content)
                     if isinstance(data, dict) and data.get("summary"):
@@ -762,6 +792,7 @@ def get_or_create_bridge(platform_user_id: str) -> FeishuAgentBridge:
         _bridge_registry[platform_user_id] = bridge
 
         from capabilities.rpa.feishu_bot import get_feishu_engine
+
         engine = get_feishu_engine(platform_user_id)
         engine.add_message_callback(bridge.on_message)
 
@@ -774,6 +805,7 @@ def remove_bridge(platform_user_id: str) -> None:
     if platform_user_id in _bridge_registry:
         bridge = _bridge_registry.pop(platform_user_id)
         from capabilities.rpa.feishu_bot import get_feishu_engine
+
         engine = get_feishu_engine(platform_user_id)
         engine.remove_message_callback(bridge.on_message)
         logger.info(f"[FeishuAgentBridge] 已移除用户 {platform_user_id} 的桥")

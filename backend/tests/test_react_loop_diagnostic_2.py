@@ -27,7 +27,12 @@ class _FakeBus:
 
     async def publish(self, workflow_id, event_type, payload, turn_id=None):
         self.calls.append(
-            {"workflow_id": workflow_id, "event_type": event_type, "payload": payload, "turn_id": turn_id}
+            {
+                "workflow_id": workflow_id,
+                "event_type": event_type,
+                "payload": payload,
+                "turn_id": turn_id,
+            }
         )
         return "evt_fake"
 
@@ -59,10 +64,17 @@ class _ScriptedLLM:
 
 
 def _chunk(content: str = "", is_final: bool = True, token_usage: int = 1) -> dict:
-    return {"content": content, "reasoning_content": "", "is_final": is_final, "token_usage": token_usage}
+    return {
+        "content": content,
+        "reasoning_content": "",
+        "is_final": is_final,
+        "token_usage": token_usage,
+    }
 
 
-def _react_step(thought: str, tool_calls: list | None = None, final: bool = False, output: dict | None = None) -> str:
+def _react_step(
+    thought: str, tool_calls: list | None = None, final: bool = False, output: dict | None = None
+) -> str:
     step = {"thought": thought, "tool_calls": tool_calls or [], "final": final}
     if output is not None:
         step["output"] = output
@@ -113,7 +125,9 @@ class TestStep8CallLlmRetry:
         简单重试逻辑会重试 3 次才放弃，浪费时间。
         """
         source = inspect.getsource(ReactorSession._call_llm)
-        has_401_check = "401" in source or "unrecoverable" in source or "unauthorized" in source.lower()
+        has_401_check = (
+            "401" in source or "unrecoverable" in source or "unauthorized" in source.lower()
+        )
 
         if not has_401_check:
             # 这不是 crash bug，但记录诊断信息
@@ -121,7 +135,7 @@ class TestStep8CallLlmRetry:
 
     def test_stream_retry_state_exists_and_works(self):
         """StreamRetryState 已实现且可用。"""
-        from app.engine.governance.stream_retry import StreamRetryState, RetryAction
+        from app.engine.governance.stream_retry import RetryAction, StreamRetryState
 
         state = StreamRetryState()
 
@@ -156,6 +170,7 @@ class TestStep9DispatchTimeout:
         """_dispatch 源码中是否使用了 asyncio.wait_for。"""
         # 2026-10 二期：执行已下沉 transport，超时保护在 InProcessTransport.call
         from app.engine.protocol.transport import InProcessTransport
+
         source = inspect.getsource(InProcessTransport.call)
         has_timeout = "wait_for" in source or "timeout" in source.lower()
 
@@ -189,6 +204,7 @@ class TestStep10ChatAgentHistoryInjection:
     def test_agentic_loop_injects_history_into_topic(self):
         """_agentic_loop 是否把历史拼接到 topic 字符串。"""
         from app.agents.chat_agent import ChatAgent
+
         source = inspect.getsource(ChatAgent._agentic_loop)
 
         # 检查是否有 history 拼接到 topic 的逻辑
@@ -207,7 +223,9 @@ class TestStep10ChatAgentHistoryInjection:
     def test_build_initial_messages_only_takes_topic(self):
         """_build_initial_messages 是否只接受 topic（单条 user message）。"""
         source = inspect.getsource(ReactorSession._build_initial_messages)
-        has_history_param = "history" in source or "messages" in source.split("def")[1].split("):")[0]
+        has_history_param = (
+            "history" in source or "messages" in source.split("def")[1].split("):")[0]
+        )
 
         if not has_history_param:
             # _build_initial_messages 不接受历史消息参数
@@ -229,6 +247,7 @@ class TestStep11CallLlmRetryExhaustion:
     @pytest.mark.asyncio
     async def test_llm_failure_returns_final_json(self):
         """LLM 持续失败 → _call_llm 返回 error JSON → _parse_step 应识别为 final。"""
+
         class _FailingLLM:
             model_name = "failing"
 
@@ -243,9 +262,9 @@ class TestStep11CallLlmRetryExhaustion:
 
         # _call_llm 重试耗尽后返回 {"final": true, "output": {"error": ...}}
         # _parse_step 应解析出 final=True，循环应终止
-        assert result.get("_iterations") == 1, (
-            f"LLM 失败后循环应在第 1 轮终止，实际: {result.get('_iterations')}"
-        )
+        assert (
+            result.get("_iterations") == 1
+        ), f"LLM 失败后循环应在第 1 轮终止，实际: {result.get('_iterations')}"
         # 应有错误信息
         has_error = "error" in result or any("error" in str(v) for v in result.values())
         assert has_error, "LLM 失败后应有错误信息"
@@ -267,6 +286,7 @@ class TestStep12DispatchArgsLeakage:
         """_dispatch 是否在 args 中注入 _user_id 等内部字段。"""
         # 2026-10 二期：注入下沉 dispatch 钩子链（SkillCallUnwrapHook.pre_execute）
         from app.engine.protocol.dispatch_hooks import SkillCallUnwrapHook
+
         source = inspect.getsource(SkillCallUnwrapHook.pre_execute)
         has_user_id_inject = "_user_id" in source and "args[" in source
         has_workflow_id_inject = "_workflow_id" in source and "args[" in source

@@ -23,7 +23,9 @@ from app.core.skill_registry import register
 
 logger = logging.getLogger(__name__)
 
-_WIKI_URL_RE = re.compile(r"https?://[^\s]*?(?:feishu\.cn|larksuite\.com)/(?:wiki|docx|docs)/([A-Za-z0-9]+)")
+_WIKI_URL_RE = re.compile(
+    r"https?://[^\s]*?(?:feishu\.cn|larksuite\.com)/(?:wiki|docx|docs)/([A-Za-z0-9]+)"
+)
 
 
 def _extract_token(raw: str) -> str:
@@ -45,7 +47,9 @@ class FeishuWikiDocInput(BaseModel):
             "append_content(向已有文档追加内容)"
         ),
     )
-    space_id: str = Field(default="", description="知识库空间 ID。list_nodes/create_doc 用；list_spaces 可不传")
+    space_id: str = Field(
+        default="", description="知识库空间 ID。list_nodes/create_doc 用；list_spaces 可不传"
+    )
     parent_node_token: str = Field(
         default="",
         description="父节点 token（可传 wiki 链接）。空=空间顶层。list_nodes/create_doc 用",
@@ -93,7 +97,7 @@ class FeishuWikiDocSkill(Skill):
 
         try:
             from app.config import get_settings
-            from capabilities.messaging.adapters.feishu import FeishuClient, FeishuAPIError
+            from capabilities.messaging.adapters.feishu import FeishuAPIError, FeishuClient
 
             settings = get_settings()
             if not (settings.feishu_app_id and settings.feishu_app_secret):
@@ -145,11 +149,14 @@ class FeishuWikiDocSkill(Skill):
         try:
             from app.core.context_vars import current_db_session
             from capabilities.messaging.services.feishu_oauth import get_valid_user_access_token
+
             db = current_db_session.get(None)
             if db is not None and user_id and user_id != "default":
                 return await get_valid_user_access_token(db, user_id)
         except Exception as exc:
-            logger.warning(f"[FeishuWikiDocSkill] user token unavailable, fallback tenant token: {exc}")
+            logger.warning(
+                f"[FeishuWikiDocSkill] user token unavailable, fallback tenant token: {exc}"
+            )
         return None
 
     async def _list_spaces(self, client: Any, access_token: str | None = None) -> dict[str, Any]:
@@ -159,10 +166,16 @@ class FeishuWikiDocSkill(Skill):
             "ok": True,
             "count": len(items),
             "items": items,
-            "hint": "用 space_id 调 list_nodes 浏览节点，或调 create_doc 在该空间归档文档" if items else "",
+            "hint": (
+                "用 space_id 调 list_nodes 浏览节点，或调 create_doc 在该空间归档文档"
+                if items
+                else ""
+            ),
         }
 
-    async def _search_docs(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _search_docs(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         query = (inputs.get("query") or inputs.get("content") or "").strip()
         if not query:
             return {"ok": False, "error": "search_docs 需要提供 query（搜索关键词）"}
@@ -177,12 +190,16 @@ class FeishuWikiDocSkill(Skill):
             "hint": "搜索结果中的 url/token 可传给 read_doc 读取正文；该接口按用户授权范围返回个人文档和知识库文档",
         }
 
-    async def _list_nodes(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _list_nodes(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         space_id = (inputs.get("space_id") or "").strip()
         if not space_id:
             return {"ok": False, "error": "list_nodes 需要提供 space_id（可先用 list_spaces 获取）"}
         parent = _extract_token(inputs.get("parent_node_token", ""))
-        result = await client.list_wiki_nodes(space_id, parent_node_token=parent, access_token=access_token)
+        result = await client.list_wiki_nodes(
+            space_id, parent_node_token=parent, access_token=access_token
+        )
         items = result.get("items", [])
         return {
             "ok": True,
@@ -193,7 +210,9 @@ class FeishuWikiDocSkill(Skill):
             "hint": "has_child=true 的节点可传其 node_token 作为 parent_node_token 继续下钻；obj_type=docx 的节点可传 node_token 给 read_doc 读取正文",
         }
 
-    async def _create_doc(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _create_doc(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         space_id = (inputs.get("space_id") or "").strip()
         title = (inputs.get("title") or "").strip()
         content = inputs.get("content") or ""
@@ -203,9 +222,14 @@ class FeishuWikiDocSkill(Skill):
         if not title:
             return {"ok": False, "error": "create_doc 需要提供 title（文档标题）"}
         if not content.strip():
-            return {"ok": False, "error": "create_doc 需要提供 content（Markdown 内容，可为空标题+正文）"}
+            return {
+                "ok": False,
+                "error": "create_doc 需要提供 content（Markdown 内容，可为空标题+正文）",
+            }
 
-        created = await client.create_wiki_doc(space_id, title, parent_node_token=parent, access_token=access_token)
+        created = await client.create_wiki_doc(
+            space_id, title, parent_node_token=parent, access_token=access_token
+        )
         document_id = created["document_id"]
         appended = await client.append_doc_content(document_id, content, access_token=access_token)
         return {
@@ -218,10 +242,15 @@ class FeishuWikiDocSkill(Skill):
             "hint": f"文档已创建并写入 {appended.get('appended_blocks', 0)} 个内容块，节点 token: {created['node_token']}",
         }
 
-    async def _read_doc(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _read_doc(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         token = _extract_token(inputs.get("doc_token", ""))
         if not token:
-            return {"ok": False, "error": "read_doc 需要提供 doc_token（文档 ID、wiki 节点 token 或飞书链接均可）"}
+            return {
+                "ok": False,
+                "error": "read_doc 需要提供 doc_token（文档 ID、wiki 节点 token 或飞书链接均可）",
+            }
 
         document_id, resolved = await self._resolve_document_id(client, token, access_token)
         content = await client.read_doc_content(document_id, access_token=access_token)
@@ -233,13 +262,21 @@ class FeishuWikiDocSkill(Skill):
             "content": content,
         }
 
-    async def _append_content(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _append_content(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         token = _extract_token(inputs.get("doc_token", ""))
         content = inputs.get("content") or ""
         if not token:
-            return {"ok": False, "error": "append_content 需要提供 doc_token（文档 ID、wiki 节点 token 或飞书链接均可）"}
+            return {
+                "ok": False,
+                "error": "append_content 需要提供 doc_token（文档 ID、wiki 节点 token 或飞书链接均可）",
+            }
         if not content.strip():
-            return {"ok": False, "error": "append_content 需要提供 content（要追加的 Markdown 内容）"}
+            return {
+                "ok": False,
+                "error": "append_content 需要提供 content（要追加的 Markdown 内容）",
+            }
 
         document_id, resolved = await self._resolve_document_id(client, token, access_token)
         appended = await client.append_doc_content(document_id, content, access_token=access_token)
@@ -252,7 +289,9 @@ class FeishuWikiDocSkill(Skill):
 
     # -------------------- 辅助 --------------------
 
-    async def _resolve_document_id(self, client: Any, token: str, access_token: str | None = None) -> tuple[str, bool]:
+    async def _resolve_document_id(
+        self, client: Any, token: str, access_token: str | None = None
+    ) -> tuple[str, bool]:
         """把 wiki 节点 token / 链接解析为 docx 文档 ID。
 
         规则：wik 开头的 token 视为 wiki 节点，先查节点信息取 obj_token；

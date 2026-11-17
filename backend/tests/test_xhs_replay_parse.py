@@ -95,6 +95,7 @@ def _detail_html(note_id: str, image_count: int = 9, video_url: str = "") -> str
 # 1. 重放 harness 自检（不依赖任何录制夹具）
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_replay_response_wraps_real_selector():
     """测试: ReplayResponse
     场景: 用真实 HTML 构造离线 Response
@@ -143,9 +144,7 @@ async def test_parse_detail_returns_full_gallery():
     预期: image_urls 9 张（图集唯一来源），tags 解析出来
     """
     spider = _spider()
-    result = await replay.run_parse_note(
-        spider, _detail_html("n1", image_count=9), note_id="n1"
-    )
+    result = await replay.run_parse_note(spider, _detail_html("n1", image_count=9), note_id="n1")
     item = result.items[0]
 
     assert len(item["image_urls"]) == 9
@@ -179,9 +178,7 @@ async def test_parse_detail_single_image_note_keeps_one_image():
     预期: 只有 1 张图也算完整图集（不能因为"只有一张"被判为卡片兜底）
     """
     spider = _spider()
-    result = await replay.run_parse_note(
-        spider, _detail_html("s1", image_count=1), note_id="s1"
-    )
+    result = await replay.run_parse_note(spider, _detail_html("s1", image_count=1), note_id="s1")
     assert len(result.items[0]["image_urls"]) == 1
     assert result.items[0]["from_card"] is False
 
@@ -206,6 +203,7 @@ async def test_parse_detects_login_page_without_network():
 # ═══════════════════════════════════════════════════════════════════
 # 2. 真实录制页面重放（夹具缺失时 skip，不静默通过）
 # ═══════════════════════════════════════════════════════════════════
+
 
 def _require(name: str) -> None:
     if not replay.has_fixture(name):

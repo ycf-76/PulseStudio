@@ -13,12 +13,12 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from app.engine.schemas import AgentOutput, LLMProtocol, WorkflowContext
 from app.agents.input_rules import ChatInputRule
 from app.agents.registry import AgentRegistry
+from app.core.context_vars import current_db_session
 from app.engine.reactor.session import ReactorSession
 from app.engine.reactor.task_classifier import TaskType, build_classifier_from_skills
-from app.core.context_vars import current_db_session
+from app.engine.schemas import AgentOutput, LLMProtocol, WorkflowContext
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +86,24 @@ class ChatAgent:
 
         target_agent = agent_id or "chat_agent"
         try:
-            session = self._registry.build_session(target_agent, workflow_id=workflow_id, creation_type=creation_type, auto_approve=auto_approve)
+            session = self._registry.build_session(
+                target_agent,
+                workflow_id=workflow_id,
+                creation_type=creation_type,
+                auto_approve=auto_approve,
+            )
         except KeyError:
             if target_agent != "chat_agent":
-                logger.warning(f"[ChatAgent] agent '{target_agent}' not found, falling back to chat_agent")
+                logger.warning(
+                    f"[ChatAgent] agent '{target_agent}' not found, falling back to chat_agent"
+                )
                 try:
-                    session = self._registry.build_session("chat_agent", workflow_id=workflow_id, creation_type=creation_type, auto_approve=auto_approve)
+                    session = self._registry.build_session(
+                        "chat_agent",
+                        workflow_id=workflow_id,
+                        creation_type=creation_type,
+                        auto_approve=auto_approve,
+                    )
                 except KeyError:
                     return await self._fallback_intent_route(message, context, workflow_id)
             else:
@@ -112,25 +124,31 @@ class ChatAgent:
                         override_applied = True
                         logger.info(f"[ChatAgent] model override applied: {model_override}")
                     else:
-                        logger.warning(f"[ChatAgent] model override '{model_override}' unavailable, fallback to assignment")
+                        logger.warning(
+                            f"[ChatAgent] model override '{model_override}' unavailable, fallback to assignment"
+                        )
                 except Exception as e:
                     logger.warning(f"[ChatAgent] apply model override failed: {e}")
 
             if not override_applied:
                 try:
+                    from app.engine.factory import get_llm_for_model
                     from app.services.model_assignment import (
                         get_cached_agent_model,
                         get_cached_default_model,
                     )
-                    from app.engine.factory import get_llm_for_model
 
-                    _assigned = get_cached_agent_model(user_id, target_agent) or get_cached_default_model(user_id)
+                    _assigned = get_cached_agent_model(
+                        user_id, target_agent
+                    ) or get_cached_default_model(user_id)
                     if _assigned:
                         _assigned_llm = await get_llm_for_model(_assigned, user_id=user_id)
                         if _assigned_llm is not None:
                             session.llm = _assigned_llm
                         else:
-                            logger.warning(f"[ChatAgent] assigned model '{_assigned}' unavailable, keep session default")
+                            logger.warning(
+                                f"[ChatAgent] assigned model '{_assigned}' unavailable, keep session default"
+                            )
                 except Exception as e:
                     logger.warning(f"[ChatAgent] apply model assignment failed: {e}")
 
@@ -140,7 +158,11 @@ class ChatAgent:
         if session.llm is not None:
             guidance = extra_system_prompt or ""
             return await self._agentic_loop(
-                message, session_id, session, context, db,
+                message,
+                session_id,
+                session,
+                context,
+                db,
                 plan_guidance=guidance,
                 image_asset_ids=image_asset_ids,
                 video_asset_ids=video_asset_ids,
@@ -159,6 +181,7 @@ class ChatAgent:
         if _llm is None:
             try:
                 from app.agents.registry import AgentRegistry
+
                 _session = AgentRegistry().build_session("chat_agent")
                 _llm = _session.llm
             except Exception:
@@ -168,11 +191,9 @@ class ChatAgent:
             return None
         try:
             from app.services import chat_session
+
             all_messages = await chat_session.list_messages(session_id, limit=200)
-            user_assistant_msgs = [
-                m for m in all_messages
-                if m["role"] in ("user", "assistant")
-            ]
+            user_assistant_msgs = [m for m in all_messages if m["role"] in ("user", "assistant")]
             if len(user_assistant_msgs) <= recent_limit:
                 return None
             old_msgs = user_assistant_msgs[:-recent_limit]
@@ -231,9 +252,7 @@ class ChatAgent:
         block = "\n".join(lines)
         return f"{base_prompt}\n\n{block}" if base_prompt else block
 
-    async def _resolve_work_video_path(
-        self, db: Any, user_id: str, work_id: str
-    ) -> str | None:
+    async def _resolve_work_video_path(self, db: Any, user_id: str, work_id: str) -> str | None:
         """取作品本地缓存视频的绝对路径（yt-dlp 已下载的那份）。
 
         只读查询，任何失败都返回 None——视频路径缺失不阻断文本分析链路。
@@ -306,11 +325,15 @@ class ChatAgent:
 
             if image_asset_ids:
                 input_data["image_asset_ids"] = image_asset_ids
-                logger.debug(f"[ChatAgent._agentic_loop] image_asset_ids injected into context: {image_asset_ids}")
+                logger.debug(
+                    f"[ChatAgent._agentic_loop] image_asset_ids injected into context: {image_asset_ids}"
+                )
 
             if video_asset_ids:
                 input_data["video_asset_ids"] = video_asset_ids
-                logger.debug(f"[ChatAgent._agentic_loop] video_asset_ids injected into context: {video_asset_ids}")
+                logger.debug(
+                    f"[ChatAgent._agentic_loop] video_asset_ids injected into context: {video_asset_ids}"
+                )
 
             # 作品上下文：work_id 必须进 run context——work_edit 靠它定位要写
             # 的那一条记录（LLM 看不到数据库 id，由 WorkEditContextHook 强制覆盖）。
@@ -327,7 +350,9 @@ class ChatAgent:
                 # 视频作品：把本地缓存视频路径带进 run context，
                 # CreativeVideoContextHook 据此注入 video_path（用户未另外上传视频时）。
                 if not video_asset_ids:
-                    _work_video_path = await self._resolve_work_video_path(db, context.user_id, _work_id)
+                    _work_video_path = await self._resolve_work_video_path(
+                        db, context.user_id, _work_id
+                    )
                     if _work_video_path:
                         input_data["work_video_path"] = _work_video_path
                         logger.info(
@@ -386,15 +411,13 @@ class ChatAgent:
                                 f"[ChatAgent] personality inject skipped: {_personality_err}"
                             )
                 except Exception as _profile_err:
-                    logger.debug(
-                        f"[ChatAgent] profile soft-inject skipped: {_profile_err}"
-                    )
+                    logger.debug(f"[ChatAgent] profile soft-inject skipped: {_profile_err}")
 
                 try:
-                    from app.services import chat_session
-                    from app.services import side_session as _side_svc
                     from app.engine.governance.context_manager import ContextManager
                     from app.engine.governance.token_budget import TokenBudgetConfig
+                    from app.services import chat_session
+                    from app.services import side_session as _side_svc
 
                     # 侧会话判定：有快照即为侧会话（快照与侧会话同事务创建，一一对应）
                     _side_snapshot = await _side_svc.get_snapshot(session_id)
@@ -411,7 +434,8 @@ class ChatAgent:
                         creative_state = await chat_session.get_creative_state(session_id)
                     if creative_state and "world_state" in creative_state:
                         _cm = ContextManager.from_snapshot(
-                            session_id, creative_state,
+                            session_id,
+                            creative_state,
                             token_budget_config=TokenBudgetConfig(),
                         )
                     elif creative_state:
@@ -445,9 +469,7 @@ class ChatAgent:
                     fragments, rollout_item = _cm.update_world_state()
 
                     if fragments:
-                        logger.info(
-                            f"[ChatAgent] WorldState diff injected: {len(fragments)} chars"
-                        )
+                        logger.info(f"[ChatAgent] WorldState diff injected: {len(fragments)} chars")
 
                     _cr = creative_state.get("copywrite_result") if creative_state else None
                     if _cr:
@@ -488,6 +510,7 @@ class ChatAgent:
             if _cm is not None:
                 try:
                     from app.services import chat_session as _cs
+
                     new_snapshot = _cm.take_snapshot()
                     await _cs.update_creative_state(session_id, new_snapshot)
                     logger.debug(

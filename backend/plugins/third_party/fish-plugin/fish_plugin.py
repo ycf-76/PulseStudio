@@ -20,9 +20,9 @@ _SPEED_RANGE = (0.5, 2.0)
 _PLACEMENTS = ("left", "right")
 
 _DEFAULT_CONFIG: Dict[str, Any] = {
-    "size": 96,            # 鱼的宽度 px
-    "speed": 1.0,          # 动画速度倍率
-    "bubble": True,        # 是否显示气泡
+    "size": 96,  # 鱼的宽度 px
+    "speed": 1.0,  # 动画速度倍率
+    "bubble": True,  # 是否显示气泡
     "placement": "right",  # 鱼在输入框的哪一侧
 }
 

@@ -1,5 +1,7 @@
 """10.20 二期 deck 服务契约测试（parse_deck_json 防御式解析）。"""
+
 import json
+
 import pytest
 
 from capabilities.video.services.deck_orchestrator import parse_deck_json
@@ -9,11 +11,22 @@ class TestParseDeckJson:
     def test_normal_array(self):
         raw = '[{"title":"防晒要提前涂","bullets":["出门前 10 分钟","用量一元硬币"]}]'
         slides = parse_deck_json(raw)
-        assert slides == [{"title": "防晒要提前涂", "slide_type": "points", "bullets": [{"text": "出门前 10 分钟", "emphasis": "none"}, {"text": "用量一元硬币", "emphasis": "none"}]}]
+        assert slides == [
+            {
+                "title": "防晒要提前涂",
+                "slide_type": "points",
+                "bullets": [
+                    {"text": "出门前 10 分钟", "emphasis": "none"},
+                    {"text": "用量一元硬币", "emphasis": "none"},
+                ],
+            }
+        ]
 
     def test_wrapped_in_code_fence_and_prose(self):
         raw = '好的，以下是幻灯片：\n```json\n[{"title":"t","bullets":["a"]}]\n```'
-        assert parse_deck_json(raw) == [{"title": "t", "slide_type": "points", "bullets": [{"text": "a", "emphasis": "none"}]}]
+        assert parse_deck_json(raw) == [
+            {"title": "t", "slide_type": "points", "bullets": [{"text": "a", "emphasis": "none"}]}
+        ]
 
     def test_bad_json_returns_empty(self):
         assert parse_deck_json("不是 JSON") == []
@@ -23,14 +36,18 @@ class TestParseDeckJson:
         assert parse_deck_json('{"title":"t"}') == []
 
     def test_item_field_type_enforced(self):
-        raw = '[{"title":123,"bullets":["a"]},{"title":"t","bullets":"not-list"},' \
-              '{"title":"ok","bullets":["a"]}]'
+        raw = (
+            '[{"title":123,"bullets":["a"]},{"title":"t","bullets":"not-list"},'
+            '{"title":"ok","bullets":["a"]}]'
+        )
         assert [s["title"] for s in parse_deck_json(raw)] == ["ok"]
 
     def test_empty_bullets_dropped(self):
         raw = '[{"title":"t","bullets":[]},{"title":"t2","bullets":["","  ","x"]}]'
         slides = parse_deck_json(raw)
-        assert slides == [{"title": "t2", "slide_type": "points", "bullets": [{"text": "x", "emphasis": "none"}]}]
+        assert slides == [
+            {"title": "t2", "slide_type": "points", "bullets": [{"text": "x", "emphasis": "none"}]}
+        ]
 
     def test_title_truncated_bullets_capped(self):
         raw = '[{"title":"' + "长" * 30 + '","bullets":["' + "b" * 30 + '","c","d","e","f"]}]'
@@ -69,8 +86,13 @@ class TestDeckThemes:
         from capabilities.video.services.deck_orchestrator import _DECK_THEMES
 
         required = {
-            "body_bg", "text_color", "bullet_bg", "bullet_border",
-            "dot_color", "accent_bg", "muted_color",
+            "body_bg",
+            "text_color",
+            "bullet_bg",
+            "bullet_border",
+            "dot_color",
+            "accent_bg",
+            "muted_color",
         }
         for name, theme in _DECK_THEMES.items():
             assert required <= set(theme), f"{name} 缺字段: {required - set(theme)}"
@@ -137,7 +159,9 @@ class TestDeckThemes:
             # render 内部：browser = p.chromium.launch() → new_page()
             p.chromium.launch.return_value.new_page.return_value = page
             render_deck_slides(
-                [{"title": "t", "bullets": ["a"]}], tmp_path, theme="cream",
+                [{"title": "t", "bullets": ["a"]}],
+                tmp_path,
+                theme="cream",
             )
 
         html = page.set_content.call_args.args[0]
@@ -152,17 +176,23 @@ class TestDeckThemes:
             generate_deck_slides,
         )
 
-        with patch(
-            "app.adapters.llm_base.llm_prompt_to_text",
-            new=AsyncMock(return_value='[{"title":"t","bullets":["a"]}]'),
-        ), patch(
-            # render_deck_slides 是同步函数（generate 经 to_thread 调用），
-            # mock 用 MagicMock — AsyncMock 会返回未 await 的 coroutine
-            "capabilities.video.services.deck_orchestrator.render_deck_slides",
-            new=MagicMock(return_value=[tmp_path / "slide_01.png"]),
-        ) as render_mock:
+        with (
+            patch(
+                "app.adapters.llm_base.llm_prompt_to_text",
+                new=AsyncMock(return_value='[{"title":"t","bullets":["a"]}]'),
+            ),
+            patch(
+                # render_deck_slides 是同步函数（generate 经 to_thread 调用），
+                # mock 用 MagicMock — AsyncMock 会返回未 await 的 coroutine
+                "capabilities.video.services.deck_orchestrator.render_deck_slides",
+                new=MagicMock(return_value=[tmp_path / "slide_01.png"]),
+            ) as render_mock,
+        ):
             await generate_deck_slides(
-                "转录全文", MagicMock(), tmp_path, theme="cream",
+                "转录全文",
+                MagicMock(),
+                tmp_path,
+                theme="cream",
             )
 
         assert render_mock.call_args.kwargs.get("theme") == "cream"
@@ -179,10 +209,12 @@ class TestAccentDocumentFlow:
         long_title = "这是一个足够长会换行的标题测试文本" * 3
         html = _slide_html(long_title, ["要点一", "要点二"], 0, 3)
         assert "top:560px" not in html, "accent 不得再用 absolute 写死 top"
-        assert "position:absolute" not in html.split(".accent")[1].split("}")[0], \
-            ".accent 规则不得含 absolute 定位"
-        assert html.index("</h1>") < html.index('class="accent"'), \
-            "accent 必须在 h1 之后的文档流位置"
+        assert (
+            "position:absolute" not in html.split(".accent")[1].split("}")[0]
+        ), ".accent 规则不得含 absolute 定位"
+        assert html.index("</h1>") < html.index(
+            'class="accent"'
+        ), "accent 必须在 h1 之后的文档流位置"
 
     def test_accent_single_line_still_renders(self):
         """常规短标题 → accent 仍渲染（不因改造丢失）。"""
@@ -206,20 +238,28 @@ class TestSlidesPersistence:
             generate_deck_slides,
         )
 
-        with patch(
-            "app.adapters.llm_base.llm_prompt_to_text",
-            new=AsyncMock(return_value='[{"title":"t","bullets":["a"]}]'),
-        ), patch(
-            "capabilities.video.services.deck_orchestrator.render_deck_slides",
-            new=MagicMock(return_value=[tmp_path / "slide_01.png"]),
+        with (
+            patch(
+                "app.adapters.llm_base.llm_prompt_to_text",
+                new=AsyncMock(return_value='[{"title":"t","bullets":["a"]}]'),
+            ),
+            patch(
+                "capabilities.video.services.deck_orchestrator.render_deck_slides",
+                new=MagicMock(return_value=[tmp_path / "slide_01.png"]),
+            ),
         ):
             await generate_deck_slides(
-                "转录全文", MagicMock(), tmp_path, theme="cream",
+                "转录全文",
+                MagicMock(),
+                tmp_path,
+                theme="cream",
             )
 
         data = json.loads((tmp_path / "slides.json").read_text(encoding="utf-8"))
         assert data["theme"] == "cream"
-        assert data["slides"] == [{"title": "t", "slide_type": "points", "bullets": [{"text": "a", "emphasis": "none"}]}]
+        assert data["slides"] == [
+            {"title": "t", "slide_type": "points", "bullets": [{"text": "a", "emphasis": "none"}]}
+        ]
         assert data["transcript"] == "转录全文"
 
     def test_render_from_slides_explicit_theme(self, tmp_path):
@@ -233,17 +273,26 @@ class TestSlidesPersistence:
         )
 
         json_path = tmp_path / "slides.json"
-        json_path.write_text(json.dumps({
-            "theme": "cream", "transcript": "x",
-            "slides": [{"title": "t", "bullets": ["a", "b"]}],
-        }, ensure_ascii=False), encoding="utf-8")
+        json_path.write_text(
+            json.dumps(
+                {
+                    "theme": "cream",
+                    "transcript": "x",
+                    "slides": [{"title": "t", "bullets": ["a", "b"]}],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
 
         page = MagicMock()
         with patch("playwright.sync_api.sync_playwright") as sp:
             p = sp.return_value.__enter__.return_value
             p.chromium.launch.return_value.new_page.return_value = page
             paths = render_deck_from_slides(
-                json_path, tmp_path / "out", theme="sunset",
+                json_path,
+                tmp_path / "out",
+                theme="sunset",
             )
 
         html = page.set_content.call_args.args[0]
@@ -261,9 +310,16 @@ class TestSlidesPersistence:
         )
 
         json_path = tmp_path / "slides.json"
-        json_path.write_text(json.dumps({
-            "theme": "cream", "slides": [{"title": "t", "bullets": []}],
-        }, ensure_ascii=False), encoding="utf-8")
+        json_path.write_text(
+            json.dumps(
+                {
+                    "theme": "cream",
+                    "slides": [{"title": "t", "bullets": []}],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
 
         page = MagicMock()
         with patch("playwright.sync_api.sync_playwright") as sp:
@@ -273,30 +329,48 @@ class TestSlidesPersistence:
 
         html = page.set_content.call_args.args[0]
         assert _DECK_THEMES["cream"]["body_bg"] in html
+
+
 class TestParseRichContract:
     """10.24-A/B：富要点契约 — bullets [{text, emphasis}] + slide_type，
     旧 str 格式自动映射，非法值白名单回退。"""
 
     def test_新格式富要点与页型(self):
         import json
-        raw = json.dumps([{
-            "title": "转化率翻倍", "slide_type": "stat",
-            "bullets": [{"text": "3.2%", "emphasis": "number"},
-                        {"text": "留存更高", "emphasis": "keyword"}],
-        }], ensure_ascii=False)
-        assert parse_deck_json(raw) == [{
-            "title": "转化率翻倍", "slide_type": "stat",
-            "bullets": [{"text": "3.2%", "emphasis": "number"},
-                        {"text": "留存更高", "emphasis": "keyword"}],
-        }]
+
+        raw = json.dumps(
+            [
+                {
+                    "title": "转化率翻倍",
+                    "slide_type": "stat",
+                    "bullets": [
+                        {"text": "3.2%", "emphasis": "number"},
+                        {"text": "留存更高", "emphasis": "keyword"},
+                    ],
+                }
+            ],
+            ensure_ascii=False,
+        )
+        assert parse_deck_json(raw) == [
+            {
+                "title": "转化率翻倍",
+                "slide_type": "stat",
+                "bullets": [
+                    {"text": "3.2%", "emphasis": "number"},
+                    {"text": "留存更高", "emphasis": "keyword"},
+                ],
+            }
+        ]
 
     def test_旧str格式自动映射(self):
         raw = '[{"title":"t","bullets":["a","b"]}]'
-        assert parse_deck_json(raw) == [{
-            "title": "t", "slide_type": "points",
-            "bullets": [{"text": "a", "emphasis": "none"},
-                        {"text": "b", "emphasis": "none"}],
-        }]
+        assert parse_deck_json(raw) == [
+            {
+                "title": "t",
+                "slide_type": "points",
+                "bullets": [{"text": "a", "emphasis": "none"}, {"text": "b", "emphasis": "none"}],
+            }
+        ]
 
     def test_非法emphasis回退none(self):
         raw = '[{"title":"t","bullets":[{"text":"a","emphasis":"big"}]}]'
@@ -318,6 +392,7 @@ class TestSlideTypeRender:
 
     def _html(self, bullets, slide_type="points", title="t"):
         from capabilities.video.services.deck_orchestrator import _slide_html
+
         return _slide_html(title, bullets, 0, 2, slide_type=slide_type)
 
     def test_points默认版式含要点卡(self):
@@ -329,26 +404,29 @@ class TestSlideTypeRender:
         assert 'class="bullet"' in html
 
     def test_emphasis渲染强调样式(self):
-        html = self._html([{"text": "3.2%", "emphasis": "number"},
-                           {"text": "留存", "emphasis": "keyword"}])
+        html = self._html(
+            [{"text": "3.2%", "emphasis": "number"}, {"text": "留存", "emphasis": "keyword"}]
+        )
         assert "em-num" in html
         assert "em-kw" in html
 
     def test_quote金句页无要点卡(self):
-        html = self._html([{"text": "注", "emphasis": "none"}],
-                          slide_type="quote", title="少熬夜")
+        html = self._html([{"text": "注", "emphasis": "none"}], slide_type="quote", title="少熬夜")
         assert "quote-title" in html
         assert 'class="bullet"' not in html
 
     def test_stat大数字页(self):
-        html = self._html([{"text": "3.2%", "emphasis": "number"}],
-                          slide_type="stat", title="转化率")
+        html = self._html(
+            [{"text": "3.2%", "emphasis": "number"}], slide_type="stat", title="转化率"
+        )
         assert "stat-num" in html
 
     def test_compare两栏页(self):
-        html = self._html([{"text": "左", "emphasis": "none"},
-                           {"text": "右", "emphasis": "none"}],
-                          slide_type="compare", title="对比")
+        html = self._html(
+            [{"text": "左", "emphasis": "none"}, {"text": "右", "emphasis": "none"}],
+            slide_type="compare",
+            title="对比",
+        )
         assert "compare-grid" in html
 
     def test_非法slide_type回退points版式(self):
@@ -393,6 +471,7 @@ def _llm_seq(*responses):
 
 def _render_mock(tmp_path):
     from unittest.mock import MagicMock, patch
+
     return patch(
         "capabilities.video.services.deck_orchestrator.render_deck_slides",
         new=MagicMock(return_value=[tmp_path / "slide_01.png"]),
@@ -401,6 +480,7 @@ def _render_mock(tmp_path):
 
 def _llm_patch(fake):
     from unittest.mock import patch
+
     return patch("app.adapters.llm_base.llm_prompt_to_text", new=fake)
 
 
@@ -416,8 +496,7 @@ class TestGenerateCapacityAndReview:
 
         long = "字" * 8500
         fake, calls = _llm_seq('[{"title":"t","bullets":["a"]}]')
-        with _llm_patch(fake), \
-                _render_mock(tmp_path):
+        with _llm_patch(fake), _render_mock(tmp_path):
             await generate_deck_slides(long, None, tmp_path)
 
         prompt = calls["prompts"][0]
@@ -428,30 +507,31 @@ class TestGenerateCapacityAndReview:
     @pytest.mark.asyncio
     async def test_自检通过共两次调用(self, tmp_path):
         import json
+
         from capabilities.video.services.deck_orchestrator import (
             generate_deck_slides,
         )
 
         gen = json.dumps([{"title": "t", "bullets": ["a"]}], ensure_ascii=False)
         fake, calls = _llm_seq(gen, "OK")
-        with _llm_patch(fake), \
-                _render_mock(tmp_path):
+        with _llm_patch(fake), _render_mock(tmp_path):
             await generate_deck_slides("转录", None, tmp_path)
         assert calls["n"] == 2, "生成 + 审查各一次，OK 不重试"
 
     @pytest.mark.asyncio
     async def test_自检意见触发一轮重试(self, tmp_path):
         import json
+
         from capabilities.video.services.deck_orchestrator import (
             generate_deck_slides,
         )
 
         v1 = json.dumps([{"title": "v1", "bullets": ["a"]}], ensure_ascii=False)
-        v2 = json.dumps([{"title": "v2", "slide_type": "quote",
-                          "bullets": ["b"]}], ensure_ascii=False)
+        v2 = json.dumps(
+            [{"title": "v2", "slide_type": "quote", "bullets": ["b"]}], ensure_ascii=False
+        )
         fake, calls = _llm_seq(v1, "第2页全是空话，换成金句页", v2, "OK")
-        with _llm_patch(fake), \
-                _render_mock(tmp_path):
+        with _llm_patch(fake), _render_mock(tmp_path):
             await generate_deck_slides("转录", None, tmp_path)
 
         assert calls["n"] == 4, "gen+review + retry-gen+review"
@@ -462,16 +542,21 @@ class TestGenerateCapacityAndReview:
     @pytest.mark.asyncio
     async def test_重试上限两轮(self, tmp_path):
         import json
+
         from capabilities.video.services.deck_orchestrator import (
             generate_deck_slides,
         )
 
-        seq = ['[{"title":"v1","bullets":["a"]}]', "改",
-               '[{"title":"v2","bullets":["a"]}]', "再改",
-               '[{"title":"v3","bullets":["a"]}]', "还改"]
+        seq = [
+            '[{"title":"v1","bullets":["a"]}]',
+            "改",
+            '[{"title":"v2","bullets":["a"]}]',
+            "再改",
+            '[{"title":"v3","bullets":["a"]}]',
+            "还改",
+        ]
         fake, calls = _llm_seq(*seq)
-        with _llm_patch(fake), \
-                _render_mock(tmp_path):
+        with _llm_patch(fake), _render_mock(tmp_path):
             await generate_deck_slides("转录", None, tmp_path)
 
         assert calls["n"] == 6, "gen+review + (gen+review)×2 = 封顶 6 次"
@@ -481,14 +566,13 @@ class TestGenerateCapacityAndReview:
     @pytest.mark.asyncio
     async def test_重试解析空保留上一版(self, tmp_path):
         import json
+
         from capabilities.video.services.deck_orchestrator import (
             generate_deck_slides,
         )
 
-        fake, _ = _llm_seq('[{"title":"v1","bullets":["a"]}]', "改",
-                           "这不是 JSON", "OK")
-        with _llm_patch(fake), \
-                _render_mock(tmp_path):
+        fake, _ = _llm_seq('[{"title":"v1","bullets":["a"]}]', "改", "这不是 JSON", "OK")
+        with _llm_patch(fake), _render_mock(tmp_path):
             await generate_deck_slides("转录", None, tmp_path)
         data = json.loads((tmp_path / "slides.json").read_text(encoding="utf-8"))
         assert data["slides"][0]["title"] == "v1"
@@ -496,14 +580,13 @@ class TestGenerateCapacityAndReview:
     @pytest.mark.asyncio
     async def test_审查异常不阻断(self, tmp_path):
         import json
+
         from capabilities.video.services.deck_orchestrator import (
             generate_deck_slides,
         )
 
-        fake, calls = _llm_seq('[{"title":"v1","bullets":["a"]}]',
-                               RuntimeError("api down"))
-        with _llm_patch(fake), \
-                _render_mock(tmp_path):
+        fake, calls = _llm_seq('[{"title":"v1","bullets":["a"]}]', RuntimeError("api down"))
+        with _llm_patch(fake), _render_mock(tmp_path):
             await generate_deck_slides("转录", None, tmp_path)
         assert calls["n"] == 2, "审查异常不再重试"
         data = json.loads((tmp_path / "slides.json").read_text(encoding="utf-8"))
@@ -558,9 +641,9 @@ class TestAutoTheme:
             await generate_deck_slides("转录", None, tmp_path, theme="auto")
 
         prompt = calls["prompts"][0]
-        assert all(name in prompt for name in ("midnight", "cream", "sunset")), (
-            "prompt 应含三主题气质画像"
-        )
+        assert all(
+            name in prompt for name in ("midnight", "cream", "sunset")
+        ), "prompt 应含三主题气质画像"
         data = json.loads((tmp_path / "slides.json").read_text(encoding="utf-8"))
         assert data["theme"] == "sunset", "slides.json 应落 LLM 选中主题而非 auto"
         assert rm.call_args.kwargs["theme"] == "sunset"
@@ -605,11 +688,14 @@ class TestSlideImages:
         """image_prompt 合法收录；非 str 丢弃；超长截 200。"""
         from capabilities.video.services.deck_orchestrator import parse_deck_json
 
-        raw = json.dumps([
-            {"title": "t1", "bullets": ["a"], "image_prompt": "sunny beach, warm tones"},
-            {"title": "t2", "bullets": ["a"], "image_prompt": 123},
-            {"title": "t3", "bullets": ["a"], "image_prompt": "x" * 300},
-        ], ensure_ascii=False)
+        raw = json.dumps(
+            [
+                {"title": "t1", "bullets": ["a"], "image_prompt": "sunny beach, warm tones"},
+                {"title": "t2", "bullets": ["a"], "image_prompt": 123},
+                {"title": "t3", "bullets": ["a"], "image_prompt": "x" * 300},
+            ],
+            ensure_ascii=False,
+        )
         slides = parse_deck_json(raw)
         assert slides[0]["image_prompt"] == "sunny beach, warm tones"
         assert "image_prompt" not in slides[1]
@@ -625,9 +711,10 @@ class TestSlideImages:
         img.write_bytes(b"\xff\xd8\xff\xe0fakejpeg")
         html = _slide_html("t", ["a"], 1, 5, image=str(img))
         assert 'class="bg-img"' in html
-        assert "data:image/jpeg;base64," + base64.b64encode(
-            b"\xff\xd8\xff\xe0fakejpeg"
-        ).decode() in html
+        assert (
+            "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xff\xe0fakejpeg").decode()
+            in html
+        )
         assert 'class="bg-shade"' in html
         assert 'class="fg"' in html
 
@@ -643,8 +730,7 @@ class TestSlideImages:
         """image 文件缺失 → 静默回退纯文字。"""
         from capabilities.video.services.deck_orchestrator import _slide_html
 
-        html = _slide_html("t", ["a"], 1, 5,
-                           image=str(tmp_path / "ghost.jpg"))
+        html = _slide_html("t", ["a"], 1, 5, image=str(tmp_path / "ghost.jpg"))
         assert "bg-img" not in html
 
     @pytest.mark.asyncio
@@ -663,16 +749,20 @@ class TestSlideImages:
         fake_adapter = MagicMock()
         fake_adapter.generate = AsyncMock(return_value=[b"jpgbytes"])
         settings = MagicMock(dashscope_api_key="sk-test")
-        with patch("app.config.get_settings", return_value=settings), \
-                patch("capabilities.image_gen.adapters.image_gen.WanxAdapter",
-                      return_value=fake_adapter):
+        with (
+            patch("app.config.get_settings", return_value=settings),
+            patch(
+                "capabilities.image_gen.adapters.image_gen.WanxAdapter", return_value=fake_adapter
+            ),
+        ):
             n = await _generate_slide_images(slides, tmp_path)
 
         assert n == 1
         fake_adapter.generate.assert_awaited_once()
-        assert "image_prompt" in fake_adapter.generate.await_args.kwargs.get(
-            "prompt", ""
-        ) or "sunny beach" in fake_adapter.generate.await_args.args[0]
+        assert (
+            "image_prompt" in fake_adapter.generate.await_args.kwargs.get("prompt", "")
+            or "sunny beach" in fake_adapter.generate.await_args.args[0]
+        )
         saved = tmp_path / "img_01.jpg"
         assert saved.is_file() and saved.read_bytes() == b"jpgbytes"
         assert slides[0]["image"] == str(saved)
@@ -708,15 +798,15 @@ class TestSlideImages:
             {"title": "b", "bullets": [], "image_prompt": "p2"},
         ]
         fake_adapter = MagicMock()
-        calls = [AsyncMock(side_effect=RuntimeError("api down")),
-                 AsyncMock(return_value=[b"ok"])]
-        fake_adapter.generate = AsyncMock(
-            side_effect=[RuntimeError("api down"), [b"ok"]]
-        )
+        calls = [AsyncMock(side_effect=RuntimeError("api down")), AsyncMock(return_value=[b"ok"])]
+        fake_adapter.generate = AsyncMock(side_effect=[RuntimeError("api down"), [b"ok"]])
         settings = MagicMock(dashscope_api_key="sk-test")
-        with patch("app.config.get_settings", return_value=settings), \
-                patch("capabilities.image_gen.adapters.image_gen.WanxAdapter",
-                      return_value=fake_adapter):
+        with (
+            patch("app.config.get_settings", return_value=settings),
+            patch(
+                "capabilities.image_gen.adapters.image_gen.WanxAdapter", return_value=fake_adapter
+            ),
+        ):
             n = await _generate_slide_images(slides, tmp_path)
         assert n == 1
         assert "image" not in slides[0]
@@ -731,23 +821,36 @@ class TestSlideImages:
             generate_deck_slides,
         )
 
-        wrapped = json.dumps([{
-            "title": "t", "bullets": ["a"], "image_prompt": "warm kitchen",
-        }], ensure_ascii=False)
+        wrapped = json.dumps(
+            [
+                {
+                    "title": "t",
+                    "bullets": ["a"],
+                    "image_prompt": "warm kitchen",
+                }
+            ],
+            ensure_ascii=False,
+        )
         fake, _ = _llm_seq(wrapped, "OK")
         img = tmp_path / "img_01.jpg"
-        with _llm_patch(fake), \
-                _render_mock(tmp_path) as rm, \
-                patch("capabilities.video.services.deck_orchestrator."
-                      "_generate_slide_images", new=AsyncMock(return_value=1)) as gi:
+        with (
+            _llm_patch(fake),
+            _render_mock(tmp_path) as rm,
+            patch(
+                "capabilities.video.services.deck_orchestrator." "_generate_slide_images",
+                new=AsyncMock(return_value=1),
+            ) as gi,
+        ):
             # 生图 mock 副作用：就地填 image 路径（模拟真实回填）
             async def _fake_gen(slides, out_dir):
                 slides[0]["image"] = str(img)
                 return 1
+
             gi.side_effect = _fake_gen
             await generate_deck_slides("转录", None, tmp_path)
 
         import json as _json
+
         data = _json.loads((tmp_path / "slides.json").read_text(encoding="utf-8"))
         assert data["slides"][0]["image"] == str(img)
         assert data["slides"][0]["image_prompt"] == "warm kitchen"

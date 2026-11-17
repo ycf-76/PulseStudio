@@ -51,26 +51,35 @@ def _subprocess_transcribe(audio_path, model_size="small", language=None):
     """whisper 子进程隔离：防 ct2 cuDNN DLL 污染同进程 torch CUDA（RVM）。"""
     code = _WHISPER_RUNNER % (BACKEND, Path(audio_path))
     proc = subprocess.run(
-        [sys.executable, "-c", code], cwd=str(BACKEND),
-        capture_output=True, text=True, timeout=900,
+        [sys.executable, "-c", code],
+        cwd=str(BACKEND),
+        capture_output=True,
+        text=True,
+        timeout=900,
     )
     for line in (proc.stdout or "").splitlines():
         if line.startswith("@@TRANSCRIPT@@"):
-            raw = json.loads(line[len("@@TRANSCRIPT@@"):])
+            raw = json.loads(line[len("@@TRANSCRIPT@@") :])
             from capabilities.video.adapters.whisper_transcribe import (
-                TranscribeSegment, TranscribeWord,
+                TranscribeSegment,
+                TranscribeWord,
             )
+
             return [
                 TranscribeSegment(
-                    text=s["text"], start=s["start"], end=s["end"],
-                    words=[TranscribeWord(text=w["text"], start=w["start"],
-                                          end=w["end"])
-                           for w in s.get("words") or []],
+                    text=s["text"],
+                    start=s["start"],
+                    end=s["end"],
+                    words=[
+                        TranscribeWord(text=w["text"], start=w["start"], end=w["end"])
+                        for w in s.get("words") or []
+                    ],
                 )
                 for s in raw
             ]
     raise RuntimeError(
-        f"子进程 whisper 转录失败 rc={proc.returncode}：{(proc.stderr or '')[-500:]}")
+        f"子进程 whisper 转录失败 rc={proc.returncode}：{(proc.stderr or '')[-500:]}"
+    )
 
 
 async def main() -> int:
@@ -171,16 +180,18 @@ async def main() -> int:
         print("[driver] required_fx 硬校验=开（effects 申报 dx≥40px |rot|≥2.5°）", flush=True)
     t0 = time.perf_counter()
     chunks = []
-    async for c in skill.execute({
-        "video_path": str(video),
-        "method": method,
-        "brief": brief,
-        "canvas": canvas,
-        "require_fx": require_fx,
-        "llm": llm,
-        "_user_id": "user_video_test",
-        "_workflow_id": "user-video-36s",
-    }):
+    async for c in skill.execute(
+        {
+            "video_path": str(video),
+            "method": method,
+            "brief": brief,
+            "canvas": canvas,
+            "require_fx": require_fx,
+            "llm": llm,
+            "_user_id": "user_video_test",
+            "_workflow_id": "user-video-36s",
+        }
+    ):
         chunks.append(c)
     elapsed = time.perf_counter() - t0
 
@@ -190,10 +201,16 @@ async def main() -> int:
     chunk = chunks[0]
     phases = [e.get("phase") for e in events if e.get("phase")]
     preview_events = [e for e in events if e.get("preview_url")]
-    print(f"\n[driver] elapsed={elapsed:.1f}s turns={chunk.get('turns')} "
-          f"success={chunk.get('success')}", flush=True)
-    print(f"[driver] sse_events={len(events)} preview_events={len(preview_events)} "
-          f"phases={phases}", flush=True)
+    print(
+        f"\n[driver] elapsed={elapsed:.1f}s turns={chunk.get('turns')} "
+        f"success={chunk.get('success')}",
+        flush=True,
+    )
+    print(
+        f"[driver] sse_events={len(events)} preview_events={len(preview_events)} "
+        f"phases={phases}",
+        flush=True,
+    )
     if not chunk.get("success"):
         print(f"[driver] ERROR={chunk.get('error')!r}", file=sys.stderr)
         print(f"[driver] review={chunk.get('review')!r}", file=sys.stderr)
@@ -216,10 +233,12 @@ async def main() -> int:
     }
     STUDIO_ROOT.mkdir(parents=True, exist_ok=True)
     (STUDIO_ROOT / "_user_video_run.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     # 全量 SSE 事件落盘：失败取证不再靠猜（第八次同签名×4 止损无法定位教训）
     (STUDIO_ROOT / "_user_video_run_events.json").write_text(
-        json.dumps(events, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(events, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(f"[driver] summary -> {STUDIO_ROOT / '_user_video_run.json'}", flush=True)
     return 0 if chunk.get("success") else 1
 

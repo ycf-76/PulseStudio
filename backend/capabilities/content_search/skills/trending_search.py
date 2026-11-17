@@ -166,7 +166,7 @@ class TrendingSearchSkill(Skill):
 
         # 按互动量降序排序
         items.sort(key=lambda x: x["interactions"], reverse=True)
-        final_results = items[:in_.limit]
+        final_results = items[: in_.limit]
 
         # ===== 空结果 fallback：热门榜兜底 =====
         # 所有关键词搜索都 0 结果时，对【用户指定的平台】调 get_trending，
@@ -265,7 +265,9 @@ class TrendingSearchSkill(Skill):
             finally:
                 await client.aclose()
         except asyncio.TimeoutError:
-            logger.warning(f"[skill] final translation hit budget ({budget}s), keeping original text")
+            logger.warning(
+                f"[skill] final translation hit budget ({budget}s), keeping original text"
+            )
             return
         except Exception as e:
             logger.warning(f"[skill] final translation failed: {e}")
@@ -355,8 +357,7 @@ class TrendingSearchSkill(Skill):
         if source is None:
             available = self._list_platforms()
             logger.warning(
-                f"[skill] platform '{platform}' not available, "
-                f"registered: {available}"
+                f"[skill] platform '{platform}' not available, " f"registered: {available}"
             )
             return [], []
         try:
@@ -376,7 +377,9 @@ class TrendingSearchSkill(Skill):
             err_msg = str(e)
             logger.error(f"[skill] trending_search failed on {source.name}: {err_msg}")
             if "local client" in err_msg or "无 local client" in err_msg:
-                logger.warning(f"[skill] {source.name} source unavailable (client not connected), returning empty")
+                logger.warning(
+                    f"[skill] {source.name} source unavailable (client not connected), returning empty"
+                )
                 return [], [source.name]
             raise
         except Exception as e:
@@ -417,8 +420,16 @@ class TrendingSearchSkill(Skill):
 
         # 英文平台列表：这些平台内容以英文为主，中文关键词需翻译
         _EN_PLATFORMS = {
-            "hackernews", "github", "reddit", "pinterest", "instagram",
-            "twitter", "youtube", "tiktok", "medium", "devto",
+            "hackernews",
+            "github",
+            "reddit",
+            "pinterest",
+            "instagram",
+            "twitter",
+            "youtube",
+            "tiktok",
+            "medium",
+            "devto",
         }
 
         # 搜索并发控制参数见模块顶部常量（_MAX_CONCURRENT / _PER_PLATFORM_TIMEOUT /
@@ -426,22 +437,54 @@ class TrendingSearchSkill(Skill):
 
         # 中文关键词 → 英文关键词映射（本地翻译，不依赖外部 API）
         _ZH_EN_MAP = {
-            "教育": "education", "学习": "learning", "课程": "course",
-            "培训": "training", "考试": "exam", "学校": "school",
-            "大学": "university", "英语": "english", "数学": "math",
-            "编程": "programming", "科技": "technology", "人工智能": "artificial intelligence",
-            "AI": "AI", "机器学习": "machine learning", "深度学习": "deep learning",
-            "大数据": "big data", "云计算": "cloud computing", "区块链": "blockchain",
-            "创业": "startup", "投资": "investment", "金融": "finance",
-            "健康": "health", "医疗": "medical", "减肥": "weight loss",
-            "健身": "fitness", "美食": "food", "旅行": "travel",
-            "穿搭": "fashion", "美妆": "beauty", "护肤": "skincare",
-            "职场": "career", "副业": "side hustle", "赚钱": "make money",
-            "读书": "reading", "写作": "writing", "设计": "design",
-            "摄影": "photography", "音乐": "music", "电影": "movie",
-            "游戏": "gaming", "宠物": "pet", "家居": "home decor",
-            "育儿": "parenting", "心理": "psychology", "社交": "social media",
-            "电商": "ecommerce", "直播": "livestream", "短视频": "short video",
+            "教育": "education",
+            "学习": "learning",
+            "课程": "course",
+            "培训": "training",
+            "考试": "exam",
+            "学校": "school",
+            "大学": "university",
+            "英语": "english",
+            "数学": "math",
+            "编程": "programming",
+            "科技": "technology",
+            "人工智能": "artificial intelligence",
+            "AI": "AI",
+            "机器学习": "machine learning",
+            "深度学习": "deep learning",
+            "大数据": "big data",
+            "云计算": "cloud computing",
+            "区块链": "blockchain",
+            "创业": "startup",
+            "投资": "investment",
+            "金融": "finance",
+            "健康": "health",
+            "医疗": "medical",
+            "减肥": "weight loss",
+            "健身": "fitness",
+            "美食": "food",
+            "旅行": "travel",
+            "穿搭": "fashion",
+            "美妆": "beauty",
+            "护肤": "skincare",
+            "职场": "career",
+            "副业": "side hustle",
+            "赚钱": "make money",
+            "读书": "reading",
+            "写作": "writing",
+            "设计": "design",
+            "摄影": "photography",
+            "音乐": "music",
+            "电影": "movie",
+            "游戏": "gaming",
+            "宠物": "pet",
+            "家居": "home decor",
+            "育儿": "parenting",
+            "心理": "psychology",
+            "社交": "social media",
+            "电商": "ecommerce",
+            "直播": "livestream",
+            "短视频": "short video",
         }
 
         def _translate_keyword_zh_to_en(kw: str) -> str:
@@ -466,9 +509,13 @@ class TrendingSearchSkill(Skill):
         if has_chinese:
             en_keyword = _translate_keyword_zh_to_en(keyword)
             if en_keyword != keyword:
-                logger.info(f"[skill] translated keyword '{keyword}' → '{en_keyword}' for EN platforms")
+                logger.info(
+                    f"[skill] translated keyword '{keyword}' → '{en_keyword}' for EN platforms"
+                )
             else:
-                logger.info(f"[skill] keyword '{keyword}' could not be translated, using original for EN platforms")
+                logger.info(
+                    f"[skill] keyword '{keyword}' could not be translated, using original for EN platforms"
+                )
 
         async def _search_one(plat: str) -> tuple[list, str]:
             src = source_manager.get_source(plat)
@@ -488,7 +535,9 @@ class TrendingSearchSkill(Skill):
                 )
                 return r, plat
             except asyncio.TimeoutError:
-                logger.warning(f"[skill] trending_search timed out on {plat} ({_PER_PLATFORM_TIMEOUT}s)")
+                logger.warning(
+                    f"[skill] trending_search timed out on {plat} ({_PER_PLATFORM_TIMEOUT}s)"
+                )
                 return [], plat
             except Exception as e:
                 logger.error(f"[skill] trending_search failed on {plat}: {e}")
@@ -597,6 +646,7 @@ class TrendingSearchSkill(Skill):
 
     def _list_platforms(self) -> list[str]:
         from capabilities.content_search.sources.manager import source_manager
+
         return source_manager.list_platforms()
 
     @staticmethod

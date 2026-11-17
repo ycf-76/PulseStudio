@@ -17,6 +17,7 @@
     card_audit.py audit -f outputs/x/card_01.png --json
     for f in outputs/x/card_*.png; do python card_audit.py audit -f "$f"; done
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,6 +39,7 @@ def _die(msg: str, code: int = 1) -> None:
 
 def _row_has_content(arr):
     import numpy as np
+
     gray = arr.mean(axis=2)
     gx = np.abs(np.diff(gray, axis=1))
     edge = gx > EDGE_TOL
@@ -101,10 +103,16 @@ def analyze(path: str, tol: int = EDGE_TOL) -> dict:
         problems.append("头重脚轻：内容堆在顶部、底部近空")
 
     return {
-        "file": str(p), "size": f"{w}x{h}", "bg": bg,
-        "span": round(span, 3), "bottom_dead": round(bottom_dead, 3),
-        "max_gap": round(max_gap_frac, 3), "fill": round(fill, 3), "bands": bands,
-        "pass": not problems, "problems": problems,
+        "file": str(p),
+        "size": f"{w}x{h}",
+        "bg": bg,
+        "span": round(span, 3),
+        "bottom_dead": round(bottom_dead, 3),
+        "max_gap": round(max_gap_frac, 3),
+        "fill": round(fill, 3),
+        "bands": bands,
+        "pass": not problems,
+        "problems": problems,
     }
 
 
@@ -114,16 +122,20 @@ def _print(r: dict, as_json: bool) -> None:
         return
     tag = "PASS" if r["pass"] else "FAIL"
     print(f"{tag}  {Path(r['file']).name}  ({r['size']})")
-    print(f"  纵向跨度 {r['span']*100:.0f}% | 底部死空白 {r['bottom_dead']*100:.0f}% | "
-          f"最大空白带 {r['max_gap']*100:.0f}% | 4带密度 {r['bands']}")
+    print(
+        f"  纵向跨度 {r['span']*100:.0f}% | 底部死空白 {r['bottom_dead']*100:.0f}% | "
+        f"最大空白带 {r['max_gap']*100:.0f}% | 4带密度 {r['bands']}"
+    )
     for p in r["problems"]:
         print(f"  !! {p}")
 
 
 def _selftest() -> int:
     import tempfile
+
     import numpy as np
     from PIL import Image
+
     ok = True
 
     def chk(name, cond):
@@ -132,6 +144,7 @@ def _selftest() -> int:
         ok = ok and cond
 
     with tempfile.TemporaryDirectory() as td:
+
         def stripes(region, base, h=1440, w=1080):
             a = np.full((h, w, 3), base, np.uint8)
             y0, y1 = region
@@ -140,29 +153,36 @@ def _selftest() -> int:
             a[y0:y1] = block
             return a
 
-        f1 = Path(td) / "top.png"; Image.fromarray(stripes((80, 600), 245)).save(f1)
+        f1 = Path(td) / "top.png"
+        Image.fromarray(stripes((80, 600), 245)).save(f1)
         r1 = analyze(str(f1))
         chk("检出底部死空白", (not r1["pass"]) and r1["bottom_dead"] > 0.15)
 
-        f2 = Path(td) / "full.png"; Image.fromarray(stripes((80, 1370), 245)).save(f2)
+        f2 = Path(td) / "full.png"
+        Image.fromarray(stripes((80, 1370), 245)).save(f2)
         r2 = analyze(str(f2))
         chk("填满的卡片 PASS", r2["pass"] and r2["span"] >= 0.80)
 
-        f3 = Path(td) / "dark.png"; Image.fromarray(stripes((80, 1370), 14)).save(f3)
+        f3 = Path(td) / "dark.png"
+        Image.fromarray(stripes((80, 1370), 14)).save(f3)
         r3 = analyze(str(f3))
         chk("深底也能测跨度", r3["span"] >= 0.80 and r3["bg"][0] < 40)
 
         grad = np.zeros((1440, 1080, 3), np.uint8)
         for y in range(1440):
             grad[y, :] = (10 + y // 20, 20 + y // 30, 60 + y // 12)
-        f4 = Path(td) / "grad.png"; Image.fromarray(grad).save(f4)
+        f4 = Path(td) / "grad.png"
+        Image.fromarray(grad).save(f4)
         r4 = analyze(str(f4))
         chk("平滑渐变判为空", (not r4["pass"]) and r4["span"] < 0.2)
 
         mid = np.full((1440, 1080, 3), 245, np.uint8)
-        blk = np.full((200, 1080, 3), 245, np.uint8); blk[:, ::6] = 20
-        mid[80:280] = blk; mid[1160:1360] = blk
-        f5 = Path(td) / "gap.png"; Image.fromarray(mid).save(f5)
+        blk = np.full((200, 1080, 3), 245, np.uint8)
+        blk[:, ::6] = 20
+        mid[80:280] = blk
+        mid[1160:1360] = blk
+        f5 = Path(td) / "gap.png"
+        Image.fromarray(mid).save(f5)
         r5 = analyze(str(f5))
         chk("检出中段大空洞", (not r5["pass"]) and r5["max_gap"] > 0.15)
 
@@ -173,7 +193,9 @@ def _selftest() -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="卡片成图确定性质检（死空白/密度）",
-        formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
     sub = ap.add_subparsers(dest="cmd", required=True)
     pa = sub.add_parser("audit", help="分析卡片 PNG")
     pa.add_argument("-f", "--file", required=True, help="卡片 PNG（支持 glob）")

@@ -46,7 +46,9 @@ class RealMediaProvider:
 
             if provider == "dashscope":
                 kwargs["api_key"] = getattr(settings, "dashscope_api_key", "") or ""
-                kwargs["model"] = getattr(settings, "dashscope_video_model", "") or "wanx2.1-t2v-turbo"
+                kwargs["model"] = (
+                    getattr(settings, "dashscope_video_model", "") or "wanx2.1-t2v-turbo"
+                )
             elif provider == "kling":
                 kwargs["access_key"] = getattr(settings, "kling_access_key", "") or ""
                 kwargs["secret_key"] = getattr(settings, "kling_secret_key", "") or ""

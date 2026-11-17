@@ -32,11 +32,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.engine.governance.world_state import WorldState
+from app.engine.governance.context_compact import CompactConfig, CompactStrategy, ContextCompactor
+from app.engine.governance.context_window import CompactScope, ContextWindowTracker
 from app.engine.governance.conversation_history import ConversationHistory, HistoryItem
-from app.engine.governance.token_budget import TokenBudget, TokenBudgetConfig, BudgetAction
-from app.engine.governance.context_window import ContextWindowTracker, CompactScope
-from app.engine.governance.context_compact import ContextCompactor, CompactConfig, CompactStrategy
+from app.engine.governance.token_budget import BudgetAction, TokenBudget, TokenBudgetConfig
+from app.engine.governance.world_state import WorldState
 
 logger = logging.getLogger(__name__)
 
@@ -92,16 +92,11 @@ class ContextManager:
           - fragments: diff 渲染的文本，注入对话历史
           - rollout_item: 当前快照，用于持久化
         """
-        fragments, rollout_item = self.world_state.update_world_state(
-            self._world_state_baseline
-        )
+        fragments, rollout_item = self.world_state.update_world_state(self._world_state_baseline)
 
         if fragments:
             self.history.add_system_message(fragments)
-            logger.info(
-                f"[context_manager] WorldState diff injected: "
-                f"{len(fragments)} chars"
-            )
+            logger.info(f"[context_manager] WorldState diff injected: " f"{len(fragments)} chars")
 
         self._world_state_baseline = self.world_state.take_snapshot()
 
@@ -141,21 +136,27 @@ class ContextManager:
             new_items: list[HistoryItem] = []
             for msg in compacted:
                 if msg.get("role") == "system":
-                    new_items.append(HistoryItem(
-                        role="system",
-                        content=msg.get("content", ""),
-                        metadata={"compaction": True},
-                    ))
+                    new_items.append(
+                        HistoryItem(
+                            role="system",
+                            content=msg.get("content", ""),
+                            metadata={"compaction": True},
+                        )
+                    )
                 elif msg.get("role") == "user":
-                    new_items.append(HistoryItem(
-                        role="user",
-                        content=msg.get("content", ""),
-                    ))
+                    new_items.append(
+                        HistoryItem(
+                            role="user",
+                            content=msg.get("content", ""),
+                        )
+                    )
                 elif msg.get("role") == "assistant":
-                    new_items.append(HistoryItem(
-                        role="assistant",
-                        content=msg.get("content", ""),
-                    ))
+                    new_items.append(
+                        HistoryItem(
+                            role="assistant",
+                            content=msg.get("content", ""),
+                        )
+                    )
 
             self.history.replace_compacted_history(new_items)
             self.token_budget.advance_window()

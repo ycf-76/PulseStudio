@@ -28,6 +28,7 @@ if str(BACKEND_DIR) not in sys.path:
 # Ensure .env is loaded
 try:
     from dotenv import load_dotenv
+
     load_dotenv(BACKEND_DIR / ".env", override=False)
 except ImportError:
     pass
@@ -43,9 +44,11 @@ def _has_env(key: str) -> bool:
 # Helper: init SourceManager with all available sources
 # ═══════════════════════════════════════════════════════════════════
 
+
 async def _init_all_sources():
     """Initialize SourceManager with all available sources (same as app lifespan)."""
-    from capabilities.content_search.sources.manager import source_manager, init_sources
+    from capabilities.content_search.sources.manager import init_sources, source_manager
+
     if not source_manager.list_platforms():
         await init_sources()
     return source_manager
@@ -61,12 +64,14 @@ async def _reset_sources_after_test():
     """
     yield
     from capabilities.content_search.sources.manager import source_manager
+
     await source_manager.close_all()
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 1. TAVILY: 全网搜索（需 TAVILY_API_KEY）
 # ═══════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -117,6 +122,7 @@ async def test_tavily_chinese_keyword():
 # 2. DEEPSEEK: 原生联网搜索（服务端 web_search 工具，复用 DEEPSEEK_API_KEY）
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _has_env("DEEPSEEK_API_KEY"), reason="DEEPSEEK_API_KEY not set")
@@ -133,7 +139,9 @@ async def test_deepseek_search_returns_real_data():
         assert len(results) > 0, "DeepSeek should return results for Chinese keyword"
 
         first = results[0]
-        assert first.platform == "deepseek", f"Platform should be 'deepseek', got '{first.platform}'"
+        assert (
+            first.platform == "deepseek"
+        ), f"Platform should be 'deepseek', got '{first.platform}'"
         assert first.title, "Result should have a title"
         assert first.url.startswith("http"), f"Result should have a real URL, got '{first.url}'"
 
@@ -177,7 +185,9 @@ async def test_deepseek_api_search_returns_real_data():
         assert len(results) > 0, "Search API should return results for Chinese keyword"
 
         first = results[0]
-        assert first.platform == "deepseek_api", f"Platform should be 'deepseek_api', got '{first.platform}'"
+        assert (
+            first.platform == "deepseek_api"
+        ), f"Platform should be 'deepseek_api', got '{first.platform}'"
         assert first.title, "Result should have a title"
         assert first.url.startswith("http"), f"Result should have a real URL, got '{first.url}'"
         assert first.content, "Result should carry the body summary as content"
@@ -213,6 +223,7 @@ async def test_deepseek_api_get_trending():
 # ═══════════════════════════════════════════════════════════════════
 # 3. HACKERNEWS: 零认证，免费 API
 # ═══════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -250,7 +261,9 @@ async def test_hackernews_get_trending():
         assert first.title, "Trending post should have a title"
         assert first.likes >= 0, "Should have likes count"
 
-        logger.info(f"[HN trending] got {len(results)} results, top: {first.title[:60]} (likes={first.likes})")
+        logger.info(
+            f"[HN trending] got {len(results)} results, top: {first.title[:60]} (likes={first.likes})"
+        )
     finally:
         await source.close()
 
@@ -258,6 +271,7 @@ async def test_hackernews_get_trending():
 # ═══════════════════════════════════════════════════════════════════
 # 3. GITHUB: 零认证可用（限速60/h），有 token 更好
 # ═══════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -285,6 +299,7 @@ async def test_github_search_returns_real_data():
 # 4. DEV.TO: 零认证，免费 API
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_devto_search_returns_real_data():
@@ -309,6 +324,7 @@ async def test_devto_search_returns_real_data():
 # ═══════════════════════════════════════════════════════════════════
 # 5. BUILTIN: 零网络依赖，纯本地
 # ═══════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -353,11 +369,15 @@ async def test_builtin_get_trending():
 # 6. HOTBOARD: 公益 API，国内直连
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_hotboard_weibo_returns_real_data():
     """微博热搜热榜应返回真实热搜数据。"""
-    from capabilities.content_search.sources.hotboard_source import HotboardSource, load_hotboard_config
+    from capabilities.content_search.sources.hotboard_source import (
+        HotboardSource,
+        load_hotboard_config,
+    )
 
     cfg = load_hotboard_config()
     if "hb-weibo" not in cfg:
@@ -386,7 +406,10 @@ async def test_hotboard_weibo_returns_real_data():
 @pytest.mark.asyncio
 async def test_hotboard_bilibili_returns_real_data():
     """B站热搜热榜应返回真实热搜数据。"""
-    from capabilities.content_search.sources.hotboard_source import HotboardSource, load_hotboard_config
+    from capabilities.content_search.sources.hotboard_source import (
+        HotboardSource,
+        load_hotboard_config,
+    )
 
     cfg = load_hotboard_config()
     if "hb-bilibili" not in cfg:
@@ -415,6 +438,7 @@ async def test_hotboard_bilibili_returns_real_data():
 # 7. SOGOU (头条搜索): 免费，国内直连
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_sogou_search_returns_real_data():
@@ -438,6 +462,7 @@ async def test_sogou_search_returns_real_data():
 # ═══════════════════════════════════════════════════════════════════
 # 8. XHS SPIDER: 小红书站内搜索（需登录态）
 # ═══════════════════════════════════════════════════════════════════
+
 
 def _xhs_storage_exists() -> bool:
     storage_path = BACKEND_DIR / "app" / "storage_states" / "xiaohongshu.json"
@@ -483,6 +508,7 @@ async def test_xhs_spider_search_returns_real_data():
 # 9. SOURCE MANAGER: 多平台综合搜索
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_source_manager_init_and_list():
@@ -513,14 +539,16 @@ async def test_source_manager_multi_platform_search():
 # 10. TRENDING SEARCH SKILL: 真实调用
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_trending_search_skill_real_call():
     """trending_search skill 应能真实调用并返回数据。"""
     sm = await _init_all_sources()
 
-    from app.core.skill_registry import get_skill_class_by_name
     from unittest.mock import MagicMock
+
+    from app.core.skill_registry import get_skill_class_by_name
 
     cls = get_skill_class_by_name("trending_search")
     skill = cls()
@@ -528,13 +556,15 @@ async def test_trending_search_skill_real_call():
     mock_ctx = MagicMock()
     mock_ctx.user_id = "test_user"
 
-    result = await skill.execute({
-        "keyword": "AI agent",
-        "limit": 5,
-        "platform": "hackernews",
-        "min_interactions": 0,
-        "_context": mock_ctx,
-    })
+    result = await skill.execute(
+        {
+            "keyword": "AI agent",
+            "limit": 5,
+            "platform": "hackernews",
+            "min_interactions": 0,
+            "_context": mock_ctx,
+        }
+    )
 
     assert result.get("count", 0) > 0, "trending_search should return results"
     assert len(result.get("results", [])) > 0, "Should have result items"
@@ -544,8 +574,7 @@ async def test_trending_search_skill_real_call():
     assert "url" in first, "Result item should have url"
 
     logger.info(
-        f"[trending_search skill] got {result['count']} results, "
-        f"first: {first['title'][:60]}"
+        f"[trending_search skill] got {result['count']} results, " f"first: {first['title'][:60]}"
     )
 
 
@@ -553,14 +582,16 @@ async def test_trending_search_skill_real_call():
 # 11. XHS SEARCH SKILL: 真实调用（需登录态）
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.slow
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _xhs_storage_exists(), reason="xiaohongshu.json not found")
 async def test_xhs_search_skill_real_call():
     """xhs_search skill 应能真实调用并返回小红书笔记。"""
-    from app.core.skill_registry import get_skill_class_by_name
     from unittest.mock import MagicMock
+
+    from app.core.skill_registry import get_skill_class_by_name
 
     cls = get_skill_class_by_name("xhs_search")
     skill = cls()
@@ -568,13 +599,15 @@ async def test_xhs_search_skill_real_call():
     mock_ctx = MagicMock()
     mock_ctx.user_id = "test_user"
 
-    result = await skill.execute({
-        "keyword": "穿搭",
-        "limit": 5,
-        "min_likes": 0,
-        "require_cover": False,
-        "_context": mock_ctx,
-    })
+    result = await skill.execute(
+        {
+            "keyword": "穿搭",
+            "limit": 5,
+            "min_likes": 0,
+            "require_cover": False,
+            "_context": mock_ctx,
+        }
+    )
 
     if result.get("count", 0) > 0:
         first = result["results"][0]
@@ -594,13 +627,14 @@ async def test_xhs_search_skill_real_call():
 # 12. TAVILY SITE SEARCH: 站内搜索
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _has_env("TAVILY_API_KEY"), reason="TAVILY_API_KEY not set")
 async def test_tavily_site_search_zhihu():
     """Tavily Site Search 应能搜索知乎内容。"""
-    from capabilities.content_search.sources.tavily_source import TavilySource
     from capabilities.content_search.sources.tavily_site_source import TavilySiteSource
+    from capabilities.content_search.sources.tavily_source import TavilySource
 
     api_key = os.environ["TAVILY_API_KEY"]
     tavily = TavilySource(api_key=api_key)
@@ -622,14 +656,15 @@ async def test_tavily_site_search_zhihu():
 # 13. AGENT → SUB-AGENT → CRAWLER: 完整真实链路
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_agent_spawn_crawler_real_chain():
     """主 Agent spawn 爬虫子 Agent → 调 trending_search → 返回真实数据。"""
     from app.engine.collab.agent_manager import AgentManager
+    from app.engine.collab.concurrency_pool import ConcurrencyPool
     from app.engine.collab.message_bus import InterAgentBus
     from app.engine.collab.tools import CollaborationTools
-    from app.engine.collab.concurrency_pool import ConcurrencyPool
     from capabilities.content_search.sources import manager as sm_mod
 
     bus = InterAgentBus()
@@ -646,8 +681,9 @@ async def test_agent_spawn_crawler_real_chain():
     sm_mod.source_manager = sm_mod.SourceManager()
     await sm_mod.init_sources()
 
-    from app.core.skill_registry import get_skill_class_by_name
     from unittest.mock import MagicMock
+
+    from app.core.skill_registry import get_skill_class_by_name
 
     cls = get_skill_class_by_name("trending_search")
     skill = cls()
@@ -680,6 +716,7 @@ async def test_agent_spawn_crawler_real_chain():
 # ═══════════════════════════════════════════════════════════════════
 # 14. DATA QUALITY: 验证返回数据的完整性和一致性
 # ═══════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -740,6 +777,7 @@ async def test_tavily_data_quality():
 # 15. CROSS-PLATFORM: 同一关键词多平台对比
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_cross_platform_same_keyword():
@@ -762,8 +800,7 @@ async def test_cross_platform_same_keyword():
 
     working_platforms = [p for p, c in platform_results.items() if c > 0]
     assert len(working_platforms) >= 2, (
-        f"At least 2 platforms should return data for '{keyword}', "
-        f"got: {platform_results}"
+        f"At least 2 platforms should return data for '{keyword}', " f"got: {platform_results}"
     )
 
     logger.info(f"[cross-platform] keyword='{keyword}', results: {platform_results}")

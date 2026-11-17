@@ -9,8 +9,9 @@ Create Date: 2026-10-23
   - ai_personality_custom: 用户自建人格的 prompt 文本（仅 ai_personality=custom 时使用）
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "019_ai_personality"
 down_revision = "018_byok"

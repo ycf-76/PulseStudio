@@ -16,9 +16,9 @@ import httpx
 from pydantic import BaseModel, Field
 
 from app.agents.prompts.scripts.meme_ops import render_classic, render_reaction
-from app.services.asset_library import save_asset
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
+from app.services.asset_library import save_asset
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +54,9 @@ class MemeRenderSkill(Skill):
     input_schema = MemeRenderInput
 
     async def execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        params = MemeRenderInput.model_validate({
-            k: v for k, v in inputs.items() if k in MemeRenderInput.model_fields
-        })
+        params = MemeRenderInput.model_validate(
+            {k: v for k, v in inputs.items() if k in MemeRenderInput.model_fields}
+        )
 
         local_path = await self._resolve_image(params.image_path, params.image_url)
         if not local_path:
@@ -121,15 +121,17 @@ class MemeRenderSkill(Skill):
             "card_draft": {
                 "title": "表情包",
                 "template": "meme_render",
-                "pages": [{
-                    "id": "page_meme",
-                    "type": "content",
-                    "mediaType": "image",
-                    "title": "表情包",
-                    "imageUrl": image_url,
-                    "width": 800,
-                    "height": 800,
-                }],
+                "pages": [
+                    {
+                        "id": "page_meme",
+                        "type": "content",
+                        "mediaType": "image",
+                        "title": "表情包",
+                        "imageUrl": image_url,
+                        "width": 800,
+                        "height": 800,
+                    }
+                ],
                 "pngUrls": [image_url] if image_url else [],
                 "htmlUrls": [],
             },

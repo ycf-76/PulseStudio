@@ -16,6 +16,7 @@
   - 每次搜索最多 20 条（小红书搜索页最多翻 2 页）
   - 检测到验证码/登录页时立即停止
 """
+
 from __future__ import annotations
 
 import json
@@ -105,7 +106,9 @@ class XhsSearchSpider(BasePlatformSpider):
                         c["path"] = "/"
                     cleaned.append(c)
                 cookie_list = cleaned
-                self.logger.info(f"XhsSearchSpider: {len(cookie_list)} cookies loaded from storageState")
+                self.logger.info(
+                    f"XhsSearchSpider: {len(cookie_list)} cookies loaded from storageState"
+                )
             else:
                 self.logger.warning("XhsSearchSpider: storageState exists but no cookies found")
         else:
@@ -130,6 +133,7 @@ class XhsSearchSpider(BasePlatformSpider):
                     await page.context.add_cookies(_cookies)
                 except Exception as e:
                     import logging
+
                     logging.getLogger("xhs_search").warning(f"page_setup add_cookies failed: {e}")
 
             kwargs_sess["page_setup"] = _inject_cookies
@@ -162,21 +166,19 @@ class XhsSearchSpider(BasePlatformSpider):
         因为 SPA 可能在弹窗出现前已渲染数据。
         """
         if self._is_captcha_page(response):
-            self.logger.error(
-                "XhsSearchSpider: 检测到验证码页面！搜索频率过高，被风控拦截。"
-            )
+            self.logger.error("XhsSearchSpider: 检测到验证码页面！搜索频率过高，被风控拦截。")
             return
 
         is_login = self._is_login_page(response)
         if is_login:
-            self.logger.warning(
-                "XhsSearchSpider: 检测到登录弹窗，仍尝试提取 __INITIAL_STATE__..."
-            )
+            self.logger.warning("XhsSearchSpider: 检测到登录弹窗，仍尝试提取 __INITIAL_STATE__...")
 
         seen_ids: set[str] = set()
         notes_from_state = self._extract_search_notes_from_initial_state(response)
         if notes_from_state:
-            self.logger.info(f"XhsSearchSpider: found {len(notes_from_state)} notes from __INITIAL_STATE__")
+            self.logger.info(
+                f"XhsSearchSpider: found {len(notes_from_state)} notes from __INITIAL_STATE__"
+            )
             for item in notes_from_state:
                 note_id = item.get("note_id", "")
                 if not note_id or note_id in seen_ids:
@@ -318,7 +320,9 @@ class XhsSearchSpider(BasePlatformSpider):
                     if not cover_img_url:
                         info_list = cover.get("infoList", [])
                         if info_list:
-                            best = max(info_list, key=lambda x: x.get("width", 0) * x.get("height", 0))
+                            best = max(
+                                info_list, key=lambda x: x.get("width", 0) * x.get("height", 0)
+                            )
                             cover_img_url = best.get("url", "")
                 elif isinstance(cover, str) and cover:
                     cover_img_url = cover
@@ -357,7 +361,9 @@ class XhsSearchSpider(BasePlatformSpider):
                 }
                 notes.append(note_item)
         except Exception as e:
-            self.logger.debug(f"XhsSearchSpider: _extract_search_notes_from_initial_state error: {e}")
+            self.logger.debug(
+                f"XhsSearchSpider: _extract_search_notes_from_initial_state error: {e}"
+            )
         return notes
 
     def _parse_search_cards_from_dom(self, response: Any) -> list[dict]:
@@ -417,11 +423,15 @@ class XhsSearchSpider(BasePlatformSpider):
                     if img_els:
                         img = img_els[0]
                         if hasattr(img, "attrib"):
-                            cover_img_url = img.attrib.get("src", "") or img.attrib.get("data-src", "")
+                            cover_img_url = img.attrib.get("src", "") or img.attrib.get(
+                                "data-src", ""
+                            )
                     if cover_img_url and cover_img_url.startswith("//"):
                         cover_img_url = f"https:{cover_img_url}"
 
-                    like_text = self._safe_text(el, "[class*='like'] span, [class*='count'], [class*='likeCount']")
+                    like_text = self._safe_text(
+                        el, "[class*='like'] span, [class*='count'], [class*='likeCount']"
+                    )
                     likes = self._parse_count(like_text)
 
                     author = ""
@@ -429,14 +439,16 @@ class XhsSearchSpider(BasePlatformSpider):
                     if author_els:
                         author = (author_els[0].text or "").strip()
 
-                    cards.append({
-                        "note_id": note_id,
-                        "note_url": href,
-                        "title": title,
-                        "cover_img_url": cover_img_url,
-                        "likes": likes,
-                        "author": author,
-                    })
+                    cards.append(
+                        {
+                            "note_id": note_id,
+                            "note_url": href,
+                            "title": title,
+                            "cover_img_url": cover_img_url,
+                            "likes": likes,
+                            "author": author,
+                        }
+                    )
                 except Exception as e:
                     self.logger.debug(f"XhsSearchSpider: error parsing card: {e}")
                     continue
@@ -462,7 +474,9 @@ class XhsSearchSpider(BasePlatformSpider):
 
             title_els = response.css("title")
             if title_els:
-                title_text = (title_els[0].text or "").lower() if hasattr(title_els[0], "text") else ""
+                title_text = (
+                    (title_els[0].text or "").lower() if hasattr(title_els[0], "text") else ""
+                )
                 if "验证" in title_text or "verify" in title_text or "captcha" in title_text:
                     return True
         except Exception:
@@ -521,10 +535,10 @@ class XhsSearchSpider(BasePlatformSpider):
                 if depth != 0:
                     continue
                 raw = txt[json_start:json_end]
-                raw = re.sub(r'\bundefined\b', 'null', raw)
-                raw = re.sub(r'\bNaN\b', 'null', raw)
-                raw = re.sub(r'\bInfinity\b', '"Infinity"', raw)
-                raw = re.sub(r'\b-Infinity\b', '"-Infinity"', raw)
+                raw = re.sub(r"\bundefined\b", "null", raw)
+                raw = re.sub(r"\bNaN\b", "null", raw)
+                raw = re.sub(r"\bInfinity\b", '"Infinity"', raw)
+                raw = re.sub(r"\b-Infinity\b", '"-Infinity"', raw)
                 raw = self._strip_js_constructors(raw)
                 try:
                     state = json.loads(raw)
@@ -539,6 +553,7 @@ class XhsSearchSpider(BasePlatformSpider):
     @staticmethod
     def _strip_js_constructors(raw: str) -> str:
         """移除 JS 构造函数表达式（new Set/Map/RegExp/Date 等）。"""
+
         def _find_matching_paren(s: str, start: int) -> int:
             depth = 0
             in_str = False
@@ -588,7 +603,7 @@ class XhsSearchSpider(BasePlatformSpider):
                 if paren_end < 0:
                     offset = abs_start + m.end()
                     continue
-                result = result[:abs_start] + replacement + result[paren_end + 1:]
+                result = result[:abs_start] + replacement + result[paren_end + 1 :]
                 offset = abs_start + len(replacement)
             raw = result
         return raw
@@ -625,11 +640,18 @@ class XhsSearchSpider(BasePlatformSpider):
                     c["path"] = val.get("path", "/")
                     cookie_list.append(c)
                 else:
-                    cookie_list.append({"name": name, "value": str(val), "domain": ".xiaohongshu.com", "path": "/"})
+                    cookie_list.append(
+                        {"name": name, "value": str(val), "domain": ".xiaohongshu.com", "path": "/"}
+                    )
         elif isinstance(self.cookies, list):
             for c in self.cookies:
                 if isinstance(c, dict) and c.get("name"):
-                    item = {"name": c["name"], "value": c.get("value", ""), "domain": ".xiaohongshu.com", "path": "/"}
+                    item = {
+                        "name": c["name"],
+                        "value": c.get("value", ""),
+                        "domain": ".xiaohongshu.com",
+                        "path": "/",
+                    }
                     if c.get("domain"):
                         item["domain"] = c["domain"]
                     if c.get("path"):
@@ -658,10 +680,10 @@ class XhsSearchSpider(BasePlatformSpider):
     def _extract_note_id(url: str) -> str:
         """从 URL 中提取 note_id。"""
         patterns = [
-            r'xiaohongshu\.com/explore/([0-9a-fA-F]{24})',
-            r'xiaohongshu\.com/discovery/item/([0-9a-fA-F]{24})',
-            r'xiaohongshu\.com/note/([0-9a-fA-F]{24})',
-            r'/note/([0-9a-fA-F]{24})',
+            r"xiaohongshu\.com/explore/([0-9a-fA-F]{24})",
+            r"xiaohongshu\.com/discovery/item/([0-9a-fA-F]{24})",
+            r"xiaohongshu\.com/note/([0-9a-fA-F]{24})",
+            r"/note/([0-9a-fA-F]{24})",
         ]
         for pat in patterns:
             m = re.search(pat, url)
@@ -685,7 +707,9 @@ class XhsSearchSpider(BasePlatformSpider):
             title_text = ""
             title_els = response.css("title")
             if title_els:
-                title_text = (title_els[0].text or "").lower() if hasattr(title_els[0], "text") else ""
+                title_text = (
+                    (title_els[0].text or "").lower() if hasattr(title_els[0], "text") else ""
+                )
             if "登录" in title_text or "login" in title_text or "signin" in title_text:
                 self.logger.info(f"XhsSearchSpider: login page detected by title: {title_text}")
                 return True
@@ -733,7 +757,9 @@ class XhsSearchSpider(BasePlatformSpider):
         env["PYTHONIOENCODING"] = "utf-8"
         pythonpath = env.get("PYTHONPATH", "")
         if backend_dir not in pythonpath.split(os.pathsep):
-            env["PYTHONPATH"] = f"{backend_dir}{os.pathsep}{pythonpath}" if pythonpath else backend_dir
+            env["PYTHONPATH"] = (
+                f"{backend_dir}{os.pathsep}{pythonpath}" if pythonpath else backend_dir
+            )
 
         cmd = [
             sys.executable,
@@ -803,7 +829,9 @@ if __name__ == "__main__":
         pass
 
     if len(_sys.argv) < 3:
-        output = json.dumps({"error": "用法: xhs_search_spider.py <keyword> <limit>"}, ensure_ascii=False)
+        output = json.dumps(
+            {"error": "用法: xhs_search_spider.py <keyword> <limit>"}, ensure_ascii=False
+        )
         _sys.stdout.write(output + "\n")
         _sys.stdout.flush()
         _sys.exit(1)
@@ -826,7 +854,9 @@ if __name__ == "__main__":
                     d[k] = str(v)
             serializable.append(d)
 
-        _sys.stdout.write(json.dumps({"ok": True, "items": serializable}, ensure_ascii=False) + "\n")
+        _sys.stdout.write(
+            json.dumps({"ok": True, "items": serializable}, ensure_ascii=False) + "\n"
+        )
         _sys.stdout.flush()
     except Exception as e:
         _sys.stdout.write(json.dumps({"error": str(e)[:500]}, ensure_ascii=False) + "\n")

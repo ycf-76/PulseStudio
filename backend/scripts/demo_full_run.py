@@ -16,7 +16,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-VIDEO = Path(r"D:\My_Project\多智能体小红书发布平台\backend\uploads\videos\OwdN5Jwjo_9XA_iAvuht-Q\01M5VDAHJR83J07D32SN14FW0P.mp4")
+VIDEO = Path(
+    r"D:\My_Project\多智能体小红书发布平台\backend\uploads\videos\OwdN5Jwjo_9XA_iAvuht-Q\01M5VDAHJR83J07D32SN14FW0P.mp4"
+)
 OUT_DIR = Path(__file__).parent.parent / "outputs" / "demo_run"
 
 
@@ -31,13 +33,15 @@ async def main() -> int:
 
     events: list[dict] = []
     t0 = time.time()
-    async for chunk in skill.execute({
-        "video_path": str(VIDEO),
-        "gate_mode": GateMode.AUTO_CONFIRM,
-    }):
+    async for chunk in skill.execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": GateMode.AUTO_CONFIRM,
+        }
+    ):
         events.append(chunk)
         event = chunk.get("event", "?")
-        if event == "?" :
+        if event == "?":
             print(f"CHUNK: {json.dumps(chunk, ensure_ascii=False, default=str)[:500]}")
         elif event == "overlay_compose_done":
             print(f"[{time.time()-t0:.0f}s] DONE: {chunk['data']['output_path']}")
@@ -105,9 +109,21 @@ def subprocess_run(ffmpeg, src: Path, ts: float, out: Path) -> None:
     import subprocess
 
     subprocess.run(
-        [ffmpeg, "-y", "-loglevel", "error", "-ss", str(ts), "-i", str(src),
-         "-vframes", "1", str(out)],
-        capture_output=True, check=False,
+        [
+            ffmpeg,
+            "-y",
+            "-loglevel",
+            "error",
+            "-ss",
+            str(ts),
+            "-i",
+            str(src),
+            "-vframes",
+            "1",
+            str(out),
+        ],
+        capture_output=True,
+        check=False,
     )
 
 

@@ -100,6 +100,7 @@ class HackerNewsSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             self._client = await create_async_client(
                 timeout=httpx.Timeout(30.0),
@@ -167,7 +168,13 @@ class HackerNewsSource(ContentSource):
                 # 只取前 64KB（og:image 在 <head> 里）
                 html = resp.text[:65536]
                 # 依次尝试：og:image（正序/倒序）→ twitter:image（正序/倒序）→ link[image_src]
-                for pattern in (_OG_IMAGE_RE, _OG_IMAGE_RE_REV, _TWITTER_IMAGE_RE, _TWITTER_IMAGE_RE_REV, _LINK_IMAGE_RE):
+                for pattern in (
+                    _OG_IMAGE_RE,
+                    _OG_IMAGE_RE_REV,
+                    _TWITTER_IMAGE_RE,
+                    _TWITTER_IMAGE_RE_REV,
+                    _LINK_IMAGE_RE,
+                ):
                     m = pattern.search(html)
                     if m:
                         img_url = m.group(1).strip()
@@ -185,7 +192,12 @@ class HackerNewsSource(ContentSource):
                     favicon_url,
                     timeout=httpx.Timeout(3.0, connect=2.0),
                     follow_redirects=True,
-                    headers={**_BROWSER_HEADERS, "Sec-Fetch-Dest": "image", "Sec-Fetch-Mode": "no-cors", "Accept": "image/*,*/*;q=0.8"},
+                    headers={
+                        **_BROWSER_HEADERS,
+                        "Sec-Fetch-Dest": "image",
+                        "Sec-Fetch-Mode": "no-cors",
+                        "Accept": "image/*,*/*;q=0.8",
+                    },
                 )
                 if fav_resp.status_code == 200:
                     content_type = fav_resp.headers.get("content-type", "")
@@ -197,7 +209,9 @@ class HackerNewsSource(ContentSource):
             # 后端抓取失败（反爬/超时）：返回构造的 favicon URL，让前端浏览器尝试加载
             # 浏览器有完整的请求头和 Cloudflare challenge 处理能力，成功率比后端高
             # 前端加载失败时用 onerror 回退到字母色块
-            logger.info(f"[hackernews] og:image fetch failed, returning favicon URL for frontend: {favicon_url}")
+            logger.info(
+                f"[hackernews] og:image fetch failed, returning favicon URL for frontend: {favicon_url}"
+            )
             return favicon_url
 
         except Exception:
@@ -260,6 +274,7 @@ class HackerNewsSource(ContentSource):
             # 去除 HTML 标签（简单处理）
             if content and "<" in content:
                 import re
+
                 content = re.sub(r"<[^>]+>", "", content).strip()
 
             summary = content[:200] if content else title[:200]
@@ -280,7 +295,7 @@ class HackerNewsSource(ContentSource):
                 content=content,
                 author=f"u/{author}",
                 url=url,
-                likes=points,          # HN 的 points = upvotes - downvotes
+                likes=points,  # HN 的 points = upvotes - downvotes
                 comments=num_comments,
                 shares=0,
                 views=0,
@@ -320,6 +335,7 @@ class HackerNewsSource(ContentSource):
             text = item.get("text") or ""
             if text:
                 import re
+
                 content = re.sub(r"<[^>]+>", "", text).strip()
 
             summary = content[:200] if content else title[:200]
@@ -379,11 +395,12 @@ class HackerNewsSource(ContentSource):
 
         params: dict[str, Any] = {
             "query": keyword,
-            "tags": "story",              # 只要故事帖，不要评论
+            "tags": "story",  # 只要故事帖，不要评论
             "hitsPerPage": min(limit, 50),
         }
         if seconds > 0:
             import time
+
             now = int(time.time())
             params["numericFilters"] = f"created_at_i>={now - seconds}"
 
@@ -448,6 +465,7 @@ class HackerNewsSource(ContentSource):
             target_ids = story_ids[:limit]
 
             results: list[TrendingContent] = []
+
             # 用并发拿每个 story 的详情
             async def fetch_item(sid: int) -> TrendingContent | None:
                 try:
@@ -471,8 +489,7 @@ class HackerNewsSource(ContentSource):
                         results.append(c)
 
             logger.info(
-                f"[hackernews] get_trending category={category}: "
-                f"got {len(results)} normalized"
+                f"[hackernews] get_trending category={category}: " f"got {len(results)} normalized"
             )
             sliced = results[:limit]
             # 抓取文章封面图（og:image），让前端有真实图片而非字母占位

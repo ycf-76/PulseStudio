@@ -27,6 +27,7 @@ LOCAL = "/uploads/topic_images/{}"
 # 1. needs_detail_refresh：本地化即完成，冷却与重试上限生效
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_all_local_images_need_no_refresh():
     """测试: needs_detail_refresh
     场景: 图集已全部落本地（本地文件不会过期）
@@ -116,8 +117,10 @@ def test_naive_datetime_is_treated_as_utc():
 # 2. select_detail_targets：单轮预算 + 优先级排序
 # ═══════════════════════════════════════════════════════════════════
 
-def _candidate(note_id: str, attempts: int = 0, last: datetime | None = None,
-               source: str = "state") -> dr.DetailCandidate:
+
+def _candidate(
+    note_id: str, attempts: int = 0, last: datetime | None = None, source: str = "state"
+) -> dr.DetailCandidate:
     return dr.DetailCandidate(
         note_id=note_id,
         url=f"https://www.xiaohongshu.com/explore/{note_id}",

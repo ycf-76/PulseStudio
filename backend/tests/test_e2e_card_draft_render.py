@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import pytest
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from app.core.skill_base import PromptDrivenSkill
 from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
-
 
 # ============================================================================
 # Test 1: _extract_card_pages 单元测试
@@ -87,8 +87,7 @@ class TestExtractCardPages:
 
     def test_5_cards_type_assignment(self):
         raw = "\n".join(
-            f"<!--card-html--><html>Card {i + 1}</html><!--/card-html-->"
-            for i in range(5)
+            f"<!--card-html--><html>Card {i + 1}</html><!--/card-html-->" for i in range(5)
         )
         pages, html_urls = PromptDrivenSkill._extract_card_pages(raw)
         assert len(pages) == 5
@@ -151,11 +150,13 @@ class TestPromptDrivenSkillReturnsCardDraft:
 <!--/card-html-->"""
 
         mock_llm = _ScriptedLLM([llm_output])
-        result = await skill.execute({
-            "llm": mock_llm,
-            "topic": "极简生活",
-            "platform": "小红书",
-        })
+        result = await skill.execute(
+            {
+                "llm": mock_llm,
+                "topic": "极简生活",
+                "platform": "小红书",
+            }
+        )
 
         assert "card_draft" in result
         card_draft = result["card_draft"]
@@ -175,17 +176,22 @@ class TestPromptDrivenSkillReturnsCardDraft:
         skill_cls = self.registry.get("produce", "xhs_note_creator")
         skill = skill_cls()
 
-        llm_output = json.dumps({
-            "title": "极简生活",
-            "content": "极简不是扔东西...",
-            "tags": ["极简生活"],
-        }, ensure_ascii=False)
+        llm_output = json.dumps(
+            {
+                "title": "极简生活",
+                "content": "极简不是扔东西...",
+                "tags": ["极简生活"],
+            },
+            ensure_ascii=False,
+        )
 
         mock_llm = _ScriptedLLM([llm_output])
-        result = await skill.execute({
-            "llm": mock_llm,
-            "topic": "极简生活",
-        })
+        result = await skill.execute(
+            {
+                "llm": mock_llm,
+                "topic": "极简生活",
+            }
+        )
 
         assert "card_draft" not in result
 
@@ -194,17 +200,25 @@ class TestPromptDrivenSkillReturnsCardDraft:
         skill_cls = self.registry.get("produce", "xhs_note_creator")
         skill = skill_cls()
 
-        llm_output = json.dumps({
-            "title": "极简生活",
-            "content": "极简不是扔东西...",
-            "tags": ["极简生活"],
-        }, ensure_ascii=False) + "\n\n<!--card-html--><html>策划卡片</html><!--/card-html-->"
+        llm_output = (
+            json.dumps(
+                {
+                    "title": "极简生活",
+                    "content": "极简不是扔东西...",
+                    "tags": ["极简生活"],
+                },
+                ensure_ascii=False,
+            )
+            + "\n\n<!--card-html--><html>策划卡片</html><!--/card-html-->"
+        )
 
         mock_llm = _ScriptedLLM([llm_output])
-        result = await skill.execute({
-            "llm": mock_llm,
-            "topic": "极简生活",
-        })
+        result = await skill.execute(
+            {
+                "llm": mock_llm,
+                "topic": "极简生活",
+            }
+        )
 
         assert "card_draft" in result
         assert len(result["card_draft"]["pages"]) == 1
@@ -219,7 +233,9 @@ class TestPersistCreativeStateEmitsDraftPatch:
     """验证 _persist_creative_state 对图文 Skill 推送 draft_patch SSE 事件。"""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="draft_patch 推送随旧 harness 退役，ReactorSession 新链路未重建该事件（EVENT_DRAFT_PATCH 现无发送方）——功能缺口待大哥定夺是否补建")
+    @pytest.mark.skip(
+        reason="draft_patch 推送随旧 harness 退役，ReactorSession 新链路未重建该事件（EVENT_DRAFT_PATCH 现无发送方）——功能缺口待大哥定夺是否补建"
+    )
     async def test_card_produce_tool_emits_draft_patch(self):
         from app.engine.harness.executor.loop import ReActLoop
         from app.services.sse_bus import EVENT_DRAFT_PATCH
@@ -261,10 +277,15 @@ class TestPersistCreativeStateEmitsDraftPatch:
                 assert "draft_id" in payload
                 assert "updates" in payload
                 assert "_card_draft" in payload["updates"]
-                assert payload["updates"]["_card_draft"]["pages"][0]["htmlContent"] == "<html>...</html>"
+                assert (
+                    payload["updates"]["_card_draft"]["pages"][0]["htmlContent"]
+                    == "<html>...</html>"
+                )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="draft_patch 推送随旧 harness 退役，ReactorSession 新链路未重建该事件（EVENT_DRAFT_PATCH 现无发送方）——功能缺口待大哥定夺是否补建")
+    @pytest.mark.skip(
+        reason="draft_patch 推送随旧 harness 退役，ReactorSession 新链路未重建该事件（EVENT_DRAFT_PATCH 现无发送方）——功能缺口待大哥定夺是否补建"
+    )
     async def test_non_card_tool_does_not_emit_draft_patch(self):
         from app.engine.harness.executor.loop import ReActLoop
 
@@ -288,7 +309,9 @@ class TestPersistCreativeStateEmitsDraftPatch:
                 mock_bus.publish.assert_not_called()
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="draft_patch 推送随旧 harness 退役，ReactorSession 新链路未重建该事件（EVENT_DRAFT_PATCH 现无发送方）——功能缺口待大哥定夺是否补建")
+    @pytest.mark.skip(
+        reason="draft_patch 推送随旧 harness 退役，ReactorSession 新链路未重建该事件（EVENT_DRAFT_PATCH 现无发送方）——功能缺口待大哥定夺是否补建"
+    )
     async def test_card_tool_without_card_draft_does_not_emit(self):
         from app.engine.harness.executor.loop import ReActLoop
 

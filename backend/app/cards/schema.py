@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.cards.color import derive_tokens, accessible_accent
+from app.cards.color import accessible_accent, derive_tokens
 
 
 class Heading(BaseModel):
@@ -108,7 +108,9 @@ class ImageBlock(BaseModel):
     type: Literal["image"] = "image"
     media_id: str = Field(min_length=1)
     source: Literal["upload", "ai"] = "upload"
-    resolved_url: str = Field(pattern=r"^/uploads/assets/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+\.(jpg|png|webp|gif)$")
+    resolved_url: str = Field(
+        pattern=r"^/uploads/assets/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+\.(jpg|png|webp|gif)$"
+    )
     alt: str = Field(default="配图", max_length=80)
 
 
@@ -299,9 +301,27 @@ class IconGrid(BaseModel):
     pairs: list[IconPair] = Field(min_length=3, max_length=6)
 
 
-Block = Annotated[Union[Heading, Text, ListBlock, Steps, Compare, ImageBlock, Cta, BentoGrid, Stat,
-                       Timeline, Quote, Kicker, Footer, Qa, Code, IconGrid],
-                  Field(discriminator="type")]
+Block = Annotated[
+    Union[
+        Heading,
+        Text,
+        ListBlock,
+        Steps,
+        Compare,
+        ImageBlock,
+        Cta,
+        BentoGrid,
+        Stat,
+        Timeline,
+        Quote,
+        Kicker,
+        Footer,
+        Qa,
+        Code,
+        IconGrid,
+    ],
+    Field(discriminator="type"),
+]
 
 LAYOUTS: dict[str, tuple[str, ...]] = {
     "cover_display": ("heading",),
@@ -357,9 +377,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "500",
         "radius": "4px",
-        "bg": "#f2f4f5", "text": "#0a1f3d", "accent": "#315d93",
+        "bg": "#f2f4f5",
+        "text": "#0a1f3d",
+        "accent": "#315d93",
         "accents": "#315d93,#2e6b4f,#8f7650",
-        "on_image_bg": "#0a1f3d", "on_image_text": "#f5f2ea",
+        "on_image_bg": "#0a1f3d",
+        "on_image_text": "#f5f2ea",
     },
     # 牛皮纸：更暖更生活化（Pulse Kraft Paper）
     "warm": {
@@ -369,9 +392,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "500",
         "radius": "6px",
-        "bg": "#eedfc7", "text": "#2a1e13", "accent": "#9b5a2e",
+        "bg": "#eedfc7",
+        "text": "#2a1e13",
+        "accent": "#9b5a2e",
         "accents": "#9b5a2e,#2e6b4f",
-        "on_image_bg": "#2a1e13", "on_image_text": "#eedfc7",
+        "on_image_bg": "#2a1e13",
+        "on_image_text": "#eedfc7",
     },
     # 瑞士极简：白底黑字、零圆角零阴影（Pulse Swiss，点缀轴=克莱因蓝/柠檬黄/柠檬绿/安全橙）
     "swiss": {
@@ -381,9 +407,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "200",
         "radius": "0px",
-        "bg": "#fafaf8", "text": "#0a0a0a", "accent": "#002FA7",
+        "bg": "#fafaf8",
+        "text": "#0a0a0a",
+        "accent": "#002FA7",
         "accents": "#002FA7,#FFD500,#C5E803,#FF6B35",
-        "on_image_bg": "#0a0a0a", "on_image_text": "#fafaf8",
+        "on_image_bg": "#0a0a0a",
+        "on_image_text": "#fafaf8",
     },
     # 新中式墨韵：宣纸墨色 + 朱砂点缀（Pulse Chinese Ink）
     "inkwash": {
@@ -393,9 +422,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'Noto Serif SC','Noto Serif CJK SC',serif",
         "display_weight": "600",
         "radius": "0px",
-        "bg": "#f3efe4", "text": "#1a1a1a", "accent": "#a8322d",
+        "bg": "#f3efe4",
+        "text": "#1a1a1a",
+        "accent": "#a8322d",
         "accents": "#a8322d,#b08d57",
-        "on_image_bg": "#1a1a1a", "on_image_text": "#f3efe4",
+        "on_image_bg": "#1a1a1a",
+        "on_image_text": "#f3efe4",
     },
     # 奶油温柔：莫兰迪柔色（Pulse Morandi/Cream，点缀轴=莫兰迪四色）
     "cream": {
@@ -405,10 +437,13 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'Noto Sans SC',sans-serif",
         "display_weight": "600",
         "radius": "24px",
-        "bg": "#FAF6EF", "text": "#5A4F45", "accent": "#A3B0A0",
+        "bg": "#FAF6EF",
+        "text": "#5A4F45",
+        "accent": "#A3B0A0",
         "accents": "#A3B0A0,#8CA3AD,#C9A9A6,#9B8AA0",
         # cream 的正文色用偏深的暖灰（#5A4F45），压在图上才读得清，反色层仍自己给深底
-        "on_image_bg": "#4a3f36", "on_image_text": "#FAF6EF",
+        "on_image_bg": "#4a3f36",
+        "on_image_text": "#FAF6EF",
     },
     # 极客终端：深底 + 等宽字（点缀轴=绿/琥珀）
     "terminal": {
@@ -418,9 +453,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "700",
         "radius": "0px",
-        "bg": "#0d1117", "text": "#c9d1d9", "accent": "#3fb950",
+        "bg": "#0d1117",
+        "text": "#c9d1d9",
+        "accent": "#3fb950",
         "accents": "#3fb950,#e3b341",
-        "on_image_bg": "#0d1117", "on_image_text": "#c9d1d9",
+        "on_image_bg": "#0d1117",
+        "on_image_text": "#c9d1d9",
     },
     # 多巴胺 Y2K：高饱和撞色 + 粗黑字（Pulse Dopamine，点缀轴=粉/克莱因蓝/安全橙）
     "dopamine": {
@@ -430,9 +468,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "900",
         "radius": "0px",
-        "bg": "#FFD500", "text": "#0a0a0a", "accent": "#FF5CA8",
+        "bg": "#FFD500",
+        "text": "#0a0a0a",
+        "accent": "#FF5CA8",
         "accents": "#FF5CA8,#002FA7,#FF6B35",
-        "on_image_bg": "#0a0a0a", "on_image_text": "#ffffff",
+        "on_image_bg": "#0a0a0a",
+        "on_image_text": "#ffffff",
     },
     # 高奢黑金：近黑底 + 细金线（点缀轴=金）
     "luxe_noir": {
@@ -442,9 +483,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "200",
         "radius": "0px",
-        "bg": "#0e0d0c", "text": "#ece2cf", "accent": "#d4a04a",
+        "bg": "#0e0d0c",
+        "text": "#ece2cf",
+        "accent": "#d4a04a",
         "accents": "#d4a04a",
-        "on_image_bg": "#0e0d0c", "on_image_text": "#ece2cf",
+        "on_image_bg": "#0e0d0c",
+        "on_image_text": "#ece2cf",
     },
     # 手账贴纸：奶白纸 + 胶带色块（Pulse Journal，点缀轴=胶带四色）
     "journal": {
@@ -454,9 +498,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'Noto Sans SC','Microsoft YaHei',sans-serif",
         "display_weight": "500",
         "radius": "16px",
-        "bg": "#FBF7F0", "text": "#3a3632", "accent": "#B8D8C8",
+        "bg": "#FBF7F0",
+        "text": "#3a3632",
+        "accent": "#B8D8C8",
         "accents": "#B8D8C8,#F3D9A4,#E8C4C4,#Bcd3E8",
-        "on_image_bg": "#3a3632", "on_image_text": "#FBF7F0",
+        "on_image_bg": "#3a3632",
+        "on_image_text": "#FBF7F0",
     },
     # 森林墨：Pulse Forest Ink 衍生，深绿点缀（NEW）
     "forest": {
@@ -466,9 +513,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "500",
         "radius": "4px",
-        "bg": "#f5f1e8", "text": "#16251b", "accent": "#2e6b4f",
+        "bg": "#f5f1e8",
+        "text": "#16251b",
+        "accent": "#2e6b4f",
         "accents": "#2e6b4f,#8f7650",
-        "on_image_bg": "#16251b", "on_image_text": "#f5f1e8",
+        "on_image_bg": "#16251b",
+        "on_image_text": "#f5f1e8",
     },
     # 沙丘：Pulse Dune 衍生，沙棕点缀（NEW）
     "dune": {
@@ -478,9 +528,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "500",
         "radius": "8px",
-        "bg": "#f0e6d2", "text": "#1f1a14", "accent": "#8f7650",
+        "bg": "#f0e6d2",
+        "text": "#1f1a14",
+        "accent": "#8f7650",
         "accents": "#8f7650,#9b5a2e",
-        "on_image_bg": "#1f1a14", "on_image_text": "#f0e6d2",
+        "on_image_bg": "#1f1a14",
+        "on_image_text": "#f0e6d2",
     },
     # 植物学：Pulse Botanical 衍生，叶绿点缀（NEW）
     "botanical": {
@@ -490,9 +543,12 @@ THEMES: dict[str, dict[str, str]] = {
         "kicker_font": "'JetBrains Mono','Noto Sans Mono CJK SC',monospace",
         "display_weight": "600",
         "radius": "12px",
-        "bg": "#f6f4ee", "text": "#2f3b2c", "accent": "#7d9b76",
+        "bg": "#f6f4ee",
+        "text": "#2f3b2c",
+        "accent": "#7d9b76",
         "accents": "#7d9b76,#c08457,#a7bda0",
-        "on_image_bg": "#2f3b2c", "on_image_text": "#f6f4ee",
+        "on_image_bg": "#2f3b2c",
+        "on_image_text": "#f6f4ee",
     },
 }
 
@@ -501,8 +557,18 @@ THEME_IDS: tuple[str, ...] = tuple(THEMES)
 # 单一事实源：工具入参与 compose_deck 都用这个别名，避免多处 Literal 各自漂移
 # （之前 card_compose.py 只写了 ["ink","warm"]，另外 4 套主题 LLM 根本选不到）。
 ThemeId = Literal[
-    "ink", "warm", "swiss", "inkwash", "cream", "terminal",
-    "dopamine", "luxe_noir", "journal", "forest", "dune", "botanical",
+    "ink",
+    "warm",
+    "swiss",
+    "inkwash",
+    "cream",
+    "terminal",
+    "dopamine",
+    "luxe_noir",
+    "journal",
+    "forest",
+    "dune",
+    "botanical",
 ]
 
 
@@ -572,8 +638,7 @@ def _theme_block(name: str, spec: dict[str, str]) -> str:
         f"background:var(--bg);color:var(--text)}}"
     )
     overrides = "".join(
-        f".{name}.accent-{i}{{--accent:{acc}}}"
-        for i, acc in enumerate(accents[1:], start=1)
+        f".{name}.accent-{i}{{--accent:{acc}}}" for i, acc in enumerate(accents[1:], start=1)
     )
     return base + overrides
 

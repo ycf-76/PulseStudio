@@ -3,6 +3,7 @@
 独立成模块的原因：三期能力服务化后，主进程在 remote 模式下只重建
 检测结果对象（从服务返回的 dict），不应被迫加载 numpy。
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field

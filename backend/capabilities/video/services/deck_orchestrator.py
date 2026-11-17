@@ -195,10 +195,7 @@ def parse_deck_json(raw: str) -> list[dict[str, Any]]:
         ip = ip.strip()[:200] if isinstance(ip, str) and ip.strip() else None
         d: dict[str, Any] = {
             "title": _simplify_cn(title.strip()[:20]),
-            "slide_type": (
-                stype if isinstance(stype, str) and stype in _SLIDE_TYPES
-                else "points"
-            ),
+            "slide_type": (stype if isinstance(stype, str) and stype in _SLIDE_TYPES else "points"),
             "bullets": clean[:4],
         }
         if ip:
@@ -206,10 +203,7 @@ def parse_deck_json(raw: str) -> list[dict[str, Any]]:
         # M2-P0-2 触发词：dict.text 白名单收录（裸 str 容错），
         # 无效/缺失丢弃 → 调用方回退句边界（绝不阻断）
         tg = item.get("trigger")
-        tt = (
-            tg.get("text") if isinstance(tg, dict)
-            else (tg if isinstance(tg, str) else None)
-        )
+        tt = tg.get("text") if isinstance(tg, dict) else (tg if isinstance(tg, str) else None)
         if isinstance(tt, str) and tt.strip():
             d["trigger"] = {"text": _simplify_cn(tt.strip()[:12])}
         slides.append(d)
@@ -261,9 +255,7 @@ def _bullet_html(b: Any, show: bool = True, tw_k: int | None = None) -> str:
     if em == "number":
         body_html = _esc(text)
     else:
-        body_html = "".join(
-            f'<span class="tw">{_esc(c)}</span>' for c in text
-        )
+        body_html = "".join(f'<span class="tw">{_esc(c)}</span>' for c in text)
     return (
         f'<div class="bullet" id="twc-b{tw_k}" style="opacity:0">'
         f'<span class="dot"></span>'
@@ -304,10 +296,14 @@ def _slide_layers_plan(slide: dict[str, Any]) -> list[dict[str, Any]]:
         {"name": "head", "t0": 0.10, "dur": _LAYER_FADE, "y0": _LAYER_SHIFT},
     ]
     for k in range(len(slide.get("bullets") or [])):
-        layers.append({
-            "name": f"b{k}", "t0": 0.45 + k * _LAYER_STAGGER,
-            "dur": _LAYER_FADE, "y0": _LAYER_SHIFT,
-        })
+        layers.append(
+            {
+                "name": f"b{k}",
+                "t0": 0.45 + k * _LAYER_STAGGER,
+                "dur": _LAYER_FADE,
+                "y0": _LAYER_SHIFT,
+            }
+        )
     return layers
 
 
@@ -334,7 +330,9 @@ def _typewriter_plan(slide: dict[str, Any]) -> dict[str, dict[str, Any]] | None:
 
 
 def _typewriter_t_done(
-    plan: dict[str, dict[str, Any]], slide: dict[str, Any], cps: float,
+    plan: dict[str, dict[str, Any]],
+    slide: dict[str, Any],
+    cps: float,
 ) -> float:
     """页内文字全部完成时刻（纯函数）— 各层 t0 + 字数/cps
     （+单字 fade / 卡片 0.15）取最大。"""
@@ -343,7 +341,8 @@ def _typewriter_t_done(
     for k, meta in plan.items():
         if meta["chars"]:
             n_chars = (
-                len(str(slide.get("title") or "")) if k == "head"
+                len(str(slide.get("title") or ""))
+                if k == "head"
                 else len(_bullet_pair(bullets[int(k[1:])])[0])
             )
             ends.append(meta["t0"] + n_chars / cps + _TYPEWRITER_FADE)
@@ -354,7 +353,8 @@ def _typewriter_t_done(
 
 
 def _typewriter_cps(
-    plan: dict[str, dict[str, Any]] | None, slide: dict[str, Any],
+    plan: dict[str, dict[str, Any]] | None,
+    slide: dict[str, Any],
     avail: float,
 ) -> float:
     """N6：页级有效字速（纯函数）— 最紧文字层在 avail 内流不完时
@@ -369,7 +369,8 @@ def _typewriter_cps(
         if not meta["chars"]:
             continue
         n_chars = (
-            len(str(slide.get("title") or "")) if k == "head"
+            len(str(slide.get("title") or ""))
+            if k == "head"
             else len(_bullet_pair(bullets[int(k[1:])])[0])
         )
         slack = avail - meta["t0"] - _TYPEWRITER_FADE
@@ -386,7 +387,10 @@ def _typewriter_avail(dur: float, is_last: bool, td: float) -> float:
 
 
 def _slide_html(
-    title: str, bullets: list[Any], idx: int, total: int,
+    title: str,
+    bullets: list[Any],
+    idx: int,
+    total: int,
     person_clearance_px: int = 0,
     theme: str = "midnight",
     slide_type: str = "points",
@@ -411,16 +415,15 @@ def _slide_html(
     非 points 页 / 缺省不流式。
     """
     t = dict(_DECK_THEMES.get(theme) or _DECK_THEMES["midnight"])
-    t["image_shade"] = _DECK_IMAGE_SHADES.get(
-        theme, _DECK_IMAGE_SHADES["midnight"]
-    )
+    t["image_shade"] = _DECK_IMAGE_SHADES.get(theme, _DECK_IMAGE_SHADES["midnight"])
     st = slide_type if slide_type in _SLIDE_TYPES else "points"
     # N6 打字机调度：points 页文字逐字浮现（None → 整页淡入）
     tw_plan = (
         _typewriter_plan(
             {"slide_type": st, "title": title, "bullets": bullets},
         )
-        if typewriter else None
+        if typewriter
+        else None
     )
     # N5 层选择器：各元素可见性（hidden 占位保布局）；文字层透明底
     vis_idx = only_layer is None or only_layer == "head"
@@ -449,7 +452,7 @@ def _slide_html(
             bg_css = (
                 ".bg-img { position:absolute; inset:0; width:100%;"
                 " height:100%; object-fit:cover; }\n"
-                f'.bg-shade {{ position:absolute; inset:0;'
+                f".bg-shade {{ position:absolute; inset:0;"
                 f' background:{t["image_shade"]}; }}'
             )
         except OSError:
@@ -457,19 +460,13 @@ def _slide_html(
             bg_css = ""
     # N2：顶部右侧让位 — 小窗占位时标题右缩、页码移左上
     idx_pos = "left:110px" if top_right_clear_px > 0 else "right:110px"
-    title_clear = (
-        f" margin-right:{top_right_clear_px}px;"
-        if top_right_clear_px > 0 else ""
-    )
+    title_clear = f" margin-right:{top_right_clear_px}px;" if top_right_clear_px > 0 else ""
     if tw_plan:
-        _tw_title = "".join(
-            f'<span class="tw">{_esc(c)}</span>' for c in title
-        )
+        _tw_title = "".join(f'<span class="tw">{_esc(c)}</span>' for c in title)
         _h1 = f'<h1 id="tw-head">{_tw_title}</h1>'
     else:
         _h1 = (
-            f"<h1 style=\"visibility:"
-            f"{'visible' if vis_title else 'hidden'}\">{_esc(title)}</h1>"
+            f'<h1 style="visibility:' f"{'visible' if vis_title else 'hidden'}\">{_esc(title)}</h1>"
         )
     head = (
         f'<div class="idx" style="visibility:'
@@ -513,17 +510,12 @@ def _slide_html(
         )
     else:
         if tw_plan:
-            body = "\n".join(
-                _bullet_html(b, tw_k=i) for i, b in enumerate(bullets)
-            )
+            body = "\n".join(_bullet_html(b, tw_k=i) for i, b in enumerate(bullets))
         else:
             body = "\n".join(
                 _bullet_html(
                     b,
-                    show=(
-                        only_layer is None
-                        or (b_sel >= 0 and i == b_sel)
-                    ),
+                    show=(only_layer is None or (b_sel >= 0 and i == b_sel)),
                 )
                 for i, b in enumerate(bullets)
             )
@@ -533,9 +525,13 @@ def _slide_html(
     if tw_plan:
         sched = json.dumps(tw_plan, ensure_ascii=False)
         tw_js = (
-            "<script>window.__twCps=" + repr(tw_cps or _TYPEWRITER_CPS)
-            + ";window.__twFade=" + repr(_TYPEWRITER_FADE)
-            + ";window.__tw=" + sched + ";window.__twSet=function(t){"
+            "<script>window.__twCps="
+            + repr(tw_cps or _TYPEWRITER_CPS)
+            + ";window.__twFade="
+            + repr(_TYPEWRITER_FADE)
+            + ";window.__tw="
+            + sched
+            + ";window.__twSet=function(t){"
             "var S=window.__tw;for(var k in S){var s=S[k];"
             'var el=document.getElementById("tw-"+k);'
             "if(el){if(s.chars){var ch=el.children;"
@@ -596,10 +592,7 @@ h1 {{ font-size:96px; line-height:1.28; font-weight:900;
 
 
 def _esc(s: str) -> str:
-    return (
-        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def render_deck_slides(
@@ -622,7 +615,10 @@ def render_deck_slides(
         try:
             for i, s in enumerate(slides, 1):
                 html = _slide_html(
-                    s["title"], s["bullets"], i, len(slides),
+                    s["title"],
+                    s["bullets"],
+                    i,
+                    len(slides),
                     person_clearance_px=person_clearance_px,
                     theme=theme,
                     slide_type=s.get("slide_type", "points"),
@@ -662,7 +658,10 @@ def render_deck_from_slides(
         logger.warning(f"[deck] slides.json 不可读（降级 []）：{e}")
         return []
     return render_deck_slides(
-        slides, out_dir, width, height,
+        slides,
+        out_dir,
+        width,
+        height,
         person_clearance_px=person_clearance_px,
         top_right_clear_px=top_right_clear_px,
         theme=theme or data.get("theme") or "midnight",
@@ -699,7 +698,10 @@ def render_deck_layers(
                 for j, ly in enumerate(plan):
                     name = ly["name"]
                     html = _slide_html(
-                        sl["title"], sl["bullets"], i, len(slides),
+                        sl["title"],
+                        sl["bullets"],
+                        i,
+                        len(slides),
                         person_clearance_px=person_clearance_px,
                         theme=theme,
                         slide_type=sl.get("slide_type", "points"),
@@ -746,8 +748,7 @@ def render_deck_typewriter(
 
     if len(durations) != len(slides):
         raise ValueError(
-            f"typewriter durations mismatch: {len(durations)} "
-            f"for {len(slides)} slides"
+            f"typewriter durations mismatch: {len(durations)} " f"for {len(slides)} slides"
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     dirs: list[Path] = []
@@ -760,11 +761,15 @@ def render_deck_typewriter(
                 # 短页/片尾提速：流完需时超页可用时长 → 按比例提字速
                 # （末页扣尾漂移 _TAIL_DRAIN，保证结尾不截字）
                 cps_eff = _typewriter_cps(
-                    plan, sl,
+                    plan,
+                    sl,
                     _typewriter_avail(durations[i], i == len(slides) - 1, td),
                 )
                 html = _slide_html(
-                    sl["title"], sl["bullets"], i + 1, len(slides),
+                    sl["title"],
+                    sl["bullets"],
+                    i + 1,
+                    len(slides),
                     person_clearance_px=person_clearance_px,
                     theme=theme,
                     slide_type=sl.get("slide_type", "points"),
@@ -778,10 +783,7 @@ def render_deck_typewriter(
                 page_dir.mkdir(parents=True, exist_ok=True)
                 page.set_content(html, wait_until="networkidle")
                 # 文字完成时刻（提速字速下复算）
-                t_done = (
-                    _typewriter_t_done(plan, sl, cps_eff)
-                    if plan else 0.0
-                )
+                t_done = _typewriter_t_done(plan, sl, cps_eff) if plan else 0.0
                 last: Path | None = None
                 for j in range(n):
                     t = j / fps
@@ -837,8 +839,7 @@ def _decor_card_html(slide: dict[str, Any], theme: str = "midnight") -> str:
 
             data = Path(slide["image"]).read_bytes()
             thumb_html = (
-                f'<img class="thumb" src="data:image/jpeg;base64,'
-                f'{b64encode(data).decode()}">'
+                f'<img class="thumb" src="data:image/jpeg;base64,' f'{b64encode(data).decode()}">'
             )
         except Exception:
             thumb_html = ""
@@ -846,10 +847,7 @@ def _decor_card_html(slide: dict[str, Any], theme: str = "midnight") -> str:
     bullets_html = ""
     for b in bullets:
         text, emph = _bullet_pair(b)
-        body = (
-            f'<em class="kw">{_esc(text)}</em>'
-            if emph == "keyword" else _esc(text)
-        )
+        body = f'<em class="kw">{_esc(text)}</em>' if emph == "keyword" else _esc(text)
         bullets_html += f'<div class="bl">{body}</div>'
 
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>
@@ -888,9 +886,7 @@ def render_decor_cards(
     from playwright.sync_api import sync_playwright
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    first_theme = theme or (
-        "midnight"  # theme=None 时由调用方传 JSON 内主题
-    )
+    first_theme = theme or ("midnight")  # theme=None 时由调用方传 JSON 内主题
     paths: list[Path] = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -910,7 +906,8 @@ def render_decor_cards(
 
 
 async def _generate_slide_images(
-    slides: list[dict[str, Any]], out_dir: Path,
+    slides: list[dict[str, Any]],
+    out_dir: Path,
 ) -> int:
     """10.26：逐页万相生图（image_prompt → img_NN.jpg → slides[i]["image"]）。
 
@@ -943,16 +940,21 @@ async def _generate_slide_images(
 
 
 async def _review_deck(
-    llm: Any, slides: list[dict[str, Any]], transcript_text: str,
+    llm: Any,
+    slides: list[dict[str, Any]],
+    transcript_text: str,
 ) -> str:
     """10.24-D 自检审查 — 返回修改意见；达标/异常返回 ""（不阻断）。"""
     try:
         from app.adapters.llm_base import llm_prompt_to_text
 
-        raw = await llm_prompt_to_text(llm, _REVIEW_PROMPT.format(
-            slides_json=json.dumps(slides, ensure_ascii=False),
-            transcript=transcript_text[:1500],
-        ))
+        raw = await llm_prompt_to_text(
+            llm,
+            _REVIEW_PROMPT.format(
+                slides_json=json.dumps(slides, ensure_ascii=False),
+                transcript=transcript_text[:1500],
+            ),
+        )
         fb = (raw or "").strip()
         if not fb or fb.rstrip(".。！!").upper() == "OK":
             return ""
@@ -989,11 +991,14 @@ async def generate_deck_slides(
 
         fb = (
             _FEEDBACK_SECTION.format(revision=feedback.strip())
-            if feedback and feedback.strip() else ""
+            if feedback and feedback.strip()
+            else ""
         )
         auto = theme == "auto"
         prompt = _DECK_PROMPT.format(
-            n=max_slides, transcript=transcript_text[:8000], feedback=fb,
+            n=max_slides,
+            transcript=transcript_text[:8000],
+            feedback=fb,
         ) + (_THEME_AUTO_SECTION if auto else "")
         raw = await llm_prompt_to_text(llm, prompt)
         # 10.25-E：auto → LLM 包裹对象自选主题；越权/裸数组降级 midnight
@@ -1009,7 +1014,8 @@ async def generate_deck_slides(
             if not review_fb:
                 break
             retry_prompt = _DECK_PROMPT.format(
-                n=max_slides, transcript=transcript_text[:8000],
+                n=max_slides,
+                transcript=transcript_text[:8000],
                 feedback=_FEEDBACK_SECTION.format(revision=review_fb),
             )
             raw = await llm_prompt_to_text(llm, retry_prompt)
@@ -1024,14 +1030,27 @@ async def generate_deck_slides(
         out_dir.mkdir(parents=True, exist_ok=True)
         # 10.26：自动配图（image_prompt → 万相生图 → image 路径进 JSON）
         await _generate_slide_images(slides, out_dir)
-        (out_dir / "slides.json").write_text(json.dumps({
-            "theme": actual, "transcript": transcript_text,
-            "slides": slides,
-        }, ensure_ascii=False, indent=1), encoding="utf-8")
+        (out_dir / "slides.json").write_text(
+            json.dumps(
+                {
+                    "theme": actual,
+                    "transcript": transcript_text,
+                    "slides": slides,
+                },
+                ensure_ascii=False,
+                indent=1,
+            ),
+            encoding="utf-8",
+        )
         logger.info(f"[deck] LLM 产出 {len(slides)} 张幻灯片（theme={actual}）")
         return await asyncio.to_thread(
-            render_deck_slides, slides, out_dir, width, height,
-            person_clearance_px, theme=actual,
+            render_deck_slides,
+            slides,
+            out_dir,
+            width,
+            height,
+            person_clearance_px,
+            theme=actual,
             top_right_clear_px=top_right_clear_px,
         )
     except Exception as e:

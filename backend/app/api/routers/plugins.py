@@ -24,50 +24,49 @@ Endpoints:
 - POST   /api/plugins/{plugin_id}/update-from-github  - 从 GitHub 更新插件 ⭐新增
 """
 
-import sys
-import os
 import json
-import zipfile
-import tempfile
-import shutil
 import logging
+import os
+import shutil
+import sys
+import tempfile
+import zipfile
 from datetime import datetime
-from typing import List, Optional
 from pathlib import Path as FilePath
+from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, UploadFile, File, Form
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException
 from fastapi import Path as FastPath
+from fastapi import Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 sys.path.insert(0, "D:/My_Project/多智能体内容运营创作平台/backend")
 
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from app.db.session import get_db
-from app.db.plugin_models import Plugin
-from app.services.plugin_service import PluginService
 from app.api.deps import get_current_user
-from app.api.schemas.plugin_schemas import (
-    # Request/Response models
-    PluginCreate,
-    PluginUpdate,
-    PluginResponse,
-    PluginListResponse,
-    PluginSearchQuery,
-    PluginInstallRequest,
+from app.api.schemas.plugin_schemas import (  # Request/Response models
+    BulkActionRequest,
+    BulkActionResponse,
+    MarketplaceQuery,
     PluginActionResponse,
     PluginConfigRequest,
     PluginConfigResponse,
+    PluginCreate,
+    PluginInstallRequest,
+    PluginListResponse,
+    PluginResponse,
     PluginReviewCreate,
     PluginReviewResponse,
+    PluginSearchQuery,
+    PluginUpdate,
     PluginVersionCreate,
     PluginVersionResponse,
-    MarketplaceQuery,
-    BulkActionRequest,
-    BulkActionResponse,
 )
-from pydantic import BaseModel, Field
-
+from app.db.plugin_models import Plugin
+from app.db.session import get_db
+from app.services.plugin_service import PluginService
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +79,7 @@ router = APIRouter(
 
 # ==================== 依赖注入 ====================
 
+
 def get_plugin_service(db: AsyncSession = Depends(get_db)) -> PluginService:
     """获取插件服务实例"""
     return PluginService(db)
@@ -89,6 +89,7 @@ get_current_user_id = get_current_user
 
 
 # ==================== 健康检查端点（必须在 /{plugin_id} 之前） ====================
+
 
 @router.get(
     "/health",
@@ -100,19 +101,15 @@ async def health_check(service: PluginService = Depends(get_plugin_service)):
     try:
         # 统计插件数量
         from sqlalchemy import func
-        
-        count_result = await service.session.execute(
-            select(func.count()).select_from(Plugin)
-        )
+
+        count_result = await service.session.execute(select(func.count()).select_from(Plugin))
         total_plugins = count_result.scalar()
-        
+
         active_count_result = await service.session.execute(
-            select(func.count())
-            .select_from(Plugin)
-            .where(Plugin.status == "ACTIVE")
+            select(func.count()).select_from(Plugin).where(Plugin.status == "ACTIVE")
         )
         active_plugins = active_count_result.scalar()
-        
+
         return {
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),
@@ -120,7 +117,7 @@ async def health_check(service: PluginService = Depends(get_plugin_service)):
                 "total_plugins": total_plugins,
                 "active_plugins": active_plugins,
                 "system_status": "operational",
-            }
+            },
         }
     except Exception as e:
         return {
@@ -131,11 +128,12 @@ async def health_check(service: PluginService = Depends(get_plugin_service)):
                 "total_plugins": 0,
                 "active_plugins": 0,
                 "system_status": "error",
-            }
+            },
         }
 
 
 # ==================== CRUD 端点 ====================
+
 
 @router.get(
     "",
@@ -167,16 +165,17 @@ async def list_plugins(
         page=page,
         page_size=page_size,
     )
-    
+
     plugins, total = await service.list_plugins(query)
-    
+
     try:
         items = [PluginResponse.model_validate(p) for p in plugins]
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Serialization error: {e}")
-    
+
     return PluginListResponse(
         total=total,
         page=page,
@@ -214,6 +213,7 @@ async def create_plugin(
 
 # ==================== 固定路径端点（必须在 /{plugin_id} 之前） ====================
 
+
 @router.get(
     "/my",
     response_model=List[dict],
@@ -247,14 +247,14 @@ async def bulk_action(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Maximum 50 plugins per batch operation",
         )
-    
+
     valid_actions = ["enable", "disable", "uninstall"]
     if data.action not in valid_actions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid action. Must be one of: {', '.join(valid_actions)}",
         )
-    
+
     result = await service.bulk_action(user_id, data.plugin_ids, data.action)
 
     return BulkActionResponse(**result)
@@ -280,7 +280,9 @@ async def upload_plugin(
     4. 同步元数据到数据库
     5. 自动为当前用户安装该插件
     """
-    logger.info(f"[upload_plugin] Received upload request: filename={plugin_package.filename}, content_type={plugin_package.content_type}")
+    logger.info(
+        f"[upload_plugin] Received upload request: filename={plugin_package.filename}, content_type={plugin_package.content_type}"
+    )
     try:
         content = await plugin_package.read()
         logger.info(f"[upload_plugin] Read {len(content)} bytes from upload")
@@ -288,7 +290,7 @@ async def upload_plugin(
         logger.error(f"[upload_plugin] Failed to read upload content: {read_err}")
         raise HTTPException(status_code=500, detail=f"Failed to read upload: {read_err}")
 
-    if not plugin_package.filename or not plugin_package.filename.endswith('.zip'):
+    if not plugin_package.filename or not plugin_package.filename.endswith(".zip"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only .zip plugin packages are accepted",
@@ -309,10 +311,10 @@ async def upload_plugin(
         with open(zip_path, "wb") as f:
             f.write(content)
 
-        with zipfile.ZipFile(zip_path, 'r') as zf:
+        with zipfile.ZipFile(zip_path, "r") as zf:
             manifest_path = None
             for name in zf.namelist():
-                if name.endswith('plugin.json'):
+                if name.endswith("plugin.json"):
                     manifest_path = name
                     break
 
@@ -324,7 +326,7 @@ async def upload_plugin(
 
             for member in zf.namelist():
                 member_path = os.path.normpath(member)
-                if member_path.startswith('..') or os.path.isabs(member_path):
+                if member_path.startswith("..") or os.path.isabs(member_path):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Unsafe path in zip: {member}",
@@ -333,7 +335,7 @@ async def upload_plugin(
             with zf.open(manifest_path) as mf:
                 manifest = json.load(mf)
 
-        required_fields = ['id', 'name', 'version', 'category']
+        required_fields = ["id", "name", "version", "category"]
         for field in required_fields:
             if field not in manifest:
                 raise HTTPException(
@@ -341,8 +343,8 @@ async def upload_plugin(
                     detail=f"Missing required field: {field}",
                 )
 
-        plugin_id = manifest['id']
-        if not plugin_id or not plugin_id.replace('-', '').replace('_', '').isalnum():
+        plugin_id = manifest["id"]
+        if not plugin_id or not plugin_id.replace("-", "").replace("_", "").isalnum():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid plugin id: {plugin_id}",
@@ -352,8 +354,12 @@ async def upload_plugin(
         # 而 ORM 只声明了 String(32)，不做校验就会把非法值写库 →
         # MySQL DataError 1265，接口返回 500 并把原始 SQL 泄漏给前端。
         _allowed_categories = {
-            "PLATFORM", "DATASOURCE", "WORKFLOW_NODE",
-            "AI_MODEL", "UI_THEME", "INTEGRATION",
+            "PLATFORM",
+            "DATASOURCE",
+            "WORKFLOW_NODE",
+            "AI_MODEL",
+            "UI_THEME",
+            "INTEGRATION",
         }
         raw_category = str(manifest.get("category") or "").strip()
         normalized_category = raw_category.upper()
@@ -380,7 +386,7 @@ async def upload_plugin(
 
         THIRD_PARTY_BASE.mkdir(parents=True, exist_ok=True)
 
-        with zipfile.ZipFile(zip_path, 'r') as zf:
+        with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(target_dir)
 
         plugin_json_in_target = target_dir / "plugin.json"
@@ -403,6 +409,7 @@ async def upload_plugin(
                     break
 
         from app.core.sync_builtin_plugins import sync_single_third_party_plugin
+
         sync_result = await sync_single_third_party_plugin(plugin_id)
 
         if sync_result["synced"] == 0 and sync_result["skipped"] == 0:
@@ -412,27 +419,37 @@ async def upload_plugin(
             )
 
         from app.services.plugin_service import PluginService
+
         service = PluginService(db)
         try:
             install_result = await service.install_plugin(user_id, plugin_id)
             logger.info(f"[upload_plugin] Auto-install result: {install_result}")
         except ValueError as install_err:
             if "already installed" in str(install_err):
-                logger.info(f"[upload_plugin] Plugin already installed for user, skipping auto-install")
+                logger.info(
+                    f"[upload_plugin] Plugin already installed for user, skipping auto-install"
+                )
             else:
                 logger.warning(f"[upload_plugin] Auto-install failed: {install_err}")
         except Exception as install_err:
-            logger.warning(f"[upload_plugin] Auto-install after upload failed (non-fatal): {install_err}")
+            logger.warning(
+                f"[upload_plugin] Auto-install after upload failed (non-fatal): {install_err}"
+            )
 
         try:
             from app.core.plugin_manager import get_global_plugin_manager
+
             pm = get_global_plugin_manager()
             if pm:
                 load_result = await pm.load_plugin_from_dir(str(target_dir))
                 if load_result.success:
-                    logger.info(f"[upload_plugin] Hot-loaded plugin into runtime PluginManager: {plugin_id}")
+                    logger.info(
+                        f"[upload_plugin] Hot-loaded plugin into runtime PluginManager: {plugin_id}"
+                    )
                 else:
-                    logger.warning(f"[upload_plugin] PluginManager hot-load failed: {load_result.error}")
+                    logger.warning(
+                        f"[upload_plugin] PluginManager hot-load failed: {load_result.error}"
+                    )
         except Exception as e:
             logger.warning(f"[upload_plugin] PluginManager hot-load skipped: {e}")
 
@@ -442,9 +459,9 @@ async def upload_plugin(
             "success": True,
             "message": "Plugin installed successfully",
             "plugin_id": plugin_id,
-            "name": manifest['name'],
-            "version": manifest['version'],
-            "category": manifest['category'],
+            "name": manifest["name"],
+            "version": manifest["version"],
+            "category": manifest["category"],
             "install_path": str(target_dir),
             "sync_result": sync_result,
         }
@@ -453,6 +470,7 @@ async def upload_plugin(
         raise
     except Exception as e:
         import traceback
+
         tb = traceback.format_exc()
         logger.error(f"[upload_plugin] Upload failed: {e}\n{tb}")
         # 不把原始异常回传前端：DB 驱动的异常串里带完整 SQL 与表结构，
@@ -470,6 +488,7 @@ async def upload_plugin(
 # ⚠️ 路由顺序铁律：本端点必须注册在 `/{plugin_id}` 之前，
 # 否则 "marketplace" 会被动态段捕获，前端 /plugins/marketplace 直接 404
 # （Plugin 'marketplace' not found，E2E 实测复现）。
+
 
 @router.get(
     "/marketplace",
@@ -520,13 +539,13 @@ async def get_plugin(
 ):
     """获取单个插件详情"""
     plugin = await service.get_plugin(plugin_id)
-    
+
     if not plugin:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Plugin '{plugin_id}' not found",
         )
-    
+
     return PluginResponse.model_validate(plugin)
 
 
@@ -585,7 +604,7 @@ async def delete_plugin(
     except Exception:
         plugin = None
 
-    is_builtin = getattr(plugin, 'is_builtin', True) if plugin else True
+    is_builtin = getattr(plugin, "is_builtin", True) if plugin else True
 
     try:
         await service.delete_plugin(plugin_id)
@@ -602,13 +621,16 @@ async def delete_plugin(
             )
 
     if not is_builtin:
-        tp_dir = FilePath(__file__).parent.parent.parent.parent / "plugins" / "third_party" / plugin_id
+        tp_dir = (
+            FilePath(__file__).parent.parent.parent.parent / "plugins" / "third_party" / plugin_id
+        )
         if tp_dir.exists():
             shutil.rmtree(tp_dir, ignore_errors=True)
             logger.info(f"Removed third-party plugin directory: {tp_dir}")
 
     try:
         from app.core.plugin_manager import get_global_plugin_manager
+
         pm = get_global_plugin_manager()
         if pm and plugin_id in pm:
             await pm.unload_plugin(plugin_id)
@@ -618,6 +640,7 @@ async def delete_plugin(
 
 
 # ==================== 安装管理端点 ====================
+
 
 @router.post(
     "/{plugin_id}/install",
@@ -676,12 +699,17 @@ async def uninstall_plugin(
     """
     try:
         plugin_info = await service.get_plugin(plugin_id)
-        is_builtin = getattr(plugin_info, 'is_builtin', True) if plugin_info else True
+        is_builtin = getattr(plugin_info, "is_builtin", True) if plugin_info else True
 
         result = await service.uninstall_plugin(user_id, plugin_id)
 
         if not is_builtin:
-            tp_dir = FilePath(__file__).parent.parent.parent.parent / "plugins" / "third_party" / plugin_id
+            tp_dir = (
+                FilePath(__file__).parent.parent.parent.parent
+                / "plugins"
+                / "third_party"
+                / plugin_id
+            )
             if tp_dir.exists():
                 shutil.rmtree(tp_dir, ignore_errors=True)
                 logger.info(f"Removed third-party plugin directory: {tp_dir}")
@@ -695,6 +723,7 @@ async def uninstall_plugin(
 
         try:
             from app.core.plugin_manager import get_global_plugin_manager
+
             pm = get_global_plugin_manager()
             if pm and plugin_id in pm:
                 await pm.unload_plugin(plugin_id)
@@ -737,7 +766,7 @@ async def enable_plugin(
     """启用已安装的插件"""
     try:
         result = await service.enable_plugin(user_id, plugin_id)
-        
+
         return PluginActionResponse(
             success=result["success"],
             message=result["message"],
@@ -771,7 +800,7 @@ async def disable_plugin(
     """禁用已安装的插件"""
     try:
         result = await service.disable_plugin(user_id, plugin_id)
-        
+
         return PluginActionResponse(
             success=result["success"],
             message=result["message"],
@@ -793,6 +822,7 @@ async def disable_plugin(
 
 # ==================== 配置管理端点 ====================
 
+
 @router.get(
     "/{plugin_id}/config",
     response_model=PluginConfigResponse,
@@ -806,13 +836,13 @@ async def get_plugin_config(
 ):
     """获取用户的插件配置"""
     config = await service._get_user_config(user_id, plugin_id)
-    
+
     if not config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No configuration found for plugin '{plugin_id}'",
         )
-    
+
     return PluginConfigResponse.model_validate(config)
 
 
@@ -846,6 +876,7 @@ async def update_plugin_config(
 
 # ==================== 版本管理端点 ====================
 
+
 @router.get(
     "/{plugin_id}/versions",
     response_model=List[PluginVersionResponse],
@@ -865,13 +896,14 @@ async def list_plugin_versions(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Plugin '{plugin_id}' not found",
         )
-    
+
     versions = await service.list_versions(plugin_id, include_deprecated)
-    
+
     return [PluginVersionResponse.model_validate(v) for v in versions]
 
 
 # ==================== 评价系统端点 ====================
+
 
 @router.post(
     "/{plugin_id}/reviews",
@@ -912,7 +944,9 @@ async def get_plugin_reviews(
     plugin_id: str = FastPath(..., description="Plugin ID"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=50, description="Items per page"),
-    sort_by: str = Query("newest", description="Sort order: newest/oldest/rating_high/rating_low/helpful"),
+    sort_by: str = Query(
+        "newest", description="Sort order: newest/oldest/rating_high/rating_low/helpful"
+    ),
     rating_filter: Optional[int] = Query(None, ge=1, le=5, description="Filter by star rating"),
     service: PluginService = Depends(get_plugin_service),
 ):
@@ -1078,9 +1112,13 @@ async def mark_review_helpful(
 
 # ==================== GitHub 安装端点 ⭐新增 ====================
 
+
 class GithubInstallRequest(BaseModel):
     """GitHub 安装请求"""
-    repo_url: str = Field(..., description="GitHub 仓库 URL (如 https://github.com/user/plugin-repo)")
+
+    repo_url: str = Field(
+        ..., description="GitHub 仓库 URL (如 https://github.com/user/plugin-repo)"
+    )
     branch: str = Field(default="main", description="分支名（默认 main）")
     use_git_clone: bool = Field(default=False, description="是否使用 git clone（需要本地安装 git）")
 
@@ -1097,11 +1135,11 @@ async def install_from_github(
 ):
     """
     从 GitHub 仓库安装插件
-    
+
     支持两种安装模式：
     1. ZIP 下载模式（默认）：通过 GitHub API 下载仓库 zip 包，无需本地 git
     2. Git Clone 模式：使用 git clone 命令克隆仓库，支持后续 git pull 更新
-    
+
     示例请求：
     ```json
     {
@@ -1110,7 +1148,7 @@ async def install_from_github(
         "use_git_clone": false
     }
     ```
-    
+
     返回示例：
     ```json
     {
@@ -1125,18 +1163,19 @@ async def install_from_github(
     """
     try:
         from app.services.github_installer import get_github_installer
-        
+
         installer = get_github_installer()
         result = await installer.install_from_github(
             repo_url=request.repo_url,
             branch=request.branch,
             use_git_clone=request.use_git_clone,
         )
-        
+
         if result.get("success"):
             # 安装成功后，尝试自动加载插件
             try:
                 from app.core.plugin_manager import get_global_plugin_manager
+
                 pm = get_global_plugin_manager()
                 if pm and result.get("plugin_id"):
                     # 重新扫描并加载新插件
@@ -1146,12 +1185,12 @@ async def install_from_github(
                 logger.warning(f"[plugins] 自动加载新插件失败: {e}")
 
             pass
-            
+
             # 记录安装历史（可选）
             logger.info(f"[plugins] 用户 {user_id} 从 GitHub 安装插件: {result}")
-        
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"[plugins] GitHub 安装异常: {e}")
         raise HTTPException(
@@ -1173,15 +1212,15 @@ async def update_from_github(
 ):
     """
     更新已安装的 GitHub 插件
-    
+
     对于通过 git clone 安装的插件：
     - 使用 git pull --ff-only 快速更新
     - 保留完整的 git 历史，支持回滚
-    
+
     对于通过 zip 下载安装的插件：
     - 重新从 GitHub 下载最新版本
     - 替换旧版本文件
-    
+
     返回示例：
     ```json
     {
@@ -1193,17 +1232,18 @@ async def update_from_github(
     """
     try:
         from app.services.github_installer import get_github_installer
-        
+
         installer = get_github_installer()
         result = await installer.update_plugin(
             plugin_id=plugin_id,
             use_git_pull=use_git_pull,
         )
-        
+
         if result.get("success"):
             # 更新成功后，重新加载插件
             try:
                 from app.core.plugin_manager import get_global_plugin_manager
+
                 pm = get_global_plugin_manager()
                 if pm and plugin_id in pm:
                     await pm.unload_plugin(plugin_id)
@@ -1213,11 +1253,11 @@ async def update_from_github(
                 logger.warning(f"[plugins] 重新加载插件失败: {e}")
 
             pass
-            
+
             logger.info(f"[plugins] 用户 {user_id} 更新 GitHub 插件: {plugin_id}")
-        
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"[plugins] GitHub 更新异常: {e}")
         raise HTTPException(

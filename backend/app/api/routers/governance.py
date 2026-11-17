@@ -165,8 +165,10 @@ async def collab_switch_mode(
         raise HTTPException(status_code=404, detail=f"Collab session {session_id} not found")
 
     state["collab_mode"] = new_mode.value
-    from app.cache.redis import redis_client
     import json
+
+    from app.cache.redis import redis_client
+
     await redis_client.set(f"collab:{session_id}", json.dumps(state), ex=3600)
 
     return {"session_id": session_id, "collab_mode": new_mode.value, "status": "updated"}
@@ -196,7 +198,9 @@ async def collab_interrupt_agent(
     agents = state.get("agents", [])
     found = any(a.get("agent_id") == agent_id for a in agents)
     if not found:
-        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found in session {session_id}")
+        raise HTTPException(
+            status_code=404, detail=f"Agent {agent_id} not found in session {session_id}"
+        )
 
     agent_info = next(a for a in agents if a.get("agent_id") == agent_id)
     if agent_info.get("status") not in ("running", "pending"):

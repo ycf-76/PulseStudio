@@ -8,8 +8,9 @@ Create Date: 2026-11-01
 前端作品详情页据此播放/提供本地文件。
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "021_local_video"
 down_revision = "020_user_avatar"

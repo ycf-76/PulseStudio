@@ -51,6 +51,7 @@ def _ffmpeg_cmd() -> str:
     if _FFMPEG_EXE is None:
         try:
             from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+
             _FFMPEG_EXE = resolve_ffmpeg() or "ffmpeg"
         except Exception:
             _FFMPEG_EXE = "ffmpeg"
@@ -80,10 +81,7 @@ def _check_ffmpeg() -> None:
     if bindir not in os.environ.get("PATH", ""):
         os.environ["PATH"] = bindir + os.pathsep + os.environ.get("PATH", "")
     if shutil.which("ffprobe") is None:
-        logger.warning(
-            "ffprobe 不在 PATH：时长/音轨探测将走防御式兜底"
-            "（不影响合成主链）"
-        )
+        logger.warning("ffprobe 不在 PATH：时长/音轨探测将走防御式兜底" "（不影响合成主链）")
 
 
 async def _ensure_ffmpeg() -> str | None:
@@ -122,7 +120,10 @@ async def _run(cmd: list[str], cwd: str | None = None) -> str:
         returncode = process.returncode
     except NotImplementedError:
         result = await asyncio.to_thread(
-            subprocess.run, cmd, capture_output=True, cwd=cwd,
+            subprocess.run,
+            cmd,
+            capture_output=True,
+            cwd=cwd,
         )
         stdout, stderr, returncode = result.stdout, result.stderr, result.returncode
 
@@ -152,9 +153,14 @@ def _subtitle_vf(ass_path: Path) -> tuple[str, str]:
 async def _probe_duration(path: str) -> float:
     """探测视频时长（依据 Pulse assemble.py _probe_duration L41-48）。"""
     cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=nw=1:nk=1", path,
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=nw=1:nk=1",
+        path,
     ]
     try:
         try:
@@ -166,7 +172,9 @@ async def _probe_duration(path: str) -> float:
             stdout, _ = await process.communicate()
         except NotImplementedError:
             result = await asyncio.to_thread(
-                subprocess.run, cmd, capture_output=True,
+                subprocess.run,
+                cmd,
+                capture_output=True,
             )
             stdout = result.stdout
         return float(stdout.decode().strip())
@@ -177,10 +185,16 @@ async def _probe_duration(path: str) -> float:
 async def _has_audio(path: str) -> bool:
     """探测视频是否含音轨（依据 Pulse assemble.py _has_audio L51-56）。"""
     cmd = [
-        "ffprobe", "-v", "error",
-        "-select_streams", "a:0",
-        "-show_entries", "stream=codec_name",
-        "-of", "csv=p=0", path,
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=codec_name",
+        "-of",
+        "csv=p=0",
+        path,
     ]
     try:
         try:
@@ -193,7 +207,9 @@ async def _has_audio(path: str) -> bool:
             returncode = process.returncode
         except NotImplementedError:
             result = await asyncio.to_thread(
-                subprocess.run, cmd, capture_output=True,
+                subprocess.run,
+                cmd,
+                capture_output=True,
             )
             stdout, returncode = result.stdout, result.returncode
         return returncode == 0 and bool(stdout.decode().strip())
@@ -241,9 +257,7 @@ def _char_units(ch: str) -> float:
 def wrap_caption(text: str, max_units: float) -> list[str]:
     """按显示宽度把一行字幕确定性折成多行（依据 Pulse assemble.py wrap_caption L95-120）。"""
     flat = " ".join(
-        seg.strip()
-        for seg in str(text).replace("\\N", "\n").split("\n")
-        if seg.strip()
+        seg.strip() for seg in str(text).replace("\\N", "\n").split("\n") if seg.strip()
     )
     if not flat:
         return []
@@ -338,9 +352,7 @@ def _srt_to_ass(
 
     events: list[str] = []
     blocks = [
-        b
-        for b in srt_path.read_text(encoding="utf-8").replace("\r", "").split("\n\n")
-        if b.strip()
+        b for b in srt_path.read_text(encoding="utf-8").replace("\r", "").split("\n\n") if b.strip()
     ]
     for b in blocks:
         rows = [r for r in b.split("\n") if r.strip() != ""]
@@ -354,9 +366,7 @@ def _srt_to_ass(
         if not wrapped:
             continue
         text = "\\N".join(wrapped)
-        events.append(
-            f"Dialogue: 0,{_ass_ts(start)},{_ass_ts(end)},Default,,0,0,0,,{text}"
-        )
+        events.append(f"Dialogue: 0,{_ass_ts(start)},{_ass_ts(end)},Default,,0,0,0,,{text}")
     ass_path.write_text(header + "\n".join(events) + "\n", encoding="utf-8")
     return ass_path
 
@@ -406,11 +416,24 @@ async def _make_shot_clip(
         src_dur = await _probe_duration(src)
 
         if src_dur >= dur - 0.05 or src_dur <= 0:
-            await _run([
-                _ffmpeg_cmd(), "-y", "-i", src, "-t", f"{dur:.3f}",
-                "-vf", f"{base_vf},fps=30", "-an",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out),
-            ])
+            await _run(
+                [
+                    _ffmpeg_cmd(),
+                    "-y",
+                    "-i",
+                    src,
+                    "-t",
+                    f"{dur:.3f}",
+                    "-vf",
+                    f"{base_vf},fps=30",
+                    "-an",
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    str(out),
+                ]
+            )
             return
 
         factor = dur / src_dur
@@ -423,26 +446,64 @@ async def _make_shot_clip(
         if mode == "auto":
             mode = "stretch" if factor <= MAX_STRETCH else "loop"
         if mode == "stretch":
-            await _run([
-                _ffmpeg_cmd(), "-y", "-i", src,
-                "-vf", f"{base_vf},setpts={factor:.4f}*PTS,fps=30",
-                "-t", f"{dur:.3f}", "-an",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out),
-            ])
+            await _run(
+                [
+                    _ffmpeg_cmd(),
+                    "-y",
+                    "-i",
+                    src,
+                    "-vf",
+                    f"{base_vf},setpts={factor:.4f}*PTS,fps=30",
+                    "-t",
+                    f"{dur:.3f}",
+                    "-an",
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    str(out),
+                ]
+            )
         elif mode == "freeze":
-            await _run([
-                _ffmpeg_cmd(), "-y", "-i", src,
-                "-vf", f"{base_vf},fps=30,tpad=stop_mode=clone:stop_duration={dur:.3f}",
-                "-t", f"{dur:.3f}", "-an",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out),
-            ])
+            await _run(
+                [
+                    _ffmpeg_cmd(),
+                    "-y",
+                    "-i",
+                    src,
+                    "-vf",
+                    f"{base_vf},fps=30,tpad=stop_mode=clone:stop_duration={dur:.3f}",
+                    "-t",
+                    f"{dur:.3f}",
+                    "-an",
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    str(out),
+                ]
+            )
         else:
-            await _run([
-                _ffmpeg_cmd(), "-y", "-stream_loop", "-1", "-i", src,
-                "-t", f"{dur:.3f}",
-                "-vf", f"{base_vf},fps=30", "-an",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out),
-            ])
+            await _run(
+                [
+                    _ffmpeg_cmd(),
+                    "-y",
+                    "-stream_loop",
+                    "-1",
+                    "-i",
+                    src,
+                    "-t",
+                    f"{dur:.3f}",
+                    "-vf",
+                    f"{base_vf},fps=30",
+                    "-an",
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    str(out),
+                ]
+            )
     else:
         src = shot.get("image")
         if not src or not Path(src).is_file():
@@ -450,11 +511,26 @@ async def _make_shot_clip(
         frames = max(1, int(dur * 30))
         motion = str(shot.get("motion") or image_motion)
         vf = _image_filter(motion, w, h, frames)
-        await _run([
-            _ffmpeg_cmd(), "-y", "-loop", "1", "-i", src,
-            "-t", f"{dur:.3f}", "-vf", vf, "-an",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out),
-        ])
+        await _run(
+            [
+                _ffmpeg_cmd(),
+                "-y",
+                "-loop",
+                "1",
+                "-i",
+                src,
+                "-t",
+                f"{dur:.3f}",
+                "-vf",
+                vf,
+                "-an",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                str(out),
+            ]
+        )
 
 
 async def compose_video(
@@ -523,22 +599,37 @@ async def compose_video(
             clip = workdir / f"clip_{i:03d}.mp4"
             logger.info(f"合成分镜 {i + 1}/{len(shots)}（{dur:.1f}s）")
             await _make_shot_clip(
-                shot, dur, w, h, clip, workdir,
+                shot,
+                dur,
+                w,
+                h,
+                clip,
+                workdir,
                 pad_mode=pad_mode,
                 image_motion=image_motion,
             )
             clips.append(clip)
 
         concat_list = workdir / "list.txt"
-        concat_list.write_text(
-            "".join(f"file '{c}'\n" for c in clips), encoding="utf-8"
-        )
+        concat_list.write_text("".join(f"file '{c}'\n" for c in clips), encoding="utf-8")
         silent = workdir / "silent.mp4"
-        await _run([
-            _ffmpeg_cmd(), "-y", "-f", "concat", "-safe", "0",
-            "-i", str(concat_list),
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", str(silent),
-        ])
+        await _run(
+            [
+                _ffmpeg_cmd(),
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                str(silent),
+            ]
+        )
 
         video_dur = sum(durations)
 
@@ -558,12 +649,14 @@ async def compose_video(
             ai = 1
 
             inputs += [
-                "-f", "lavfi", "-t", f"{video_dur:.3f}",
-                "-i", "anullsrc=r=48000:cl=stereo",
+                "-f",
+                "lavfi",
+                "-t",
+                f"{video_dur:.3f}",
+                "-i",
+                "anullsrc=r=48000:cl=stereo",
             ]
-            filters.append(
-                f"[{ai}:a]aformat=sample_fmts=fltp:channel_layouts=stereo[abase]"
-            )
+            filters.append(f"[{ai}:a]aformat=sample_fmts=fltp:channel_layouts=stereo[abase]")
             ai += 1
 
             if narration:
@@ -588,13 +681,26 @@ async def compose_video(
             filters.append(
                 f"{''.join(amix_srcs)}amix=inputs={len(amix_srcs)}:duration=first:normalize=0[aout]"
             )
-            await _run([
-                _ffmpeg_cmd(), "-y", *inputs,
-                "-filter_complex", ";".join(filters),
-                "-map", "0:v", "-map", "[aout]",
-                "-t", f"{video_dur:.3f}",
-                "-c:v", "copy", "-c:a", "aac", str(stage2),
-            ])
+            await _run(
+                [
+                    _ffmpeg_cmd(),
+                    "-y",
+                    *inputs,
+                    "-filter_complex",
+                    ";".join(filters),
+                    "-map",
+                    "0:v",
+                    "-map",
+                    "[aout]",
+                    "-t",
+                    f"{video_dur:.3f}",
+                    "-c:v",
+                    "copy",
+                    "-c:a",
+                    "aac",
+                    str(stage2),
+                ]
+            )
             stage = stage2
 
         if sub_path:
@@ -603,17 +709,29 @@ async def compose_video(
             else:
                 ass_path = workdir / "sub.ass"
                 _srt_to_ass(
-                    sub_path, ass_path, w, h,
+                    sub_path,
+                    ass_path,
+                    w,
+                    h,
                     font=sub_font,
                 )
             # Windows ffmpeg 的 subtitles 滤镜吃不了绝对路径（详见 _subtitle_vf），
             # 用 cwd + 纯文件名方案。2026-10-13 真机实测四种写法唯一可靠的解。
             sub_vf, sub_cwd = _subtitle_vf(ass_path)
-            await _run([
-                _ffmpeg_cmd(), "-y", "-i", str(stage),
-                "-vf", sub_vf,
-                "-c:a", "copy", str(out),
-            ], cwd=sub_cwd)
+            await _run(
+                [
+                    _ffmpeg_cmd(),
+                    "-y",
+                    "-i",
+                    str(stage),
+                    "-vf",
+                    sub_vf,
+                    "-c:a",
+                    "copy",
+                    str(out),
+                ],
+                cwd=sub_cwd,
+            )
         else:
             shutil.copy(str(stage), str(out))
 
@@ -695,11 +813,20 @@ async def burn_subtitles(
         # Windows ffmpeg 的 subtitles 滤镜吃不了绝对路径（详见 _subtitle_vf）
         sub_vf, sub_cwd = _subtitle_vf(ass_path)
         staged = workdir / "burned.mp4"
-        await _run([
-            _ffmpeg_cmd(), "-y", "-i", str(src),
-            "-vf", sub_vf,
-            "-c:a", "copy", str(staged),
-        ], cwd=sub_cwd)
+        await _run(
+            [
+                _ffmpeg_cmd(),
+                "-y",
+                "-i",
+                str(src),
+                "-vf",
+                sub_vf,
+                "-c:a",
+                "copy",
+                str(staged),
+            ],
+            cwd=sub_cwd,
+        )
         shutil.copy(str(staged), str(out))
 
     logger.info(f"字幕已烧入成片：{out}（{len(shots)} 镜，缩放系数 {scale:.3f}）")
@@ -716,23 +843,58 @@ async def _normalize_clip(clip: Path, norm: Path) -> None:
         每条输入都有音频流（缺流会让 filter_complex 直接失败）
     """
     if await _has_audio(str(clip)):
-        await _run([
-            _ffmpeg_cmd(), "-y", "-i", str(clip),
-            "-vf", "fps=30,format=yuv420p,setsar=1",
-            "-c:v", "libx264", "-c:a", "aac", "-b:a", "128k",
-            "-ar", "48000", "-ac", "2", "-r", "30",
-            str(norm),
-        ])
+        await _run(
+            [
+                _ffmpeg_cmd(),
+                "-y",
+                "-i",
+                str(clip),
+                "-vf",
+                "fps=30,format=yuv420p,setsar=1",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                "-ar",
+                "48000",
+                "-ac",
+                "2",
+                "-r",
+                "30",
+                str(norm),
+            ]
+        )
     else:
-        await _run([
-            _ffmpeg_cmd(), "-y", "-i", str(clip),
-            "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-            "-vf", "fps=30,format=yuv420p,setsar=1",
-            "-map", "0:v", "-map", "1:a",
-            "-c:v", "libx264", "-c:a", "aac", "-b:a", "128k",
-            "-r", "30", "-shortest",
-            str(norm),
-        ])
+        await _run(
+            [
+                _ffmpeg_cmd(),
+                "-y",
+                "-i",
+                str(clip),
+                "-f",
+                "lavfi",
+                "-i",
+                "anullsrc=r=48000:cl=stereo",
+                "-vf",
+                "fps=30,format=yuv420p,setsar=1",
+                "-map",
+                "0:v",
+                "-map",
+                "1:a",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                "-r",
+                "30",
+                "-shortest",
+                str(norm),
+            ]
+        )
 
 
 def _xfade_offsets(durations: list[float], xfade_durs: list[float]) -> list[float]:
@@ -781,6 +943,7 @@ async def compose_video_concat(
 
     if not output_path:
         import tempfile as _tf
+
         output_path = str(Path(_tf.mkdtemp()) / "concat_output.mp4")
 
     out = Path(output_path)
@@ -817,7 +980,7 @@ async def compose_video_concat(
             logger.info(f"单片段直接输出（含音轨）：{out}")
             return out
 
-        trans = (transitions or ["cut"] * (len(normalized) - 1))
+        trans = transitions or ["cut"] * (len(normalized) - 1)
         while len(trans) < len(normalized) - 1:
             trans.append("cut")
 
@@ -829,11 +992,21 @@ async def compose_video_concat(
                 "".join(f"file '{c}'\n" for c in normalized),
                 encoding="utf-8",
             )
-            await _run([
-                _ffmpeg_cmd(), "-y", "-f", "concat", "-safe", "0",
-                "-i", str(concat_list),
-                "-c", "copy", str(out),
-            ])
+            await _run(
+                [
+                    _ffmpeg_cmd(),
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    str(concat_list),
+                    "-c",
+                    "copy",
+                    str(out),
+                ]
+            )
             logger.info(f"concat 拼接完成（无转场，音轨保留）：{out}")
             return out
 
@@ -861,18 +1034,31 @@ async def compose_video_concat(
             v_parts.append(
                 f"{prev_v}[{i + 1}:v]xfade=transition={t_type}:duration={cur_dur:.3f}:offset={offsets[i]:.2f}{out_v}"
             )
-            a_parts.append(
-                f"{prev_a}[{i + 1}:a]acrossfade=d={cur_dur:.3f}:c1=tri:c2=tri{out_a}"
-            )
+            a_parts.append(f"{prev_a}[{i + 1}:a]acrossfade=d={cur_dur:.3f}:c1=tri:c2=tri{out_a}")
             prev_v, prev_a = out_v, out_a
 
-        await _run([
-            _ffmpeg_cmd(), "-y", *inputs,
-            "-filter_complex", ";".join(v_parts + a_parts),
-            "-map", "[vout]", "-map", "[aout]",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-b:a", "128k", str(out),
-        ])
+        await _run(
+            [
+                _ffmpeg_cmd(),
+                "-y",
+                *inputs,
+                "-filter_complex",
+                ";".join(v_parts + a_parts),
+                "-map",
+                "[vout]",
+                "-map",
+                "[aout]",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                str(out),
+            ]
+        )
         logger.info(f"xfade 拼接完成（含转场，音画同步）：{out}")
         return out
 
@@ -892,6 +1078,7 @@ async def compose_video_concat_simple(
 
     if not output_path:
         import tempfile as _tf
+
         output_path = str(Path(_tf.mkdtemp()) / "concat_simple.mp4")
 
     out = Path(output_path)
@@ -933,10 +1120,20 @@ async def compose_video_concat_simple(
             "".join(f"file '{c}'\n" for c in normalized),
             encoding="utf-8",
         )
-        await _run([
-            _ffmpeg_cmd(), "-y", "-f", "concat", "-safe", "0",
-            "-i", str(concat_list),
-            "-c", "copy", str(out),
-        ])
+        await _run(
+            [
+                _ffmpeg_cmd(),
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-c",
+                "copy",
+                str(out),
+            ]
+        )
         logger.info(f"简单拼接完成（音轨保留）：{out}")
         return out

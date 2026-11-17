@@ -1,5 +1,9 @@
 import pytest
-pytest.skip("app.engine.codex 已删除（prompt 组装迁至 reactor/prompt.py），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.engine.codex 已删除（prompt 组装迁至 reactor/prompt.py），本文件测退役实现",
+    allow_module_level=True,
+)
 
 """Tests for codex_prompt.py — Step 2 validation."""
 
@@ -9,6 +13,7 @@ import pytest
 class TestCodexPrompt:
     def test_tool_descriptions_generated(self):
         from app.engine.codex.prompt import build_tool_descriptions
+
         desc = build_tool_descriptions()
         assert "file_read" in desc
         assert "file_write" in desc
@@ -20,12 +25,14 @@ class TestCodexPrompt:
 
     def test_tool_descriptions_has_all_13(self):
         from app.engine.codex.prompt import build_tool_descriptions
+
         desc = build_tool_descriptions()
         lines = [l for l in desc.strip().splitlines() if l.startswith("- ")]
         assert len(lines) == 13
 
     def test_full_system_prompt(self):
         from app.engine.codex.prompt import get_codex_system_prompt
+
         prompt = get_codex_system_prompt()
         assert "可用工具" in prompt
         assert "工作方式" in prompt
@@ -37,6 +44,7 @@ class TestCodexPrompt:
 
     def test_permissions_in_descriptions(self):
         from app.engine.codex.prompt import build_tool_descriptions
+
         desc = build_tool_descriptions()
         assert "bash:exec" in desc
         assert "xhs:search" in desc
@@ -44,6 +52,7 @@ class TestCodexPrompt:
 
     def test_prompt_is_deterministic(self):
         from app.engine.codex.prompt import get_codex_system_prompt
+
         p1 = get_codex_system_prompt()
         p2 = get_codex_system_prompt()
         assert p1 == p2

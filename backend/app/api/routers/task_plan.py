@@ -8,6 +8,7 @@ POST   /api/task-plans/{id}/pause   暂停
 POST   /api/task-plans/{id}/resume  恢复
 POST   /api/task-plans/{id}/cancel  取消
 """
+
 import logging
 from typing import Any
 
@@ -27,13 +28,17 @@ router = APIRouter(prefix="/api/task-plans", tags=["task-plans"])
 
 class DecomposeRequest(BaseModel):
     """意图拆解请求。"""
-    intent_text: str = Field(..., min_length=1, max_length=5000, description="发布意图（多行清单或一句话）")
+
+    intent_text: str = Field(
+        ..., min_length=1, max_length=5000, description="发布意图（多行清单或一句话）"
+    )
     daily_time: str | None = Field(None, description="每日发布时间 HH:MM，如 09:00")
     dry_run: bool = Field(False, description="True 时不调用 LLM（规则拆解，零 token 测试路径）")
 
 
 class CreatePlanItem(BaseModel):
     """清单条目（用户编辑后的最终版）。"""
+
     day_index: int = Field(..., ge=1, le=60)
     topic: str = Field(..., min_length=1, max_length=500)
     keyword: str | None = Field(None, max_length=200)
@@ -41,6 +46,7 @@ class CreatePlanItem(BaseModel):
 
 class CreatePlanRequest(BaseModel):
     """创建清单请求。"""
+
     intent_text: str = Field(..., min_length=1, max_length=5000)
     title: str = Field("", max_length=200)
     account_id: str | None = Field(None, description="小红书账号 ID")

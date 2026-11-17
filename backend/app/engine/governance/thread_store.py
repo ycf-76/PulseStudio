@@ -127,17 +127,13 @@ class ThreadStore:
             ThreadEventType.CHECKPOINT,
             {"checkpoint_name": name, "event_index": cp.event_index},
         )
-        logger.info(
-            f"[thread:{self.thread_id}] checkpoint '{name}' at event #{cp.event_index}"
-        )
+        logger.info(f"[thread:{self.thread_id}] checkpoint '{name}' at event #{cp.event_index}")
         return cp
 
     def rollback(self, name: str) -> list[dict[str, Any]] | None:
         cp = self._checkpoints.get(name)
         if cp is None:
-            logger.warning(
-                f"[thread:{self.thread_id}] checkpoint '{name}' not found"
-            )
+            logger.warning(f"[thread:{self.thread_id}] checkpoint '{name}' not found")
             return None
 
         self._events = self._events[: cp.event_index]
@@ -145,9 +141,7 @@ class ThreadStore:
         self._token_usage = cp.token_usage
 
         # Remove checkpoints created after this one
-        to_remove = [
-            k for k, v in self._checkpoints.items() if v.event_index > cp.event_index
-        ]
+        to_remove = [k for k, v in self._checkpoints.items() if v.event_index > cp.event_index]
         for k in to_remove:
             del self._checkpoints[k]
 
@@ -276,7 +270,9 @@ class ThreadStore:
             logger.warning(f"[thread:{thread_id}] load failed: {e}")
             return None
 
-    async def persist_checkpoint(self, name: str, messages: list[dict[str, Any]] | None = None) -> Checkpoint:
+    async def persist_checkpoint(
+        self, name: str, messages: list[dict[str, Any]] | None = None
+    ) -> Checkpoint:
         """Create a checkpoint and persist to Redis atomically.
 
         Ref: Codex session.rs — checkpoints are the natural persistence

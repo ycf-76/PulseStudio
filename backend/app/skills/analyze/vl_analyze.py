@@ -146,8 +146,7 @@ def _flatten_content(raw: Any) -> str:
     """DashScope 多模态响应 content 可能是 list[{"text": ...}] — 拉平为纯文本。"""
     if isinstance(raw, list):
         return "".join(
-            item.get("text", "") if isinstance(item, dict) else str(item)
-            for item in raw
+            item.get("text", "") if isinstance(item, dict) else str(item) for item in raw
         )
     return str(raw or "")
 
@@ -316,9 +315,7 @@ class VLAnalyzeSkill(Skill):
         elif asset_id:
             image_src = await _load_asset_as_base64(asset_id, inputs)
         if not image_src:
-            raise ValueError(
-                "image_base64 / image_path / image_url / asset_id 至少需要一个"
-            )
+            raise ValueError("image_base64 / image_path / image_url / asset_id 至少需要一个")
 
         llm = self.llm or _get_vl_llm()
         if llm is None:

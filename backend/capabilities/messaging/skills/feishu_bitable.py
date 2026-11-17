@@ -22,9 +22,7 @@ from app.core.skill_registry import register
 logger = logging.getLogger(__name__)
 
 # Bitable 字段类型编码（官方 bitable v1 规范）
-FIELD_TYPES = (
-    "1=文本 2=数字 3=单选 4=多选 5=日期 7=复选框 11=人员 13=电话 15=超链接 17=附件"
-)
+FIELD_TYPES = "1=文本 2=数字 3=单选 4=多选 5=日期 7=复选框 11=人员 13=电话 15=超链接 17=附件"
 
 
 class FeishuBitableInput(BaseModel):
@@ -39,8 +37,12 @@ class FeishuBitableInput(BaseModel):
         default="",
         description="open_table 时：多维表格链接（https://xxx.feishu.cn/base/<app_token>?table=<table_id>），提供后自动解析，无需再传 app_token/table_id",
     )
-    name: str = Field(default="", description="create_app 时多维表格的名称（用简短业务名，如「小红书内容排期」）")
-    folder_token: str = Field(default="", description="create_app 可选：目标文件夹 token，留空则在云空间根目录创建")
+    name: str = Field(
+        default="", description="create_app 时多维表格的名称（用简短业务名，如「小红书内容排期」）"
+    )
+    folder_token: str = Field(
+        default="", description="create_app 可选：目标文件夹 token，留空则在云空间根目录创建"
+    )
     app_token: str = Field(
         default="",
         description="create_table/add_records 时：多维表格 app_token。从 create_app 返回值或飞书链接 .../base/<app_token> 获取",
@@ -49,11 +51,13 @@ class FeishuBitableInput(BaseModel):
     fields: list[dict[str, Any]] = Field(
         default=[],
         description=(
-            f"create_table 时字段定义列表，每项 {{\"field_name\": 字段名, \"type\": 类型编码}}，类型编码：{FIELD_TYPES}。"
+            f'create_table 时字段定义列表，每项 {{"field_name": 字段名, "type": 类型编码}}，类型编码：{FIELD_TYPES}。'
             "第一个字段建议用 1(文本) 作为主字段"
         ),
     )
-    table_id: str = Field(default="", description="add_records 时：数据表 table_id，从 create_table 返回值获取")
+    table_id: str = Field(
+        default="", description="add_records 时：数据表 table_id，从 create_table 返回值获取"
+    )
     records: list[dict[str, Any]] = Field(
         default=[],
         description="add_records 时要写入的记录列表，每项为 {字段名: 值}，键必须与字段名完全一致",
@@ -95,7 +99,7 @@ class FeishuBitableSkill(Skill):
 
         try:
             from app.config import get_settings
-            from capabilities.messaging.adapters.feishu import FeishuClient, FeishuAPIError
+            from capabilities.messaging.adapters.feishu import FeishuAPIError, FeishuClient
 
             settings = get_settings()
             if not (settings.feishu_app_id and settings.feishu_app_secret):
@@ -143,20 +147,29 @@ class FeishuBitableSkill(Skill):
         try:
             from app.core.context_vars import current_db_session
             from capabilities.messaging.services.feishu_oauth import get_valid_user_access_token
+
             db = current_db_session.get(None)
             if db is not None and user_id and user_id != "default":
                 return await get_valid_user_access_token(db, user_id)
         except Exception as exc:
-            logger.warning(f"[FeishuBitableSkill] user token unavailable, fallback tenant token: {exc}")
+            logger.warning(
+                f"[FeishuBitableSkill] user token unavailable, fallback tenant token: {exc}"
+            )
         return None
 
-    async def _create_app(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _create_app(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         name = (inputs.get("name") or "").strip()
         if not name:
-            return {"ok": False, "error": "create_app 需要提供 name（多维表格名称，如「小红书内容排期」）"}
+            return {
+                "ok": False,
+                "error": "create_app 需要提供 name（多维表格名称，如「小红书内容排期」）",
+            }
 
         created = await client.create_bitable_app(
-            name, folder_token=(inputs.get("folder_token") or "").strip(),
+            name,
+            folder_token=(inputs.get("folder_token") or "").strip(),
             access_token=access_token,
         )
         return {
@@ -166,12 +179,17 @@ class FeishuBitableSkill(Skill):
             "hint": "下一步用 operation='create_table' 在该应用中创建数据表（传 app_token），定义字段后写入记录",
         }
 
-    async def _create_table(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _create_table(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         app_token = (inputs.get("app_token") or "").strip()
         table_name = (inputs.get("table_name") or "").strip()
         fields = inputs.get("fields") or []
         if not app_token:
-            return {"ok": False, "error": "create_table 需要提供 app_token（可先用 create_app 创建）"}
+            return {
+                "ok": False,
+                "error": "create_table 需要提供 app_token（可先用 create_app 创建）",
+            }
         if not table_name:
             return {"ok": False, "error": "create_table 需要提供 table_name（数据表名称）"}
         if not isinstance(fields, list) or not fields:
@@ -181,7 +199,10 @@ class FeishuBitableSkill(Skill):
             }
 
         created = await client.create_bitable_table(
-            app_token, table_name, fields=fields, access_token=access_token,
+            app_token,
+            table_name,
+            fields=fields,
+            access_token=access_token,
         )
         return {
             "ok": True,
@@ -191,14 +212,22 @@ class FeishuBitableSkill(Skill):
             "hint": "下一步用 operation='add_records' 写入数据（传 app_token + table_id，records 的键必须与上面的 field_names 完全一致）",
         }
 
-    async def _add_records(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _add_records(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         app_token = (inputs.get("app_token") or "").strip()
         table_id = (inputs.get("table_id") or "").strip()
         records = inputs.get("records") or []
         if not app_token or not table_id:
-            return {"ok": False, "error": "add_records 需要提供 app_token 和 table_id（从 create_app/create_table 返回值获取）"}
+            return {
+                "ok": False,
+                "error": "add_records 需要提供 app_token 和 table_id（从 create_app/create_table 返回值获取）",
+            }
         if not isinstance(records, list) or not records:
-            return {"ok": False, "error": "add_records 需要提供 records（记录列表，每项为 {字段名: 值}）"}
+            return {
+                "ok": False,
+                "error": "add_records 需要提供 records（记录列表，每项为 {字段名: 值}）",
+            }
 
         created = await client.batch_create_bitable_records(app_token, table_id, records)
         return {
@@ -210,7 +239,9 @@ class FeishuBitableSkill(Skill):
             "hint": "数据已写入，把 url 告诉用户可在飞书直接打开查看",
         }
 
-    async def _open_table(self, client: Any, inputs: dict[str, Any], access_token: str | None = None) -> dict[str, Any]:
+    async def _open_table(
+        self, client: Any, inputs: dict[str, Any], access_token: str | None = None
+    ) -> dict[str, Any]:
         """打开/读取已有多维表格：解析链接 → 字段 + 记录（扁平化预览）。"""
         from fastapi import HTTPException
 
@@ -234,7 +265,11 @@ class FeishuBitableSkill(Skill):
         tables = await client.list_bitable_tables(app_token, access_token=access_token)
         if not tables:
             return {"ok": False, "error": "该多维表格中没有任何数据表"}
-        table = next((t for t in tables if t.get("table_id") == table_id), None) if table_id else tables[0]
+        table = (
+            next((t for t in tables if t.get("table_id") == table_id), None)
+            if table_id
+            else tables[0]
+        )
         if table is None:
             return {
                 "ok": False,
@@ -244,7 +279,9 @@ class FeishuBitableSkill(Skill):
         table_id = table["table_id"]
 
         fields = await client.list_bitable_fields(app_token, table_id, access_token=access_token)
-        raw_records = await client.search_bitable_records(app_token, table_id, access_token=access_token)
+        raw_records = await client.search_bitable_records(
+            app_token, table_id, access_token=access_token
+        )
 
         type_by_name = {(f.get("field_name") or ""): int(f.get("type") or 0) for f in fields}
         records: list[dict[str, str]] = []

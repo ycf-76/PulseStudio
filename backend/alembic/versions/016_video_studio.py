@@ -12,8 +12,9 @@ AI 视频工坊任务层（docs/VIDEO_ARCHITECTURE_ALIGNMENT_MIGRATION_PLAN.md �
 当前 head 仍为 014，故本迁移 down_revision = "014"。
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 # revision identifiers
 revision = "016_video_studio"

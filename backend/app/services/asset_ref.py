@@ -28,8 +28,9 @@ async def guard_asset_ids(
             "available_asset_ids": list[str],
         }
     """
-    from app.db.models import ImageAsset
     from sqlalchemy import select
+
+    from app.db.models import ImageAsset
     from app.db.session import AsyncSessionLocal
 
     available: list[str] = []
@@ -70,18 +71,14 @@ async def guard_asset_ids(
     parts: list[str] = []
     if hallucinated:
         parts.append(
-            f"以下 asset_id 是 LLM 幻觉生成的假 ID：{hallucinated}，"
-            f"不是素材库中的真实 ID"
+            f"以下 asset_id 是 LLM 幻觉生成的假 ID：{hallucinated}，" f"不是素材库中的真实 ID"
         )
     if not_found:
-        parts.append(
-            f"以下 asset_id 在素材库中不存在：{not_found}"
-        )
+        parts.append(f"以下 asset_id 在素材库中不存在：{not_found}")
 
     error_msg = "；".join(parts)
     hint = (
-        f"请使用 available_asset_ids 中的真实 ID 重新调用。"
-        f"当前可用素材共 {len(available)} 个。"
+        f"请使用 available_asset_ids 中的真实 ID 重新调用。" f"当前可用素材共 {len(available)} 个。"
     )
 
     logger.warning(

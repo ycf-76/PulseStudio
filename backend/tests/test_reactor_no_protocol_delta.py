@@ -28,7 +28,12 @@ class _FakeBus:
 
     async def publish(self, workflow_id, event_type, payload, turn_id=None):
         self.calls.append(
-            {"workflow_id": workflow_id, "event_type": event_type, "payload": payload, "turn_id": turn_id}
+            {
+                "workflow_id": workflow_id,
+                "event_type": event_type,
+                "payload": payload,
+                "turn_id": turn_id,
+            }
         )
         return "evt_fake"
 
@@ -93,9 +98,7 @@ async def test_call_llm_default_suppresses_delta():
         sse_bus=bus,
     )
 
-    content, token_usage, _reasoning = await session._call_llm(
-        [{"role": "user", "content": "x"}]
-    )
+    content, token_usage, _reasoning = await session._call_llm([{"role": "user", "content": "x"}])
 
     assert "agent_message_delta" not in _event_types(bus)
     assert '"final": true' in content

@@ -12,6 +12,7 @@ emit_progress() 发射进度事件 → httpx 回推主进程 /internal/events
 - 主进程侧 /internal/events 端点在 capability_service/main.py 注册
 - 前端零改动：事件 schema 与 sse_bus.publish() 完全对齐
 """
+
 from __future__ import annotations
 
 import logging
@@ -37,7 +38,9 @@ async def _httpx_progress_callback(event: dict[str, Any]) -> None:
     """emit_progress() 的回调实现：httpx POST 到主进程 /internal/events。"""
     url = _main_process_events_url()
     if not url:
-        logger.debug(f"[event-bridge] no CAPABILITY_EVENTS_URL, event dropped: {event.get('event_type')}")
+        logger.debug(
+            f"[event-bridge] no CAPABILITY_EVENTS_URL, event dropped: {event.get('event_type')}"
+        )
         return
 
     try:
@@ -65,7 +68,9 @@ def install_progress_bridge() -> bool:
     """
     url = _main_process_events_url()
     if not url:
-        logger.info("[event-bridge] CAPABILITY_EVENTS_URL not set, progress bridge not installed (inprocess mode)")
+        logger.info(
+            "[event-bridge] CAPABILITY_EVENTS_URL not set, progress bridge not installed (inprocess mode)"
+        )
         return False
 
     from capability_service.main import set_progress_callback
@@ -98,12 +103,14 @@ async def emit_progress_via_bridge(
     if has_service:
         from capability_service.main import emit_progress
 
-        await emit_progress({
-            "workflow_id": workflow_id,
-            "event_type": event_type,
-            "payload": payload,
-            "turn_id": turn_id,
-        })
+        await emit_progress(
+            {
+                "workflow_id": workflow_id,
+                "event_type": event_type,
+                "payload": payload,
+                "turn_id": turn_id,
+            }
+        )
     else:
         from app.services.sse_bus import sse_bus
 

@@ -24,6 +24,7 @@ _normalize_compose_inputs = ComposeCardDeckSkill._normalize_compose_inputs
 
 # ---------- 1) 参数归一化：标签→id、未知风格键并入 style_hint ----------
 
+
 def test_normalize_recipe_label_to_id():
     cleaned = _normalize_compose_inputs({"recipe_id": "数据解读"})
     assert cleaned["recipe_id"] == "data_insight"
@@ -41,18 +42,24 @@ def test_unknown_theme_value_moves_to_style_hint():
 
 
 def test_extra_context_merged_into_style_hint():
-    cleaned = _normalize_compose_inputs({
-        "extra_context": "视觉风格：白色报纸风",
-        "platform": "douyin",
-    })
+    cleaned = _normalize_compose_inputs(
+        {
+            "extra_context": "视觉风格：白色报纸风",
+            "platform": "douyin",
+        }
+    )
     assert "白色报纸风" in cleaned["style_hint"]
     assert cleaned["platform"] == "douyin"
 
 
 def test_valid_ids_untouched():
-    cleaned = _normalize_compose_inputs({
-        "recipe_id": "tutorial_steps", "theme_id": "swiss", "style_hint": "报纸",
-    })
+    cleaned = _normalize_compose_inputs(
+        {
+            "recipe_id": "tutorial_steps",
+            "theme_id": "swiss",
+            "style_hint": "报纸",
+        }
+    )
     assert cleaned["recipe_id"] == "tutorial_steps"
     assert cleaned["theme_id"] == "swiss"
     assert cleaned["style_hint"] == "报纸"
@@ -66,9 +73,12 @@ def test_get_recipe_accepts_label_and_rejects_unknown():
 
 # ---------- 2) 自由风格渲染：截断检测 + 续写补救 ----------
 
+
 def _html_page(title: str) -> str:
-    return (f"<!doctype html><html><head><title>{title}</title></head>"
-            f"<body><h1>{title}</h1></body></html>")
+    return (
+        f"<!doctype html><html><head><title>{title}</title></head>"
+        f"<body><h1>{title}</h1></body></html>"
+    )
 
 
 class _ScriptedLLM:
@@ -84,8 +94,7 @@ class _ScriptedLLM:
 
 
 def _plan_with(n: int) -> Plan:
-    sections = [Section(kind="text", title=f"第{i+1}页", text=f"内容{i+1}")
-                for i in range(n)]
+    sections = [Section(kind="text", title=f"第{i+1}页", text=f"内容{i+1}") for i in range(n)]
     return Plan(subtitle="副标题", sections=sections, closing="收尾")
 
 
@@ -97,10 +106,12 @@ async def test_truncated_output_triggers_continuation_and_merges():
         "结尾\n```html\n<!doctype html><html><head><title>结尾"
         # ← 截断：无收尾 </html>、无闭合 ```
     )
-    llm = _ScriptedLLM([
-        truncated,
-        "结尾\n```html\n" + _html_page("结尾页") + "\n```\n",
-    ])
+    llm = _ScriptedLLM(
+        [
+            truncated,
+            "结尾\n```html\n" + _html_page("结尾页") + "\n```\n",
+        ]
+    )
     draft = await _render_free_form(_plan_with(3), "测试主题", "报纸风", llm)
     assert len(llm.prompts) == 2, "截断后必须发起一次续写调用"
     assert "第3页「第3页」" in llm.prompts[1], "续写 prompt 必须点名还缺哪页"
@@ -119,8 +130,7 @@ async def test_continuation_still_truncated_raises():
 @pytest.mark.asyncio
 async def test_complete_output_single_call():
     raw = "\n\n".join(
-        f"{'封面' if i == 0 else '正文'}\n```html\n{_html_page(f'页{i}')}\n```"
-        for i in range(3)
+        f"{'封面' if i == 0 else '正文'}\n```html\n{_html_page(f'页{i}')}\n```" for i in range(3)
     )
     llm = _ScriptedLLM([raw])
     draft = await _render_free_form(_plan_with(3), "测试主题", "报纸风", llm)

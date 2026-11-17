@@ -1,12 +1,12 @@
 """ReAct Loop 八轮诊断 — R1 Guardian 确认全链路 + R2 loop_state 泄漏 + R3 终态 SSE + R4 熔断器 + R5 turn_id。
 
-  Step 35: ChatAgent._agentic_loop 有 _awaiting_guardian_confirmation 检查
-  Step 36: agent_chat 有 awaiting_guardian_confirmation 状态处理
-  Step 37: /confirm-guardian 端点存在且完整
-  Step 38: /confirm + /clarify 后台任务 cleanup_loop_state 在 finally 中
-  Step 39: /confirm-storyboard 内部异常发 workflow_error SSE
-  Step 40: 熔断器 record_failure 区分不可恢复错误
-  Step 41: workflow_error 回调带 turn_id
+Step 35: ChatAgent._agentic_loop 有 _awaiting_guardian_confirmation 检查
+Step 36: agent_chat 有 awaiting_guardian_confirmation 状态处理
+Step 37: /confirm-guardian 端点存在且完整
+Step 38: /confirm + /clarify 后台任务 cleanup_loop_state 在 finally 中
+Step 39: /confirm-storyboard 内部异常发 workflow_error SSE
+Step 40: 熔断器 record_failure 区分不可恢复错误
+Step 41: workflow_error 回调带 turn_id
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ from __future__ import annotations
 import inspect
 
 import pytest
-
 
 # ============================================================================
 # Step 35: ChatAgent._agentic_loop Guardian 确认状态
@@ -27,6 +26,7 @@ class TestStep35GuardianChatAgentStatus:
     def test_agentic_loop_checks_guardian_confirmation(self):
         """_agentic_loop 应有 _awaiting_guardian_confirmation 检查。"""
         from app.agents.chat_agent import ChatAgent
+
         source = inspect.getsource(ChatAgent._agentic_loop)
 
         has_check = "_awaiting_guardian_confirmation" in source
@@ -39,6 +39,7 @@ class TestStep35GuardianChatAgentStatus:
     def test_returns_awaiting_guardian_confirmation_status(self):
         """应返回 awaiting_guardian_confirmation 状态。"""
         from app.agents.chat_agent import ChatAgent
+
         source = inspect.getsource(ChatAgent._agentic_loop)
 
         has_status = "awaiting_guardian_confirmation" in source
@@ -59,6 +60,7 @@ class TestStep36AgentChatGuardianStatus:
     def test_agent_chat_handles_guardian_status(self):
         """agent_chat 应有 awaiting_guardian_confirmation 分支。"""
         from app.api.routers.chat_agent import agent_chat
+
         source = inspect.getsource(agent_chat)
 
         has_guardian = "awaiting_guardian_confirmation" in source
@@ -70,6 +72,7 @@ class TestStep36AgentChatGuardianStatus:
     def test_returns_loop_state_path(self):
         """应返回 loop_state_path 供前端调用 /confirm-guardian。"""
         from app.api.routers.chat_agent import agent_chat
+
         source = inspect.getsource(agent_chat)
 
         # 找 guardian 分支
@@ -95,6 +98,7 @@ class TestStep37ConfirmGuardianEndpoint:
     def test_endpoint_exists(self):
         """/confirm-guardian 端点应存在。"""
         from app.api.routers.chat_agent import router
+
         routes = [r.path for r in router.routes]
         has_endpoint = any("confirm-guardian" in r for r in routes)
         assert has_endpoint, (
@@ -105,6 +109,7 @@ class TestStep37ConfirmGuardianEndpoint:
     def test_validates_guardian_confirmation_type(self):
         """端点应验证 loop_state 是 Guardian 确认类型。"""
         from app.api.routers.chat_agent import confirm_guardian_action
+
         source = inspect.getsource(confirm_guardian_action)
 
         has_type_check = "_awaiting_guardian_confirmation" in source
@@ -116,17 +121,18 @@ class TestStep37ConfirmGuardianEndpoint:
     def test_reject_path_sends_terminal_sse(self):
         """reject 路径应发 agent_loop_done 终态 SSE。"""
         from app.api.routers.chat_agent import confirm_guardian_action
+
         source = inspect.getsource(confirm_guardian_action)
 
         has_agent_loop_done = "agent_loop_done" in source
         assert has_agent_loop_done, (
-            "/confirm-guardian reject 路径应发 agent_loop_done SSE，"
-            "确保 SSE 流正确关闭。"
+            "/confirm-guardian reject 路径应发 agent_loop_done SSE，" "确保 SSE 流正确关闭。"
         )
 
     def test_cleanup_in_finally(self):
         """approve 路径的 cleanup_loop_state 应在 finally 中。"""
         from app.api.routers.chat_agent import confirm_guardian_action
+
         source = inspect.getsource(confirm_guardian_action)
 
         # 找后台任务中的 cleanup（第二个出现，第一个是 reject 路径）
@@ -150,8 +156,7 @@ class TestStep37ConfirmGuardianEndpoint:
                 has_finally_cleanup = True
                 break
         assert has_finally_cleanup, (
-            "cleanup_loop_state 应在 finally 块中，"
-            "防止 session.run() 异常时临时文件残留。"
+            "cleanup_loop_state 应在 finally 块中，" "防止 session.run() 异常时临时文件残留。"
         )
 
 
@@ -166,6 +171,7 @@ class TestStep38BackgroundCleanupInFinally:
     def test_confirm_cleanup_in_finally(self):
         """/confirm 后台任务 cleanup_loop_state 应在 finally 中。"""
         from app.api.routers.chat_agent import confirm_action
+
         source = inspect.getsource(confirm_action)
 
         # 找 _run_resume_background 中的 cleanup
@@ -186,6 +192,7 @@ class TestStep38BackgroundCleanupInFinally:
     def test_clarify_cleanup_in_finally(self):
         """/clarify 后台任务 cleanup_loop_state 应在 finally 中。"""
         from app.api.routers.chat_agent import clarify_action
+
         source = inspect.getsource(clarify_action)
 
         bg_pos = source.find("_run_clarify_resume_background")
@@ -214,6 +221,7 @@ class TestStep39StoryboardExceptionTerminalSse:
     def test_refine_exception_publishes_workflow_error(self):
         """_run_refine_in_background 的 except 块应发 workflow_error SSE。"""
         from app.api.routers.chat_agent import confirm_storyboard_action
+
         source = inspect.getsource(confirm_storyboard_action)
 
         # 找 _run_refine_in_background
@@ -247,6 +255,7 @@ class TestStep40CircuitBreakerRecoverableFailure:
     def test_record_failure_not_always_unrecoverable(self):
         """record_failure 不应总是 is_unrecoverable=True。"""
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession._call_llm)
 
         # 找 record_failure 调用
@@ -264,6 +273,7 @@ class TestStep40CircuitBreakerRecoverableFailure:
     def test_checks_error_type(self):
         """应根据错误内容判断是否不可恢复。"""
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession._call_llm)
 
         rf_pos = source.find("record_failure")
@@ -271,7 +281,11 @@ class TestStep40CircuitBreakerRecoverableFailure:
             pytest.skip("record_failure 不存在")
         before_rf = source[:rf_pos]
         # 应有错误类型判断逻辑
-        has_error_check = "402" in before_rf[-300:] or "401" in before_rf[-300:] or "unauthorized" in before_rf[-300:]
+        has_error_check = (
+            "402" in before_rf[-300:]
+            or "401" in before_rf[-300:]
+            or "unauthorized" in before_rf[-300:]
+        )
         assert has_error_check, (
             "record_failure 前应有错误类型判断逻辑，"
             "区分不可恢复错误（401/402/403）和暂时性错误（5xx）。"
@@ -289,6 +303,7 @@ class TestStep41WorkflowErrorTurnId:
     def test_confirm_callback_has_turn_id(self):
         """/confirm 的 _on_confirm_done 回调应传 turn_id。"""
         from app.api.routers.chat_agent import confirm_action
+
         source = inspect.getsource(confirm_action)
 
         # 找 _on_confirm_done
@@ -310,6 +325,7 @@ class TestStep41WorkflowErrorTurnId:
     def test_clarify_callback_has_turn_id(self):
         """/clarify 的 _on_clarify_done 回调应传 turn_id。"""
         from app.api.routers.chat_agent import clarify_action
+
         source = inspect.getsource(clarify_action)
 
         cb_pos = source.find("_on_clarify_done")
@@ -321,13 +337,12 @@ class TestStep41WorkflowErrorTurnId:
             pytest.skip("sse_bus.publish 不存在 in callback")
         after_publish = after_cb[publish_pos:]
         has_turn_id = "turn_id" in after_publish[:300]
-        assert has_turn_id, (
-            "BUG：/clarify 的 workflow_error 回调不传 turn_id。"
-        )
+        assert has_turn_id, "BUG：/clarify 的 workflow_error 回调不传 turn_id。"
 
     def test_storyboard_callback_has_turn_id(self):
         """/confirm-storyboard 的 _on_storyboard_done 回调应传 turn_id。"""
         from app.api.routers.chat_agent import confirm_storyboard_action
+
         source = inspect.getsource(confirm_storyboard_action)
 
         cb_pos = source.find("_on_storyboard_done")
@@ -339,9 +354,7 @@ class TestStep41WorkflowErrorTurnId:
             pytest.skip("sse_bus.publish 不存在 in callback")
         after_publish = after_cb[publish_pos:]
         has_turn_id = "turn_id" in after_publish[:300]
-        assert has_turn_id, (
-            "BUG：/confirm-storyboard 的 workflow_error 回调不传 turn_id。"
-        )
+        assert has_turn_id, "BUG：/confirm-storyboard 的 workflow_error 回调不传 turn_id。"
 
 
 class TestStep42ResumeSeedsFullHistory:
@@ -355,13 +368,15 @@ class TestStep42ResumeSeedsFullHistory:
 
     def test_run_accepts_seed_messages(self):
         from app.engine.reactor.session import ReactorSession
+
         sig = inspect.signature(ReactorSession.run)
-        assert "seed_messages" in sig.parameters, (
-            "BUG：ReactorSession.run 不接受 seed_messages，续跑无法回灌历史。"
-        )
+        assert (
+            "seed_messages" in sig.parameters
+        ), "BUG：ReactorSession.run 不接受 seed_messages，续跑无法回灌历史。"
 
     def test_seed_messages_short_circuits_initial_messages(self):
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession.run)
         seed_pos = source.find("if seed_messages:")
         assert seed_pos != -1, "BUG：run() 未对 seed_messages 做分支处理。"
@@ -375,6 +390,7 @@ class TestStep42ResumeSeedsFullHistory:
     def test_confirm_guardian_passes_seed_messages(self):
         """/confirm-guardian 续跑必须把落盘历史传回 session.run。"""
         from app.api.routers.chat_agent import confirm_guardian_action
+
         source = inspect.getsource(confirm_guardian_action)
         assert 'seed_messages=state.get("messages")' in source.replace("'", '"'), (
             "BUG：/confirm-guardian 续跑未回灌 loop_state['messages']，"
@@ -384,12 +400,13 @@ class TestStep42ResumeSeedsFullHistory:
     def test_all_resume_endpoints_pass_seed_messages(self):
         """四个续跑出口（confirm / confirm-guardian / clarify 两分支）都要回灌。"""
         from app.api.routers.chat_agent import (
+            clarify_action,
             confirm_action,
             confirm_guardian_action,
-            clarify_action,
         )
+
         for fn in (confirm_action, confirm_guardian_action, clarify_action):
             src = inspect.getsource(fn).replace("'", '"')
-            assert 'seed_messages=state.get("messages")' in src, (
-                f"BUG：{fn.__name__} 的续跑未回灌 loop_state['messages']。"
-            )
+            assert (
+                'seed_messages=state.get("messages")' in src
+            ), f"BUG：{fn.__name__} 的续跑未回灌 loop_state['messages']。"

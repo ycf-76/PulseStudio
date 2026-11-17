@@ -6,6 +6,7 @@
   runtime="inprocess" → 进程内；runtime="service" → 读 Settings.grid_service_url 走 HTTP。
 - 向后兼容：toml 无 [grid] 段时仍读 Settings.grid_service_url。
 """
+
 from __future__ import annotations
 
 import asyncio

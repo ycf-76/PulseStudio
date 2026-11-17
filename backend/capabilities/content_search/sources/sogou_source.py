@@ -178,6 +178,7 @@ class SogouSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             self._client = await create_async_client(
                 timeout=httpx.Timeout(self.timeout),
@@ -188,9 +189,7 @@ class SogouSource(ContentSource):
             )
         return self._client
 
-    async def _translate_results(
-        self, results: list[TrendingContent]
-    ) -> list[TrendingContent]:
+    async def _translate_results(self, results: list[TrendingContent]) -> list[TrendingContent]:
         if not results:
             return results
         client = await self._ensure_client()
@@ -221,11 +220,13 @@ class SogouSource(ContentSource):
             if jtoken not in groups:
                 groups[jtoken] = []
             lines = _strip_tag_lines(m.group(2))
-            groups[jtoken].append({
-                "lines": lines,
-                "href": href,
-                "pos": m.start(),
-            })
+            groups[jtoken].append(
+                {
+                    "lines": lines,
+                    "href": href,
+                    "pos": m.start(),
+                }
+            )
 
         results: list[TrendingContent] = []
         idx = 0
@@ -239,7 +240,7 @@ class SogouSource(ContentSource):
             snippet = ""
             source = ""
             candidates: list[str] = []
-            url = _resolve_url(items[0]['href'])
+            url = _resolve_url(items[0]["href"])
 
             for item in items:
                 for text in item["lines"]:
@@ -281,7 +282,7 @@ class SogouSource(ContentSource):
             cover_img = ""
             pos_start = items[0]["pos"]
             pos_end = items[-1]["pos"] + 500
-            block = html[max(0, pos_start - 500):min(len(html), pos_end)]
+            block = html[max(0, pos_start - 500) : min(len(html), pos_end)]
             img_match = _RE_IMG_SRC.search(block)
             if img_match:
                 img_url = img_match.group(1).strip()
@@ -295,26 +296,28 @@ class SogouSource(ContentSource):
             position = idx + 1
             likes = max(0, 1000 - position * 50)
 
-            results.append(TrendingContent(
-                platform="sogou",
-                content_id=f"sogou_{idx}_{hash(url) & 0xFFFFFFFF}",
-                title=title,
-                summary=summary,
-                content=snippet or summary,
-                author=source,
-                url=url,
-                likes=likes,
-                comments=0,
-                shares=0,
-                views=0,
-                cover_img=cover_img,
-                published_at="",
-                tags=[],
-                title_original=title,
-                summary_original=summary,
-                content_original=snippet or summary,
-                raw={"position": position, "source": source},
-            ))
+            results.append(
+                TrendingContent(
+                    platform="sogou",
+                    content_id=f"sogou_{idx}_{hash(url) & 0xFFFFFFFF}",
+                    title=title,
+                    summary=summary,
+                    content=snippet or summary,
+                    author=source,
+                    url=url,
+                    likes=likes,
+                    comments=0,
+                    shares=0,
+                    views=0,
+                    cover_img=cover_img,
+                    published_at="",
+                    tags=[],
+                    title_original=title,
+                    summary_original=summary,
+                    content_original=snippet or summary,
+                    raw={"position": position, "source": source},
+                )
+            )
             idx += 1
 
         return results
@@ -336,12 +339,14 @@ class SogouSource(ContentSource):
         这个接口稳定返回 dom 字段，命中率远高于直接抓页面。
         """
         headers = dict(_BROWSER_HEADERS)
-        headers.update({
-            "Accept": "application/json, text/plain, */*",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-        })
+        headers.update(
+            {
+                "Accept": "application/json, text/plain, */*",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+            }
+        )
         params: dict[str, Any] = {
             "keyword": query,
             "format": "json",
@@ -399,21 +404,19 @@ class SogouSource(ContentSource):
                 if _RE_JUMP_LINK.search(text):
                     return text
                 if attempt < self.max_retries:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[sogou] 页面未包含结果链接（疑似反爬空壳页，{len(text)} 字符），"
                         f"{wait}s 后重试 {attempt+1}/{self.max_retries}"
                     )
                     await asyncio.sleep(wait)
                     continue
-                logger.error(
-                    f"[sogou] 反爬空壳页持续返回（{len(text)} 字符），本次抓取放弃"
-                )
+                logger.error(f"[sogou] 反爬空壳页持续返回（{len(text)} 字符），本次抓取放弃")
                 return ""
             except httpx.HTTPStatusError as e:
                 status_code = e.response.status_code
                 if status_code == 429 and attempt < self.max_retries:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[sogou] 429 rate limited (attempt {attempt+1}/{self.max_retries+1}), "
                         f"retrying in {wait}s"

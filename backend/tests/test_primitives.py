@@ -19,14 +19,17 @@ import pytest
 class TestPrimitiveRegistry:
     def test_all_primitives_count(self):
         from app.engine.reactor.primitives import ALL_PRIMITIVES
+
         assert len(ALL_PRIMITIVES) == 12
 
     def test_primitives_by_name_count(self):
         from app.engine.reactor.primitives import PRIMITIVES_BY_NAME
+
         assert len(PRIMITIVES_BY_NAME) == 12
 
     def test_all_have_name_and_description(self):
         from app.engine.reactor.primitives import ALL_PRIMITIVES
+
         for p in ALL_PRIMITIVES:
             assert p.name, f"{p.__class__.__name__} has no name"
             assert p.description, f"{p.__class__.__name__} has no description"
@@ -34,30 +37,40 @@ class TestPrimitiveRegistry:
 
     def test_names_are_unique(self):
         from app.engine.reactor.primitives import ALL_PRIMITIVES
+
         names = [p.name for p in ALL_PRIMITIVES]
         assert len(names) == len(set(names)), f"duplicate names: {names}"
 
     def test_by_name_mapping(self):
         from app.engine.reactor.primitives import ALL_PRIMITIVES, PRIMITIVES_BY_NAME
+
         for p in ALL_PRIMITIVES:
             assert PRIMITIVES_BY_NAME[p.name] is p
 
     def test_expected_names(self):
         from app.engine.reactor.primitives import PRIMITIVES_BY_NAME
+
         # 2026-10 loop 优化：图片三件套与 xhs_search 收编进技能体系（skill_call），
         # 新增 ask_user_question（三层澄清）与 skill_call（技能桥）
         expected = {
-            "file_read", "file_write", "file_edit",
-            "bash", "glob", "grep",
+            "file_read",
+            "file_write",
+            "file_edit",
+            "bash",
+            "glob",
+            "grep",
             "llm_generate",
-            "viral_score", "content_check",
-            "ask_user_question", "skill_call",
+            "viral_score",
+            "content_check",
+            "ask_user_question",
+            "skill_call",
             "work_edit",
         }
         assert set(PRIMITIVES_BY_NAME.keys()) == expected
 
     def test_info_method(self):
         from app.engine.reactor.primitives import PRIMITIVES_BY_NAME
+
         info = PRIMITIVES_BY_NAME["file_read"].info()
         assert info["name"] == "file_read"
         assert "description" in info
@@ -68,18 +81,21 @@ class TestPrimitivePermissions:
     def test_file_read_needs_file_read(self):
         from app.engine.reactor.primitives import FileReadPrimitive
         from app.engine.schemas import Permission
+
         p = FileReadPrimitive()
         assert Permission.FILE_READ in p.required_permissions
 
     def test_file_write_needs_file_write(self):
         from app.engine.reactor.primitives import FileWritePrimitive
         from app.engine.schemas import Permission
+
         p = FileWritePrimitive()
         assert Permission.FILE_WRITE in p.required_permissions
 
     def test_bash_needs_bash_exec(self):
         from app.engine.reactor.primitives import BashPrimitive
         from app.engine.schemas import Permission
+
         p = BashPrimitive()
         assert Permission.BASH_EXEC in p.required_permissions
 
@@ -89,16 +105,19 @@ class TestPrimitivePermissions:
 
     def test_llm_generate_needs_no_permission(self):
         from app.engine.reactor.primitives import LLMGeneratePrimitive
+
         p = LLMGeneratePrimitive()
         assert p.required_permissions == []
 
     def test_viral_score_needs_no_permission(self):
         from app.engine.reactor.primitives import ViralScorePrimitive
+
         p = ViralScorePrimitive()
         assert p.required_permissions == []
 
     def test_content_check_needs_no_permission(self):
         from app.engine.reactor.primitives import ContentCheckPrimitive
+
         p = ContentCheckPrimitive()
         assert p.required_permissions == []
 
@@ -113,7 +132,7 @@ class TestFilePrimitivesExecution:
 
     @pytest.mark.asyncio
     async def test_file_write_and_read(self):
-        from app.engine.reactor.primitives import FileWritePrimitive, FileReadPrimitive
+        from app.engine.reactor.primitives import FileReadPrimitive, FileWritePrimitive
 
         writer = FileWritePrimitive()
         reader = FileReadPrimitive()
@@ -131,7 +150,7 @@ class TestFilePrimitivesExecution:
 
     @pytest.mark.asyncio
     async def test_file_read_with_offset_limit(self):
-        from app.engine.reactor.primitives import FileWritePrimitive, FileReadPrimitive
+        from app.engine.reactor.primitives import FileReadPrimitive, FileWritePrimitive
 
         writer = FileWritePrimitive()
         reader = FileReadPrimitive()
@@ -147,7 +166,11 @@ class TestFilePrimitivesExecution:
 
     @pytest.mark.asyncio
     async def test_file_edit(self):
-        from app.engine.reactor.primitives import FileWritePrimitive, FileEditPrimitive, FileReadPrimitive
+        from app.engine.reactor.primitives import (
+            FileEditPrimitive,
+            FileReadPrimitive,
+            FileWritePrimitive,
+        )
 
         writer = FileWritePrimitive()
         editor = FileEditPrimitive()
@@ -168,6 +191,7 @@ class TestFilePrimitivesExecution:
     @pytest.mark.asyncio
     async def test_file_read_not_found(self):
         from app.engine.reactor.primitives import FileReadPrimitive
+
         reader = FileReadPrimitive()
         result = await reader.execute(path="nonexistent.txt")
         assert result["ok"] is False
@@ -207,6 +231,7 @@ class TestContentCheckPrimitive:
     @pytest.mark.asyncio
     async def test_clean_text_passes(self):
         from app.engine.reactor.primitives import ContentCheckPrimitive
+
         p = ContentCheckPrimitive()
         result = await p.execute(text="今天分享3个手冲咖啡的小技巧")
         assert result["ok"] is True
@@ -216,6 +241,7 @@ class TestContentCheckPrimitive:
     @pytest.mark.asyncio
     async def test_sensitive_text_fails(self):
         from app.engine.reactor.primitives import ContentCheckPrimitive
+
         p = ContentCheckPrimitive()
         result = await p.execute(text="这个特效药包治百病，投资回报率超高")
         assert result["ok"] is True
@@ -225,6 +251,7 @@ class TestContentCheckPrimitive:
     @pytest.mark.asyncio
     async def test_empty_text_passes(self):
         from app.engine.reactor.primitives import ContentCheckPrimitive
+
         p = ContentCheckPrimitive()
         result = await p.execute(text="")
         assert result["ok"] is True
@@ -235,6 +262,7 @@ class TestViralScorePrimitive:
     @pytest.mark.asyncio
     async def test_empty_results_error(self):
         from app.engine.reactor.primitives import ViralScorePrimitive
+
         p = ViralScorePrimitive()
         result = await p.execute(results=[])
         assert result["ok"] is False
@@ -242,6 +270,7 @@ class TestViralScorePrimitive:
     @pytest.mark.asyncio
     async def test_with_mock_results(self):
         from app.engine.reactor.primitives import ViralScorePrimitive
+
         p = ViralScorePrimitive()
         mock_results = [
             {"title": "test1", "likes": 1000, "comments": 50, "author_fans": 5000},
@@ -253,9 +282,11 @@ class TestViralScorePrimitive:
 
 class TestImageReadPrimitive:
     """ImageReadPrimitive 已迁移至 skill_call——不再作为内核 Primitive。"""
+
     pass
 
 
 class TestImageAnalyzePrimitive:
     """ImageAnalyzePrimitive 已迁移至 skill_call——不再作为内核 Primitive。"""
+
     pass

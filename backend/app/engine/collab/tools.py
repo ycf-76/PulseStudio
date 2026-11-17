@@ -23,21 +23,34 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.engine.collab.agent_manager import AgentManager, AgentHandle, AgentStatus
-from app.engine.collab.message_bus import InterAgentBus, AgentMessage, MessageType
-from app.engine.collab.concurrency_pool import ConcurrencyPool
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
+from app.engine.collab.agent_manager import AgentHandle, AgentManager, AgentStatus
+from app.engine.collab.concurrency_pool import ConcurrencyPool
+from app.engine.collab.message_bus import AgentMessage, InterAgentBus, MessageType
 
 logger = logging.getLogger(__name__)
 
 
 class SpawnAgentInput(BaseModel):
-    task_name: str = Field(description="Short name for the sub-agent task, e.g. 'research_ai_trends'")
-    task_description: str = Field(description="Detailed description of what the sub-agent should do. Be specific about the goal, expected output format, and any constraints. The sub-agent will autonomously decide which tools to use.")
-    role: str | None = Field(default=None, description="Optional role description for the sub-agent (e.g. 'researcher', 'auditor', 'writer'). This sets the sub-agent's system prompt persona but does NOT limit its tools — it inherits ALL parent tools and decides which to use autonomously.")
-    agent_id: str | None = Field(default=None, description="OPTIONAL: reference a pre-registered specialist (e.g. 'search', 'audit') for a pre-configured skill set and prompt. When omitted, the sub-agent is a generalist that inherits ALL parent tools — this is the DEFAULT and preferred mode (ref: Codex/Claude Code). Use agent_id only when you want a specialist with a curated skill set instead of the full toolkit.")
-    model: str | None = Field(default=None, description="Optional LLM model override (e.g. 'deepseek-r1' for reasoning, 'deepseek-v3' for speed). When omitted, inherits parent model.")
+    task_name: str = Field(
+        description="Short name for the sub-agent task, e.g. 'research_ai_trends'"
+    )
+    task_description: str = Field(
+        description="Detailed description of what the sub-agent should do. Be specific about the goal, expected output format, and any constraints. The sub-agent will autonomously decide which tools to use."
+    )
+    role: str | None = Field(
+        default=None,
+        description="Optional role description for the sub-agent (e.g. 'researcher', 'auditor', 'writer'). This sets the sub-agent's system prompt persona but does NOT limit its tools — it inherits ALL parent tools and decides which to use autonomously.",
+    )
+    agent_id: str | None = Field(
+        default=None,
+        description="OPTIONAL: reference a pre-registered specialist (e.g. 'search', 'audit') for a pre-configured skill set and prompt. When omitted, the sub-agent is a generalist that inherits ALL parent tools — this is the DEFAULT and preferred mode (ref: Codex/Claude Code). Use agent_id only when you want a specialist with a curated skill set instead of the full toolkit.",
+    )
+    model: str | None = Field(
+        default=None,
+        description="Optional LLM model override (e.g. 'deepseek-r1' for reasoning, 'deepseek-v3' for speed). When omitted, inherits parent model.",
+    )
     fork_mode: str = Field(
         default="clean",
         description=(
@@ -81,6 +94,7 @@ def _build_spawn_description() -> str:
     """
     try:
         from app.agents.registry import BUILTIN_AGENTS
+
         skip_ids = {"chat_agent"}
         agent_lines = []
         for aid, adef in BUILTIN_AGENTS.items():
@@ -159,7 +173,9 @@ class SpawnAgentSkill(Skill):
         ctx = params.get("_context")
         node_id: str = ""
         if ctx:
-            node_id = getattr(ctx, "node_id", "") if not isinstance(ctx, dict) else ctx.get("node_id", "")
+            node_id = (
+                getattr(ctx, "node_id", "") if not isinstance(ctx, dict) else ctx.get("node_id", "")
+            )
 
         if not all([manager, pool, bus, parent_id]):
             return {"error": "collaboration infrastructure not available"}
@@ -189,19 +205,22 @@ class SpawnAgentSkill(Skill):
         bus.register(handle.agent_id)
 
         if task_description:
-            await bus.send(AgentMessage(
-                message_type=MessageType.TASK,
-                sender_id=parent_id,
-                recipient_id=handle.agent_id,
-                content=task_description,
-                trigger_turn=True,
-            ))
+            await bus.send(
+                AgentMessage(
+                    message_type=MessageType.TASK,
+                    sender_id=parent_id,
+                    recipient_id=handle.agent_id,
+                    content=task_description,
+                    trigger_turn=True,
+                )
+            )
 
         use_registered = False
         registered_agent_def = None
         if ref_agent_id:
             try:
                 from app.agents.registry import AgentRegistry
+
                 registry = AgentRegistry()
                 registered_agent_def = registry.get(ref_agent_id)
                 if registered_agent_def is not None:
@@ -214,7 +233,9 @@ class SpawnAgentSkill(Skill):
                         f"model={registered_agent_def.llm_model})"
                     )
                 else:
-                    logger.warning(f"[spawn_agent] agent_id '{ref_agent_id}' not found in registry, using default")
+                    logger.warning(
+                        f"[spawn_agent] agent_id '{ref_agent_id}' not found in registry, using default"
+                    )
             except Exception as e:
                 logger.warning(f"[spawn_agent] failed to lookup agent '{ref_agent_id}': {e}")
 
@@ -236,7 +257,7 @@ class SpawnAgentSkill(Skill):
             "name": handle.name,
             "path": str(handle.agent_path),
             "parent_id": parent_id or "",
-            "depth": (handle.depth if hasattr(handle, 'depth') else 1),
+            "depth": (handle.depth if hasattr(handle, "depth") else 1),
             "role": role or handle.role or None,
             "status": handle.status.value,
             "message": f"Sub-agent '{task_name}' spawned with id {handle.agent_id}",
@@ -279,13 +300,15 @@ class SendMessageSkill(Skill):
         if not target_id or not message:
             return {"error": "target_agent_id and content are required"}
 
-        await bus.send(AgentMessage(
-            message_type=MessageType.MESSAGE,
-            sender_id=sender_id,
-            recipient_id=target_id,
-            content=message,
-            trigger_turn=trigger_turn,
-        ))
+        await bus.send(
+            AgentMessage(
+                message_type=MessageType.MESSAGE,
+                sender_id=sender_id,
+                recipient_id=target_id,
+                content=message,
+                trigger_turn=trigger_turn,
+            )
+        )
 
         return {
             "success": True,
@@ -409,8 +432,7 @@ class ListAgentsSkill(Skill):
             "agents": [a.to_dict() for a in agents],
             "total": len(agents),
             "active": sum(
-                1 for a in agents
-                if a.status in (AgentStatus.RUNNING, AgentStatus.PENDING)
+                1 for a in agents if a.status in (AgentStatus.RUNNING, AgentStatus.PENDING)
             ),
         }
 

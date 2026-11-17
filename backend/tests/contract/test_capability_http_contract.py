@@ -9,6 +9,7 @@
 
 全部离线，不起真端口。
 """
+
 from __future__ import annotations
 
 import sys
@@ -19,9 +20,9 @@ import pytest
 
 pytest.importorskip("numpy", reason="grid 能力需要 numpy/Pillow")
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/ 根，保证 capability_service 可导入
-
-from capability_service.main import app as capability_app  # noqa: E402
+sys.path.insert(
+    0, str(Path(__file__).resolve().parents[2])
+)  # backend/ 根，保证 capability_service 可导入
 
 from app.engine.protocol.transport import (  # noqa: E402
     CompositeTransport,
@@ -29,6 +30,7 @@ from app.engine.protocol.transport import (  # noqa: E402
     InProcessTransport,
 )
 from app.services.grid_types import GridDetection  # noqa: E402
+from capability_service.main import app as capability_app  # noqa: E402
 
 
 def _make_test_image(tmp_path: Path) -> Path:
@@ -39,7 +41,10 @@ def _make_test_image(tmp_path: Path) -> Path:
     colors = [(30, 30, 30), (200, 200, 200), (90, 140, 220)]
     for c in range(3):
         for r in range(3):
-            im.paste(colors[(c + r) % 3], (c * 300 + 2, r * 300 + 2, (c + 1) * 300 - 2, (r + 1) * 300 - 2))
+            im.paste(
+                colors[(c + r) % 3],
+                (c * 300 + 2, r * 300 + 2, (c + 1) * 300 - 2, (r + 1) * 300 - 2),
+            )
     p = tmp_path / "grid3x3.png"
     im.save(p)
     return p
@@ -47,9 +52,12 @@ def _make_test_image(tmp_path: Path) -> Path:
 
 # ---------- 1. 能力服务协议 ----------
 
+
 @pytest.mark.asyncio
 async def test_health_endpoint():
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.get("/health")
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
@@ -57,7 +65,9 @@ async def test_health_endpoint():
 
 @pytest.mark.asyncio
 async def test_tools_list_endpoint():
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.get("/tools")
     names = {t["name"] for t in resp.json()["tools"]}
     assert {"grid_detect", "grid_split", "render_htmls"} <= names
@@ -65,12 +75,15 @@ async def test_tools_list_endpoint():
 
 @pytest.mark.asyncio
 async def test_call_unknown_tool_404():
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.post("/tools/nope/call", json={"arguments": {}})
     assert resp.status_code == 404
 
 
 # ---------- 2. 双跑等价：InProcess vs Http ----------
+
 
 @pytest.mark.asyncio
 async def test_grid_detect_dual_run_equivalent(tmp_path):
@@ -82,7 +95,9 @@ async def test_grid_detect_dual_run_equivalent(tmp_path):
     local_det = await asyncio_to_thread(local_detect, image)
 
     # http：ASGI 直连 capability app
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.post(
             "/tools/grid_detect/call", json={"arguments": {"image_path": str(image)}}
         )
@@ -113,7 +128,9 @@ async def test_grid_split_dual_run_equivalent(tmp_path):
 
     tiles_local = await asyncio_to_thread(local_split, image, out_local, det)
 
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.post(
             "/tools/grid_split/call",
             json={
@@ -130,6 +147,7 @@ async def test_grid_split_dual_run_equivalent(tmp_path):
 
 
 # ---------- 3. CompositeTransport 路由 ----------
+
 
 @pytest.mark.asyncio
 async def test_composite_routes_remote_tools(tmp_path):
@@ -148,7 +166,9 @@ async def test_composite_routes_remote_tools(tmp_path):
     )
     http = HttpTransport(
         "http://cap",
-        client=httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"),
+        client=httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+        ),
     )
     await http.refresh_tools()  # HttpTransport.get_tool 依赖工具清单缓存
     composite.register_remote({"grid_detect"}, http)
@@ -169,6 +189,7 @@ async def test_composite_routes_remote_tools(tmp_path):
 
 # ---------- 4. grid_capability remote 端到端 ----------
 
+
 @pytest.mark.asyncio
 async def test_grid_capability_remote_mode(tmp_path, monkeypatch):
     from app.services import grid_capability
@@ -178,11 +199,11 @@ async def test_grid_capability_remote_mode(tmp_path, monkeypatch):
     class _FakeSettings:
         grid_service_url = "http://cap"
 
-    monkeypatch.setattr(
-        grid_capability, "_service_url", lambda: "http://cap"
-    )
+    monkeypatch.setattr(grid_capability, "_service_url", lambda: "http://cap")
 
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         monkeypatch.setattr(HttpTransport, "_ensure_client", lambda self: client)
         det = await grid_capability.detect_grid(image)
         assert isinstance(det, GridDetection)
@@ -196,10 +217,13 @@ async def test_grid_capability_remote_mode(tmp_path, monkeypatch):
 
 # ---------- 5. browser_capability 双跑契约（五期-A） ----------
 
+
 @pytest.mark.asyncio
 async def test_render_htmls_registered_in_capability_service():
     """render_htmls 工具已在 capability-service 注册。"""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.get("/tools")
     names = {t["name"] for t in resp.json()["tools"]}
     assert "render_htmls" in names
@@ -261,14 +285,15 @@ def test_get_capability_service_url_service_mode_with_url(monkeypatch):
     注意：Settings 是 lru_cache 单例，monkeypatch.setenv 之后必须 cache_clear，
     否则会读到前面用例缓存下来的空 URL（单独跑绿、整目录跑红 = 顺序依赖）。
     """
-    from app.core.capability_loader import get_capability_service_url, _read_toml_data
     from app.config import get_settings
+    from app.core.capability_loader import _read_toml_data, get_capability_service_url
 
     original_data = _read_toml_data()
 
     class _FakeData:
         def __enter__(self):
             return self
+
         def __exit__(self, *args):
             pass
 
@@ -293,9 +318,8 @@ def test_get_capability_service_url_service_mode_with_url(monkeypatch):
 
 def test_get_capability_service_url_service_mode_no_url_warns(monkeypatch):
     """runtime=service + URL 为空 → 告警 + 返回空串（回退 inprocess）。"""
-    from app.core.capability_loader import get_capability_service_url
-
     import app.core.capability_loader as loader_mod
+    from app.core.capability_loader import get_capability_service_url
 
     original_data = loader_mod._read_toml_data()
     fake_data = dict(original_data)
@@ -312,16 +336,16 @@ def test_get_capability_service_url_service_mode_no_url_warns(monkeypatch):
 
 def test_grid_capability_uses_toml_runtime(monkeypatch):
     """grid_capability._service_url() 现在走 capability_loader 声明。"""
-    from app.services import grid_capability
     from app.core.capability_loader import get_capability_service_url
+    from app.services import grid_capability
 
     assert grid_capability._service_url() == get_capability_service_url("grid")
 
 
 def test_browser_capability_uses_toml_runtime():
     """browser_capability._service_url() 现在走 capability_loader 声明。"""
-    from app.services import browser_capability
     from app.core.capability_loader import get_capability_service_url
+    from app.services import browser_capability
 
     assert browser_capability._service_url() == get_capability_service_url("browser")
 
@@ -332,8 +356,9 @@ def test_browser_capability_uses_toml_runtime():
 @pytest.mark.asyncio
 async def test_internal_events_endpoint_receives_and_forwards():
     """POST /internal/events 接收进度事件并转发进 sse_bus。"""
-    from app.api.routers.internal import router
     from fastapi import FastAPI
+
+    from app.api.routers.internal import router
 
     internal_app = FastAPI()
     internal_app.include_router(router)
@@ -373,8 +398,9 @@ async def test_internal_events_endpoint_receives_and_forwards():
 @pytest.mark.asyncio
 async def test_internal_events_without_turn_id():
     """POST /internal/events 不传 turn_id 也能正常工作。"""
-    from app.api.routers.internal import router
     from fastapi import FastAPI
+
+    from app.api.routers.internal import router
 
     internal_app = FastAPI()
     internal_app.include_router(router)
@@ -452,9 +478,10 @@ def test_event_bridge_install_without_env():
 @pytest.mark.asyncio
 async def test_progress_dual_run_equivalent():
     """进度事件双跑等价：进程内直发 vs 经 /internal/events 转发，SSE 总线收到同一结构。"""
-    from app.services.sse_bus import sse_bus
-    from app.api.routers.internal import router
     from fastapi import FastAPI
+
+    from app.api.routers.internal import router
+    from app.services.sse_bus import sse_bus
 
     workflow_id = "test_dual_progress"
 
@@ -502,7 +529,9 @@ async def test_progress_dual_run_equivalent():
 @pytest.mark.asyncio
 async def test_tts_piper_registered_in_capability_service():
     """tts_piper 工具已在 capability-service 注册。"""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.get("/tools")
     names = {t["name"] for t in resp.json()["tools"]}
     assert "tts_piper" in names
@@ -511,7 +540,9 @@ async def test_tts_piper_registered_in_capability_service():
 @pytest.mark.asyncio
 async def test_video_compose_registered_in_capability_service():
     """video_compose 工具已在 capability-service 注册。"""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.get("/tools")
     names = {t["name"] for t in resp.json()["tools"]}
     assert "video_compose" in names
@@ -526,8 +557,8 @@ def test_media_capability_local_mode():
 
 def test_media_capability_uses_toml_runtime():
     """media_capability._service_url() 走 capability_loader 声明。"""
-    from app.services import media_capability
     from app.core.capability_loader import get_capability_service_url
+    from app.services import media_capability
 
     assert media_capability._service_url() == get_capability_service_url("media")
 
@@ -545,7 +576,14 @@ def test_capability_tools_count_includes_media():
     """capability-service 工具列表包含全部 6 个工具（grid*2 + render_htmls + tts_piper + video_compose + spider_sync）。"""
     from capability_service.main import CAPABILITY_TOOLS
 
-    expected = {"grid_detect", "grid_split", "render_htmls", "tts_piper", "video_compose", "spider_sync"}
+    expected = {
+        "grid_detect",
+        "grid_split",
+        "render_htmls",
+        "tts_piper",
+        "video_compose",
+        "spider_sync",
+    }
     assert set(CAPABILITY_TOOLS.keys()) == expected
 
 
@@ -555,7 +593,9 @@ def test_capability_tools_count_includes_media():
 @pytest.mark.asyncio
 async def test_spider_sync_registered_in_capability_service():
     """spider_sync 工具已在 capability-service 注册。"""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+    ) as client:
         resp = await client.get("/tools")
     names = {t["name"] for t in resp.json()["tools"]}
     assert "spider_sync" in names
@@ -570,8 +610,8 @@ def test_spider_capability_local_mode():
 
 def test_spider_capability_uses_toml_runtime():
     """spider_capability._service_url() 走 capability_loader 声明。"""
-    from app.services import spider_capability
     from app.core.capability_loader import get_capability_service_url
+    from app.services import spider_capability
 
     assert spider_capability._service_url() == get_capability_service_url("spider")
 
@@ -591,4 +631,5 @@ def test_spider_capability_has_start_sync():
 
     assert hasattr(spider_capability, "start_sync")
     import inspect
+
     assert inspect.iscoroutinefunction(spider_capability.start_sync)

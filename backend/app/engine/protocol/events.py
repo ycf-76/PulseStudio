@@ -8,6 +8,7 @@
 
 对应文档：docs/内核-能力分层架构方案.md §3.2 契约带①。
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -82,15 +83,22 @@ class EventType(str, Enum):
 
 
 # 终态事件：必须携带 ended_reason
-TERMINAL_EVENTS: frozenset[str] = frozenset({
-    EventType.NODE_COMPLETED.value,
-    EventType.WORKFLOW_COMPLETED.value,
-})
+TERMINAL_EVENTS: frozenset[str] = frozenset(
+    {
+        EventType.NODE_COMPLETED.value,
+        EventType.WORKFLOW_COMPLETED.value,
+    }
+)
 
 # 终态事件白名单里禁止出现的大对象（明细走 POST 响应，不走 SSE）
-_FORBIDDEN_IN_TERMINAL_SSE: frozenset[str] = frozenset({
-    "_steps", "_loop_truncated", "_token_budget_exhausted", "_duplicate_tool_calls",
-})
+_FORBIDDEN_IN_TERMINAL_SSE: frozenset[str] = frozenset(
+    {
+        "_steps",
+        "_loop_truncated",
+        "_token_budget_exhausted",
+        "_duplicate_tool_calls",
+    }
+)
 
 
 class LoopTermination(BaseModel):

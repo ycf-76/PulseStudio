@@ -7,6 +7,7 @@ TaskPlan（清单，用户一句话意图）→ TaskItem（逐日子任务）→
 
 job 入口 run_task_scan() 由 main.py lifespan 注册（每分钟）。
 """
+
 from __future__ import annotations
 
 import json
@@ -15,7 +16,8 @@ from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 import httpx
-from sqlalchemy import select, update as sa_update
+from sqlalchemy import select
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -88,8 +90,7 @@ def _rule_based_decompose(intent_text: str, daily_time: str) -> dict[str, Any]:
         # 单行内的顿号/逗号/分号列表（中英文均支持）
         single = entries[0] if entries else intent_text.strip()
         normalized = (
-            single.replace("；", ";").replace("、", ";")
-            .replace("，", ";").replace(",", ";")
+            single.replace("；", ";").replace("、", ";").replace("，", ";").replace(",", ";")
         )
         entries = [e.strip() for e in normalized.split(";") if e.strip()]
     warnings: list[str] = []
@@ -213,6 +214,7 @@ async def decompose_intent(
 # 核心服务
 # ============================================================================
 
+
 class TaskPlanService:
     """任务清单 CRUD + 到期执行 + 挂起处理 + 状态收敛。"""
 
@@ -223,24 +225,18 @@ class TaskPlanService:
 
     async def list_plans(self, user_id: str) -> list[dict[str, Any]]:
         rows = await self.db.scalars(
-            select(TaskPlan)
-            .where(TaskPlan.user_id == user_id)
-            .order_by(TaskPlan.created_at.desc())
+            select(TaskPlan).where(TaskPlan.user_id == user_id).order_by(TaskPlan.created_at.desc())
         )
         return [self._plan_to_dict(p) for p in rows]
 
     async def get_plan_detail(self, user_id: str, plan_id: str) -> dict[str, Any] | None:
         plan = await self.db.scalar(
-            select(TaskPlan).where(
-                TaskPlan.id == plan_id, TaskPlan.user_id == user_id
-            )
+            select(TaskPlan).where(TaskPlan.id == plan_id, TaskPlan.user_id == user_id)
         )
         if not plan:
             return None
         items = await self.db.scalars(
-            select(TaskItem)
-            .where(TaskItem.plan_id == plan_id)
-            .order_by(TaskItem.day_index)
+            select(TaskItem).where(TaskItem.plan_id == plan_id).order_by(TaskItem.day_index)
         )
         runs = await self.db.scalars(
             select(TaskRun)
@@ -253,10 +249,7 @@ class TaskPlanService:
             run_map.setdefault(r.task_item_id, self._run_to_dict(r))
         return {
             **self._plan_to_dict(plan),
-            "items": [
-                {**self._item_to_dict(it), "latest_run": run_map.get(it.id)}
-                for it in items
-            ],
+            "items": [{**self._item_to_dict(it), "latest_run": run_map.get(it.id)} for it in items],
         }
 
     # ---------- 创建 / 生命周期 ----------
@@ -301,8 +294,12 @@ class TaskPlanService:
         hh, mm = daily_time.split(":")
         for it in items:
             plan_time = datetime(
-                base_date.year, base_date.month, base_date.day,
-                int(hh), int(mm), tzinfo=_TZ_SH,
+                base_date.year,
+                base_date.month,
+                base_date.day,
+                int(hh),
+                int(mm),
+                tzinfo=_TZ_SH,
             ) + timedelta(days=max(int(it.get("day_index", 1)) - 1, 0))
             self.db.add(
                 TaskItem(
@@ -422,12 +419,14 @@ class TaskPlanService:
             account = None  # XhsAccount removed
             if not account or account.status.value != "active":
                 await self._fail_item(
-                    item, plan,
+                    item,
+                    plan,
                     reason=f"小红书账号不可用（status={account.status.value if account else 'missing'}）",
                     pause_plan=True,
                 )
                 await self._notify_feishu_or_fallback(
-                    plan, "任务清单已暂停：小红书账号失效",
+                    plan,
+                    "任务清单已暂停：小红书账号失效",
                     f"清单「{plan.title}」Day {item.day_index} 发布前检测到账号不可用，"
                     f"已暂停全部后续任务。请重新登录后手动恢复。",
                 )
@@ -467,9 +466,12 @@ class TaskPlanService:
             select(TaskItem.id)
             .where(
                 TaskItem.plan_id == plan.id,
-                TaskItem.status.in_([
-                    TaskItemStatus.PENDING, TaskItemStatus.RUNNING,
-                ]),
+                TaskItem.status.in_(
+                    [
+                        TaskItemStatus.PENDING,
+                        TaskItemStatus.RUNNING,
+                    ]
+                ),
             )
             .limit(1)
         )
@@ -590,7 +592,9 @@ class TaskPlanService:
                     app_id=settings.feishu_app_id,
                     app_secret=settings.feishu_app_secret,
                 )
-                await client.send_text(open_id, f"【{title}】\n{message}", receive_id_type="open_id")
+                await client.send_text(
+                    open_id, f"【{title}】\n{message}", receive_id_type="open_id"
+                )
                 return
             except Exception as e:
                 logger.warning(f"[task_plan] feishu notify failed, fallback to SSE: {e}")
@@ -656,6 +660,7 @@ _PIPELINE_DEF_CACHE: str | None = None
 # ============================================================================
 # 调度 job 入口（main.py lifespan 注册，模式同 workflow_cleanup.cleanup_stale_workflows）
 # ============================================================================
+
 
 async def run_task_scan() -> dict[str, int]:
     """每分钟执行：到期任务扫描执行 → 运行状态收敛 → 挂起工作流处理。

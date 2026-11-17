@@ -27,9 +27,9 @@ from app.api.schemas.profile import (
 from app.db.models import (
     CreatorTone,
     PrimaryDomain,
-    UserProfile as UserProfileORM,
-    VisualStyle,
 )
+from app.db.models import UserProfile as UserProfileORM
+from app.db.models import VisualStyle
 
 logger = logging.getLogger(__name__)
 

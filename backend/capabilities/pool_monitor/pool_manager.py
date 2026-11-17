@@ -8,6 +8,7 @@
 注意：清理只针对 auto_source="monitor" 的自动数据，手动抓取的数据
 （auto_source="manual"）不参与自动清理，避免误删用户主动收藏的内容。
 """
+
 from __future__ import annotations
 
 import logging

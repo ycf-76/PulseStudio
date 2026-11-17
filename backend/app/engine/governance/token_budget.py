@@ -196,10 +196,7 @@ class TokenBudget:
             )
             return BudgetAction.HARD_STOP
 
-        if (
-            self._total_tokens >= self._config.warn_total_tokens
-            and not self._total_reminder_fired
-        ):
+        if self._total_tokens >= self._config.warn_total_tokens and not self._total_reminder_fired:
             self._total_reminder_fired = True
             logger.warning(
                 f"[token-budget] total usage warning: {self._total_tokens} / "

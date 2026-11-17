@@ -3,13 +3,13 @@
 具体业务逻辑在后续 Phase 实现。
 """
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 import asyncio
 import logging
 import mimetypes
 import os
 import sys
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -20,21 +20,61 @@ mimetypes.add_type("image/svg+xml", ".svg")
 
 from pathlib import Path
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import inspect as _sa_inspect
+from sqlalchemy import text as _sa_text
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api.routers import accounts, agents, assets, auth, browser, cards, chat, chat_agent, chat_file, chat_folder, chat_session, reactor, config, creative_artifact, dashboard, feedback, feishu_bot, feishu_docs, feishu_oauth, governance, mcp_bridge, memory, models, my_works, plugins, profile, proxy, quality_gate, search, side_session, skills, sse, topic_pool, workflows, workspace, internal, video_assets
-from app.config import get_settings
-from app.db.session import engine, Base
-from sqlalchemy import inspect as _sa_inspect, text as _sa_text
 import app.db.models  # noqa: F401 — ensure all ORM models registered with Base.metadata
+from app.api.routers import (
+    accounts,
+    agents,
+    assets,
+    auth,
+    browser,
+    cards,
+    chat,
+    chat_agent,
+    chat_file,
+    chat_folder,
+    chat_session,
+    config,
+    creative_artifact,
+    dashboard,
+    feedback,
+    feishu_bot,
+    feishu_docs,
+    feishu_oauth,
+    governance,
+    internal,
+    mcp_bridge,
+    memory,
+    models,
+    my_works,
+    plugins,
+    profile,
+    proxy,
+    quality_gate,
+    reactor,
+    search,
+    side_session,
+    skills,
+    sse,
+    topic_pool,
+    video_assets,
+    workflows,
+    workspace,
+)
+from app.config import get_settings
+from app.db.session import Base, engine
 
 settings = get_settings()
 
 from app.logging_conf import setup_logging
+
 setup_logging(app_level=settings.log_level)
 
 logger = logging.getLogger(__name__)
@@ -49,6 +89,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         _health.append((name, ok, detail))
 
     from app.banner import print_banner
+
     print_banner()
 
     # 启动时自动创建表
@@ -57,9 +98,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             try:
-                cols = await conn.run_sync(lambda sync: _sa_inspect(sync).get_columns("chat_sessions"))
+                cols = await conn.run_sync(
+                    lambda sync: _sa_inspect(sync).get_columns("chat_sessions")
+                )
                 if not any(c["name"] == "folder_id" for c in cols):
-                    await conn.execute(_sa_text("ALTER TABLE chat_sessions ADD COLUMN folder_id VARCHAR(100) NOT NULL DEFAULT ''"))
+                    await conn.execute(
+                        _sa_text(
+                            "ALTER TABLE chat_sessions ADD COLUMN folder_id VARCHAR(100) NOT NULL DEFAULT ''"
+                        )
+                    )
                     logger.info("Added chat_sessions.folder_id column")
             except Exception as e2:
                 logger.warning(f"chat_sessions.folder_id column check skipped: {e2}")
@@ -72,6 +119,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 初始化 LangSmith 追踪（设置环境变量，LangGraph 运行自动上报）
     if settings.langchain_tracing_v2 and settings.langchain_api_key:
         import os
+
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         os.environ["LANGCHAIN_API_KEY"] = settings.langchain_api_key
         os.environ["LANGCHAIN_PROJECT"] = settings.langchain_project
@@ -88,7 +136,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         _hstep("LangSmith", True)
     else:
-        logger.debug("LangSmith tracing disabled (set LANGCHAIN_TRACING_V2=true + LANGCHAIN_API_KEY to enable)")
+        logger.debug(
+            "LangSmith tracing disabled (set LANGCHAIN_TRACING_V2=true + LANGCHAIN_API_KEY to enable)"
+        )
         _hstep("LangSmith", True, "disabled")
 
     logger.debug("[lifespan] step 2: skipped (no MCP clients)")
@@ -109,6 +159,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     try:
         from capabilities.content_search.sources.manager import init_sources, source_manager
+
         await init_sources()
         logger.info(
             f"Content sources initialized: "
@@ -126,6 +177,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.debug("[lifespan] step 4: init pool monitor...")
     try:
         from capabilities.pool_monitor.main import pool_startup
+
         # await pool_startup()  # temporarily disabled: Tavily API rate-limited
         logger.debug("Pool monitor module skipped (Tavily rate-limited)")
         _hstep("Pool monitor", True, "disabled")
@@ -136,11 +188,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 反馈闭环定时任务（T+7 回采 + 权重校准）
     logger.debug("[lifespan] step 4.5: init performance collector scheduler...")
     try:
-        from capabilities.pool_monitor.scheduler import scheduler
         from app.services.performance_collector import (
-            collect_performance_7d,
             calibrate_weights,
+            collect_performance_7d,
         )
+        from capabilities.pool_monitor.scheduler import scheduler
+
         scheduler.add_job(
             collect_performance_7d,
             "cron",
@@ -184,8 +237,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.debug("[lifespan] step 4.7: init task plan scheduler...")
     try:
         from apscheduler.triggers.interval import IntervalTrigger
-        from capabilities.pool_monitor.scheduler import scheduler
+
         from app.services.task_plan import recover_on_startup, run_task_scan
+        from capabilities.pool_monitor.scheduler import scheduler
 
         # 启动时收敛重启前 in-flight 的任务
         await recover_on_startup()
@@ -208,6 +262,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.debug("[lifespan] step 5: init Redis cache...")
     try:
         from app.cache import redis_client
+
         await redis_client.connect()
         mode = "Redis" if redis_client.is_connected else "in-memory fallback"
         logger.info(f"Cache initialized ({mode})")
@@ -220,6 +275,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.debug("[lifespan] step 5.6: sync all plugins (builtin + third_party) to DB...")
     try:
         from app.core.sync_builtin_plugins import sync_all_plugins_to_db
+
         sync_result = await sync_all_plugins_to_db()
         logger.info(
             f"✅ Plugins synced: "
@@ -236,6 +292,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         if settings.feishu_app_id and settings.feishu_app_secret:
             from capabilities.messaging.adapters.feishu import FeishuClient
+
             _feishu_client = FeishuClient(
                 app_id=settings.feishu_app_id,
                 app_secret=settings.feishu_app_secret,
@@ -246,7 +303,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             )
             _hstep("Feishu", True)
         else:
-            logger.debug("Feishu integration disabled (set FEISHU_APP_ID + FEISHU_APP_SECRET to enable)")
+            logger.debug(
+                "Feishu integration disabled (set FEISHU_APP_ID + FEISHU_APP_SECRET to enable)"
+            )
             _hstep("Feishu", True, "disabled")
     except Exception as e:
         logger.warning(f"Feishu integration init failed: {e}")
@@ -254,7 +313,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.debug("[lifespan] step 5.9: auto-restore WeChat bot engines...")
     try:
-        from app.rpa.wechat_bot_engine import get_wechat_engine, _CREDENTIALS_DIR
+        from app.rpa.wechat_bot_engine import _CREDENTIALS_DIR, get_wechat_engine
+
         _wx_cred_path = Path(_CREDENTIALS_DIR)
         _wx_restored = 0
         for _cred_file in _wx_cred_path.glob(".wechat_credentials_*.json"):
@@ -282,6 +342,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # step 6: 预热 LLM adapter + Skill 注册（消除首次请求 3-4s 冷启动）
     try:
         from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
+
         ensure_builtin_skills_registered()
         SkillRegistry.instance().scan_third_party()
         logger.debug("[lifespan] step 6: Skill registry warmed up")
@@ -293,6 +354,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 模型分配缓存预热（智能体 / 技能的模型选择）
     try:
         from app.services.model_assignment import load_all_assignments
+
         await load_all_assignments()
         _hstep("Model assignment warmup", True)
     except Exception as _assign_err:
@@ -301,12 +363,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     try:
         from app.engine.factory import get_deepseek_llm
+
         _warm_llm = get_deepseek_llm(model="deepseek-chat")
         if _warm_llm is not None:
             logger.debug("[lifespan] step 6: LLM adapter warmed up (deepseek-chat)")
             _hstep("LLM warmup", True, "deepseek-chat")
         else:
-            logger.debug("[lifespan] step 6: LLM adapter warmup skipped (no API key or circuit open)")
+            logger.debug(
+                "[lifespan] step 6: LLM adapter warmup skipped (no API key or circuit open)"
+            )
             _hstep("LLM warmup", True, "skipped")
     except Exception as _llm_warm_err:
         logger.warning(f"[lifespan] LLM warmup skipped: {_llm_warm_err}")
@@ -314,6 +379,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     try:
         from app.engine.factory import get_deepseek_llm
+
         _warm_r1 = get_deepseek_llm(model="deepseek-reasoner")
         if _warm_r1 is not None:
             logger.debug("[lifespan] step 6: LLM adapter warmed up (deepseek-reasoner)")
@@ -325,9 +391,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # step 6.5: AI 视频工坊 Worker（异步任务层消费循环 + 启动恢复）
     # 设计依据：docs/VIDEO_ARCHITECTURE_ALIGNMENT_MIGRATION_PLAN.md §4（D1/D6）
     try:
-        from capabilities.video.services.video_worker import video_worker
-        from capabilities.video.services.video_handlers import register_default_handlers
         from app.services.sse_bus import sse_bus
+        from capabilities.video.services.video_handlers import register_default_handlers
+        from capabilities.video.services.video_worker import video_worker
 
         async def _on_video_job_event(outcome: str, job: dict) -> None:
             """Video Worker 任务完成/失败 → 推送 SSE 事件给前端。"""
@@ -352,9 +418,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         video_worker.on_event = _on_video_job_event
         register_default_handlers(video_worker)
         await video_worker.start()
-        logger.info(
-            f"Video worker started (handlers={video_worker.registered_types})"
-        )
+        logger.info(f"Video worker started (handlers={video_worker.registered_types})")
         _hstep("Video worker", True, ",".join(video_worker.registered_types))
     except Exception as _vw_err:
         logger.warning(f"[lifespan] video worker init failed: {_vw_err}")
@@ -364,12 +428,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 浏览器功能（navigate/snapshot/click 等）同进程内直接调用 Playwright。
     try:
         from app.tools.browser.client import get_browser_client
+
         _browser_client = get_browser_client()
         if await _browser_client._ensure_initialized():
             logger.info("Built-in Playwright browser client ready")
             _hstep("Browser (Playwright)", True)
         else:
-            logger.warning("[lifespan] ⚠️ Built-in Playwright browser init failed (will lazy-init on first use)")
+            logger.warning(
+                "[lifespan] ⚠️ Built-in Playwright browser init failed (will lazy-init on first use)"
+            )
             _hstep("Browser (Playwright)", True, "lazy")
     except Exception as _browser_init_err:
         logger.warning(f"[lifespan] Built-in browser init failed: {_browser_init_err}")
@@ -378,7 +445,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # step 8: 通用浏览器自动化（G4）——审计 sink 注入 + MCP token 初始化
     try:
         import secrets as _secrets
+
         from app.api.routers.browser import install_audit_sink, set_generated_mcp_token
+
         install_audit_sink()
         if not settings.mcp_browser_token:
             _tok = _secrets.token_urlsafe(24)
@@ -400,9 +469,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(
         f"\n{'='*60}\n"
         f"  STARTUP HEALTH REPORT  {_ok}/{len(_health)} ok, {_fail} failed\n"
-        f"{'='*60}\n"
-        + "\n".join(f"  {l}" for l in _lines)
-        + f"\n{'='*60}"
+        f"{'='*60}\n" + "\n".join(f"  {l}" for l in _lines) + f"\n{'='*60}"
     )
 
     # 事件循环阻塞看门狗：服务"整体无响应"（连 /health 都超时）时，
@@ -418,6 +485,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 内置 Playwright 浏览器客户端
     try:
         from app.tools.browser.client import get_browser_client
+
         _bc = get_browser_client()
         await _bc.shutdown()
         logger.info("Built-in Playwright browser client shutdown")
@@ -426,6 +494,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 关闭 Redis 连接
     try:
         from app.cache import redis_client
+
         await redis_client.close()
         logger.info("Redis connection closed")
     except Exception as e:
@@ -433,17 +502,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 选题池调度器关闭
     try:
         from capabilities.pool_monitor.main import pool_shutdown
+
         pool_shutdown()
     except Exception as e:
         logger.warning(f"Pool monitor shutdown failed: {e}")
     try:
         from capabilities.content_search.sources.manager import source_manager
+
         await source_manager.close_all()
     except Exception as e:
         logger.warning(f"Content sources close failed: {e}")
     # AI 视频工坊 Worker 停止（先于引擎 dispose，避免任务写库报连接已关）
     try:
         from capabilities.video.services.video_worker import video_worker
+
         await video_worker.stop()
     except Exception as e:
         logger.warning(f"Video worker shutdown failed: {e}")
@@ -453,6 +525,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 async def engine_dispose() -> None:
     """关闭数据库引擎连接池。"""
     from app.db.session import engine
+
     await engine.dispose()
 
 
@@ -469,12 +542,14 @@ app = FastAPI(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     import traceback
+
     tb = traceback.format_exc()
     logger.error(f"Unhandled exception on {request.method} {request.url}: {exc}\n{tb}")
     return JSONResponse(
         status_code=500,
         content={"detail": f"Internal Server Error: {str(exc)}", "traceback": tb},
     )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -497,9 +572,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     WINDOW_SECONDS = 60
 
     RATE_LIMIT_EXEMPT_PATHS = {
-        "/health", "/docs", "/redoc", "/openapi.json",
-        "/api/v1/plugins", "/api/v1/plugins/installed",
-        "/api/v1/skills", "/api/v1/config",
+        "/health",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/api/v1/plugins",
+        "/api/v1/plugins/installed",
+        "/api/v1/skills",
+        "/api/v1/config",
         "/api/feishu/webhook",
     }
     RATE_LIMIT_EXEMPT_PREFIXES = (
@@ -531,12 +611,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if auth_header.startswith("Bearer "):
             try:
                 from app.security import verify_jwt
+
                 payload = verify_jwt(auth_header[7:])
                 user_id = payload.get("sub")
             except Exception:
                 pass
 
-        limit_key = f"ratelimit:user:{user_id}" if user_id else f"ratelimit:ip:{request.client.host if request.client else 'unknown'}"
+        limit_key = (
+            f"ratelimit:user:{user_id}"
+            if user_id
+            else f"ratelimit:ip:{request.client.host if request.client else 'unknown'}"
+        )
 
         try:
             count = await redis_client.incr(limit_key)
@@ -546,7 +631,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if count > self.RATE_LIMIT_PER_MINUTE:
                 return JSONResponse(
                     status_code=429,
-                    content={"detail": f"请求过于频繁，请稍后再试（限制：{self.RATE_LIMIT_PER_MINUTE}次/分钟）"},
+                    content={
+                        "detail": f"请求过于频繁，请稍后再试（限制：{self.RATE_LIMIT_PER_MINUTE}次/分钟）"
+                    },
                 )
         except Exception:
             pass
@@ -558,8 +645,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class RequestLogMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if "feishu" in request.url.path or request.url.path == "/":
-            logger.info(f"[RequestLog] {request.method} {request.url.path} from {request.client.host if request.client else '?'}")
+            logger.info(
+                f"[RequestLog] {request.method} {request.url.path} from {request.client.host if request.client else '?'}"
+            )
         return await call_next(request)
+
 
 app.add_middleware(RequestLogMiddleware)
 app.add_middleware(RateLimitMiddleware)
@@ -586,6 +676,7 @@ async def _event_loop_watchdog(interval_s: float = 10.0) -> None:
             if lag > 15000:
                 logger.error(f"[watchdog] event loop 严重阻塞 ({lag:.0f}ms)，转储任务栈：")
                 import linecache
+
                 dumped = 0
                 for task in asyncio.all_tasks():
                     if task is asyncio.current_task() or task.done():
@@ -596,9 +687,13 @@ async def _event_loop_watchdog(interval_s: float = 10.0) -> None:
                     parts = []
                     for f in stack[-6:]:
                         src = linecache.getline(f.f_code.co_filename, f.f_lineno).strip()
-                        parts.append(f"    {f.f_code.co_filename}:{f.f_lineno} in {f.f_code.co_name} | {src[:90]}")
+                        parts.append(
+                            f"    {f.f_code.co_filename}:{f.f_lineno} in {f.f_code.co_name} | {src[:90]}"
+                        )
                     if parts:
-                        logger.error(f"[watchdog] ── task [{task.get_name()}]:\n" + "\n".join(parts))
+                        logger.error(
+                            f"[watchdog] ── task [{task.get_name()}]:\n" + "\n".join(parts)
+                        )
                         dumped += 1
                 logger.error(f"[watchdog] 转储完成，共 {dumped} 个挂起任务带栈帧")
         except asyncio.CancelledError:
@@ -612,6 +707,7 @@ async def _event_loop_watchdog(interval_s: float = 10.0) -> None:
 async def health_check() -> dict[str, str]:
     """健康检查端点。"""
     from app.cache import redis_client
+
     cache_status = "redis" if redis_client.is_connected else "fallback"
     return {"status": "ok", "app": settings.app_name, "cache": cache_status}
 
@@ -641,8 +737,10 @@ app.include_router(workspace.router)
 app.include_router(plugins.router)  # Plugin system API (v2.0)
 app.include_router(governance.router)  # Governance Stats API
 from app.api.routers import wechat_bot
+
 app.include_router(wechat_bot.router)  # WeChat Bot API (v6.0 - iLink协议)
 from app.api.routers import feishu_bot
+
 app.include_router(feishu_bot.router)  # Feishu Bot API (飞书集成)
 app.include_router(feishu_oauth.router)  # Feishu OAuth user account binding
 app.include_router(feishu_docs.router)  # 飞书云文档网页组件鉴权（右侧栏活文档展示）
@@ -650,6 +748,7 @@ app.include_router(reactor.router)  # Reactor mode API (ReAct loop + thin primit
 app.include_router(browser.router)  # Generic browser automation API (G4: domains + audit)
 app.include_router(browser.mcp_router)  # External MCP Server /api/mcp/browser (G4)
 from app.api.routers import task_plan
+
 app.include_router(task_plan.router)  # Task Plan API (多日定时发布)
 
 app.include_router(creative_artifact.router)  # CreativeArtifact API (统一创作对象)
@@ -670,10 +769,12 @@ app.mount("/uploads", StaticFiles(directory=str(_upload_dir)), name="uploads")
 # 挂载 outputs 目录：平台产物（卡片图/视频）以 /outputs/<相对路径> 对外暴露
 # 与 output_index 使用同一套解析逻辑，保证「扫描到的产物」与「静态可访问路径」指向同一目录
 from app.services.output_index import output_root as _resolve_output_root
+
 _outputs_dir = _resolve_output_root()
 if _outputs_dir is not None:
     app.mount("/outputs", StaticFiles(directory=str(_outputs_dir)), name="outputs")
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8000)

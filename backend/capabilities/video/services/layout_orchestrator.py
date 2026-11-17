@@ -31,20 +31,21 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 DEFAULT_BG_COLOR = "#1a1a2e"
-_PIP_MARGIN = 20                 # pip 窗口距边缘像素（对齐 talking_head_overlay 默认）
-_MAX_SEGMENTS = 10               # 构图护栏：防 LLM 过度碎片化
-_MIN_SEGMENT_SEC = 1.5           # 构图护栏：单段最短时长（防构图抖动）
-_MAX_PLAN_ATTEMPTS = 3           # 规划 + 反馈重试 ≤2（对齐 P0 审片闭环）
-_TOL = 0.05                      # 时间轴浮点容差（铺满/相邻判定）
+_PIP_MARGIN = 20  # pip 窗口距边缘像素（对齐 talking_head_overlay 默认）
+_MAX_SEGMENTS = 10  # 构图护栏：防 LLM 过度碎片化
+_MIN_SEGMENT_SEC = 1.5  # 构图护栏：单段最短时长（防构图抖动）
+_MAX_PLAN_ATTEMPTS = 3  # 规划 + 反馈重试 ≤2（对齐 P0 审片闭环）
+_TOL = 0.05  # 时间轴浮点容差（铺满/相邻判定）
 _HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 _SHOT_RE = re.compile(r"^shot:(\d+)$")
 
 
 class LayoutPrimitive(str, Enum):
     """布局原语白名单 — LLM 只能三选一。"""
-    FULL = "full"      # 人像全屏
-    PIP = "pip"        # 人像缩角，主画面 = 配图 / 纯色背景
-    BROLL = "broll"    # 配图全屏，人像隐藏
+
+    FULL = "full"  # 人像全屏
+    PIP = "pip"  # 人像缩角，主画面 = 配图 / 纯色背景
+    BROLL = "broll"  # 配图全屏，人像隐藏
 
 
 class PipCorner(str, Enum):
@@ -56,17 +57,19 @@ class PipCorner(str, Enum):
 
 class LayoutSegment(BaseModel):
     """一个布局段 — 对齐 CutCandidate 的可审计设计（reason 必填可选）。"""
+
     start: float
     end: float
     primitive: LayoutPrimitive
     pip_position: PipCorner | None = None
     pip_scale: float = 0.3
-    main_source: str | None = None   # "shot:N" | "color"（pip/broll 必填）
+    main_source: str | None = None  # "shot:N" | "color"（pip/broll 必填）
     reason: str = ""
 
 
 class LayoutTimeline(BaseModel):
     """布局时间轴 — LLM 的唯一产出物。"""
+
     segments: list[LayoutSegment] = Field(default_factory=list)
     bg_color: str = DEFAULT_BG_COLOR
 
@@ -74,11 +77,13 @@ class LayoutTimeline(BaseModel):
 class RenderStep(NamedTuple):
     """一段的确定性编译产物 — cmd 为抽象命令（cmd[0] 恒 "ffmpeg"，
     执行器负责解析真实二进制路径 → 编译保持纯函数、不依赖环境）。"""
+
     cmd: list[str]
     out_path: Path
 
 
 # ── 校验（三重锁第 2 层） ─────────────────────────────────────────
+
 
 def validate_layout_timeline(
     timeline: LayoutTimeline,
@@ -100,16 +105,12 @@ def validate_layout_timeline(
     if not _HEX_RE.match(timeline.bg_color or ""):
         problems.append(f"bg_color 非法（须 #rrggbb）：{timeline.bg_color!r}")
     if len(segs) > _MAX_SEGMENTS:
-        problems.append(
-            f"段数 {len(segs)} 超上限 {_MAX_SEGMENTS}（构图碎片化，合并相邻同原语段）"
-        )
+        problems.append(f"段数 {len(segs)} 超上限 {_MAX_SEGMENTS}（构图碎片化，合并相邻同原语段）")
 
     if abs(segs[0].start) > _TOL:
         problems.append(f"时间轴必须从 0 开始（首段 start={segs[0].start}）")
     if abs(segs[-1].end - duration) > _TOL:
-        problems.append(
-            f"时间轴必须铺满至片尾（末段 end={segs[-1].end}，片长 {duration}）"
-        )
+        problems.append(f"时间轴必须铺满至片尾（末段 end={segs[-1].end}，片长 {duration}）")
 
     for i, seg in enumerate(segs, 1):
         if seg.end <= seg.start:
@@ -122,9 +123,7 @@ def validate_layout_timeline(
         if i > 1:
             gap = seg.start - segs[i - 2].end
             if gap > _TOL:
-                problems.append(
-                    f"段 {i - 1} 与段 {i} 之间留缝（{gap:.2f}s）"
-                )
+                problems.append(f"段 {i - 1} 与段 {i} 之间留缝（{gap:.2f}s）")
             elif -gap > _TOL:
                 problems.append(f"段 {i - 1} 与段 {i} 时间重叠（{-gap:.2f}s）")
 
@@ -134,9 +133,7 @@ def validate_layout_timeline(
 
         src = (seg.main_source or "").strip()
         if not src:
-            problems.append(
-                f"{prim.value} 段 {i} 缺 main_source（shot:N 或 color）"
-            )
+            problems.append(f"{prim.value} 段 {i} 缺 main_source（shot:N 或 color）")
             continue
         m = _SHOT_RE.match(src)
         if m:
@@ -144,25 +141,20 @@ def validate_layout_timeline(
             if broll_count <= 0:
                 problems.append(f"段 {i} 引用配图 {src} 但没有可用配图")
             elif n >= broll_count:
-                problems.append(
-                    f"段 {i} main_source 引用不存在的配图 {src}（共 {broll_count} 张）"
-                )
+                problems.append(f"段 {i} main_source 引用不存在的配图 {src}（共 {broll_count} 张）")
         elif src != "color":
             problems.append(f"段 {i} main_source 非法：{src!r}（shot:N 或 color）")
         elif prim == LayoutPrimitive.BROLL:
-            problems.append(
-                f"broll 段 {i} 的 main_source 必须是配图引用（shot:N），不能是 color"
-            )
+            problems.append(f"broll 段 {i} 的 main_source 必须是配图引用（shot:N），不能是 color")
 
         if prim == LayoutPrimitive.PIP and not (0.1 <= seg.pip_scale <= 0.5):
-            problems.append(
-                f"pip 段 {i} pip_scale={seg.pip_scale} 越界（0.1~0.5）"
-            )
+            problems.append(f"pip 段 {i} pip_scale={seg.pip_scale} 越界（0.1~0.5）")
 
     return problems
 
 
 # ── 防御式解析（仿 overlay_orchestrator._parse_plan_output） ─────
+
 
 def _strip_fences(raw: str) -> str:
     """剥掉 LLM 爱加的 ```json 围栏。"""
@@ -222,19 +214,29 @@ def parse_layout_output(
 def fallback_timeline(duration: float, broll_count: int = 0) -> LayoutTimeline:
     """降级布局 — 单段静态 pip（对齐 _execute_pip 默认参数）。"""
     src = "shot:0" if broll_count > 0 else "color"
-    return LayoutTimeline(segments=[
-        LayoutSegment(
-            start=0.0, end=duration, primitive=LayoutPrimitive.PIP,
-            pip_position=PipCorner.BOTTOM_RIGHT, pip_scale=0.3,
-            main_source=src, reason="降级：规划失败回退静态画中画",
-        ),
-    ])
+    return LayoutTimeline(
+        segments=[
+            LayoutSegment(
+                start=0.0,
+                end=duration,
+                primitive=LayoutPrimitive.PIP,
+                pip_position=PipCorner.BOTTOM_RIGHT,
+                pip_scale=0.3,
+                main_source=src,
+                reason="降级：规划失败回退静态画中画",
+            ),
+        ]
+    )
 
 
 # ── 确定性编译（三重锁第 3 层 — 纯函数，不执行） ─────────────────
 
+
 def _pip_geometry(
-    corner: PipCorner, scale: float, w: int, h: int,
+    corner: PipCorner,
+    scale: float,
+    w: int,
+    h: int,
 ) -> tuple[int, int, int, int]:
     """pip 窗口几何：宽高 + 四角摆放坐标。"""
     pw, ph = int(w * scale), int(h * scale)
@@ -253,8 +255,18 @@ def _letterbox_expr(w: int, h: int, out_label: str = "[bg]") -> str:
 
 
 _VCODEC = [
-    "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-    "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "fast",
+    "-crf",
+    "23",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
 ]
 
 
@@ -281,13 +293,23 @@ def build_render_plan(
         if seg.primitive == LayoutPrimitive.FULL:
             # 全屏段：剪切 + 重编码（必重编码共识：不用 -c copy）
             cmd = [
-                "ffmpeg", "-y", "-ss", ss, "-i", str(video_path),
-                "-t", t, *_VCODEC, str(out),
+                "ffmpeg",
+                "-y",
+                "-ss",
+                ss,
+                "-i",
+                str(video_path),
+                "-t",
+                t,
+                *_VCODEC,
+                str(out),
             ]
         elif seg.primitive == LayoutPrimitive.PIP:
             pw, ph, x, y = _pip_geometry(
                 seg.pip_position or PipCorner.BOTTOM_RIGHT,
-                seg.pip_scale, w, h,
+                seg.pip_scale,
+                w,
+                h,
             )
             src = (seg.main_source or "color").strip()
             m = _SHOT_RE.match(src)
@@ -299,12 +321,29 @@ def build_render_plan(
                     f"[bg][pip]overlay={x}:{y}[v]"
                 )
                 cmd = [
-                    "ffmpeg", "-y", "-loop", "1", "-framerate", "30",
-                    "-i", str(brolls[int(m.group(1))]),
-                    "-ss", ss, "-i", str(video_path), "-t", t,
-                    "-filter_complex", fc,
-                    "-map", "[v]", "-map", "1:a?",
-                    *_VCODEC, "-shortest", str(out),
+                    "ffmpeg",
+                    "-y",
+                    "-loop",
+                    "1",
+                    "-framerate",
+                    "30",
+                    "-i",
+                    str(brolls[int(m.group(1))]),
+                    "-ss",
+                    ss,
+                    "-i",
+                    str(video_path),
+                    "-t",
+                    t,
+                    "-filter_complex",
+                    fc,
+                    "-map",
+                    "[v]",
+                    "-map",
+                    "1:a?",
+                    *_VCODEC,
+                    "-shortest",
+                    str(out),
                 ]
             else:
                 # 主画面 = 纯色背景（lavfi color 源，输入 0 是原视频）
@@ -315,10 +354,23 @@ def build_render_plan(
                     f"[bg][pip]overlay={x}:{y}[v]"
                 )
                 cmd = [
-                    "ffmpeg", "-y", "-ss", ss, "-i", str(video_path), "-t", t,
-                    "-filter_complex", fc,
-                    "-map", "[v]", "-map", "0:a?",
-                    *_VCODEC, "-shortest", str(out),
+                    "ffmpeg",
+                    "-y",
+                    "-ss",
+                    ss,
+                    "-i",
+                    str(video_path),
+                    "-t",
+                    t,
+                    "-filter_complex",
+                    fc,
+                    "-map",
+                    "[v]",
+                    "-map",
+                    "0:a?",
+                    *_VCODEC,
+                    "-shortest",
+                    str(out),
                 ]
         else:  # BROLL：配图全屏，无人像窗口
             n = 0
@@ -327,12 +379,29 @@ def build_render_plan(
                 n = int(m.group(1))
             fc = f"[1:v]{_letterbox_expr(w, h, '[v]')}"
             cmd = [
-                "ffmpeg", "-y", "-loop", "1", "-framerate", "30",
-                "-i", str(brolls[n]),
-                "-ss", ss, "-i", str(video_path), "-t", t,
-                "-filter_complex", fc,
-                "-map", "[v]", "-map", "1:a?",
-                *_VCODEC, "-shortest", str(out),
+                "ffmpeg",
+                "-y",
+                "-loop",
+                "1",
+                "-framerate",
+                "30",
+                "-i",
+                str(brolls[n]),
+                "-ss",
+                ss,
+                "-i",
+                str(video_path),
+                "-t",
+                t,
+                "-filter_complex",
+                fc,
+                "-map",
+                "[v]",
+                "-map",
+                "1:a?",
+                *_VCODEC,
+                "-shortest",
+                str(out),
             ]
         steps.append(RenderStep(cmd=cmd, out_path=out))
 
@@ -343,7 +412,9 @@ async def _run_ffmpeg(cmd: list[str]) -> str:
     """异步执行 ffmpeg（对齐 smart_cut._run_ffmpeg 模式，NotImplementedError 兜底）。"""
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await process.communicate()
         returncode = process.returncode
@@ -352,9 +423,7 @@ async def _run_ffmpeg(cmd: list[str]) -> str:
         stdout, stderr, returncode = result.stdout, result.stderr, result.returncode
 
     if returncode != 0:
-        tail = "\n".join(
-            (stderr.decode(errors="replace") or "").splitlines()[-12:]
-        )
+        tail = "\n".join((stderr.decode(errors="replace") or "").splitlines()[-12:])
         raise RuntimeError(f"ffmpeg 失败（exit {returncode}）：\n{tail}")
     return stdout.decode(errors="replace")
 
@@ -387,21 +456,30 @@ async def compile_layout(
     # concat 列表（Windows 路径反斜杠会被 demuxer 当转义 → 统一正斜杠）
     list_path = Path(tmp_dir) / "concat.txt"
     list_path.write_text(
-        "\n".join(
-            f"file '{str(step.out_path.resolve()).replace(chr(92), '/')}'"
-            for step in steps
-        ),
+        "\n".join(f"file '{str(step.out_path.resolve()).replace(chr(92), '/')}'" for step in steps),
         encoding="utf-8",
     )
     out_path = Path(tmp_dir) / f"{Path(video_path).stem}_layout.mp4"
-    await _run_ffmpeg([
-        ff, "-y", "-f", "concat", "-safe", "0",
-        "-i", str(list_path), "-c", "copy", str(out_path),
-    ])
+    await _run_ffmpeg(
+        [
+            ff,
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(list_path),
+            "-c",
+            "copy",
+            str(out_path),
+        ]
+    )
     return out_path
 
 
 # ── LLM 布局规划（三重锁第 1 层 + 反馈重试） ─────────────────────
+
 
 def _build_layout_prompt(
     duration: float,
@@ -421,7 +499,9 @@ def _build_layout_prompt(
             lines.append(f"  {float(s):.1f}-{float(e):.1f} {t}")
         transcript_text = "口播转录（时间轴，秒）：\n" + "\n".join(lines)
     else:
-        transcript_text = f"（未提供转录文本。口播总长 {duration:.1f}s，按开场/核心/收束的常规叙事节奏编排）"
+        transcript_text = (
+            f"（未提供转录文本。口播总长 {duration:.1f}s，按开场/核心/收束的常规叙事节奏编排）"
+        )
 
     return f"""你是口播视频的镜头布局编排师。根据口播内容规划画面构图时间轴：
 人物什么时候全屏、什么时候缩到角落把主画面让给配图、什么时候全屏配图。
@@ -509,7 +589,9 @@ _LAYOUT_REVIEW_PROMPT = """你是口播视频布局编排的视觉审查员。�
 
 
 async def _extract_frames(
-    video_path: str | Path, timestamps: list[float], out_dir: str | Path,
+    video_path: str | Path,
+    timestamps: list[float],
+    out_dir: str | Path,
 ) -> list[Path]:
     """定点抽帧 — 复用 overlay_review.extract_review_frames（防御式）。"""
     from capabilities.video.services.overlay_review import extract_review_frames
@@ -528,9 +610,7 @@ def _flatten_vlm_content(resp: dict[str, Any]) -> str:
     """DashScope 多图输入 content 可能是 list[{"text":...}] — 拉平取文本。"""
     content = resp.get("content") if isinstance(resp, dict) else resp
     if isinstance(content, list):
-        return "".join(
-            str(p.get("text", "")) for p in content if isinstance(p, dict)
-        )
+        return "".join(str(p.get("text", "")) for p in content if isinstance(p, dict))
     return str(content or "")
 
 
@@ -565,8 +645,10 @@ async def review_layout(
 
             # 请求体预算分块（复用 overlay_review 实测阈值，防中间层掐断）
             from capabilities.video.services.overlay_review import (
-                _ChunkItem, _pack_chunks,
+                _ChunkItem,
+                _pack_chunks,
             )
+
             items = [
                 _ChunkItem(meta=seg, uri=uri, tag="layout")
                 for seg, uri in zip(timeline.segments, uris)
@@ -575,9 +657,7 @@ async def review_layout(
             for chunk in _pack_chunks(items):
                 timeline_desc = "\n".join(
                     f"帧{i + 1}（{seg.primitive.value} {seg.start:.1f}-{seg.end:.1f}s）：{seg.reason or '无说明'}"
-                    for i, seg in enumerate(
-                        [it.meta for it in chunk if it.meta is not None]
-                    )
+                    for i, seg in enumerate([it.meta for it in chunk if it.meta is not None])
                 )
                 prompt = _LAYOUT_REVIEW_PROMPT.format(timeline_desc=timeline_desc)
                 content: list[dict[str, Any]] = [{"text": prompt}]
@@ -594,9 +674,7 @@ async def review_layout(
                     logger.warning(f"[layout] 审查输出非 JSON，降级通过：{text[:80]!r}")
                     continue
                 if isinstance(data, dict) and data.get("verdict") == "fail":
-                    problems.extend(
-                        str(p) for p in (data.get("problems") or []) if p
-                    )
+                    problems.extend(str(p) for p in (data.get("problems") or []) if p)
             if problems:
                 return "；".join(problems)
             return None
@@ -608,6 +686,5 @@ async def review_layout(
 def plan_key(timeline: LayoutTimeline) -> str:
     """产物隔离 key — 不同布局时间轴不互相覆盖（对齐 talking_head_overlay）。"""
     return hashlib.md5(
-        json.dumps(timeline.model_dump(), ensure_ascii=False, sort_keys=True)
-        .encode("utf-8")
+        json.dumps(timeline.model_dump(), ensure_ascii=False, sort_keys=True).encode("utf-8")
     ).hexdigest()[:8]

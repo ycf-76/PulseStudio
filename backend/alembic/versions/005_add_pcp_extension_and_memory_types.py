@@ -13,9 +13,9 @@ Changes:
    my_works_summary, my_attribution, avoid_patterns
 """
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision = '005'
 down_revision = '004'

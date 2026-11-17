@@ -6,6 +6,7 @@ utf-8，原来的「UTF-8 → 系统首选编码」等于没有 GBK 兜底，Win
 
 全离线、零真机、零网络。
 """
+
 from __future__ import annotations
 
 import locale

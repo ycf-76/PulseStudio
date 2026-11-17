@@ -27,8 +27,21 @@ MAX_GREP_LINES = 200
 # 走本模块实现（不起子进程）的命令集合
 NATIVE_COMMANDS: frozenset[str] = frozenset(
     {
-        "ls", "dir", "cat", "type", "head", "tail", "wc", "echo", "pwd",
-        "find", "grep", "rg", "glob", "which", "where",
+        "ls",
+        "dir",
+        "cat",
+        "type",
+        "head",
+        "tail",
+        "wc",
+        "echo",
+        "pwd",
+        "find",
+        "grep",
+        "rg",
+        "glob",
+        "which",
+        "where",
     }
 )
 
@@ -127,9 +140,7 @@ def _cmd_ls(args: list[str], cwd: Path) -> tuple[int, str, str]:
             lines.append(_ls_line(root, flags))
             continue
         try:
-            entries = [
-                p for p in root.iterdir() if "a" in flags or not p.name.startswith(".")
-            ]
+            entries = [p for p in root.iterdir() if "a" in flags or not p.name.startswith(".")]
         except OSError as e:
             errors.append(f"ls: {label}: {e}")
             continue

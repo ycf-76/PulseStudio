@@ -1,12 +1,26 @@
 def test_extract_frames_counts_and_meta(tmp_path):
     # 用 ffmpeg lavfi 造 2s 30fps 测试视频
-    from capabilities.video.adapters.studio_assets import extract_frames, probe_duration
     import subprocess
+
     from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+    from capabilities.video.adapters.studio_assets import extract_frames, probe_duration
+
     src = tmp_path / "src.mp4"
-    subprocess.run([resolve_ffmpeg(), "-y", "-f", "lavfi",
-        "-i", "testsrc=duration=2:size=320x568:rate=30",
-        "-pix_fmt", "yuv420p", str(src)], check=True, capture_output=True)
+    subprocess.run(
+        [
+            resolve_ffmpeg(),
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=duration=2:size=320x568:rate=30",
+            "-pix_fmt",
+            "yuv420p",
+            str(src),
+        ],
+        check=True,
+        capture_output=True,
+    )
     info = extract_frames(str(src), tmp_path / "frames", fps=24.0)
     assert info.count == 48 and abs(info.fps - 24.0) < 0.01
     assert info.width == 320 and info.height == 568
@@ -63,8 +77,7 @@ def test_probe_bottom_mixed_votes_require_majority(tmp_path):
     from capabilities.video.adapters.studio_assets import probe_bottom_elements
 
     for i in range(5):
-        _synth_frame(tmp_path / ("frame_%06d.jpg" % i),
-                     with_subtitle=(i < 2))
+        _synth_frame(tmp_path / ("frame_%06d.jpg" % i), with_subtitle=(i < 2))
     out = probe_bottom_elements(str(tmp_path))
     assert out["suspected"] is False
     assert out["error"] is None

@@ -34,7 +34,12 @@ def db_env(monkeypatch):
 
     async def _setup():
         async with engine.begin() as conn:
-            for t in [User.__table__, ChatSession.__table__, Base.metadata.tables["chat_messages"], Base.metadata.tables["side_snapshots"]]:
+            for t in [
+                User.__table__,
+                ChatSession.__table__,
+                Base.metadata.tables["chat_messages"],
+                Base.metadata.tables["side_snapshots"],
+            ]:
                 await conn.run_sync(t.create, checkfirst=True)
         async with sf() as db:
             db.add(User(id="u1", nickname="测试"))
@@ -80,17 +85,13 @@ async def test_sixth_active_side_session_returns_400(client):
             "/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"}
         )
         assert r.status_code == 201
-    r6 = await client.post(
-        "/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"}
-    )
+    r6 = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"})
     assert r6.status_code == 400
 
 
 @pytest.mark.asyncio
 async def test_side_session_cannot_create_side_session(client):
-    r = await client.post(
-        "/api/chat/sessions/main1/side-sessions", json={"granularity": "full"}
-    )
+    r = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "full"})
     side_id = r.json()["data"]["id"]
     resp = await client.post(
         f"/api/chat/sessions/{side_id}/side-sessions", json={"granularity": "full"}
@@ -195,10 +196,13 @@ from app.services.side_session import check_digest_cap  # noqa: E402
 
 
 def test_check_digest_cap_boundary():
-    side_messages = [{"role": "user", "content": "a" * 100}, {"role": "assistant", "content": "b" * 100}]
-    assert check_digest_cap("c" * 60, side_messages) is True   # 恰 30%
+    side_messages = [
+        {"role": "user", "content": "a" * 100},
+        {"role": "assistant", "content": "b" * 100},
+    ]
+    assert check_digest_cap("c" * 60, side_messages) is True  # 恰 30%
     assert check_digest_cap("c" * 61, side_messages) is False  # 31% 拒绝
-    assert check_digest_cap("短摘要", []) is False              # 无问答拒绝
+    assert check_digest_cap("短摘要", []) is False  # 无问答拒绝
 
 
 @pytest.mark.asyncio
@@ -206,8 +210,12 @@ async def test_bring_back_injects_special_message(client):
     r = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"})
     side_id = r.json()["data"]["id"]
     # 准备侧会话问答素材
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 200})
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 200})
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 200}
+    )
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 200}
+    )
 
     from app.api.routers import side_session as side_router_mod
 
@@ -222,7 +230,9 @@ async def test_bring_back_injects_special_message(client):
 
     # 主会话出现特殊消息
     msgs = (await client.get("/api/chat/sessions/main1/messages")).json()["data"]
-    digest_msgs = [m for m in msgs if (m.get("agent_meta") or {}).get("message_type") == "side_session_digest"]
+    digest_msgs = [
+        m for m in msgs if (m.get("agent_meta") or {}).get("message_type") == "side_session_digest"
+    ]
     assert len(digest_msgs) == 1
     assert digest_msgs[0]["role"] == "user"
     assert digest_msgs[0]["agent_meta"]["side_session_id"] == side_id
@@ -233,14 +243,24 @@ async def test_bring_back_injects_special_message(client):
 async def test_double_bring_back_creates_two_messages(client):
     r = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"})
     side_id = r.json()["data"]["id"]
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 300})
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 300})
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 300}
+    )
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 300}
+    )
 
-    await client.post(f"/api/side-sessions/{side_id}/bring-back", json={"digest": "第一次结论" + "x" * 160})
-    await client.post(f"/api/side-sessions/{side_id}/bring-back", json={"digest": "第二次结论" + "y" * 160})
+    await client.post(
+        f"/api/side-sessions/{side_id}/bring-back", json={"digest": "第一次结论" + "x" * 160}
+    )
+    await client.post(
+        f"/api/side-sessions/{side_id}/bring-back", json={"digest": "第二次结论" + "y" * 160}
+    )
 
     msgs = (await client.get("/api/chat/sessions/main1/messages")).json()["data"]
-    digest_msgs = [m for m in msgs if (m.get("agent_meta") or {}).get("message_type") == "side_session_digest"]
+    digest_msgs = [
+        m for m in msgs if (m.get("agent_meta") or {}).get("message_type") == "side_session_digest"
+    ]
     assert len(digest_msgs) == 2
     assert digest_msgs[0]["content"] != digest_msgs[1]["content"]
 
@@ -249,7 +269,9 @@ async def test_double_bring_back_creates_two_messages(client):
 async def test_bring_back_over_cap_returns_422(client):
     r = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"})
     side_id = r.json()["data"]["id"]
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 100})
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 100}
+    )
     resp = await client.post(f"/api/side-sessions/{side_id}/bring-back", json={"digest": "x" * 200})
     assert resp.status_code == 422
 
@@ -260,8 +282,12 @@ async def test_bring_back_when_main_session_deleted_returns_400(client, db_env):
     _setup, sf = db_env
     r = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"})
     side_id = r.json()["data"]["id"]
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 200})
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 200})
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 200}
+    )
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 200}
+    )
 
     async with sf() as db:
         main = await db.get(ChatSession, "main1")
@@ -280,8 +306,12 @@ async def test_bring_back_when_main_session_deleted_returns_400(client, db_env):
 async def test_draft_endpoint_returns_digest(client, monkeypatch):
     r = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"})
     side_id = r.json()["data"]["id"]
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 100})
-    await client.post(f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 100})
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "user", "content": "a" * 100}
+    )
+    await client.post(
+        f"/api/chat/sessions/{side_id}/messages", json={"role": "assistant", "content": "b" * 100}
+    )
 
     from app.services import side_session as svc
 
@@ -310,9 +340,7 @@ async def test_other_user_cannot_access_side_sessions(db_env):
     app.dependency_overrides[get_current_user] = lambda: "u2"
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
-        resp = await c.post(
-            "/api/chat/sessions/main1/side-sessions", json={"granularity": "full"}
-        )
+        resp = await c.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "full"})
         assert resp.status_code == 403
 
 
@@ -323,11 +351,16 @@ async def test_finalize_ignores_side_sessions_not_owned_by_user(client, db_env):
     async with sf() as db:
         db.add(User(id="u2", nickname="另一个用户"))
         db.add(ChatSession(id="main2", user_id="u2", title="别人的主会话"))
-        db.add(ChatSession(
-            id="foreign_side", user_id="u2", kind="side",
-            parent_session_id="main2", title="别人的侧会话",
-            side_meta={"status": "active"},
-        ))
+        db.add(
+            ChatSession(
+                id="foreign_side",
+                user_id="u2",
+                kind="side",
+                parent_session_id="main2",
+                title="别人的侧会话",
+                side_meta={"status": "active"},
+            )
+        )
         await db.commit()
 
     resp = await client.post(
@@ -349,19 +382,24 @@ async def test_concurrent_side_write_confirm_only_one_succeeds(client, db_env, m
     _setup, sf = db_env
     r = await client.post("/api/chat/sessions/main1/side-sessions", json={"granularity": "digest"})
     side_id = r.json()["data"]["id"]
-    await side_session.set_pending_write(side_id, {
-        "tool_name": "file_write",
-        "arguments": {"path": "a.txt"},
-        "description": "写文件",
-        "permissions": ["file_write"],
-    })
+    await side_session.set_pending_write(
+        side_id,
+        {
+            "tool_name": "file_write",
+            "arguments": {"path": "a.txt"},
+            "description": "写文件",
+            "permissions": ["file_write"],
+        },
+    )
 
     from app.engine.reactor.loop_state import save_loop_state
 
-    state_path = save_loop_state({
-        "messages": [{"role": "user", "content": "hi"}],
-        "context_snapshot": {},
-    })
+    state_path = save_loop_state(
+        {
+            "messages": [{"role": "user", "content": "hi"}],
+            "context_snapshot": {},
+        }
+    )
 
     # 后台续跑用假会话，避免测试环境拉起真实 LLM
     class _FakeSession:
@@ -377,6 +415,7 @@ async def test_concurrent_side_write_confirm_only_one_succeeds(client, db_env, m
             return _FakeSession()
 
     import app.agents.registry as registry_mod
+
     monkeypatch.setattr(registry_mod, "AgentRegistry", lambda: _FakeFactory())
 
     async def _call():
@@ -395,16 +434,22 @@ async def test_archived_side_session_rejects_agent_chat(db_env):
     _setup, sf = db_env
     await _setup()
     async with sf() as db:
-        db.add(ChatSession(
-            id="side_arch", user_id="u1", kind="side",
-            parent_session_id="main1", title="已归档",
-            side_meta={"status": "archived"},
-        ))
+        db.add(
+            ChatSession(
+                id="side_arch",
+                user_id="u1",
+                kind="side",
+                parent_session_id="main1",
+                title="已归档",
+                side_meta={"status": "archived"},
+            )
+        )
         await db.commit()
 
     from fastapi import FastAPI as _FA
-    from app.db.session import get_db
+
     from app.api.routers import chat_agent as chat_agent_router
+    from app.db.session import get_db
 
     app = _FA()
     app.include_router(chat_agent_router.router)

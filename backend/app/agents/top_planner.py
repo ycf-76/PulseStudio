@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -171,7 +170,9 @@ def _keyword_fallback(message: str, context: dict[str, Any] | None = None) -> To
             context_used="fallback: 发给我",
         )
 
-    if re.search(r"搜|搜索|查|查找|找一下", message) and re.search(r"热点|爆款|趋势|新闻|资讯", message):
+    if re.search(r"搜|搜索|查|查找|找一下", message) and re.search(
+        r"热点|爆款|趋势|新闻|资讯", message
+    ):
         tools.append(ToolCall(tool=ToolName.TRENDING_SEARCH))
         m = re.search(r"(?:穿搭|美食|旅行|健身|护肤|数码|科技|AI)", message)
         topic = m.group(0) if m else "今日热点"
@@ -189,7 +190,8 @@ def _keyword_fallback(message: str, context: dict[str, Any] | None = None) -> To
                 ToolCall(tool=ToolName.IMAGE_GEN),
                 ToolCall(tool=ToolName.CONTENT_AUDIT),
             ],
-            topic=message, confidence=0.7,
+            topic=message,
+            confidence=0.7,
             intent="full_create",
             steps=["搜索热点", "爆款分析", "撰写文案", "生成图片", "审核"],
             strategy="sequential",
@@ -201,7 +203,9 @@ def _keyword_fallback(message: str, context: dict[str, Any] | None = None) -> To
     if re.search(r"封面", message) and re.search(r"做|设计|生成", message):
         tools.append(ToolCall(tool=ToolName.COVER_DESIGN))
 
-    if re.search(r"写|撰写|生成|创作", message) and re.search(r"文案|笔记|报告|内容|文章|一篇|篇", message):
+    if re.search(r"写|撰写|生成|创作", message) and re.search(
+        r"文案|笔记|报告|内容|文章|一篇|篇", message
+    ):
         tools.append(ToolCall(tool=ToolName.COPYWRITE))
 
     if re.search(r"发.*微信|推.*微信|送.*微信", message):
@@ -220,7 +224,8 @@ def _keyword_fallback(message: str, context: dict[str, Any] | None = None) -> To
         if any(kw in message for kw in ["图文", "配图", "图片呢"]):
             return TopPlan(
                 tools=[ToolCall(tool=ToolName.COPYWRITE), ToolCall(tool=ToolName.IMAGE_GEN)],
-                topic=last_topic or message, confidence=0.8,
+                topic=last_topic or message,
+                confidence=0.8,
                 intent="image",
                 steps=["生成文案", "规划图片", "生成图片"],
                 optional_tools=[ToolName.IMAGE_GEN],
@@ -229,7 +234,8 @@ def _keyword_fallback(message: str, context: dict[str, Any] | None = None) -> To
         if any(kw in message for kw in ["帮我发", "发一下"]):
             return TopPlan(
                 tools=[ToolCall(tool=ToolName.WECHAT_PUSH)],
-                topic=last_topic or message, confidence=0.8,
+                topic=last_topic or message,
+                confidence=0.8,
                 intent="publish",
                 steps=["推送到微信"],
                 context_used=f"fallback: 发/发布, last_topic={last_topic}",

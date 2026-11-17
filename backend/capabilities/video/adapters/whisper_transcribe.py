@@ -30,6 +30,7 @@ _INITIAL_PROMPT = "以下是普通话口播内容，请用简体中文转写。"
 @dataclass(frozen=True)
 class TranscribeWord:
     """单个词的时间戳。"""
+
     text: str
     start: float
     end: float
@@ -39,6 +40,7 @@ class TranscribeWord:
 @dataclass(frozen=True)
 class TranscribeSegment:
     """一个语音片段（句子级）。"""
+
     text: str
     start: float
     end: float
@@ -52,6 +54,7 @@ def check_cuda_available() -> dict[str, Any]:
     """
     try:
         import torch
+
         info: dict[str, Any] = {
             "cuda_available": torch.cuda.is_available(),
             "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
@@ -100,19 +103,25 @@ def _try_stable_ts(
         for seg in result.segments:
             words = []
             for word in seg.words:
-                words.append(TranscribeWord(
-                    text=word.word.strip(),
-                    start=word.start,
-                    end=word.end,
-                    probability=getattr(word, "probability", 1.0),
-                ))
-            segments.append(TranscribeSegment(
-                text=seg.text.strip(),
-                start=seg.start,
-                end=seg.end,
-                words=words,
-            ))
-        logger.info(f"stable-ts: transcribed {len(segments)} segments, {sum(len(s.words) for s in segments)} words")
+                words.append(
+                    TranscribeWord(
+                        text=word.word.strip(),
+                        start=word.start,
+                        end=word.end,
+                        probability=getattr(word, "probability", 1.0),
+                    )
+                )
+            segments.append(
+                TranscribeSegment(
+                    text=seg.text.strip(),
+                    start=seg.start,
+                    end=seg.end,
+                    words=words,
+                )
+            )
+        logger.info(
+            f"stable-ts: transcribed {len(segments)} segments, {sum(len(s.words) for s in segments)} words"
+        )
         return segments
 
     except Exception as e:
@@ -133,7 +142,13 @@ def resolve_model_path(model_size: str) -> str:
         return env_path
 
     # ModelScope 缓存（snapshot_download 布局）
-    ms_root = Path.home() / ".cache" / "modelscope" / "models" / f"angelala00--faster-whisper-{model_size}"
+    ms_root = (
+        Path.home()
+        / ".cache"
+        / "modelscope"
+        / "models"
+        / f"angelala00--faster-whisper-{model_size}"
+    )
     if ms_root.is_dir():
         snapshots = sorted(ms_root.glob("snapshots/*"))
         for snap in snapshots:
@@ -189,18 +204,22 @@ def _try_faster_whisper(
             words = []
             if seg.words:
                 for word in seg.words:
-                    words.append(TranscribeWord(
-                        text=word.word.strip(),
-                        start=word.start,
-                        end=word.end,
-                        probability=getattr(word, "probability", 1.0),
-                    ))
-            segments.append(TranscribeSegment(
-                text=seg.text.strip(),
-                start=seg.start,
-                end=seg.end,
-                words=words,
-            ))
+                    words.append(
+                        TranscribeWord(
+                            text=word.word.strip(),
+                            start=word.start,
+                            end=word.end,
+                            probability=getattr(word, "probability", 1.0),
+                        )
+                    )
+            segments.append(
+                TranscribeSegment(
+                    text=seg.text.strip(),
+                    start=seg.start,
+                    end=seg.end,
+                    words=words,
+                )
+            )
         logger.info(f"faster-whisper: transcribed {len(segments)} segments on {device}")
         return segments
 
@@ -234,18 +253,22 @@ def _try_openai_whisper(
         for seg in result.get("segments", []):
             words = []
             for word in seg.get("words", []):
-                words.append(TranscribeWord(
-                    text=word.get("word", "").strip(),
-                    start=word.get("start", 0),
-                    end=word.get("end", 0),
-                    probability=word.get("probability", 1.0),
-                ))
-            segments.append(TranscribeSegment(
-                text=seg.get("text", "").strip(),
-                start=seg.get("start", 0),
-                end=seg.get("end", 0),
-                words=words,
-            ))
+                words.append(
+                    TranscribeWord(
+                        text=word.get("word", "").strip(),
+                        start=word.get("start", 0),
+                        end=word.get("end", 0),
+                        probability=word.get("probability", 1.0),
+                    )
+                )
+            segments.append(
+                TranscribeSegment(
+                    text=seg.get("text", "").strip(),
+                    start=seg.get("start", 0),
+                    end=seg.get("end", 0),
+                    words=words,
+                )
+            )
         logger.info(f"openai-whisper: transcribed {len(segments)} segments")
         return segments
 
@@ -258,6 +281,7 @@ def has_audio_stream(video_path: str) -> bool:
     """检查媒体文件是否含音频流 — 无音频时转录必然为空，提前显式暴露。"""
     try:
         import av
+
         with av.open(video_path) as container:
             return len(container.streams.audio) > 0
     except Exception as e:

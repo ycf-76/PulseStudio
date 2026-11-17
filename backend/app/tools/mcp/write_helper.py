@@ -25,9 +25,9 @@ async def generate_image_with_wanx(
     Returns:
         图片 URL 列表（/uploads/assets/... 格式）
     """
-    from capabilities.image_gen.adapters.image_gen import get_default_adapter
-    from app.services.asset_library import save_asset
     from app.config import get_settings
+    from app.services.asset_library import save_asset
+    from capabilities.image_gen.adapters.image_gen import get_default_adapter
 
     settings = get_settings()
     adapter = get_default_adapter()

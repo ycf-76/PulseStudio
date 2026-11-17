@@ -1,9 +1,9 @@
 """ReAct Loop 五轮诊断 — API 层锁管理 + 后台任务异常 + LLM 静默降级。
 
-  Step 22: /clarify 锁泄漏（compile_clarification_result 异常时锁不释放）
-  Step 23: /confirm-storyboard 锁泄漏（call_args 构造异常时锁不释放）
-  Step 24: asyncio.create_task 后台任务异常被吞
-  Step 25: build_reactor_session llm=None 静默降级无日志
+Step 22: /clarify 锁泄漏（compile_clarification_result 异常时锁不释放）
+Step 23: /confirm-storyboard 锁泄漏（call_args 构造异常时锁不释放）
+Step 24: asyncio.create_task 后台任务异常被吞
+Step 25: build_reactor_session llm=None 静默降级无日志
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ class TestStep22ClarifyLockLeakage:
     def test_clarify_uses_try_finally_for_lock(self):
         """clarify_action 中 _file_lock.acquire() 后是否有 try/finally。"""
         from app.api.routers.chat_agent import clarify_action
+
         source = inspect.getsource(clarify_action)
 
         has_acquire = "_file_lock.acquire()" in source
@@ -39,12 +40,12 @@ class TestStep22ClarifyLockLeakage:
     def test_clarify_has_finally_release(self):
         """clarify_action 中是否有 finally: _file_lock.release()。"""
         from app.api.routers.chat_agent import clarify_action
+
         source = inspect.getsource(clarify_action)
 
         has_finally_release = "finally:" in source and "_file_lock.release()" in source
         assert has_finally_release, (
-            "BUG：没有 finally: _file_lock.release()。"
-            "异常路径下锁不会释放。"
+            "BUG：没有 finally: _file_lock.release()。" "异常路径下锁不会释放。"
         )
 
     def test_clarify_no_manual_release_in_early_returns(self):
@@ -54,6 +55,7 @@ class TestStep22ClarifyLockLeakage:
         检查是否还有散落的 _file_lock.release() 调用。
         """
         from app.api.routers.chat_agent import clarify_action
+
         source = inspect.getsource(clarify_action)
 
         release_count = source.count("_file_lock.release()")
@@ -74,6 +76,7 @@ class TestStep23StoryboardLockLeakage:
     def test_storyboard_uses_try_finally_for_lock(self):
         """confirm_storyboard_action 中 _file_lock.acquire() 后是否有 try/finally。"""
         from app.api.routers.chat_agent import confirm_storyboard_action
+
         source = inspect.getsource(confirm_storyboard_action)
 
         has_acquire = "_file_lock.acquire()" in source
@@ -83,19 +86,18 @@ class TestStep23StoryboardLockLeakage:
         after_acquire = source[acquire_pos:]
         has_try_after_acquire = "try:" in after_acquire[:200]
         assert has_try_after_acquire, (
-            "BUG：_file_lock.acquire() 后没有 try 块。"
-            "call_args 构造异常时锁不会释放。"
+            "BUG：_file_lock.acquire() 后没有 try 块。" "call_args 构造异常时锁不会释放。"
         )
 
     def test_storyboard_has_finally_release(self):
         """confirm_storyboard_action 中是否有 finally: _file_lock.release()。"""
         from app.api.routers.chat_agent import confirm_storyboard_action
+
         source = inspect.getsource(confirm_storyboard_action)
 
         has_finally_release = "finally:" in source and "_file_lock.release()" in source
         assert has_finally_release, (
-            "BUG：没有 finally: _file_lock.release()。"
-            "异常路径下锁不会释放。"
+            "BUG：没有 finally: _file_lock.release()。" "异常路径下锁不会释放。"
         )
 
     def test_storyboard_background_task_does_not_release_lock(self):
@@ -105,6 +107,7 @@ class TestStep23StoryboardLockLeakage:
         后台任务不应再释放锁（避免双重释放）。
         """
         from app.api.routers.chat_agent import confirm_storyboard_action
+
         source = inspect.getsource(confirm_storyboard_action)
 
         # 检查 _run_refine_in_background 内部是否有 _file_lock.release()
@@ -132,6 +135,7 @@ class TestStep24BackgroundTaskExceptionSwallowed:
     def test_confirm_adds_done_callback(self):
         """/confirm 端点的 create_task 是否加了 add_done_callback。"""
         from app.api.routers.chat_agent import confirm_action
+
         source = inspect.getsource(confirm_action)
 
         has_done_callback = "add_done_callback" in source
@@ -143,6 +147,7 @@ class TestStep24BackgroundTaskExceptionSwallowed:
     def test_clarify_adds_done_callback(self):
         """/clarify 端点的 create_task 是否加了 add_done_callback。"""
         from app.api.routers.chat_agent import clarify_action
+
         source = inspect.getsource(clarify_action)
 
         has_done_callback = "add_done_callback" in source
@@ -154,6 +159,7 @@ class TestStep24BackgroundTaskExceptionSwallowed:
     def test_storyboard_adds_done_callback(self):
         """/confirm-storyboard 端点的 create_task 是否加了 add_done_callback。"""
         from app.api.routers.chat_agent import confirm_storyboard_action
+
         source = inspect.getsource(confirm_storyboard_action)
 
         has_done_callback = "add_done_callback" in source
@@ -165,6 +171,7 @@ class TestStep24BackgroundTaskExceptionSwallowed:
     def test_done_callback_retrieves_exception(self):
         """add_done_callback 是否调用了 task.exception()。"""
         from app.api.routers.chat_agent import confirm_action
+
         source = inspect.getsource(confirm_action)
 
         has_exception_retrieval = "t.exception()" in source or "task.exception()" in source
@@ -185,6 +192,7 @@ class TestStep25LlmNoneSilentDegradation:
     def test_build_session_logs_when_llm_none(self):
         """build_reactor_session 是否在 llm=None 时记录错误日志。"""
         from app.engine.reactor.session import build_reactor_session
+
         source = inspect.getsource(build_reactor_session)
 
         # 检查是否有 llm is None 的二次检查
@@ -202,6 +210,7 @@ class TestStep25LlmNoneSilentDegradation:
     def test_build_session_checks_deepseek_return(self):
         """build_reactor_session 是否检查 get_deepseek_llm() 的返回值。"""
         from app.engine.reactor.session import build_reactor_session
+
         source = inspect.getsource(build_reactor_session)
 
         has_deepseek_call = "get_deepseek_llm(" in source

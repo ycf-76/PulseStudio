@@ -1,15 +1,25 @@
 """端到端测试：澄清确认后 SSE 链路不断开（简化版）"""
+
 import asyncio
 import json
 import time
+
 import httpx
 
 BASE = "http://localhost:8000"
-TERMINAL_TYPES = frozenset({
-    'workflow_completed', 'workflow_error', 'agent_loop_done',
-    'workflow_terminated', 'workflow_failed', 'workflow_suspended',
-    'workflow_cancelled', 'shortcut_completed',
-})
+TERMINAL_TYPES = frozenset(
+    {
+        "workflow_completed",
+        "workflow_error",
+        "agent_loop_done",
+        "workflow_terminated",
+        "workflow_failed",
+        "workflow_suspended",
+        "workflow_cancelled",
+        "shortcut_completed",
+    }
+)
+
 
 async def main():
     timeout_cfg = httpx.Timeout(120.0, connect=10.0, read=30.0, write=10.0)
@@ -23,7 +33,8 @@ async def main():
         print("Step 1: 创建会话")
         resp = await client.post("/api/chat/sessions", json={"title": "e2e-clarify"})
         if resp.status_code != 200:
-            print(f"  FAIL: {resp.status_code} {resp.text[:300]}"); return
+            print(f"  FAIL: {resp.status_code} {resp.text[:300]}")
+            return
         rj = resp.json()
         data = rj.get("data", rj)
         session_id = data.get("id") or data.get("session_id")
@@ -39,8 +50,12 @@ async def main():
             nonlocal saw_clarification
             et_buf = ""
             data_buf = ""
-            async with client.stream("GET", f"/api/sse/chat/{session_id}",
-                                     headers={"Accept": "text/event-stream"}, timeout=120.0) as r:
+            async with client.stream(
+                "GET",
+                f"/api/sse/chat/{session_id}",
+                headers={"Accept": "text/event-stream"},
+                timeout=120.0,
+            ) as r:
                 print(f"  SSE connected: {r.status_code}")
                 async for line in r.aiter_lines():
                     if line.startswith("event: "):
@@ -56,16 +71,22 @@ async def main():
                                 saw_clarification = True
                         except Exception:
                             pass
-                        data_buf = ""; et_buf = ""
+                        data_buf = ""
+                        et_buf = ""
 
         sse_task = asyncio.create_task(read_sse())
         await asyncio.sleep(1)
 
         # Step 3: 发消息
         print("  sending message...")
-        resp = await client.post("/api/v1/chat/agent", json={
-            "message": "帮我做一期小红书图文", "session_id": session_id,
-        }, timeout=120.0)
+        resp = await client.post(
+            "/api/v1/chat/agent",
+            json={
+                "message": "帮我做一期小红书图文",
+                "session_id": session_id,
+            },
+            timeout=120.0,
+        )
         agent_data = resp.json()
         status = agent_data.get("status")
         print(f"  POST /agent -> {status}")
@@ -87,7 +108,9 @@ async def main():
                 er = e["data"].get("ended_reason", "")
                 if er not in ("clarification_paused", "guardian_paused", "storyboard_paused"):
                     pause_terminal.append(e)
-        print(f"  {'OK: 0' if not pause_terminal else f'FAIL: {len(pause_terminal)}'} terminal during pause")
+        print(
+            f"  {'OK: 0' if not pause_terminal else f'FAIL: {len(pause_terminal)}'} terminal during pause"
+        )
         for e in pause_terminal:
             print(f"    - {e['type']}")
 
@@ -101,14 +124,18 @@ async def main():
                 opts = q.get("options", [])
                 answers[fn] = opts[0].get("value", "") if opts else "default"
 
-        clarify_resp = await client.post("/api/v1/chat/clarify", json={
-            "session_id": session_id,
-            "loop_state_path": agent_data.get("loop_state_path", ""),
-            "answers": answers,
-            "batch_id": batches[0].get("batch_id", "") if batches else "",
-            "action": "answer",
-            "turn_id": agent_data.get("turn_id", ""),
-        }, timeout=30)
+        clarify_resp = await client.post(
+            "/api/v1/chat/clarify",
+            json={
+                "session_id": session_id,
+                "loop_state_path": agent_data.get("loop_state_path", ""),
+                "answers": answers,
+                "batch_id": batches[0].get("batch_id", "") if batches else "",
+                "action": "answer",
+                "turn_id": agent_data.get("turn_id", ""),
+            },
+            timeout=30,
+        )
         clarify_data = clarify_resp.json()
         print(f"  POST /clarify -> {clarify_data.get('status')}")
         resume_time = time.time()
@@ -181,6 +208,7 @@ async def main():
             await sse_task
         except Exception:
             pass
+
 
 if __name__ == "__main__":
     asyncio.run(main())

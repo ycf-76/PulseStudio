@@ -27,7 +27,12 @@ class _FakeBus:
 
     async def publish(self, workflow_id, event_type, payload, turn_id=None):
         self.calls.append(
-            {"workflow_id": workflow_id, "event_type": event_type, "payload": payload, "turn_id": turn_id}
+            {
+                "workflow_id": workflow_id,
+                "event_type": event_type,
+                "payload": payload,
+                "turn_id": turn_id,
+            }
         )
         return "evt_fake"
 
@@ -59,10 +64,17 @@ class _ScriptedLLM:
 
 
 def _chunk(content: str = "", is_final: bool = True, token_usage: int = 1) -> dict:
-    return {"content": content, "reasoning_content": "", "is_final": is_final, "token_usage": token_usage}
+    return {
+        "content": content,
+        "reasoning_content": "",
+        "is_final": is_final,
+        "token_usage": token_usage,
+    }
 
 
-def _react_step(thought: str, tool_calls: list | None = None, final: bool = False, output: dict | None = None) -> str:
+def _react_step(
+    thought: str, tool_calls: list | None = None, final: bool = False, output: dict | None = None
+) -> str:
     step = {"thought": thought, "tool_calls": tool_calls or [], "final": final}
     if output is not None:
         step["output"] = output
@@ -141,10 +153,12 @@ class TestStep14ParseStepToolCallsType:
         session = _make_session(None)
 
         # LLM 返回 tool_calls 为字符串
-        parsed = session._parse_step('{"thought": "test", "tool_calls": "not_a_list", "final": false}')
-        assert parsed.get("tool_calls") == "not_a_list", (
-            "_parse_step 原样返回 tool_calls，不校验类型"
+        parsed = session._parse_step(
+            '{"thought": "test", "tool_calls": "not_a_list", "final": false}'
         )
+        assert (
+            parsed.get("tool_calls") == "not_a_list"
+        ), "_parse_step 原样返回 tool_calls，不校验类型"
 
     @pytest.mark.asyncio
     async def test_run_handles_non_list_tool_calls(self):
@@ -155,15 +169,23 @@ class TestStep14ParseStepToolCallsType:
         后续 `for call in tool_calls` 会遍历字符串的每个字符，
         每个 `call` 是单字符 str，`call.get("name")` 报 AttributeError。
         """
+
         class _BadToolCallsLLM:
             model_name = "bad_tc"
 
             async def stream_chat(self, messages, **kwargs):
-                yield _chunk('{"thought": "test", "tool_calls": "not_a_list", "final": false}', token_usage=1)
-                yield _chunk('{"thought": "done", "final": true, "output": {"status": "ok"}}', token_usage=1)
+                yield _chunk(
+                    '{"thought": "test", "tool_calls": "not_a_list", "final": false}', token_usage=1
+                )
+                yield _chunk(
+                    '{"thought": "done", "final": true, "output": {"status": "ok"}}', token_usage=1
+                )
 
             async def chat(self, messages, **kwargs):
-                return {"content": '{"thought": "done", "final": true, "output": {"status": "ok"}}', "token_usage": 1}
+                return {
+                    "content": '{"thought": "done", "final": true, "output": {"status": "ok"}}',
+                    "token_usage": 1,
+                }
 
         session = _make_session(_BadToolCallsLLM(), max_iterations=5)
 
@@ -178,15 +200,23 @@ class TestStep14ParseStepToolCallsType:
         应改为：tool_calls = parsed.get("tool_calls", []) or []
         并加类型校验：if not isinstance(tool_calls, list): tool_calls = []
         """
+
         class _BadToolCallsLLM:
             model_name = "bad_tc2"
 
             async def stream_chat(self, messages, **kwargs):
-                yield _chunk('{"thought": "test", "tool_calls": "not_a_list", "final": false}', token_usage=1)
-                yield _chunk('{"thought": "done", "final": true, "output": {"status": "ok"}}', token_usage=1)
+                yield _chunk(
+                    '{"thought": "test", "tool_calls": "not_a_list", "final": false}', token_usage=1
+                )
+                yield _chunk(
+                    '{"thought": "done", "final": true, "output": {"status": "ok"}}', token_usage=1
+                )
 
             async def chat(self, messages, **kwargs):
-                return {"content": '{"thought": "done", "final": true, "output": {"status": "ok"}}', "token_usage": 1}
+                return {
+                    "content": '{"thought": "done", "final": true, "output": {"status": "ok"}}',
+                    "token_usage": 1,
+                }
 
         session = _make_session(_BadToolCallsLLM(), max_iterations=5)
 
@@ -211,23 +241,31 @@ class TestStep15TokenUsageZero:
     @pytest.mark.asyncio
     async def test_zero_token_usage_does_not_increment_budget(self):
         """token_usage=0 时 _token_count 是否不增长。"""
+
         class _ZeroTokenLLM:
             model_name = "zero_token"
 
             async def stream_chat(self, messages, **kwargs):
-                yield _chunk('{"thought": "step1", "tool_calls": [], "final": false}', token_usage=0)
-                yield _chunk('{"thought": "done", "final": true, "output": {"status": "ok"}}', token_usage=0)
+                yield _chunk(
+                    '{"thought": "step1", "tool_calls": [], "final": false}', token_usage=0
+                )
+                yield _chunk(
+                    '{"thought": "done", "final": true, "output": {"status": "ok"}}', token_usage=0
+                )
 
             async def chat(self, messages, **kwargs):
-                return {"content": '{"thought": "done", "final": true, "output": {"status": "ok"}}', "token_usage": 0}
+                return {
+                    "content": '{"thought": "done", "final": true, "output": {"status": "ok"}}',
+                    "token_usage": 0,
+                }
 
         session = _make_session(_ZeroTokenLLM(), max_iterations=5)
         result = await session.run("test")
 
         # token_count 应该是 0（因为 token_usage 始终为 0）
-        assert session._token_count == 0, (
-            f"token_usage=0 时 _token_count 应为 0，实际: {session._token_count}"
-        )
+        assert (
+            session._token_count == 0
+        ), f"token_usage=0 时 _token_count 应为 0，实际: {session._token_count}"
 
     def test_budget_check_is_noop_when_token_count_zero(self):
         """当 _token_count 始终为 0 时，budget 检查永远不触发。"""
@@ -236,9 +274,9 @@ class TestStep15TokenUsageZero:
         session._max_tokens = 100_000
 
         # budget 检查条件
-        assert not (session._token_count >= session._max_tokens), (
-            "token_count=0 时 budget 检查不应触发"
-        )
+        assert not (
+            session._token_count >= session._max_tokens
+        ), "token_count=0 时 budget 检查不应触发"
 
     def test_run_has_no_iteration_based_safety_net(self):
         """run() 是否有基于迭代次数的安全网（max_iterations）。
@@ -277,6 +315,7 @@ class TestStep16ObservationUnboundedGrowth:
     def test_messages_max_len_is_60(self):
         """_MESSAGES_MAX_LEN 是否为 60。"""
         from app.engine.reactor.session import _MESSAGES_MAX_LEN
+
         assert _MESSAGES_MAX_LEN == 60, f"_MESSAGES_MAX_LEN 应为 60，实际: {_MESSAGES_MAX_LEN}"
 
     def test_single_iteration_can_exceed_max_len(self):

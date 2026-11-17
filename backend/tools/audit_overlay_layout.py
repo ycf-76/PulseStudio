@@ -207,7 +207,10 @@ MIN_PADDING = 8
 #   mark：箭头/圆圈/贴纸本来就是小标记；面积判据不适用
 #   card：卡片/整屏类，才谈"是否缩在一角"
 _CAPTION = {
-    "caption_pop", "caption_karaoke", "caption_typewriter", "keyword_highlight",
+    "caption_pop",
+    "caption_karaoke",
+    "caption_typewriter",
+    "keyword_highlight",
 }
 _MARK = {"arrow_point", "circle_mark", "emoji_sticker"}
 # 层级判据只对"确有主副标题语义"的模板生效 —— 编号 vs 标题
@@ -216,9 +219,7 @@ _HIERARCHY = {"title_card", "lower_third", "full_card"}
 MIN_HIERARCHY_RATIO = 0.5
 
 # 纯 emoji/符号不按文字检查兜底（颜色由系统字体决定，且无 shadow 是常态）
-_EMOJI_ONLY = re.compile(
-    r"^[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200D\s]+$"
-)
+_EMOJI_ONLY = re.compile(r"^[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200D\s]+$")
 
 
 def _is_emoji_only(s: str) -> bool:
@@ -228,14 +229,9 @@ def _is_emoji_only(s: str) -> bool:
 def _build(template_name: str) -> tuple[str | None, str]:
     fn = TEMPLATES[template_name]
     sig = inspect.signature(fn)
-    has_var_kw = any(
-        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
-    )
+    has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
     payload = {**_COMMON, **_OVERRIDES.get(template_name, {})}
-    kwargs = {
-        k: v for k, v in payload.items()
-        if k in sig.parameters or has_var_kw
-    }
+    kwargs = {k: v for k, v in payload.items() if k in sig.parameters or has_var_kw}
     kwargs.update({"width": CW, "height": CH, "duration": 2.0})
     try:
         return fn(**kwargs), ""
@@ -252,33 +248,28 @@ async def _audit_one(page: Any, name: str) -> dict[str, Any]:
     data = await page.evaluate(_COLLECT_JS)
 
     issues: list[tuple[str, str]] = []  # (级别, 描述)
-    notes: list[str] = []              # INFO 级，只展示不判不合格
+    notes: list[str] = []  # INFO 级，只展示不判不合格
 
     # 1) 对比度（仅对有明确背景色的文字可精确计算）
     for t in data["texts"]:
         if _is_emoji_only(t["text"]):
             continue
         if t.get("gradient"):
-            notes.append(
-                f"渐变文字「{t['text']}」({t['fontSize']}px) 对比度需人工目视确认"
-            )
+            notes.append(f"渐变文字「{t['text']}」({t['fontSize']}px) 对比度需人工目视确认")
             continue
         if t.get("gradientBg"):
-            notes.append(
-                f"渐变背景上的「{t['text']}」({t['fontSize']}px) 对比度需人工目视确认"
-            )
+            notes.append(f"渐变背景上的「{t['text']}」({t['fontSize']}px) 对比度需人工目视确认")
             continue
         if t["contrast"] is not None:
-            need = (
-                MIN_CONTRAST_LARGE if t["fontSize"] >= LARGE_FONT_PX
-                else MIN_CONTRAST_BODY
-            )
+            need = MIN_CONTRAST_LARGE if t["fontSize"] >= LARGE_FONT_PX else MIN_CONTRAST_BODY
             if t["contrast"] < need:
-                issues.append((
-                    "P0",
-                    f"对比度 {t['contrast']}:1 < {need}:1 「{t['text']}」"
-                    f"({t['fontSize']}px)",
-                ))
+                issues.append(
+                    (
+                        "P0",
+                        f"对比度 {t['contrast']}:1 < {need}:1 「{t['text']}」"
+                        f"({t['fontSize']}px)",
+                    )
+                )
         elif t["onVideo"] and not t["hasShadow"] and t["strokeWidth"] < 1:
             # 压视频画面且无兜底：静态无法判断真实背景亮度，
             # 十轮 demo 真机出片未报可读性问题 → 只作提示，交真人/真实素材验证
@@ -289,13 +280,17 @@ async def _audit_one(page: Any, name: str) -> dict[str, Any]:
 
     # 2) 视觉贴边：文字到背景块四边的最小距离
     gaps = [
-        t["edgeGap"] for t in data["texts"]
+        t["edgeGap"]
+        for t in data["texts"]
         if t.get("edgeGap") is not None and not _is_emoji_only(t["text"])
     ]
     if gaps and min(gaps) < MIN_PADDING:
-        issues.append((
-            "P1", f"文字距背景块边缘 {min(gaps)}px < {MIN_PADDING}px — 视觉贴边",
-        ))
+        issues.append(
+            (
+                "P1",
+                f"文字距背景块边缘 {min(gaps)}px < {MIN_PADDING}px — 视觉贴边",
+            )
+        )
 
     # 3) 层级比：阈值未经真机目视校准 → 只作提示，不判不合格
     sizes = sorted({t["fontSize"] for t in data["texts"]}, reverse=True)
@@ -303,8 +298,7 @@ async def _audit_one(page: Any, name: str) -> dict[str, Any]:
         ratio = sizes[1] / sizes[0]
         if ratio < MIN_HIERARCHY_RATIO:
             notes.append(
-                f"主次字号比 {ratio:.2f} ({sizes[0]}px vs {sizes[1]}px) — "
-                "副标题偏小，可考虑调大"
+                f"主次字号比 {ratio:.2f} ({sizes[0]}px vs {sizes[1]}px) — " "副标题偏小，可考虑调大"
             )
 
     # 4) 面积占比：只展示（阈值需用真实合格产物校准，暂不判不合格）
@@ -339,7 +333,8 @@ async def main() -> int:
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page(
-            viewport={"width": CW, "height": CH}, device_scale_factor=1,
+            viewport={"width": CW, "height": CH},
+            device_scale_factor=1,
         )
         for name in names:
             results.append(await _audit_one(page, name))
@@ -355,10 +350,7 @@ async def main() -> int:
         p1 = sum(1 for lv, _ in r["issues"] if lv == "P1")
         lv = "/".join(str(x) for x in r["levels"]) or "-"
         pad = "-" if r["min_padding"] is None else f"{r['min_padding']:.0f}px"
-        print(
-            f"{r['name']:<20}{p0:>3}{p1:>4}"
-            f"{r['area_ratio'] * 100:>10.1f}%{lv:>16}{pad:>8}"
-        )
+        print(f"{r['name']:<20}{p0:>3}{p1:>4}" f"{r['area_ratio'] * 100:>10.1f}%{lv:>16}{pad:>8}")
 
     print("\n问题清单：")
     total = 0
@@ -380,9 +372,7 @@ async def main() -> int:
             print(f"  [INFO] {name}: {n}")
 
     print(f"\n合计 {total} 条问题；P0 存在则退出码 1")
-    has_p0 = any(
-        lv == "P0" for r in results if "error" not in r for lv, _ in r["issues"]
-    )
+    has_p0 = any(lv == "P0" for r in results if "error" not in r for lv, _ in r["issues"])
     return 1 if has_p0 else 0
 
 

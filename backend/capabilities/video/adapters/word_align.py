@@ -39,6 +39,7 @@ class TimedWord:
 def _jieba_available() -> bool:
     try:
         import jieba  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -52,6 +53,7 @@ def split_words(text: str) -> list[str]:
 
     if _jieba_available():
         import jieba
+
         return [w for w in jieba.cut(text) if w.strip()]
 
     # 降级：CJK 逐字，其余按空格
@@ -93,10 +95,7 @@ def _even_fallback(word_texts: list[str], duration: float) -> list[TimedWord]:
     if n == 0:
         return []
     step = duration / n
-    return [
-        TimedWord(text=t, start=i * step, end=(i + 1) * step)
-        for i, t in enumerate(word_texts)
-    ]
+    return [TimedWord(text=t, start=i * step, end=(i + 1) * step) for i, t in enumerate(word_texts)]
 
 
 def align_word_timing(
@@ -140,7 +139,8 @@ def align_word_timing(
     if abs(len(indexed) - len(stream)) > max(2, 0.3 * len(indexed)):
         logger.debug(
             "word align mismatch: text_chars=%d word_chars=%d, fallback to even",
-            len(indexed), len(stream),
+            len(indexed),
+            len(stream),
         )
         return _even_fallback(word_texts, duration)
 

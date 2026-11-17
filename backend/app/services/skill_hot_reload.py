@@ -12,6 +12,7 @@ reload_once() 是幂等重扫（测试与手动端点共用）：
 start() 起 watchfiles 守护线程监听 skills 目录；
 配置 Settings.skill_hot_reload=false（默认）时完全不启动，行为与四期前一致。
 """
+
 from __future__ import annotations
 
 import logging
@@ -53,7 +54,9 @@ def reload_once() -> dict[str, int]:
 
         # 1b) 用户 skill .md 重扫
         fresh_user = prompt_skills.scan_and_register_user_prompt_skills()
-        fresh_user_names = {(s.node_type, s.name, getattr(s, "owner_user_id", "")) for s in fresh_user}
+        fresh_user_names = {
+            (s.node_type, s.name, getattr(s, "owner_user_id", "")) for s in fresh_user
+        }
 
         # 2) 清理已删除 .md 的残留注册（prompt 来源的技能：module 前缀可识别）
         removed = 0
@@ -109,7 +112,9 @@ def start(interval_debounce: float = 1.0) -> bool:
 
     def _loop() -> None:
         try:
-            for _changes in watch(*dirs, stop_event=_stop_event, debounce=int(interval_debounce * 1000)):
+            for _changes in watch(
+                *dirs, stop_event=_stop_event, debounce=int(interval_debounce * 1000)
+            ):
                 try:
                     reload_once()
                 except Exception:

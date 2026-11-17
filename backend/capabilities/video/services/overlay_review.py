@@ -49,6 +49,7 @@ _PER_ITEM_OVERHEAD = 2_048  # 每帧分摊的 prompt/JSON/TLS 开销余量
 
 class _ChunkItem(NamedTuple):
     """一个待审帧：meta=OverlaySegment（叠加帧）或 None（底片参考帧）。"""
+
     meta: Any | None
     uri: str
     tag: str = "mid"  # mid/settled/in/out/base — 帧时刻性质（VLM 防误报依据）
@@ -91,7 +92,8 @@ def _frame_to_data_uri(path: str | Path) -> str | None:
         if max(w, h) > MAX_FRAME_SIDE:
             scale = MAX_FRAME_SIDE / max(w, h)
             im = im.resize(
-                (round(w * scale), round(h * scale)), Image.LANCZOS,
+                (round(w * scale), round(h * scale)),
+                Image.LANCZOS,
             )
         buf = io.BytesIO()
         im.save(buf, "JPEG", quality=JPEG_QUALITY)
@@ -100,6 +102,7 @@ def _frame_to_data_uri(path: str | Path) -> str | None:
         logger.debug(f"[overlay_review] frame JPEG convert failed ({path}): {e}")
     try:
         from app.services.asset_library import url_to_base64
+
         return url_to_base64(str(path))
     except Exception:
         return None
@@ -107,14 +110,16 @@ def _frame_to_data_uri(path: str | Path) -> str | None:
 
 class ReviewIssue(BaseModel):
     """单条审查问题。"""
-    segment_id: str = ""          # 关联叠加段；空串 = 全片性问题
+
+    segment_id: str = ""  # 关联叠加段；空串 = 全片性问题
     severity: str = "suggestion"  # problem（必须修） | suggestion（可优化）
-    problem: str = ""             # 问题描述
-    suggestion: str = ""          # 修改方向
+    problem: str = ""  # 问题描述
+    suggestion: str = ""  # 修改方向
 
 
 class ReviewResult(BaseModel):
     """一轮视觉审查的结论。"""
+
     issues: list[ReviewIssue] = Field(default_factory=list)
     passed: bool = True
 
@@ -190,9 +195,17 @@ async def extract_review_frames(
         dst = out / f"{prefix}_{i:02d}.png"
         try:
             proc = await asyncio.create_subprocess_exec(
-                ffmpeg, "-y", "-loglevel", "error",
-                "-ss", f"{t:.3f}", "-i", str(src),
-                "-frames:v", "1", str(dst),
+                ffmpeg,
+                "-y",
+                "-loglevel",
+                "error",
+                "-ss",
+                f"{t:.3f}",
+                "-i",
+                str(src),
+                "-frames:v",
+                "1",
+                str(dst),
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
@@ -241,6 +254,7 @@ def _pick_frame_plan(
 
     def _is_caption(seg: Any) -> bool:
         from capabilities.video.services.overlay_orchestrator import template_name
+
         return template_name(seg.template) in _CAPTION_TEMPLATES
 
     plan: list[tuple[Any, Path, float, str]] = []
@@ -254,7 +268,9 @@ def _pick_frame_plan(
     budget = max_frames - len(plan)
     # 长段补 in/out 帧（按时长降序分配剩余预算）
     for seg, vid in sorted(
-        active, key=lambda p: p[0].time_end - p[0].time_start, reverse=True,
+        active,
+        key=lambda p: p[0].time_end - p[0].time_start,
+        reverse=True,
     ):
         if budget <= 0:
             break
@@ -306,12 +322,14 @@ def _parse_review_output(text: str) -> ReviewResult:
             suggestion = str(item.get("suggestion") or "").strip()
             if not problem and not suggestion:
                 continue
-            issues.append(ReviewIssue(
-                segment_id=str(item.get("segment_id") or ""),
-                severity=severity,
-                problem=problem,
-                suggestion=suggestion,
-            ))
+            issues.append(
+                ReviewIssue(
+                    segment_id=str(item.get("segment_id") or ""),
+                    severity=severity,
+                    problem=problem,
+                    suggestion=suggestion,
+                )
+            )
 
     raw_pass = payload.get("pass")
     if isinstance(raw_pass, bool):
@@ -366,6 +384,7 @@ async def _review_chunk(
         else:
             seg = item.meta
             from capabilities.video.services.overlay_orchestrator import template_name
+
             params_brief = json.dumps(seg.params, ensure_ascii=False)[:120]
             lines.append(
                 f"- 第{i}帧: segment_id={seg.segment_id}, template={template_name(seg.template)}, "
@@ -394,8 +413,7 @@ async def _review_chunk(
     raw = result.get("content", "")
     if isinstance(raw, list):
         text = "".join(
-            item.get("text", "") if isinstance(item, dict) else str(item)
-            for item in raw
+            item.get("text", "") if isinstance(item, dict) else str(item) for item in raw
         )
     else:
         text = str(raw or "")
@@ -431,14 +449,13 @@ def _validate_issue_refs(result: ReviewResult, plan: Any) -> ReviewResult:
                 dropped += 1
                 logger.warning(
                     "[overlay_review] issue 引用了不存在段落 %s 的文字，丢弃：%s",
-                    issue.segment_id, (issue.problem or "")[:60])
+                    issue.segment_id,
+                    (issue.problem or "")[:60],
+                )
                 continue
             kept.append(issue)
             continue
-        params_text = " ".join(
-            str(v) for v in (seg.params or {}).values()
-            if isinstance(v, str)
-        )
+        params_text = " ".join(str(v) for v in (seg.params or {}).values() if isinstance(v, str))
         refs = _quote_refs(f"{issue.problem} {issue.suggestion}")
         if not refs or any(r in params_text for r in refs):
             kept.append(issue)
@@ -447,7 +464,9 @@ def _validate_issue_refs(result: ReviewResult, plan: Any) -> ReviewResult:
             logger.warning(
                 "[overlay_review] issue 引用文字不在 segment %s params 中，"
                 "判定段号错位/幻觉丢弃：%s",
-                issue.segment_id, refs)
+                issue.segment_id,
+                refs,
+            )
 
     if dropped:
         passed = all(i.severity != "problem" for i in kept)
@@ -491,11 +510,13 @@ async def review_overlays(
     work_dir = Path(work_dir)
     try:
         from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+
         if resolve_ffmpeg() is None:
             logger.info("[overlay_review] ffmpeg 不可用，跳过视觉审查")
             return None
 
         from app.config import get_settings
+
         api_key = (get_settings().dashscope_api_key or "").strip()
         if not api_key:
             logger.info("[overlay_review] 未配置 DASHSCOPE_API_KEY，跳过视觉审查")
@@ -513,6 +534,7 @@ async def review_overlays(
             base_duration = 0.0
             try:
                 from capabilities.video.adapters.silence_detect import probe_duration
+
                 base_duration = await probe_duration(base_video)
             except Exception:
                 base_duration = 0.0
@@ -520,11 +542,15 @@ async def review_overlays(
                 base_frame_paths = await extract_review_frames(
                     base_video,
                     [base_duration / 3.0, base_duration * 2.0 / 3.0],
-                    work_dir, prefix="review_base",
+                    work_dir,
+                    prefix="review_base",
                 )
         for seg, vid, t, tag in frame_plan:
             got = await extract_review_frames(
-                vid, [t], work_dir, prefix=f"review_{seg.segment_id}_{tag}",
+                vid,
+                [t],
+                work_dir,
+                prefix=f"review_{seg.segment_id}_{tag}",
             )
             if got:
                 frames.append((seg, got[0], tag))
@@ -533,18 +559,17 @@ async def review_overlays(
             return None
 
         # ── 帧编码 + 按请求体预算分块 ──
-        from capabilities.image_gen.adapters.qwen_vl import QwenVLAdapter
         from app.services.model_tier import PipelineStage, get_tier_router
+        from capabilities.image_gen.adapters.qwen_vl import QwenVLAdapter
 
         vl_model = get_tier_router().resolve(PipelineStage.VL_UNDERSTAND, "vl")
         adapter = QwenVLAdapter(api_key=api_key, model=vl_model)
 
         palette = list(getattr(plan, "palette", None) or [])
         # 底片参考帧在前（块内"前 n_base 张"措辞依赖此序）
-        frame_items = (
-            [(None, p, "base") for p in base_frame_paths]
-            + [(seg, p, tag) for seg, p, tag in frames]
-        )
+        frame_items = [(None, p, "base") for p in base_frame_paths] + [
+            (seg, p, tag) for seg, p, tag in frames
+        ]
         items: list[_ChunkItem] = []
         for meta, path, tag in frame_items:
             uri = _frame_to_data_uri(path)
@@ -570,8 +595,11 @@ async def review_overlays(
         merged = _validate_issue_refs(merged, plan)
         logger.info(
             "[overlay_review] 审查完成：%d 块 / %d 帧，%d 个问题（problem 级 %d），passed=%s",
-            len(results), len(items),
-            len(merged.issues), len(merged.critical_issues), merged.passed,
+            len(results),
+            len(items),
+            len(merged.issues),
+            len(merged.critical_issues),
+            merged.passed,
         )
         return merged
 

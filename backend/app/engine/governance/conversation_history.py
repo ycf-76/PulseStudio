@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HistoryItem:
     """对标 Codex ResponseItem — 一条历史记录。"""
+
     role: str
     content: str
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -79,11 +80,13 @@ class ConversationHistory:
         self._history_version += 1
 
     def add_tool_call(self, tool_name: str, arguments: dict[str, Any]) -> None:
-        self._items.append(HistoryItem(
-            role="tool_call",
-            content=json.dumps({"name": tool_name, "arguments": arguments}, ensure_ascii=False),
-            metadata={"tool_name": tool_name},
-        ))
+        self._items.append(
+            HistoryItem(
+                role="tool_call",
+                content=json.dumps({"name": tool_name, "arguments": arguments}, ensure_ascii=False),
+                metadata={"tool_name": tool_name},
+            )
+        )
         self._history_version += 1
 
     def add_tool_output(self, tool_name: str, output: Any, ok: bool = True) -> None:
@@ -92,20 +95,24 @@ class ConversationHistory:
             obs_str = json.dumps(output, ensure_ascii=False, default=str)
         else:
             obs_str = str(output)
-        self._items.append(HistoryItem(
-            role="tool_output",
-            content=f"[observation] {tool_name} -> {obs_str}",
-            metadata={"tool_name": tool_name, "ok": ok},
-        ))
+        self._items.append(
+            HistoryItem(
+                role="tool_output",
+                content=f"[observation] {tool_name} -> {obs_str}",
+                metadata={"tool_name": tool_name, "ok": ok},
+            )
+        )
         self._history_version += 1
 
     def add_observation(self, tool_name: str, obs_str: str) -> None:
         """兼容 ReactorSession 现有的 observation 格式。"""
-        self._items.append(HistoryItem(
-            role="tool_output",
-            content=f"[observation] {tool_name} -> {obs_str}",
-            metadata={"tool_name": tool_name},
-        ))
+        self._items.append(
+            HistoryItem(
+                role="tool_output",
+                content=f"[observation] {tool_name} -> {obs_str}",
+                metadata={"tool_name": tool_name},
+            )
+        )
         self._history_version += 1
 
     def for_prompt(self, system_prompt: str = "") -> list[dict[str, str]]:
@@ -189,10 +196,12 @@ class ConversationHistory:
         history = cls()
         history._history_version = data.get("history_version", 0)
         for item_data in data.get("items", []):
-            history._items.append(HistoryItem(
-                role=item_data.get("role", "user"),
-                content=item_data.get("content", ""),
-                metadata=item_data.get("metadata", {}),
-                timestamp=item_data.get("timestamp", 0),
-            ))
+            history._items.append(
+                HistoryItem(
+                    role=item_data.get("role", "user"),
+                    content=item_data.get("content", ""),
+                    metadata=item_data.get("metadata", {}),
+                    timestamp=item_data.get("timestamp", 0),
+                )
+            )
         return history

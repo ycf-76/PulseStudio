@@ -29,7 +29,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -264,10 +264,10 @@ class LLMRequestQueue:
 
     async def shutdown(self) -> None:
         """Cancel all worker tasks and stop the queue."""
-        for task in getattr(self, '_worker_tasks', []):
+        for task in getattr(self, "_worker_tasks", []):
             if not task.done():
                 task.cancel()
-        if getattr(self, '_worker_tasks', None):
+        if getattr(self, "_worker_tasks", None):
             await asyncio.gather(*self._worker_tasks, return_exceptions=True)
         self._started = False
         logger.info("[llm-queue] shutdown complete")

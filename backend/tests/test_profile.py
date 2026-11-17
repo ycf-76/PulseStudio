@@ -31,16 +31,15 @@ from app.api.schemas.profile import (
 from app.db.models import (
     CreatorTone,
     PrimaryDomain,
-    VisualStyle,
 )
-from app.db.models import (
-    UserProfile as UserProfileORM,
-)
+from app.db.models import UserProfile as UserProfileORM
+from app.db.models import VisualStyle
 from app.services.profile_service import ProfileService
 
 # ----------------------------------------------------------------------
 # Mock 基础设施
 # ----------------------------------------------------------------------
+
 
 def _make_orm_profile(
     user_id: str = "user_1",
@@ -77,6 +76,7 @@ def _mock_db_with_profile(orm_profile: UserProfileORM | None):
 # ----------------------------------------------------------------------
 # Schema 测试
 # ----------------------------------------------------------------------
+
 
 def test_to_prompt_context_full():
     profile = UserProfile(
@@ -128,6 +128,7 @@ def test_update_request_invalid_domain_rejected():
 # ----------------------------------------------------------------------
 # ProfileService 测试
 # ----------------------------------------------------------------------
+
 
 def test_get_profile_not_found():
     db = _mock_db_with_profile(None)
@@ -197,6 +198,7 @@ def test_upsert_updates_existing_no_duplicate_row():
 # ----------------------------------------------------------------------
 # Router 测试（轻量 app + 依赖覆盖，不起完整后端）
 # ----------------------------------------------------------------------
+
 
 class _SyncASGIClient:
     """最小同步 ASGI 客户端垫片。
@@ -276,14 +278,17 @@ def test_router_put_invalid_domain_returns_422():
 def test_router_put_success():
     db = _mock_db_with_profile(None)
     client = _make_client(db)
-    resp = client.put("/api/profile", json={
-        "primary_domain": "tech",
-        "sub_domain": "AI编程",
-        "tone": "professional",
-        "visual_style": "warm",
-        "taboo_topics": ["政治"],
-        "taboo_words": ["绝对"],
-    })
+    resp = client.put(
+        "/api/profile",
+        json={
+            "primary_domain": "tech",
+            "sub_domain": "AI编程",
+            "tone": "professional",
+            "visual_style": "warm",
+            "taboo_topics": ["政治"],
+            "taboo_words": ["绝对"],
+        },
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert body["success"] is True

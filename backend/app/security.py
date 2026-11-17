@@ -10,6 +10,7 @@
 P1-6：Access Token 30分钟过期 + Refresh Token 7天过期。
 前端 401 时用 refresh_token 静默刷新，用户无感知。
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone

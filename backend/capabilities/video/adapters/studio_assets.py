@@ -64,9 +64,19 @@ def extract_frames(video_path: str, out_dir: Path, fps: float = 24.0) -> FrameSe
     width, height = _probe_size(video_path)
 
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error", "-i", str(video_path),
-        "-vf", f"fps={fps:g}", "-qscale:v", "2",
-        "-start_number", "0", str(out_dir / FRAME_PATTERN),
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(video_path),
+        "-vf",
+        f"fps={fps:g}",
+        "-qscale:v",
+        "2",
+        "-start_number",
+        "0",
+        str(out_dir / FRAME_PATTERN),
     ]
     _run_ffmpeg(cmd)
 
@@ -74,8 +84,12 @@ def extract_frames(video_path: str, out_dir: Path, fps: float = 24.0) -> FrameSe
     if not frames:
         raise RuntimeError(f"extract_frames produced no frames: {video_path}")
     return FrameSeqInfo(
-        frame_dir=out_dir, count=len(frames), fps=float(fps),
-        width=width, height=height, pattern=FRAME_PATTERN,
+        frame_dir=out_dir,
+        count=len(frames),
+        fps=float(fps),
+        width=width,
+        height=height,
+        pattern=FRAME_PATTERN,
     )
 
 
@@ -146,7 +160,9 @@ def _ffmpeg_info_stderr(media_path: str) -> str:
         with open(log, "wb") as f:
             subprocess.run(
                 [ffmpeg, "-hide_banner", "-i", str(media_path)],
-                stdout=f, stderr=f, check=False,
+                stdout=f,
+                stderr=f,
+                check=False,
             )
         return log.read_text(encoding="utf-8", errors="replace")
 
@@ -170,8 +186,8 @@ def _size_from_ffmpeg_stderr(video_path: str) -> tuple[int, int]:
 # 依据：烧录字幕/台标/水印是高对比密集文本，贴底排布 → 底部区域边缘密度
 # 显著高于画面中部；自然画面（人脸/背景）边缘分布相对均匀。多帧投票压住
 # 背景复杂度噪声（个别镜头底部有杂物不致误判）。
-_BOTTOM_RATIO_TRIGGER = 1.5   # 单帧判定：底部密度 / 中部密度 阈值
-_BOTTOM_VOTE_RATIO = 0.6      # 投票判定：≥60% 采样帧命中才报疑似
+_BOTTOM_RATIO_TRIGGER = 1.5  # 单帧判定：底部密度 / 中部密度 阈值
+_BOTTOM_VOTE_RATIO = 0.6  # 投票判定：≥60% 采样帧命中才报疑似
 
 
 def _edge_densities(gray: "np.ndarray") -> tuple[float, float]:
@@ -183,8 +199,8 @@ def _edge_densities(gray: "np.ndarray") -> tuple[float, float]:
     import numpy as np
 
     h = gray.shape[0]
-    gy = np.abs(np.diff(gray.astype("float32"), axis=0))      # (h-1, w)
-    gx = np.abs(np.diff(gray.astype("float32"), axis=1))      # (h, w-1)
+    gy = np.abs(np.diff(gray.astype("float32"), axis=0))  # (h-1, w)
+    gx = np.abs(np.diff(gray.astype("float32"), axis=1))  # (h, w-1)
     mid0, bot0 = h // 4, int(h * 0.75)
     mid = float(gy[mid0:bot0].mean() + gx[mid0:bot0].mean())
     bottom = float(gy[bot0:].mean() + gx[bot0:].mean())

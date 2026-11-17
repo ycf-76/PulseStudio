@@ -3,6 +3,7 @@
 文档依据: docs/FEATURE_平台账号管理与作品数据回收.md（采集降级链）
 核心约束: 平台正则只做路由提示，不能成为「非这 6 个平台就不采集」的准入限制。
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
@@ -253,9 +254,13 @@ def test_detect_platform_still_routes_known_platforms():
     预期: 仍能识别为对应平台（正则只做路由提示，功能未回退）
     文档依据: docs/FEATURE_平台账号管理与作品数据回收.md#7-Spider采集层
     """
-    assert work_collector.detect_platform("https://www.xiaohongshu.com/explore/abc") == "xiaohongshu"
+    assert (
+        work_collector.detect_platform("https://www.xiaohongshu.com/explore/abc") == "xiaohongshu"
+    )
     assert work_collector.detect_platform("https://v.douyin.com/xyz/") == "douyin"
-    assert work_collector.detect_platform("https://www.bilibili.com/video/BV1xx411c7mD") == "bilibili"
+    assert (
+        work_collector.detect_platform("https://www.bilibili.com/video/BV1xx411c7mD") == "bilibili"
+    )
     assert work_collector.detect_platform("https://example.com/post/1") == "unknown"
 
 
@@ -340,7 +345,9 @@ def test_rpa_bridge_treats_any_public_url_as_collectable():
     from capabilities.rpa import feishu_agent_bridge, wechat_agent_bridge
 
     for bridge in (wechat_agent_bridge, feishu_agent_bridge):
-        has_link, url, platform = bridge._has_collectable_link("看看这篇 https://example.com/post/1")
+        has_link, url, platform = bridge._has_collectable_link(
+            "看看这篇 https://example.com/post/1"
+        )
         assert has_link is True
         assert url == "https://example.com/post/1"
         assert platform == ""
@@ -513,12 +520,14 @@ async def test_trending_search_routes_url_input_to_collector():
     with patch.object(
         work_collector, "collect_from_url", AsyncMock(return_value=stats)
     ) as collector:
-        out = await TrendingSearchSkill().execute({
-            "keyword": "看看这篇 https://example.com/post/1",
-            "platform": "tavily",
-            "limit": 10,
-            "min_interactions": 0,
-        })
+        out = await TrendingSearchSkill().execute(
+            {
+                "keyword": "看看这篇 https://example.com/post/1",
+                "platform": "tavily",
+                "limit": 10,
+                "min_interactions": 0,
+            }
+        )
 
     assert collector.await_count == 1
     assert collector.await_args.args[0] == "https://example.com/post/1"
@@ -538,15 +547,15 @@ async def test_trending_search_url_failure_returns_error_not_keyword_search():
     """
     from capabilities.content_search.skills.trending_search import TrendingSearchSkill
 
-    with patch.object(
-        work_collector, "collect_from_url", AsyncMock(return_value=None)
-    ):
-        out = await TrendingSearchSkill().execute({
-            "keyword": "https://unreachable.example.com/post",
-            "platform": "",
-            "limit": 10,
-            "min_interactions": 0,
-        })
+    with patch.object(work_collector, "collect_from_url", AsyncMock(return_value=None)):
+        out = await TrendingSearchSkill().execute(
+            {
+                "keyword": "https://unreachable.example.com/post",
+                "platform": "",
+                "limit": 10,
+                "min_interactions": 0,
+            }
+        )
 
     assert out["count"] == 0
     assert out["results"] == []

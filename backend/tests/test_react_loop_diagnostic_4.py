@@ -1,9 +1,9 @@
 """ReAct Loop 四轮诊断 — 用户报告的 P0/P1 问题验证。
 
-  Step 18: /tmp/ 硬编码 Windows 路径 (P0-1)
-  Step 19: clarification/storyboard break 时 tool_call_start 无配对 tool_call_end (P0-2)
-  Step 20: _extract_json_from_text 不处理字符串内花括号 (P1-4)
-  Step 21: _maybe_truncate_messages 切断 assistant-observation 配对 (P1-5)
+Step 18: /tmp/ 硬编码 Windows 路径 (P0-1)
+Step 19: clarification/storyboard break 时 tool_call_start 无配对 tool_call_end (P0-2)
+Step 20: _extract_json_from_text 不处理字符串内花括号 (P1-4)
+Step 21: _maybe_truncate_messages 切断 assistant-observation 配对 (P1-5)
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -27,7 +27,12 @@ class _FakeBus:
 
     async def publish(self, workflow_id, event_type, payload, turn_id=None):
         self.calls.append(
-            {"workflow_id": workflow_id, "event_type": event_type, "payload": payload, "turn_id": turn_id}
+            {
+                "workflow_id": workflow_id,
+                "event_type": event_type,
+                "payload": payload,
+                "turn_id": turn_id,
+            }
         )
         return "evt_fake"
 
@@ -53,9 +58,9 @@ class TestStep18TmpPath:
         if sys.platform == "win32":
             _tmp = os.environ.get("TEMP") or os.environ.get("TMP")
             if _tmp:
-                assert _tmp.replace("\\", "/") in state_dir_str.replace("\\", "/"), (
-                    f"Windows 上 _STATE_DIR 应使用 %TEMP%/{_tmp}，实际: {state_dir_str}"
-                )
+                assert _tmp.replace("\\", "/") in state_dir_str.replace(
+                    "\\", "/"
+                ), f"Windows 上 _STATE_DIR 应使用 %TEMP%/{_tmp}，实际: {state_dir_str}"
         else:
             _tmpdir = os.environ.get("TMPDIR")
             if _tmpdir:
@@ -64,6 +69,7 @@ class TestStep18TmpPath:
     def test_state_dir_respects_env_override(self):
         """REACTOR_STATE_DIR 环境变量是否覆盖默认值。"""
         import importlib
+
         import app.engine.reactor.loop_state as mod
 
         original = os.environ.get("REACTOR_STATE_DIR")
@@ -86,9 +92,9 @@ class TestStep18TmpPath:
         if sys.platform == "win32":
             _tmp = os.environ.get("TEMP") or os.environ.get("TMP")
             if _tmp:
-                assert not state_dir_str.startswith("/tmp"), (
-                    f"Windows 上 _STATE_DIR 不应硬编码为 /tmp，实际: {state_dir_str}"
-                )
+                assert not state_dir_str.startswith(
+                    "/tmp"
+                ), f"Windows 上 _STATE_DIR 不应硬编码为 /tmp，实际: {state_dir_str}"
 
 
 # ============================================================================
@@ -211,23 +217,24 @@ class TestStep21TruncationPairing:
         messages = [{"role": "system", "content": "system prompt"}]
         for i in range(50):
             messages.append({"role": "assistant", "content": f"thought {i}"})
-            messages.append({"role": "user", "content": f"[observation] tool_{i} -> {{\"ok\": true}}"})
+            messages.append(
+                {"role": "user", "content": f'[observation] tool_{i} -> {{"ok": true}}'}
+            )
 
         messages.append({"role": "assistant", "content": "thought 50"})
-        messages.append({"role": "user", "content": "[observation] tool_50 -> {\"ok\": true}"})
+        messages.append({"role": "user", "content": '[observation] tool_50 -> {"ok": true}'})
 
         truncated = session._maybe_truncate_messages(messages)
 
         non_system = [m for m in truncated if m.get("role") != "system"]
         if non_system:
             first = non_system[0]
-            is_orphan_obs = (
-                first.get("role") == "user"
-                and str(first.get("content", "")).startswith("[observation]")
-            )
-            assert not is_orphan_obs, (
-                "截断后第一条非 system 消息不应是孤立的 observation（无前导 assistant thought）"
-            )
+            is_orphan_obs = first.get("role") == "user" and str(
+                first.get("content", "")
+            ).startswith("[observation]")
+            assert (
+                not is_orphan_obs
+            ), "截断后第一条非 system 消息不应是孤立的 observation（无前导 assistant thought）"
 
     def test_truncation_preserves_system_messages(self):
         """截断后 system 消息应完整保留。"""

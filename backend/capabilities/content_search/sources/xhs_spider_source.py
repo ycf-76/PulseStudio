@@ -13,6 +13,7 @@
   - 需要有效登录态（storageState），过期时返回空并提示重新登录
   - 检测到验证码时自动停止
 """
+
 from __future__ import annotations
 
 import logging
@@ -111,16 +112,14 @@ class XhsSpiderSource(ContentSource):
         通过 stdout JSON 行返回结果。
         """
         if not self._check_storage_state():
-            logger.error(
-                "[xiaohongshu_spider] 登录态不可用，无法搜索。"
-                "请先扫码登录小红书。"
-            )
+            logger.error("[xiaohongshu_spider] 登录态不可用，无法搜索。" "请先扫码登录小红书。")
             return []
 
         search_limit = min(limit, 20)
 
         try:
             from capabilities.scrapling.spiders.xhs_search_spider import XhsSearchSpider
+
             raw_items = await XhsSearchSpider.run_search(keyword, search_limit)
         except Exception as e:
             logger.error(f"[xiaohongshu_spider] search_trending failed: {e}")

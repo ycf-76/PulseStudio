@@ -3,6 +3,7 @@
 设置页账号管理、我的空间平台筛选、产物平台推断共用同一份清单，
 避免各模块各自维护 PLATFORM_LABELS 导致分类不一致。
 """
+
 from __future__ import annotations
 
 SUPPORTED_PLATFORMS: tuple[str, ...] = ("xiaohongshu", "douyin", "bilibili")

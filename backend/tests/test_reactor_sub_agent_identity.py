@@ -74,17 +74,23 @@ async def test_spawn_agent_carries_real_sub_agent_identity():
     """spawn_agent：start 带 task_name 真名，end 带 dispatch 返回的 agent_id/name。"""
     bus = _FakeBus()
     session = ReactorSession(
-        llm=_FakeStreamLLM([
-            _step_with_tools([{
-                "name": "spawn_agent",
-                "arguments": {
-                    "task_name": "通勤妆容素材组",
-                    "task_description": "搜集近 7 天早八妆爆款",
-                    "role": "researcher",
-                },
-            }]),
-            _final_step(),
-        ]),
+        llm=_FakeStreamLLM(
+            [
+                _step_with_tools(
+                    [
+                        {
+                            "name": "spawn_agent",
+                            "arguments": {
+                                "task_name": "通勤妆容素材组",
+                                "task_description": "搜集近 7 天早八妆爆款",
+                                "role": "researcher",
+                            },
+                        }
+                    ]
+                ),
+                _final_step(),
+            ]
+        ),
         workflow_id="wf_sub_id",
         sse_bus=bus,
     )
@@ -119,13 +125,19 @@ async def test_tool_with_agent_id_arg_carries_id_at_start():
     """wait_agent 这类带 agent_id 的工具，start 阶段就带得出身份。"""
     bus = _FakeBus()
     session = ReactorSession(
-        llm=_FakeStreamLLM([
-            _step_with_tools([{
-                "name": "wait_agent",
-                "arguments": {"agent_id": "agent_9f3c"},
-            }]),
-            _final_step(),
-        ]),
+        llm=_FakeStreamLLM(
+            [
+                _step_with_tools(
+                    [
+                        {
+                            "name": "wait_agent",
+                            "arguments": {"agent_id": "agent_9f3c"},
+                        }
+                    ]
+                ),
+                _final_step(),
+            ]
+        ),
         workflow_id="wf_wait_agent",
         sse_bus=bus,
     )
@@ -152,13 +164,19 @@ async def test_plain_tool_emits_empty_sub_agent_fields():
     """普通工具（xhs_search 等）不得被误判成子智能体行。"""
     bus = _FakeBus()
     session = ReactorSession(
-        llm=_FakeStreamLLM([
-            _step_with_tools([{
-                "name": "xhs_search",
-                "arguments": {"query": "早八妆", "limit": 20},
-            }]),
-            _final_step(),
-        ]),
+        llm=_FakeStreamLLM(
+            [
+                _step_with_tools(
+                    [
+                        {
+                            "name": "xhs_search",
+                            "arguments": {"query": "早八妆", "limit": 20},
+                        }
+                    ]
+                ),
+                _final_step(),
+            ]
+        ),
         workflow_id="wf_plain_tool",
         sse_bus=bus,
     )

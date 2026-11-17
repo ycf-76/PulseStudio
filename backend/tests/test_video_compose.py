@@ -35,8 +35,8 @@ from capabilities.video.adapters.video_compose import (
     wrap_caption,
 )
 
-
 # ── 1. ComposeError ─────────────────────────────────────────
+
 
 class TestComposeError:
     def test_error_type_and_message(self):
@@ -51,6 +51,7 @@ class TestComposeError:
 
 
 # ── 2. _fmt_ts ─────────────────────────────────────────────
+
 
 class TestFmtTs:
     def test_zero(self):
@@ -68,6 +69,7 @@ class TestFmtTs:
 
 # ── 3. _ass_ts ─────────────────────────────────────────────
 
+
 class TestAssTs:
     def test_simple(self):
         assert _ass_ts("00:00:03,500") == "0:00:03.50"
@@ -77,6 +79,7 @@ class TestAssTs:
 
 
 # ── 4. _char_units ─────────────────────────────────────────
+
 
 class TestCharUnits:
     def test_cjk(self):
@@ -90,6 +93,7 @@ class TestCharUnits:
 
 
 # ── 5. wrap_caption ────────────────────────────────────────
+
 
 class TestWrapCaption:
     def test_short_text_no_wrap(self):
@@ -112,6 +116,7 @@ class TestWrapCaption:
 
 
 # ── 6. _auto_srt ───────────────────────────────────────────
+
 
 class TestAutoSrt:
     def test_generates_srt(self):
@@ -145,6 +150,7 @@ class TestAutoSrt:
 
 # ── 7. _srt_to_ass ─────────────────────────────────────────
 
+
 class TestSrtToAss:
     def test_converts_srt_to_ass(self):
         with tempfile.TemporaryDirectory() as td:
@@ -176,6 +182,7 @@ class TestSrtToAss:
 
 # ── 8. _image_filter ───────────────────────────────────────
 
+
 class TestImageFilter:
     def test_static(self):
         vf = _image_filter("static", 1080, 1920, 90)
@@ -196,9 +203,11 @@ class TestImageFilter:
 
 # ── 9. VideoComposeInput ───────────────────────────────────
 
+
 class TestVideoComposeInput:
     def test_valid_input(self):
         from capabilities.video.skills.video_compose import VideoComposeInput
+
         inp = VideoComposeInput(
             storyboard={"shots": [{"image": "test.png", "duration": 3}]},
         )
@@ -207,6 +216,7 @@ class TestVideoComposeInput:
 
     def test_custom_pad_mode(self):
         from capabilities.video.skills.video_compose import VideoComposeInput
+
         inp = VideoComposeInput(
             storyboard={"shots": []},
             pad_mode="trim",
@@ -216,9 +226,11 @@ class TestVideoComposeInput:
 
 # ── 10. AutoShortVideoInput ────────────────────────────────
 
+
 class TestAutoShortVideoInput:
     def test_valid_input(self):
         from capabilities.video.skills.auto_short_video import AutoShortVideoInput
+
         inp = AutoShortVideoInput(topic="为什么 Rust 正在替代 C++")
         assert inp.target_duration == 30.0
         assert inp.ratio == "9:16"
@@ -227,6 +239,7 @@ class TestAutoShortVideoInput:
 
     def test_custom_params(self):
         from capabilities.video.skills.auto_short_video import AutoShortVideoInput
+
         inp = AutoShortVideoInput(
             topic="测试主题",
             target_duration=60.0,
@@ -242,11 +255,13 @@ class TestAutoShortVideoInput:
 
     def test_topic_too_short(self):
         from capabilities.video.skills.auto_short_video import AutoShortVideoInput
+
         with pytest.raises(Exception):
             AutoShortVideoInput(topic="x")
 
     def test_duration_range(self):
         from capabilities.video.skills.auto_short_video import AutoShortVideoInput
+
         with pytest.raises(Exception):
             AutoShortVideoInput(topic="valid", target_duration=1.0)
         with pytest.raises(Exception):
@@ -254,6 +269,7 @@ class TestAutoShortVideoInput:
 
 
 # ── 11. _check_ffmpeg ──────────────────────────────────────
+
 
 class TestCheckFfmpeg:
     def test_raises_when_missing(self):

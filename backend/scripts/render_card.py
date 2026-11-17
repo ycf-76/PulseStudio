@@ -12,6 +12,7 @@
     render_card.py --html cards.html --out-dir ./out --all ".card" --prefix card
     render_card.py --selftest
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,8 +41,10 @@ async def _render(args) -> int:
     try:
         from playwright.async_api import async_playwright
     except ImportError:
-        print("ERROR: 未安装 playwright。请运行：pip install playwright && playwright install chromium",
-              file=sys.stderr)
+        print(
+            "ERROR: 未安装 playwright。请运行：pip install playwright && playwright install chromium",
+            file=sys.stderr,
+        )
         return 3
 
     html_path = Path(args.html).resolve()
@@ -65,8 +68,7 @@ async def _render(args) -> int:
             device_scale_factor=args.scale,
         )
         try:
-            await page.goto(f"file://{html_path}", wait_until="load",
-                            timeout=args.nav_timeout)
+            await page.goto(f"file://{html_path}", wait_until="load", timeout=args.nav_timeout)
         except Exception as e:
             print(f"WARN: 页面加载超时，继续渲染: {e}", file=sys.stderr)
         try:
@@ -139,9 +141,21 @@ async def _selftest() -> int:
         hp.write_text(html, encoding="utf-8")
         op = Path(d) / "t.png"
         ns = argparse.Namespace(
-            html=str(hp), out=str(op), out_dir=None, selector=".card", all=None,
-            prefix="card", full_page=False, width=400, height=225, scale=2,
-            format="png", quality=90, wait=300, nav_timeout=20000, proxy=None,
+            html=str(hp),
+            out=str(op),
+            out_dir=None,
+            selector=".card",
+            all=None,
+            prefix="card",
+            full_page=False,
+            width=400,
+            height=225,
+            scale=2,
+            format="png",
+            quality=90,
+            wait=300,
+            nav_timeout=20000,
+            proxy=None,
         )
         rc = await _render(ns)
         if rc == 0 and op.is_file() and op.stat().st_size > 0:

@@ -47,14 +47,14 @@ _DESIGN_W = 1080
 _DESIGN_H = 1920
 
 # 亮色盘（v3 视觉冲击的"记忆点"色）
-_YELLOW = "#FFE066"   # 亮黄（主强调）
+_YELLOW = "#FFE066"  # 亮黄（主强调）
 _YELLOW_SHADOW = "#E0B400"
-_RED = "#FF4D4D"      # 亮红（次强调）
+_RED = "#FF4D4D"  # 亮红（次强调）
 _RED_SHADOW = "#C22F2F"
-_ORANGE = "#FF9F43"   # 橙（渐变副色）
-_GREEN = "#22C55E"    # 亮绿（v4 split_compare 正确侧）
-_TEAL = "#4ECDC4"     # 青绿（数据类）
-_PURPLE = "#A78BFA"   # 紫（柱状图）
+_ORANGE = "#FF9F43"  # 橙（渐变副色）
+_GREEN = "#22C55E"  # 亮绿（v4 split_compare 正确侧）
+_TEAL = "#4ECDC4"  # 青绿（数据类）
+_PURPLE = "#A78BFA"  # 紫（柱状图）
 _BAR_COLORS = [_RED, _YELLOW, _TEAL, _PURPLE, _ORANGE]
 
 
@@ -132,10 +132,7 @@ def _word_spans(
     if not words:
         ws = split_words(text)
         step = duration / max(len(ws), 1)
-        words = [
-            {"text": w, "start": i * step, "end": (i + 1) * step}
-            for i, w in enumerate(ws)
-        ]
+        words = [{"text": w, "start": i * step, "end": (i + 1) * step} for i, w in enumerate(ws)]
     parts = []
     for i, w in enumerate(words):
         cls = "word"
@@ -228,6 +225,7 @@ function __idle(el, t, t0, dy, rot, freq, sc, ph) {
 
 # ── 字幕类 ────────────────────────────────────────────────
 
+
 def caption_pop(
     text: str,
     width: int = 1080,
@@ -263,8 +261,7 @@ def caption_pop(
         wt = w["text"]
         cls = "word"
         if accent_words:
-            hit = next((j for j, a in enumerate(accent_words)
-                        if a in wt or wt in a), -1)
+            hit = next((j for j, a in enumerate(accent_words) if a in wt or wt in a), -1)
             if hit >= 0:
                 cls += f" accent c{hit % 2 + 1}"
         spans_parts.append(f'<span class="{cls}" data-i="{i}">{wt}</span>')
@@ -408,6 +405,7 @@ window.seekTo = function(t) {
 
 # ── 关键词/图标类 ─────────────────────────────────────────
 
+
 def keyword_icon(
     keyword: str = "",
     icon: str = "📌",
@@ -456,7 +454,8 @@ window.seekTo = function(t) {
     return _doc(
         f'<div class="keyword-box"><span class="icon">{icon}</span>'
         f'<span class="txt-col"><span class="keyword">{keyword}</span>{subtitle_html}</span></div>',
-        css, js,
+        css,
+        js,
     )
 
 
@@ -505,11 +504,14 @@ window.seekTo = function(t) {
 };"""
     return _doc(
         f'<div class="highlight-box"><div class="marker"></div>'
-        f'<span class="keyword">{keyword}</span></div>', css, js,
+        f'<span class="keyword">{keyword}</span></div>',
+        css,
+        js,
     )
 
 
 # ── 卡片类 ────────────────────────────────────────────────
+
 
 def stat_card(
     label: str = "",
@@ -554,7 +556,8 @@ window.seekTo = function(t) {
     return _doc(
         f'<div class="card"><div class="icon">{icon}</div>'
         f'<div class="value">{value}</div><div class="label">{label}</div></div>',
-        css, js,
+        css,
+        js,
     )
 
 
@@ -616,7 +619,8 @@ window.seekTo = function(t) {
     return _doc(
         f'<div class="title-box"><div class="title">{title}</div>'
         f'<div class="accent-line"></div>{subtitle_html}</div>',
-        css, js,
+        css,
+        js,
     )
 
 
@@ -664,7 +668,9 @@ window.seekTo = function(t) {{
 }};"""
     return _doc(
         f'<div class="card"><div class="label">{label}</div>'
-        f'<div class="value" id="counter">{value}</div></div>', css, js,
+        f'<div class="value" id="counter">{value}</div></div>',
+        css,
+        js,
     )
 
 
@@ -763,11 +769,14 @@ window.seekTo = function(t) {
 };"""
     return _doc(
         f'<div class="lower-third"><div class="title">{title}</div>'
-        f'<div class="subtitle">{subtitle}</div></div>', css, js,
+        f'<div class="subtitle">{subtitle}</div></div>',
+        css,
+        js,
     )
 
 
 # ── v3 新增：强视觉结构类 ─────────────────────────────────
+
 
 def _fit_font_size(text: str, base: int, steps: list[tuple[int, int]]) -> int:
     """按字数分档缩字号 — 防长标题折行产生孤字（2026-10-27 o10/o23 实证）。
@@ -835,7 +844,9 @@ window.seekTo = function(t) {
 };"""
     return _doc(
         f'<div class="section"><div class="num">{number}</div>'
-        f'<div class="txt">{title}</div></div>', css, js,
+        f'<div class="txt">{title}</div></div>',
+        css,
+        js,
     )
 
 
@@ -868,6 +879,7 @@ window.seekTo = function(t) {
 
 
 # ── v4 新增：画面互动 + 整屏冲击类 ─────────────────────────
+
 
 def arrow_point(
     x: float = 0.5,
@@ -1014,7 +1026,8 @@ window.seekTo = function(t) {{
         f'<ellipse cx="{d / 2:.0f}" cy="{d * 0.36:.0f}" rx="{rx:.0f}" ry="{ry:.0f}" fill="none" '
         f'stroke="{color}" stroke-width="12" stroke-linecap="round" '
         f'transform="rotate(-8 {d / 2:.0f} {d * 0.36:.0f})"/></svg>{chip_html}</div>',
-        css, js,
+        css,
+        js,
     )
 
 
@@ -1085,7 +1098,8 @@ window.seekTo = function(t) {{
     return _doc(
         f'<div class="flash"><div class="stripe"></div>'
         f'<div class="core"><div class="big">{text}</div>{sub_html}</div></div>',
-        css, js,
+        css,
+        js,
     )
 
 
@@ -1106,7 +1120,13 @@ def split_compare(
     兼容键名：wrong_text/left_text/bad → bad_text；right_text/good → good_text；
     bad_emoji/good_emoji → 图标。
     """
-    bad_text = str(bad_text or kwargs.get("wrong_text") or kwargs.get("left_text") or kwargs.get("bad") or "常见误区")
+    bad_text = str(
+        bad_text
+        or kwargs.get("wrong_text")
+        or kwargs.get("left_text")
+        or kwargs.get("bad")
+        or "常见误区"
+    )
     good_text = str(good_text or kwargs.get("right_text") or kwargs.get("good") or "正确做法")
     bad_icon = str(kwargs.get("bad_emoji") or bad_icon)
     good_icon = str(kwargs.get("good_emoji") or good_icon)
@@ -1150,8 +1170,9 @@ window.seekTo = function(t) {
         f'<div class="split">'
         f'<div class="half bad"><div class="mk">{bad_icon}</div><div class="tx">{bad_text}</div></div>'
         f'<div class="half good"><div class="mk">{good_icon}</div><div class="tx">{good_text}</div></div>'
-        f'</div>',
-        css, js,
+        f"</div>",
+        css,
+        js,
     )
 
 

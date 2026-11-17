@@ -3,6 +3,7 @@
 使用 Scrapling StealthySession（反检测浏览器）。
 抖音页面高度动态化，需要等待 JS 渲染完成。
 """
+
 from __future__ import annotations
 
 import logging
@@ -77,8 +78,7 @@ class DouyinSpider(BasePlatformSpider):
             return []
 
         video_cards = page.css(
-            "[class*='video-card'], [class*='aweme-card'], "
-            "a[href*='/video/'], a[href*='/note/']"
+            "[class*='video-card'], [class*='aweme-card'], " "a[href*='/video/'], a[href*='/note/']"
         )
 
         logger.info(f"DouyinSpider: found {len(video_cards)} video cards on user home")
@@ -193,8 +193,8 @@ class DouyinSpider(BasePlatformSpider):
     def _extract_aweme_id(url: str) -> str:
         """从 URL 中提取 aweme_id。"""
         patterns = [
-            r'douyin\.com/video/(\d+)',
-            r'douyin\.com/note/(\d+)',
+            r"douyin\.com/video/(\d+)",
+            r"douyin\.com/note/(\d+)",
         ]
         for pat in patterns:
             m = re.search(pat, url)

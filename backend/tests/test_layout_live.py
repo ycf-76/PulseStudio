@@ -10,6 +10,7 @@
   3. VLM 布局审查：每段中点抽帧看构图
   4. 降级链不在本脚本范围（单测已覆盖）
 """
+
 import asyncio
 import json
 import sys
@@ -41,12 +42,14 @@ async def main() -> None:
 
     skill = DynamicLayoutSkill()
     events = []
-    async for ev in skill.execute({
-        "video_path": str(VIDEO),
-        "gate_mode": "auto_confirm",
-        "brolls": brolls,
-        "transcript": transcript,
-    }):
+    async for ev in skill.execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": "auto_confirm",
+            "brolls": brolls,
+            "transcript": transcript,
+        }
+    ):
         print(f"[event] {json.dumps(ev, ensure_ascii=False)[:400]}")
         events.append(ev)
 
@@ -66,7 +69,11 @@ async def main() -> None:
         print(
             f"  段{i}: {seg['start']:.1f}-{seg['end']:.1f}s "
             f"{seg['primitive']}"
-            + (f" @{seg.get('pip_position')} x{seg.get('pip_scale')}" if seg["primitive"] == "pip" else "")
+            + (
+                f" @{seg.get('pip_position')} x{seg.get('pip_scale')}"
+                if seg["primitive"] == "pip"
+                else ""
+            )
             + f" main={seg.get('main_source')} — {seg.get('reason', '')}"
         )
     print(f"\n[live] 成片: {out}")
@@ -78,6 +85,7 @@ async def main() -> None:
 
     # 成片时长校验 ≈ 源片
     from capabilities.video.adapters.silence_detect import probe_duration
+
     src_d, out_d = await probe_duration(str(VIDEO)), await probe_duration(str(out))
     print(f"[live] 时长: 源 {src_d:.2f}s → 成片 {out_d:.2f}s（差 {abs(src_d - out_d):.2f}s）")
     if abs(src_d - out_d) > 0.5:

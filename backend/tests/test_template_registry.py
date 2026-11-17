@@ -2,6 +2,7 @@ import pytest
 
 try:
     from app.templates.registry import BUILTIN_TEMPLATES, TemplateRegistry
+
     HAS_REGISTRY = True
 except ImportError:
     HAS_REGISTRY = False

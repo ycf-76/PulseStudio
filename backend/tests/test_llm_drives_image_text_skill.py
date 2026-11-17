@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import pytest
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.core.skill_base import Skill, PromptDrivenSkill
-from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
+import pytest
 
+from app.core.skill_base import PromptDrivenSkill, Skill
+from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
 
 IMAGE_TEXT_PRODUCE_SKILLS = {
     "xhs_note_creator",
@@ -32,18 +32,44 @@ IMAGE_TEXT_PRODUCE_SKILLS = {
 }
 
 IMAGE_TEXT_ALL_SKILL_NAMES = {
-    "xhs_note_creator", "copywriting", "social_content",
-    "card_xiaohongshu", "card_quote", "card_design", "infographic",
-    "poster_hero", "comparison_card", "style_transfer",
-    "content_matrix", "topic_evaluator", "hook_generator", "carousel_planner",
-    "voice_builder", "positioning_analysis",
-    "publish_checklist", "quality_gate", "risk_scanner", "content_repurposing",
-    "trending_topics", "competitor_analysis", "content_gap_analysis",
-    "data_tracker", "comment_insights", "strategy_advisor", "content_postmortem",
-    "text_polisher", "text_condenser", "caption_hashtag", "post_formatter",
+    "xhs_note_creator",
+    "copywriting",
+    "social_content",
+    "card_xiaohongshu",
+    "card_quote",
+    "card_design",
+    "infographic",
+    "poster_hero",
+    "comparison_card",
+    "style_transfer",
+    "content_matrix",
+    "topic_evaluator",
+    "hook_generator",
+    "carousel_planner",
+    "voice_builder",
+    "positioning_analysis",
+    "publish_checklist",
+    "quality_gate",
+    "risk_scanner",
+    "content_repurposing",
+    "trending_topics",
+    "competitor_analysis",
+    "content_gap_analysis",
+    "data_tracker",
+    "comment_insights",
+    "strategy_advisor",
+    "content_postmortem",
+    "text_polisher",
+    "text_condenser",
+    "caption_hashtag",
+    "post_formatter",
     "persona_check",
-    "casual", "elegant", "lively_girl", "professional",
-    "trending_search", "xhs_search",
+    "casual",
+    "elegant",
+    "lively_girl",
+    "professional",
+    "trending_search",
+    "xhs_search",
 }
 
 
@@ -64,11 +90,13 @@ class _ScriptedLLM:
         if self._call_count < len(self._responses):
             resp = self._responses[self._call_count]
         else:
-            resp = json.dumps({
-                "thought": "已完成所有步骤",
-                "final": True,
-                "output": {"result": "图文作品生成完成"},
-            })
+            resp = json.dumps(
+                {
+                    "thought": "已完成所有步骤",
+                    "final": True,
+                    "output": {"result": "图文作品生成完成"},
+                }
+            )
         self._call_count += 1
         return {"content": resp, "reasoning_content": None, "token_usage": 100}
 
@@ -78,19 +106,25 @@ class _ScriptedLLM:
 
 
 def _make_tool_call_json(thought: str, tool_name: str, arguments: dict, final: bool = False):
-    return json.dumps({
-        "thought": thought,
-        "tool_calls": [{"name": tool_name, "arguments": arguments}],
-        "final": final,
-    }, ensure_ascii=False)
+    return json.dumps(
+        {
+            "thought": thought,
+            "tool_calls": [{"name": tool_name, "arguments": arguments}],
+            "final": final,
+        },
+        ensure_ascii=False,
+    )
 
 
 def _make_final_json(thought: str, output: dict):
-    return json.dumps({
-        "thought": thought,
-        "final": True,
-        "output": output,
-    }, ensure_ascii=False)
+    return json.dumps(
+        {
+            "thought": thought,
+            "final": True,
+            "output": output,
+        },
+        ensure_ascii=False,
+    )
 
 
 # ============================================================================
@@ -229,7 +263,7 @@ class TestCreationTypeSkillResolution:
         assert "lively_girl" in names
 
     def test_image_text_includes_always_load_skills(self):
-        from app.agents.registry import _resolve_creation_type_skills, ALWAYS_LOAD_SKILLS
+        from app.agents.registry import ALWAYS_LOAD_SKILLS, _resolve_creation_type_skills
 
         names = _resolve_creation_type_skills("image_text")
         for name in ALWAYS_LOAD_SKILLS:
@@ -250,9 +284,13 @@ class TestLLMRoutingForImageText:
         from app.agents.chat_agent import ChatAgent
         from app.engine.schemas import AgentOutput
 
-        llm = _ScriptedLLM([
-            json.dumps({"thought": "完成", "final": True, "output": {"result": "图文创作完成"}}),
-        ])
+        llm = _ScriptedLLM(
+            [
+                json.dumps(
+                    {"thought": "完成", "final": True, "output": {"result": "图文创作完成"}}
+                ),
+            ]
+        )
 
         class _FakeHarnessWithRun:
             llm = None
@@ -261,7 +299,10 @@ class TestLLMRoutingForImageText:
 
             async def run(self, message, context=None, context_manager=None):
                 self.run_called = True
-                return {"result": "图文创作完成", "skills_used": ["xhs_note_creator"]}  # 真实 run() 返回 dict
+                return {
+                    "result": "图文创作完成",
+                    "skills_used": ["xhs_note_creator"],
+                }  # 真实 run() 返回 dict
 
             async def shutdown(self):
                 pass
@@ -270,7 +311,9 @@ class TestLLMRoutingForImageText:
             def __init__(self):
                 self.harness = _FakeHarnessWithRun()
 
-            def build_session(self, agent_id, workflow_id=None, creation_type=None, auto_approve=True):
+            def build_session(
+                self, agent_id, workflow_id=None, creation_type=None, auto_approve=True
+            ):
                 return self.harness
 
         registry = _FakeReg()
@@ -297,7 +340,9 @@ class TestLLMRoutingForImageText:
                 pass
 
         class _FakeReg:
-            def build_session(self, agent_id, workflow_id=None, creation_type=None, auto_approve=True):
+            def build_session(
+                self, agent_id, workflow_id=None, creation_type=None, auto_approve=True
+            ):
                 return _FakeHarnessNoLLM()
 
         agent = ChatAgent(registry=_FakeReg())
@@ -332,42 +377,53 @@ class TestLLMDrivesFullImageTextWorkflow:
         skill_note = self.registry.get("produce", "xhs_note_creator")()
         skill_card = self.registry.get("produce", "card_xiaohongshu")()
 
-        note_result = json.dumps({
-            "title": "极简生活｜5个习惯让你越活越轻盈",
-            "content": "极简不是扔东西，而是让每件物品都有存在的理由...",
-            "tags": ["极简生活", "断舍离", "生活方式"],
-            "card_plan": [
-                {"type": "cover", "title": "极简生活"},
-                {"type": "content", "title": "习惯1：一进一出"},
-                {"type": "content", "title": "习惯2：5分钟整理"},
-                {"type": "content", "title": "习惯3：数字极简"},
-                {"type": "ending", "title": "开始你的极简之旅"},
-            ],
-        }, ensure_ascii=False)
+        note_result = json.dumps(
+            {
+                "title": "极简生活｜5个习惯让你越活越轻盈",
+                "content": "极简不是扔东西，而是让每件物品都有存在的理由...",
+                "tags": ["极简生活", "断舍离", "生活方式"],
+                "card_plan": [
+                    {"type": "cover", "title": "极简生活"},
+                    {"type": "content", "title": "习惯1：一进一出"},
+                    {"type": "content", "title": "习惯2：5分钟整理"},
+                    {"type": "content", "title": "习惯3：数字极简"},
+                    {"type": "ending", "title": "开始你的极简之旅"},
+                ],
+            },
+            ensure_ascii=False,
+        )
 
         card_result = "<!--card-html--><html><body><div class='card' style='width:1080px;height:1440px;'>卡片1</div></body></html><!--/card-html-->"
 
         mock_llm = _ScriptedLLM([note_result, card_result])
 
-        step1 = await skill_note.execute({
-            "llm": mock_llm,
-            "topic": "极简生活",
-            "platform": "小红书",
-        })
+        step1 = await skill_note.execute(
+            {
+                "llm": mock_llm,
+                "topic": "极简生活",
+                "platform": "小红书",
+            }
+        )
 
         assert isinstance(step1, dict)
         assert "error" not in step1 or step1.get("error") is None
-        print(f"\n[Step1 xhs_note_creator] LLM调用={mock_llm._call_count}, 结果keys={list(step1.keys())}")
+        print(
+            f"\n[Step1 xhs_note_creator] LLM调用={mock_llm._call_count}, 结果keys={list(step1.keys())}"
+        )
 
-        step2 = await skill_card.execute({
-            "llm": mock_llm,
-            "topic": "极简生活",
-            "content": note_result,
-            "platform": "小红书",
-        })
+        step2 = await skill_card.execute(
+            {
+                "llm": mock_llm,
+                "topic": "极简生活",
+                "content": note_result,
+                "platform": "小红书",
+            }
+        )
 
         assert isinstance(step2, dict)
-        print(f"[Step2 card_xiaohongshu] LLM调用={mock_llm._call_count}, 结果keys={list(step2.keys())}")
+        print(
+            f"[Step2 card_xiaohongshu] LLM调用={mock_llm._call_count}, 结果keys={list(step2.keys())}"
+        )
         print(f"[总LLM调用次数] {mock_llm._call_count}")
 
         assert mock_llm._call_count == 2
@@ -378,29 +434,36 @@ class TestLLMDrivesFullImageTextWorkflow:
         skill_copywrite = self.registry.get("copywrite", "lively_girl")()
         skill_card = self.registry.get("produce", "card_xiaohongshu")()
 
-        copywrite_result = json.dumps({
-            "title": "AI教育也太香了吧！",
-            "content": "姐妹们！AI教育真的绝绝子...",
-            "tags": ["AI教育", "未来课堂", "教育科技"],
-        }, ensure_ascii=False)
+        copywrite_result = json.dumps(
+            {
+                "title": "AI教育也太香了吧！",
+                "content": "姐妹们！AI教育真的绝绝子...",
+                "tags": ["AI教育", "未来课堂", "教育科技"],
+            },
+            ensure_ascii=False,
+        )
 
         card_result = "<!--card-html--><html><body>卡片HTML</body></html><!--/card-html-->"
 
         mock_llm = _ScriptedLLM([copywrite_result, card_result])
 
-        step1 = await skill_copywrite.execute({
-            "llm": mock_llm,
-            "topic": "AI教育",
-        })
+        step1 = await skill_copywrite.execute(
+            {
+                "llm": mock_llm,
+                "topic": "AI教育",
+            }
+        )
 
         assert isinstance(step1, dict)
         print(f"\n[Step1 lively_girl copywrite] LLM调用={mock_llm._call_count}")
 
-        step2 = await skill_card.execute({
-            "llm": mock_llm,
-            "topic": "AI教育",
-            "content": copywrite_result,
-        })
+        step2 = await skill_card.execute(
+            {
+                "llm": mock_llm,
+                "topic": "AI教育",
+                "content": copywrite_result,
+            }
+        )
 
         assert isinstance(step2, dict)
         print(f"[Step2 card_xiaohongshu] LLM调用={mock_llm._call_count}")
@@ -426,28 +489,37 @@ class TestPromptDrivenSkillExecution:
         skill_cls = self.registry.get("produce", "xhs_note_creator")
         skill = skill_cls()
 
-        mock_llm = _ScriptedLLM([
-            json.dumps({
-                "title": "AI教育：5个你不知道的真相",
-                "content": "AI正在改变教育的方方面面...",
-                "tags": ["AI教育", "未来课堂"],
-                "card_plan": [
-                    {"type": "cover", "title": "AI教育真相"},
-                    {"type": "content", "title": "个性化学习"},
-                    {"type": "ending", "title": "行动号召"},
-                ],
-            }, ensure_ascii=False),
-        ])
+        mock_llm = _ScriptedLLM(
+            [
+                json.dumps(
+                    {
+                        "title": "AI教育：5个你不知道的真相",
+                        "content": "AI正在改变教育的方方面面...",
+                        "tags": ["AI教育", "未来课堂"],
+                        "card_plan": [
+                            {"type": "cover", "title": "AI教育真相"},
+                            {"type": "content", "title": "个性化学习"},
+                            {"type": "ending", "title": "行动号召"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+            ]
+        )
 
-        result = await skill.execute({
-            "llm": mock_llm,
-            "topic": "AI教育",
-            "platform": "小红书",
-        })
+        result = await skill.execute(
+            {
+                "llm": mock_llm,
+                "topic": "AI教育",
+                "platform": "小红书",
+            }
+        )
 
         assert isinstance(result, dict)
         assert "error" not in result or result.get("error") is None
-        print(f"\n[xhs_note_creator execute 结果] {json.dumps(result, ensure_ascii=False, indent=2)[:500]}")
+        print(
+            f"\n[xhs_note_creator execute 结果] {json.dumps(result, ensure_ascii=False, indent=2)[:500]}"
+        )
 
     @pytest.mark.asyncio
     async def test_card_xiaohongshu_execute_with_mock_llm(self):
@@ -455,18 +527,24 @@ class TestPromptDrivenSkillExecution:
         skill_cls = self.registry.get("produce", "card_xiaohongshu")
         skill = skill_cls()
 
-        mock_llm = _ScriptedLLM([
-            "<!--card-html--><!DOCTYPE html><html><head><style>.card{width:1080px;height:1440px;}</style></head><body><div class='card'>测试卡片</div></body></html><!--/card-html-->",
-        ])
+        mock_llm = _ScriptedLLM(
+            [
+                "<!--card-html--><!DOCTYPE html><html><head><style>.card{width:1080px;height:1440px;}</style></head><body><div class='card'>测试卡片</div></body></html><!--/card-html-->",
+            ]
+        )
 
-        result = await skill.execute({
-            "llm": mock_llm,
-            "topic": "极简生活",
-            "platform": "小红书",
-        })
+        result = await skill.execute(
+            {
+                "llm": mock_llm,
+                "topic": "极简生活",
+                "platform": "小红书",
+            }
+        )
 
         assert isinstance(result, dict)
-        print(f"\n[card_xiaohongshu execute 结果] {json.dumps(result, ensure_ascii=False, indent=2)[:500]}")
+        print(
+            f"\n[card_xiaohongshu execute 结果] {json.dumps(result, ensure_ascii=False, indent=2)[:500]}"
+        )
 
     @pytest.mark.asyncio
     async def test_prompt_skill_without_llm_returns_error(self):
@@ -474,9 +552,11 @@ class TestPromptDrivenSkillExecution:
         skill_cls = self.registry.get("produce", "xhs_note_creator")
         skill = skill_cls()
 
-        result = await skill.execute({
-            "topic": "AI教育",
-        })
+        result = await skill.execute(
+            {
+                "topic": "AI教育",
+            }
+        )
 
         assert isinstance(result, dict)
         assert "error" in result

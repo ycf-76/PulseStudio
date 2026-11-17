@@ -36,6 +36,7 @@ class SilenceDetectError(Exception):
 @dataclass(frozen=True)
 class SilenceSegment:
     """一个静音片段。"""
+
     start: float
     end: float
     duration: float
@@ -60,6 +61,7 @@ async def _run(cmd: list[str]) -> str:
     """
     if cmd and cmd[0] in ("ffmpeg", "ffprobe"):
         from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+
         exe = resolve_ffmpeg()
         if exe:
             cmd = [exe, *cmd[1:]]
@@ -73,7 +75,9 @@ async def _run(cmd: list[str]) -> str:
         returncode = process.returncode
     except NotImplementedError:
         result = await asyncio.to_thread(
-            subprocess.run, cmd, capture_output=True,
+            subprocess.run,
+            cmd,
+            capture_output=True,
         )
         stdout, stderr, returncode = result.stdout, result.stderr, result.returncode
 
@@ -144,9 +148,14 @@ async def detect_silence(
         raise SilenceDetectError("file_not_found", f"视频文件不存在：{video_path}")
 
     cmd = [
-        "ffmpeg", "-i", video_path,
-        "-af", f"silencedetect=noise={threshold_db}dB:duration={min_duration}",
-        "-f", "null", "-",
+        "ffmpeg",
+        "-i",
+        video_path,
+        "-af",
+        f"silencedetect=noise={threshold_db}dB:duration={min_duration}",
+        "-f",
+        "null",
+        "-",
     ]
 
     try:
@@ -170,7 +179,10 @@ async def detect_silence(
 
 
 ADAPTIVE_TIERS: list[tuple[float, float]] = [
-    (-35.0, 0.6), (-32.0, 0.5), (-30.0, 0.35), (-28.0, 0.3),
+    (-35.0, 0.6),
+    (-32.0, 0.5),
+    (-30.0, 0.35),
+    (-28.0, 0.3),
 ]
 
 
@@ -189,10 +201,12 @@ async def detect_silence_adaptive(
         (segments, hit_tier) — hit_tier 为命中的 (threshold_db,
         min_duration)；全部档位 0 段时 ([], None)。
     """
-    for tier in (tiers or ADAPTIVE_TIERS):
+    for tier in tiers or ADAPTIVE_TIERS:
         threshold_db, min_duration = tier
         segs = await detect_silence(
-            video_path, threshold_db=threshold_db, min_duration=min_duration,
+            video_path,
+            threshold_db=threshold_db,
+            min_duration=min_duration,
         )
         if segs:
             return segs, tier
@@ -222,10 +236,16 @@ async def has_audio_track(video_path: str) -> bool:
 
     # 2. ffprobe（系统 PATH 有 ffprobe 时）
     cmd = [
-        "ffprobe", "-v", "error",
-        "-select_streams", "a:0",
-        "-show_entries", "stream=codec_name",
-        "-of", "csv=p=0", video_path,
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=codec_name",
+        "-of",
+        "csv=p=0",
+        video_path,
     ]
     try:
         try:
@@ -238,7 +258,9 @@ async def has_audio_track(video_path: str) -> bool:
             returncode = process.returncode
         except NotImplementedError:
             result = await asyncio.to_thread(
-                subprocess.run, cmd, capture_output=True,
+                subprocess.run,
+                cmd,
+                capture_output=True,
             )
             stdout, returncode = result.stdout, result.returncode
         return returncode == 0 and bool(stdout.decode().strip())
@@ -268,9 +290,14 @@ async def probe_duration(video_path: str) -> float:
 
     # 2. ffprobe（系统 PATH 有 ffprobe 时）
     cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=nw=1:nk=1", video_path,
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=nw=1:nk=1",
+        video_path,
     ]
     try:
         try:
@@ -282,7 +309,9 @@ async def probe_duration(video_path: str) -> float:
             stdout, _ = await process.communicate()
         except (NotImplementedError, OSError):
             result = await asyncio.to_thread(
-                subprocess.run, cmd, capture_output=True,
+                subprocess.run,
+                cmd,
+                capture_output=True,
             )
             stdout = result.stdout
         return float(stdout.decode().strip())

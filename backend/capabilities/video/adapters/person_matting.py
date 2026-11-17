@@ -36,6 +36,7 @@ class MatteResult(BaseModel):
     命名：%06d.png（无 frame_ 前缀，frame_dir 下 0 起始）。pattern 字段供
     scene 引用与 review 断链检查使用；旧 meta.json 缓存缺该字段时用默认值。
     """
+
     frame_dir: Path
     count: int = Field(ge=0)
     fps: float = Field(gt=0)
@@ -115,7 +116,9 @@ def _write_frame(fgr_rgb: np.ndarray, pha: np.ndarray, path: Path) -> Path:
 
 
 def _matte_sync(
-    video_path: str, model: Any, frame_dir: Path,
+    video_path: str,
+    model: Any,
+    frame_dir: Path,
 ) -> tuple[int, int, int]:
     """同步重活（读帧 + RVM 推理 + PNG 逐帧落盘，流式不积内存）。
 
@@ -132,9 +135,7 @@ def _matte_sync(
     ratio = None
     try:
         with av.open(video_path) as container:
-            stream = next(
-                s for s in container.streams if s.type == "video"
-            )
+            stream = next(s for s in container.streams if s.type == "video")
             for frame in container.decode(stream):
                 bgr = frame.to_ndarray(format="bgr24")
                 if ratio is None:
@@ -143,15 +144,15 @@ def _matte_sync(
                 rgb = bgr[..., ::-1]
                 src = (
                     torch.from_numpy(rgb.copy())
-                    .float().div_(255.0)
-                    .permute(2, 0, 1).unsqueeze(0).cuda()
+                    .float()
+                    .div_(255.0)
+                    .permute(2, 0, 1)
+                    .unsqueeze(0)
+                    .cuda()
                 )
                 with torch.no_grad():
                     fgr, pha, *rec = model(src, *rec, ratio)
-                fgr_rgb = (
-                    fgr[0].mul(255).clamp_(0, 255).byte()
-                    .permute(1, 2, 0).cpu().numpy()
-                )
+                fgr_rgb = fgr[0].mul(255).clamp_(0, 255).byte().permute(1, 2, 0).cpu().numpy()
                 pha_np = pha[0, 0].float().cpu().numpy()
                 _write_frame(fgr_rgb, pha_np, frame_dir / f"{count:06d}.png")
                 count += 1
@@ -199,14 +200,21 @@ async def matte_person(video_path: str, out_dir: Path) -> MatteResult | None:
         frame_dir = out_dir / "frames"
         frame_dir.mkdir(parents=True, exist_ok=True)
         count, w, h = await asyncio.to_thread(
-            _matte_sync, video_path, model, frame_dir,
+            _matte_sync,
+            video_path,
+            model,
+            frame_dir,
         )
         if count <= 0:
             logger.warning("[matting] 0 帧产出，降级 None")
             return None
 
         result = MatteResult(
-            frame_dir=frame_dir, count=count, fps=fps, width=w, height=h,
+            frame_dir=frame_dir,
+            count=count,
+            fps=fps,
+            width=w,
+            height=h,
         )
         (out_dir / "meta.json").write_text(
             json.dumps(result.model_dump(mode="json", exclude={"frame_dir"})),

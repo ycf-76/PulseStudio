@@ -23,7 +23,9 @@ def _git_short_hash() -> str:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=2,
+            capture_output=True,
+            text=True,
+            timeout=2,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         )
         if out.returncode == 0:
@@ -35,6 +37,7 @@ def _git_short_hash() -> str:
 
 def _version_line() -> str:
     from app.config import get_settings
+
     s = get_settings()
     ver = getattr(s, "app_version", "1.0.0")
     h = _git_short_hash()
@@ -51,7 +54,9 @@ _TAGLINES = [
 
 
 def _tagline() -> str:
-    import hashlib, time
+    import hashlib
+    import time
+
     idx = int(hashlib.md5(str(int(time.time()) // 3600).encode()).hexdigest(), 16) % len(_TAGLINES)
     return _TAGLINES[idx]
 

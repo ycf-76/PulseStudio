@@ -10,12 +10,7 @@
 
 import re
 
-_CJK = (
-    r"㐀-䶿"
-    r"一-鿿"
-    r"豈-﫿"
-    r"\U00020000-\U0002ffff"
-)
+_CJK = r"㐀-䶿" r"一-鿿" r"豈-﫿" r"\U00020000-\U0002ffff"
 _CJK_RE = re.compile(f"[{_CJK}]")
 _WORD_RE = re.compile(r"[A-Za-z]+(?:['\-][A-Za-z]+)*")
 _NUM_RE = re.compile(r"\d+(?:[.,]\d+)*")

@@ -53,6 +53,7 @@ class DevToSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             self._client = await create_async_client(
                 timeout=httpx.Timeout(self.timeout),
@@ -62,9 +63,7 @@ class DevToSource(ContentSource):
             )
         return self._client
 
-    async def _translate_results(
-        self, results: list[TrendingContent]
-    ) -> list[TrendingContent]:
+    async def _translate_results(self, results: list[TrendingContent]) -> list[TrendingContent]:
         if not results:
             return results
         client = await self._ensure_client()

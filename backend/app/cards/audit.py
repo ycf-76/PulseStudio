@@ -9,23 +9,40 @@ after the image is rendered.
 The numbers below mirror renderer.py's CSS. They are budgets, not exact layout —
 the final PNG export is still the ground truth.
 """
+
 from __future__ import annotations
 
 import math
 
 from app.cards.schema import (
-    BentoGrid, CardDeck, CardPage, Code, Compare, Cta, Footer, Heading, IconGrid, ImageBlock,
-    Kicker, ListBlock, Qa, Quote, Stat, Steps, Text, Timeline,
+    BentoGrid,
+    CardDeck,
+    CardPage,
+    Code,
+    Compare,
+    Cta,
+    Footer,
+    Heading,
+    IconGrid,
+    ImageBlock,
+    Kicker,
+    ListBlock,
+    Qa,
+    Quote,
+    Stat,
+    Steps,
+    Text,
+    Timeline,
 )
 
 CANVAS_H = 1440
 PAD_TOP = 88
-PAD_BOTTOM = 190          # 给绝对定位的 footer 留位
+PAD_BOTTOM = 190  # 给绝对定位的 footer 留位
 CONTENT_H = CANVAS_H - PAD_TOP - PAD_BOTTOM
 CONTENT_W = 1080 - 82 * 2
 
-FILL_MIN = 0.75           # 内容需覆盖 ≥75% 可用画高
-DEAD_BAND_MAX = 0.15      # 任何空白带 >15% 画高即判失败
+FILL_MIN = 0.75  # 内容需覆盖 ≥75% 可用画高
+DEAD_BAND_MAX = 0.15  # 任何空白带 >15% 画高即判失败
 
 # 最小密度线：低于此值，该骨架必然出现死空白（来自 Pulse card-recipes 的实战阈值）
 MIN_DENSITY: dict[str, tuple[str, int]] = {
@@ -41,13 +58,13 @@ MIN_DENSITY: dict[str, tuple[str, int]] = {
 }
 
 LINE_H = {
-    "cover_h1": 136,      # 116px * 1.17
-    "body_h1": 80,        # 66px * 1.22
-    "text": 58,           # 34px * 1.7
-    "cta": 68,            # 50px * 1.35
+    "cover_h1": 136,  # 116px * 1.17
+    "body_h1": 80,  # 66px * 1.22
+    "text": 58,  # 34px * 1.7
+    "cta": 68,  # 50px * 1.35
 }
 CHARS_PER_LINE = {
-    "cover_h1": 7,        # 116px 字号，880px 上限
+    "cover_h1": 7,  # 116px 字号，880px 上限
     "body_h1": 13,
     "text": 26,
     "cta": 17,
@@ -82,7 +99,11 @@ def _cjk_len(text: str) -> int:
 def block_height(block, layout_id: str) -> int:
     """单个内容块的高度预算（px）。"""
     if isinstance(block, Heading):
-        kind = "cover_h1" if layout_id.startswith("cover") or layout_id == "image_bg_overlay" else "body_h1"
+        kind = (
+            "cover_h1"
+            if layout_id.startswith("cover") or layout_id == "image_bg_overlay"
+            else "body_h1"
+        )
         return _lines_of_text(block.text, kind) * LINE_H[kind]
     if isinstance(block, Text):
         return _lines_of_text(block.text, "text") * LINE_H["text"] + 20
@@ -91,7 +112,7 @@ def block_height(block, layout_id: str) -> int:
     if isinstance(block, Steps):
         return sum(_ledger_row(item, 22, 155) for item in block.items)
     if isinstance(block, Compare):
-        head = 34 + 32 + 28 * 2          # 列标题 + 内边距
+        head = 34 + 32 + 28 * 2  # 列标题 + 内边距
         rows = sum(_compare_row(row) for row in block.rows)
         return head + rows
     if isinstance(block, ImageBlock):
@@ -99,7 +120,7 @@ def block_height(block, layout_id: str) -> int:
             return 680 + 56
         if layout_id == "image_right_ledger":
             return 850
-        return 0                          # 满版蒙层不占流内高度
+        return 0  # 满版蒙层不占流内高度
     if isinstance(block, Cta):
         return _lines_of_text(block.text, "cta") * LINE_H["cta"] + 62 * 2
     if isinstance(block, BentoGrid):
@@ -107,7 +128,7 @@ def block_height(block, layout_id: str) -> int:
         # 跟格数基本无关（2 / 4 / 6 格都在 938px 附近）——直接用 940 估值。
         # 这样 audit 不会误判「6 格还欠填」，让 model 比真实情况修更少。
         if len(block.cells) < 2:
-            return 0                          # schema 已拒
+            return 0  # schema 已拒
         return 940
     if isinstance(block, Stat):
         # 单数据卡也是 flex:1 填满，巨数字 184px + note/source 撑出主体；
@@ -117,7 +138,7 @@ def block_height(block, layout_id: str) -> int:
         # timeline 是 flex:1，实测会把整段内容区（heading 以下）吃满，
         # 跟条数关系不大（3 条 space-around、8 条挤满都是同高）。直接给 ~1080。
         if len(block.items) < 3:
-            return 0                          # schema 已拒，但留个底
+            return 0  # schema 已拒，但留个底
         return 1080
     if isinstance(block, Quote):
         # 呼吸型骨架：quote_callout 的 LAYOUTS 只有 quote 一块，且 .quote 是 flex:1，
@@ -173,7 +194,7 @@ def page_bands(heights: list[int], content_h: int = CONTENT_H) -> list[bool]:
 def audit_page(deck: CardDeck, page: CardPage) -> dict:
     heights = [block_height(b, page.layout_id) for b in page.blocks]
     if page.layout_id not in ("cover_top_image", "image_bg_overlay", "quote_callout"):
-        heights.insert(0, 71)              # kicker
+        heights.insert(0, 71)  # kicker
     total = sum(heights)
     bands = page_bands(heights) if total else [False] * 4
 
@@ -185,7 +206,9 @@ def audit_page(deck: CardDeck, page: CardPage) -> dict:
     fill_min = 0.40 if page.layout_id == "quote_callout" else FILL_MIN
     if fill < fill_min:
         gap = fill_min - fill
-        problems.append(f"填充率 {fill * 100:.0f}% < {fill_min * 100:.0f}%（欠填 {gap * 100:.0f}%）")
+        problems.append(
+            f"填充率 {fill * 100:.0f}% < {fill_min * 100:.0f}%（欠填 {gap * 100:.0f}%）"
+        )
         hints.append(_hint_for(page, gap))
 
     # 最大连续空白带：内容末行之后到内容区底部
@@ -238,20 +261,26 @@ def _count_of(page: CardPage) -> int | None:
 def _hint_for(page: CardPage, gap: float) -> str:
     missing = int(gap * CONTENT_H)
     if page.layout_id in ("content_text", "cover_display"):
-        return (f"文字页缺少 {missing}px 内容：加一行「为什么」、一个例子/类比，"
-                f"或把该页改成清单/对比表这类天然吃高度的骨架")
+        return (
+            f"文字页缺少 {missing}px 内容：加一行「为什么」、一个例子/类比，"
+            f"或把该页改成清单/对比表这类天然吃高度的骨架"
+        )
     if page.layout_id == "end_cta":
         return f"收尾页缺少 {missing}px：补 3-5 条要点回顾，别只放一句行动号召"
     if page.layout_id == "bento_grid":
         return f"矩阵缺 {missing}px：把格子补到 ≥4 个，或给现有格子加 note/source"
     if page.layout_id == "stat_card":
-        return (f"单数据卡缺 {missing}px：note 是这段数字到底在说什么、"
-                f"source 让数据可追溯——没有这两层会像孤立大数字")
+        return (
+            f"单数据卡缺 {missing}px：note 是这段数字到底在说什么、"
+            f"source 让数据可追溯——没有这两层会像孤立大数字"
+        )
     if page.layout_id == "timeline_flow":
         return f"时间线缺 {missing}px：把条目补到 ≥3 条，或给每条加 note 补充背景"
     if page.layout_id == "quote_callout":
-        return (f"金句页缺 {missing}px：必须补三锚点——顶 kicker/日期、"
-                f"底出处/作者、上下发丝线，否则呼吸会被读成欠填")
+        return (
+            f"金句页缺 {missing}px：必须补三锚点——顶 kicker/日期、"
+            f"底出处/作者、上下发丝线，否则呼吸会被读成欠填"
+        )
     return f"缺少约 {missing}px 内容：扩写要点或换高容量骨架"
 
 

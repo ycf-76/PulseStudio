@@ -8,6 +8,7 @@
 
 字段结构刻意与采集条目保持一致，前端复用同一套卡片与详情渲染链路。
 """
+
 from __future__ import annotations
 
 import logging
@@ -153,7 +154,9 @@ async def _workflow_items(user_id: str, limit: int) -> list[dict[str, Any]]:
             first_page_html=getattr(record, "first_page_html", None),
         )
         item["workflow_id"] = record.workflow_id
-        items.append(work_content_edit.apply_content_edit(item, work_content_edit.read_record_edit(record)))
+        items.append(
+            work_content_edit.apply_content_edit(item, work_content_edit.read_record_edit(record))
+        )
     return items
 
 
@@ -209,7 +212,7 @@ async def get_generated_work(user_id: str, work_id: str) -> dict[str, Any] | Non
     if not work_id.startswith(ARTIFACT_PREFIX):
         return None
 
-    artifact_id = work_id[len(ARTIFACT_PREFIX):]
+    artifact_id = work_id[len(ARTIFACT_PREFIX) :]
     for summary in await list_artifacts_for_user(user_id, limit=10_000):
         if str(summary.get("artifact_id")) == artifact_id:
             item = artifact_to_item(summary)

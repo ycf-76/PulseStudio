@@ -11,12 +11,13 @@
 - 10-30 篇：我的模式权重从 0 线性增长到 0.6
 - 30+ 篇：我的模式权重 0.6 → 0.8（上限 0.8，始终保留别人模式的参考）
 """
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from sqlalchemy import desc, select, and_
+from sqlalchemy import and_, desc, select
 
 from app.db.models import MemoryType, PublishedContentPerformance
 from app.db.session import AsyncSessionLocal
@@ -83,12 +84,14 @@ async def maybe_trigger_attribution(user_id: str) -> bool:
     每积累 _ATTRIBUTION_TRIGGER_INTERVAL 篇新回采数据触发一次。
     """
     async with AsyncSessionLocal() as db:
-        stmt = select(
-            __import__("sqlalchemy").func.count()
-        ).select_from(PublishedContentPerformance).where(
-            and_(
-                PublishedContentPerformance.user_id == user_id,
-                PublishedContentPerformance.collected_at.isnot(None),
+        stmt = (
+            select(__import__("sqlalchemy").func.count())
+            .select_from(PublishedContentPerformance)
+            .where(
+                and_(
+                    PublishedContentPerformance.user_id == user_id,
+                    PublishedContentPerformance.collected_at.isnot(None),
+                )
             )
         )
         count = await db.scalar(stmt) or 0
@@ -125,6 +128,7 @@ class SelfAttributionEngine:
             prescription = patterns
 
         from app.services.agent_memory import save_memory
+
         await save_memory(
             user_id=user_id,
             memory_type=MemoryType.MY_ATTRIBUTION,
@@ -168,24 +172,26 @@ class SelfAttributionEngine:
 
         works = []
         for r in records:
-            works.append({
-                "id": r.id,
-                "title": r.title or "",
-                "topic": r.topic or "",
-                "platform": r.platform,
-                "performance_score": r.performance_score or 0.0,
-                "predicted_viral_score": r.predicted_viral_score,
-                "actual_viral_score": r.actual_viral_score,
-                "prediction_error": r.prediction_error,
-                "likes": r.collected_likes,
-                "collects": r.collected_collects,
-                "comments": r.collected_comments,
-                "shares": r.collected_shares,
-                "title_pattern": r.title_pattern,
-                "emotion_trigger": r.emotion_trigger,
-                "content_structure": r.content_structure,
-                "is_replicated": r.is_replicated,
-            })
+            works.append(
+                {
+                    "id": r.id,
+                    "title": r.title or "",
+                    "topic": r.topic or "",
+                    "platform": r.platform,
+                    "performance_score": r.performance_score or 0.0,
+                    "predicted_viral_score": r.predicted_viral_score,
+                    "actual_viral_score": r.actual_viral_score,
+                    "prediction_error": r.prediction_error,
+                    "likes": r.collected_likes,
+                    "collects": r.collected_collects,
+                    "comments": r.collected_comments,
+                    "shares": r.collected_shares,
+                    "title_pattern": r.title_pattern,
+                    "emotion_trigger": r.emotion_trigger,
+                    "content_structure": r.content_structure,
+                    "is_replicated": r.is_replicated,
+                }
+            )
         return works
 
     def _rule_based_attribution(self, works: list[dict]) -> dict:
@@ -208,30 +214,50 @@ class SelfAttributionEngine:
         what_works: list[dict] = []
         what_doesnt: list[dict] = []
 
-        title_patterns_high = Counter(w.get("title_pattern") for w in high_works if w.get("title_pattern"))
-        title_patterns_low = Counter(w.get("title_pattern") for w in low_works if w.get("title_pattern"))
+        title_patterns_high = Counter(
+            w.get("title_pattern") for w in high_works if w.get("title_pattern")
+        )
+        title_patterns_low = Counter(
+            w.get("title_pattern") for w in low_works if w.get("title_pattern")
+        )
         for pattern, count in title_patterns_high.most_common(5):
             if pattern and count >= 2:
-                what_works.append({"pattern": f"标题模式: {pattern}", "evidence": f"{count}篇高于中位数"})
+                what_works.append(
+                    {"pattern": f"标题模式: {pattern}", "evidence": f"{count}篇高于中位数"}
+                )
 
         for pattern, count in title_patterns_low.most_common(3):
             if pattern and count >= 2 and pattern not in dict(title_patterns_high):
-                what_doesnt.append({"pattern": f"标题模式: {pattern}", "reason": f"{count}篇低于中位数"})
+                what_doesnt.append(
+                    {"pattern": f"标题模式: {pattern}", "reason": f"{count}篇低于中位数"}
+                )
 
-        emotion_high = Counter(w.get("emotion_trigger") for w in high_works if w.get("emotion_trigger"))
-        emotion_low = Counter(w.get("emotion_trigger") for w in low_works if w.get("emotion_trigger"))
+        emotion_high = Counter(
+            w.get("emotion_trigger") for w in high_works if w.get("emotion_trigger")
+        )
+        emotion_low = Counter(
+            w.get("emotion_trigger") for w in low_works if w.get("emotion_trigger")
+        )
         for emotion, count in emotion_high.most_common(3):
             if emotion and count >= 2:
-                what_works.append({"pattern": f"情绪触发: {emotion}", "evidence": f"{count}篇高于中位数"})
+                what_works.append(
+                    {"pattern": f"情绪触发: {emotion}", "evidence": f"{count}篇高于中位数"}
+                )
 
         for emotion, count in emotion_low.most_common(2):
             if emotion and count >= 2 and emotion not in dict(emotion_high):
-                what_doesnt.append({"pattern": f"情绪触发: {emotion}", "reason": f"{count}篇低于中位数"})
+                what_doesnt.append(
+                    {"pattern": f"情绪触发: {emotion}", "reason": f"{count}篇低于中位数"}
+                )
 
-        structure_high = Counter(w.get("content_structure") for w in high_works if w.get("content_structure"))
+        structure_high = Counter(
+            w.get("content_structure") for w in high_works if w.get("content_structure")
+        )
         for struct, count in structure_high.most_common(3):
             if struct and count >= 2:
-                what_works.append({"pattern": f"内容结构: {struct}", "evidence": f"{count}篇高于中位数"})
+                what_works.append(
+                    {"pattern": f"内容结构: {struct}", "evidence": f"{count}篇高于中位数"}
+                )
 
         best_title = title_patterns_high.most_common(1)[0][0] if title_patterns_high else None
         best_emotion = emotion_high.most_common(1)[0][0] if emotion_high else None
@@ -255,6 +281,7 @@ class SelfAttributionEngine:
         """LLM 归因：让 LLM 总结出写作处方。"""
         try:
             from app.engine.factory import get_deepseek_llm
+
             llm = get_deepseek_llm(temperature=0.3)
             if llm is None:
                 return None
@@ -296,6 +323,7 @@ class SelfAttributionEngine:
                 return None
 
             import json
+
             content = raw.get("content", "") if isinstance(raw, dict) else str(raw)
             content = content.strip()
             if content.startswith("```"):

@@ -2,32 +2,32 @@
 
 import pytest
 
+from app.agents.clarification_graph import (
+    build_batches,
+    build_dependency_graph,
+    collect_clarify_fields,
+    compile_clarification_result,
+    filter_by_depends_on,
+    topological_sort,
+)
 from app.agents.clarification_schema import (
-    ClarifyWhen,
-    ClarifyOption,
-    ClarifyDepends,
-    ClarifyFieldMeta,
-    QuestionType,
-    ClarificationQuestion,
-    ClarificationBatch,
     ClarificationAnswer,
+    ClarificationBatch,
+    ClarificationQuestion,
     ClarificationSubmitRequest,
     ClarificationSubmitResponse,
-)
-from app.agents.clarification_graph import (
-    collect_clarify_fields,
-    filter_by_depends_on,
-    build_dependency_graph,
-    topological_sort,
-    build_batches,
-    compile_clarification_result,
+    ClarifyDepends,
+    ClarifyFieldMeta,
+    ClarifyOption,
+    ClarifyWhen,
+    QuestionType,
 )
 from app.core.skill_base import Skill
-
 
 # ============================================================
 # clarification_schema 类型定义
 # ============================================================
+
 
 class TestClarifyFieldMeta:
     def test_from_dict_full(self):
@@ -117,6 +117,7 @@ class TestClarificationBatch:
 # clarification_graph 依赖图与分批
 # ============================================================
 
+
 class TestCollectClarifyFields:
     def test_collect_from_skills(self):
         class FakeSkill:
@@ -183,33 +184,42 @@ class TestFilterByDependsOn:
 
     def test_depends_satisfied(self):
         fields = {
-            "style": (ClarifyFieldMeta(
-                hint="风格",
-                depends_on=[ClarifyDepends(field="platform", value="xiaohongshu")],
-            ), "copywriting"),
+            "style": (
+                ClarifyFieldMeta(
+                    hint="风格",
+                    depends_on=[ClarifyDepends(field="platform", value="xiaohongshu")],
+                ),
+                "copywriting",
+            ),
         }
         result = filter_by_depends_on(fields, {"platform": "xiaohongshu"})
         assert "style" in result
 
     def test_depends_not_satisfied(self):
         fields = {
-            "style": (ClarifyFieldMeta(
-                hint="风格",
-                depends_on=[ClarifyDepends(field="platform", value="xiaohongshu")],
-            ), "copywriting"),
+            "style": (
+                ClarifyFieldMeta(
+                    hint="风格",
+                    depends_on=[ClarifyDepends(field="platform", value="xiaohongshu")],
+                ),
+                "copywriting",
+            ),
         }
         result = filter_by_depends_on(fields, {"platform": "douyin"})
         assert "style" not in result
 
     def test_multiple_depends_all_must_satisfy(self):
         fields = {
-            "style": (ClarifyFieldMeta(
-                hint="风格",
-                depends_on=[
-                    ClarifyDepends(field="platform", value="xiaohongshu"),
-                    ClarifyDepends(field="mode", value="pro"),
-                ],
-            ), "copywriting"),
+            "style": (
+                ClarifyFieldMeta(
+                    hint="风格",
+                    depends_on=[
+                        ClarifyDepends(field="platform", value="xiaohongshu"),
+                        ClarifyDepends(field="mode", value="pro"),
+                    ],
+                ),
+                "copywriting",
+            ),
         }
         result = filter_by_depends_on(fields, {"platform": "xiaohongshu", "mode": "pro"})
         assert "style" in result
@@ -260,10 +270,13 @@ class TestBuildBatches:
     def test_multi_level_batching(self):
         fields = {
             "platform": (ClarifyFieldMeta(hint="选择平台"), "copywriting"),
-            "style": (ClarifyFieldMeta(
-                hint="选择风格",
-                depends_on=[ClarifyDepends(field="platform", value="xiaohongshu")],
-            ), "copywriting"),
+            "style": (
+                ClarifyFieldMeta(
+                    hint="选择风格",
+                    depends_on=[ClarifyDepends(field="platform", value="xiaohongshu")],
+                ),
+                "copywriting",
+            ),
         }
         # 第一批：platform 无依赖，style 依赖 platform 但尚未回答 → 被过滤
         batches_round1 = build_batches(fields, clarified_answers={})
@@ -337,11 +350,13 @@ class TestCompileClarificationResult:
 # Skill 基类 clarify_meta 属性
 # ============================================================
 
+
 class TestSkillClarifyMeta:
     def test_default_empty(self):
         class DummySkill(Skill):
             node_type = "test"
             name = "dummy"
+
             async def execute(self, inputs):
                 return {}
 
@@ -355,6 +370,7 @@ class TestSkillClarifyMeta:
                 "writing_style": ClarifyFieldMeta(hint="选择写作风格"),
                 "tone": ClarifyFieldMeta(hint="选择语气"),
             }
+
             async def execute(self, inputs):
                 return {}
 

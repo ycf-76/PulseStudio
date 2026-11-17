@@ -112,9 +112,7 @@ class McpBridgeHub:
     ) -> dict[str, Any]:
         """下发一次桥接调用并等待扩展回传结果。"""
         if not self._subscribers:
-            raise BridgeOfflineError(
-                "浏览器桥接页面未连接：请先打开 MCP 桥接页面并点击「连接」"
-            )
+            raise BridgeOfflineError("浏览器桥接页面未连接：请先打开 MCP 桥接页面并点击「连接」")
 
         call_id = uuid.uuid4().hex
         future: asyncio.Future = asyncio.get_running_loop().create_future()
@@ -139,9 +137,7 @@ class McpBridgeHub:
         except TimeoutError:
             self._pending.pop(call_id, None)
             logger.warning("[mcp_bridge] 请求超时 action=%s call_id=%s", action, call_id)
-            raise BridgeCallTimeout(
-                f"桥接调用 {action} 在 {timeout}s 内没有回传结果"
-            ) from None
+            raise BridgeCallTimeout(f"桥接调用 {action} 在 {timeout}s 内没有回传结果") from None
 
     @staticmethod
     def _format(msg: dict[str, Any]) -> str:

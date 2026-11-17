@@ -8,6 +8,7 @@
 后端 image_plan_planner / image_gen_skill / image_gen 节点内部已直接调用服务，
 此路由主要用于「前端已渲染 / 已拿到 card_draft」的补充校验与展示。
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -37,7 +38,9 @@ async def check(
         payload.card_draft,
         expected_count=payload.expected_count,
     )
-    return StandardResponse(data={
-        "report": report.model_dump(),
-        "badge": gate_badge(report),
-    })
+    return StandardResponse(
+        data={
+            "report": report.model_dump(),
+            "badge": gate_badge(report),
+        }
+    )

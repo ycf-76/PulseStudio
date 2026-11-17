@@ -104,14 +104,10 @@ class HookRegistry:
                 self._stats[f"{event}:{hook_name}"] += 1
             except Exception as e:
                 self._error_count += 1
-                logger.warning(
-                    f"[hooks] error in '{hook_name}' for event '{event}': {e}"
-                )
+                logger.warning(f"[hooks] error in '{hook_name}' for event '{event}': {e}")
             finally:
                 elapsed = (time.monotonic() - t0) * 1000
-                logger.debug(
-                    f"[hooks] {event}:{hook_name} completed in {elapsed:.1f}ms"
-                )
+                logger.debug(f"[hooks] {event}:{hook_name} completed in {elapsed:.1f}ms")
 
         return current
 
@@ -126,6 +122,7 @@ class HookRegistry:
 
 
 # ---- Built-in hooks ----
+
 
 async def hook_log_tool_call(
     tool_name: str | None = None,

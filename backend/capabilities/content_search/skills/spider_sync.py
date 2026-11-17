@@ -27,8 +27,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.core.skill_base import Skill
-from app.engine.schemas import Permission
 from app.core.skill_registry import register
+from app.engine.schemas import Permission
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,7 @@ class SpiderSyncInput(BaseModel):
     platform: str = Field(
         default="",
         description=(
-            "要同步的平台：xiaohongshu / douyin / bilibili。"
-            "留空表示同步所有已绑定平台"
+            "要同步的平台：xiaohongshu / douyin / bilibili。" "留空表示同步所有已绑定平台"
         ),
     )
     force: bool = Field(
@@ -99,8 +98,8 @@ class SpiderSyncSkill(Skill):
                 "error": f"不支持的平台：{in_.platform}，可选：{', '.join(SUPPORTED_PLATFORMS)}",
             }
 
-        from app.db.session import AsyncSessionLocal
         from app.db.models import PlatformAccount
+        from app.db.session import AsyncSessionLocal
 
         async with AsyncSessionLocal() as db:
             query = select(PlatformAccount).where(
@@ -112,7 +111,11 @@ class SpiderSyncSkill(Skill):
             accounts = list(result.all())
 
         if not accounts:
-            platform_hint = f"「{PLATFORM_LABELS.get(in_.platform, in_.platform)}」" if in_.platform else "任何平台"
+            platform_hint = (
+                f"「{PLATFORM_LABELS.get(in_.platform, in_.platform)}」"
+                if in_.platform
+                else "任何平台"
+            )
             return {
                 "ok": False,
                 "error": f"尚未绑定{platform_hint}账号，请先在设置中绑定平台账号",
@@ -149,16 +152,14 @@ class SpiderSyncSkill(Skill):
                 }
             return {"ok": False, "error": "没有可同步的账号"}
 
-        from capabilities.scrapling.spiders.db_sink import update_sync_status
         from app.services.spider_capability import start_sync
+        from capabilities.scrapling.spiders.db_sink import update_sync_status
 
         launched = []
         for acc in syncable:
             try:
                 await update_sync_status(user_id, acc.platform, "running")
-                asyncio.create_task(
-                    start_sync(acc.id, user_id, acc.platform, force=in_.force)
-                )
+                asyncio.create_task(start_sync(acc.id, user_id, acc.platform, force=in_.force))
                 launched.append(PLATFORM_LABELS.get(acc.platform, acc.platform))
             except Exception as e:
                 logger.warning(f"[SpiderSyncSkill] failed to launch sync for {acc.platform}: {e}")

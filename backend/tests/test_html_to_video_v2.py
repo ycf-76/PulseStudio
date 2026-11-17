@@ -28,7 +28,9 @@ class TestBuildFrameTimes:
         times = build_frame_times(duration=-1.0, fps=30)
         assert times == [0.0]
 
-    def test_帧间隔等于fps倒数(self, ):
+    def test_帧间隔等于fps倒数(
+        self,
+    ):
         times = build_frame_times(duration=1.0, fps=10)
         assert abs(times[1] - times[0] - 0.1) < 1e-9
 
@@ -55,9 +57,15 @@ class TestEncodePreviewFrameConservation:
             )
         out = tmp_path / "preview.mp4"
 
-        ok = asyncio.run(_encode_preview(
-            frames_dir, out, fps=30, width=270, height=480,
-        ))
+        ok = asyncio.run(
+            _encode_preview(
+                frames_dir,
+                out,
+                fps=30,
+                width=270,
+                height=480,
+            )
+        )
 
         assert ok and out.is_file()
         with av.open(str(out)) as c:

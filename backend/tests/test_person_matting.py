@@ -6,6 +6,7 @@
   - skill _execute_pip matting 分支：alpha 帧序列融合命令 /
     matting 失败回退矩形 PIP / deck_images 幻灯片主画面
 """
+
 from contextlib import asynccontextmanager
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,10 +16,10 @@ import pytest
 
 from capabilities.video.adapters.person_matting import MatteResult, matte_person
 
-
 # ---------------------------------------------------------------------------
 # adapter: matte_person
 # ---------------------------------------------------------------------------
+
 
 def _fake_frame(w=64, h=128):
     return np.full((h, w, 3), 128, dtype=np.uint8)
@@ -32,6 +33,7 @@ class TestMattePerson:
 
         def _fake_sync(video_path, model, fd):
             from capabilities.video.adapters.person_matting import _write_frame
+
             assert fd == frame_dir
             fgr = np.full((128, 64, 3), 255, dtype=np.uint8)
             pha = np.full((128, 64), 0.5, dtype=np.float32)
@@ -39,15 +41,19 @@ class TestMattePerson:
             _write_frame(fgr, pha, fd / "000001.png")
             return (2, 64, 128)
 
-        with patch(
-            "capabilities.video.adapters.person_matting._load_model",
-            return_value=MagicMock(),
-        ), patch(
-            "capabilities.video.adapters.person_matting._probe_fps",
-            return_value=30.0,
-        ), patch(
-            "capabilities.video.adapters.person_matting._matte_sync",
-            side_effect=_fake_sync,
+        with (
+            patch(
+                "capabilities.video.adapters.person_matting._load_model",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._probe_fps",
+                return_value=30.0,
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._matte_sync",
+                side_effect=_fake_sync,
+            ),
         ):
             result = await matte_person("fake.mp4", tmp_path / "matte")
 
@@ -91,15 +97,19 @@ class TestMattePerson:
     @pytest.mark.asyncio
     async def test_zero_frames_degrades_to_none(self, tmp_path):
         """视频 0 帧 → None。"""
-        with patch(
-            "capabilities.video.adapters.person_matting._load_model",
-            return_value=MagicMock(),
-        ), patch(
-            "capabilities.video.adapters.person_matting._probe_fps",
-            return_value=30.0,
-        ), patch(
-            "capabilities.video.adapters.person_matting._matte_sync",
-            return_value=(0, 0, 0),
+        with (
+            patch(
+                "capabilities.video.adapters.person_matting._load_model",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._probe_fps",
+                return_value=30.0,
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._matte_sync",
+                return_value=(0, 0, 0),
+            ),
         ):
             result = await matte_person("fake.mp4", tmp_path / "matte")
         assert result is None
@@ -107,15 +117,19 @@ class TestMattePerson:
     @pytest.mark.asyncio
     async def test_infer_exception_degrades_to_none(self, tmp_path):
         """推理中途异常（CUDA OOM 等）→ None，绝不阻断主管线。"""
-        with patch(
-            "capabilities.video.adapters.person_matting._load_model",
-            return_value=MagicMock(),
-        ), patch(
-            "capabilities.video.adapters.person_matting._probe_fps",
-            return_value=30.0,
-        ), patch(
-            "capabilities.video.adapters.person_matting._matte_sync",
-            side_effect=RuntimeError("CUDA OOM"),
+        with (
+            patch(
+                "capabilities.video.adapters.person_matting._load_model",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._probe_fps",
+                return_value=30.0,
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._matte_sync",
+                side_effect=RuntimeError("CUDA OOM"),
+            ),
         ):
             result = await matte_person("fake.mp4", tmp_path / "matte")
         assert result is None
@@ -150,15 +164,19 @@ class TestMattePerson:
         (cache_dir / "frames").mkdir(parents=True)
         (cache_dir / "meta.json").write_text("not json", encoding="utf-8")
 
-        with patch(
-            "capabilities.video.adapters.person_matting._load_model",
-            return_value=MagicMock(),
-        ), patch(
-            "capabilities.video.adapters.person_matting._probe_fps",
-            return_value=30.0,
-        ), patch(
-            "capabilities.video.adapters.person_matting._matte_sync",
-            return_value=(0, 0, 0),  # 重抠 0 帧 → None
+        with (
+            patch(
+                "capabilities.video.adapters.person_matting._load_model",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._probe_fps",
+                return_value=30.0,
+            ),
+            patch(
+                "capabilities.video.adapters.person_matting._matte_sync",
+                return_value=(0, 0, 0),  # 重抠 0 帧 → None
+            ),
         ):
             result = await matte_person("fake.mp4", cache_dir)
         assert result is None
@@ -182,24 +200,29 @@ class TestMattePerson:
         data = np.fromfile(str(path), dtype=np.uint8)
         img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
         assert img.shape == (4, 4, 4)
-        assert (img[..., 0] == 200).all()   # cv2 BGR：B 位 = 原 R
-        assert (img[..., 3] == 127).all()   # 0.5*255 → 127
+        assert (img[..., 0] == 200).all()  # cv2 BGR：B 位 = 原 R
+        assert (img[..., 3] == 127).all()  # 0.5*255 → 127
 
 
 # ---------------------------------------------------------------------------
 # skill: _execute_pip matting 分支
 # ---------------------------------------------------------------------------
 
+
 def _matte_result():
     return MatteResult(
         frame_dir=Path("D:/fake/frames"),
-        count=660, fps=30.0, width=1080, height=1920,
+        count=660,
+        fps=30.0,
+        width=1080,
+        height=1920,
     )
 
 
 class TestPipMattingBranch:
     def _patch_env(self, matte_return, captured_cmds, tmp_path):
         """公共 patch 组：分辨率/ffmpeg/抠像/临时目录 全部 mock。"""
+
         async def _fake_probe(path):
             return 1080, 1920
 
@@ -234,14 +257,20 @@ class TestPipMattingBranch:
         from capabilities.video.skills.talking_head_overlay import (
             TalkingHeadOverlaySkill,
         )
+
         # execute() 开头检查 is_file → 空文件即可（probe_duration 失败兜底 0.0）
         (tmp_path / "x.mp4").write_bytes(b"")
         skill = TalkingHeadOverlaySkill()
-        return [ev async for ev in skill.execute({
-            "video_path": str(tmp_path / "x.mp4"),
-            "gate_mode": "auto_confirm",
-            **params,
-        })]
+        return [
+            ev
+            async for ev in skill.execute(
+                {
+                    "video_path": str(tmp_path / "x.mp4"),
+                    "gate_mode": "auto_confirm",
+                    **params,
+                }
+            )
+        ]
 
     @pytest.mark.asyncio
     async def test_matting_success_uses_alpha_frames_command(self, tmp_path):
@@ -251,9 +280,14 @@ class TestPipMattingBranch:
         cmds: list = []
         patches = self._patch_env(_matte_result(), cmds, tmp_path)
         with patches[0], patches[1], patches[2], patches[3]:
-            events = await self._run_skill(tmp_path, {
-                "pip": True, "matting": True, "bg_color": "#112233",
-            })
+            events = await self._run_skill(
+                tmp_path,
+                {
+                    "pip": True,
+                    "matting": True,
+                    "bg_color": "#112233",
+                },
+            )
 
         assert cmds, "应产生 ffmpeg 合成命令"
         joined = " ".join(str(c) for c in cmds[-1])
@@ -275,16 +309,18 @@ class TestPipMattingBranch:
         cmds: list = []
         patches = self._patch_env(None, cmds, tmp_path)
         with patches[0], patches[1], patches[2], patches[3]:
-            events = await self._run_skill(tmp_path, {
-                "pip": True, "matting": True,
-            })
+            events = await self._run_skill(
+                tmp_path,
+                {
+                    "pip": True,
+                    "matting": True,
+                },
+            )
 
         assert cmds, "降级后仍应出矩形 PIP 合成命令"
         joined = " ".join(str(c) for c in cmds[-1])
         assert "%06d.png" not in joined, "降级命令不应消费帧序列"
-        assert any(
-            "fallback" in str(ev.get("event", "")) for ev in events
-        ), "应有降级广播事件"
+        assert any("fallback" in str(ev.get("event", "")) for ev in events), "应有降级广播事件"
 
     @pytest.mark.asyncio
     async def test_deck_images_bypasses_html_capture(self, tmp_path):
@@ -313,10 +349,21 @@ class TestPipMattingBranch:
                 new=slides_mock,
             ),
         )
-        with skill_patches[0], skill_patches[1], skill_patches[2], skill_patches[3], skill_patches[4]:
-            await self._run_skill(tmp_path, {
-                "pip": True, "matting": True, "deck_images": imgs,
-            })
+        with (
+            skill_patches[0],
+            skill_patches[1],
+            skill_patches[2],
+            skill_patches[3],
+            skill_patches[4],
+        ):
+            await self._run_skill(
+                tmp_path,
+                {
+                    "pip": True,
+                    "matting": True,
+                    "deck_images": imgs,
+                },
+            )
 
         slides_mock.assert_awaited_once()
         called_shots = slides_mock.call_args.args[0]
@@ -408,15 +455,22 @@ async def _run_skill(tmp_path, params, patches):
         # 测试卫生：deck 产物落盘（slides.json / transcript_rows.json）
         # 隔离到 tmp_path —— 此前单测把 2 句 rows 写进真实
         # outputs/talking_head_overlay/deck_auto/ 覆盖了 live5 真机 24 句产物。
-        stack.enter_context(patch(
-            "capabilities.video.skills.talking_head_overlay.scoped_dir",
-            new=lambda base, *a: tmp_path / "scope",
-        ))
-        return [ev async for ev in skill.execute({
-            "video_path": str(tmp_path / "x.mp4"),
-            "gate_mode": "auto_confirm",
-            **params,
-        })]
+        stack.enter_context(
+            patch(
+                "capabilities.video.skills.talking_head_overlay.scoped_dir",
+                new=lambda base, *a: tmp_path / "scope",
+            )
+        )
+        return [
+            ev
+            async for ev in skill.execute(
+                {
+                    "video_path": str(tmp_path / "x.mp4"),
+                    "gate_mode": "auto_confirm",
+                    **params,
+                }
+            )
+        ]
 
 
 def _deck_patches(tmp_path, gen_return, captured_cmds, gen_mock=None):
@@ -448,10 +502,15 @@ def _deck_patches(tmp_path, gen_return, captured_cmds, gen_mock=None):
         ),
         patch(
             "capabilities.video.adapters.person_matting.matte_person",
-            new=AsyncMock(return_value=MatteResult(
-                frame_dir=Path("D:/fake/frames"),
-                count=660, fps=30.0, width=1080, height=1920,
-            )),
+            new=AsyncMock(
+                return_value=MatteResult(
+                    frame_dir=Path("D:/fake/frames"),
+                    count=660,
+                    fps=30.0,
+                    width=1080,
+                    height=1920,
+                )
+            ),
         ),
         patch(
             "capabilities.video.adapters.person_matting._probe_image_size",
@@ -462,8 +521,7 @@ def _deck_patches(tmp_path, gen_return, captured_cmds, gen_mock=None):
             new=lambda: _fake_tmp(),
         ),
         patch(
-            "capabilities.video.services.deck_orchestrator."
-            "generate_deck_slides",
+            "capabilities.video.services.deck_orchestrator." "generate_deck_slides",
             new=gen_mock,
         ),
         patch(
@@ -500,10 +558,17 @@ class TestAutoDeckPip:
         cmds: list = []
         deck_pngs = _deck_pngs(tmp_path)
         patches, gen_mock = _deck_patches(tmp_path, deck_pngs, cmds)
-        events = await _run_skill(tmp_path, {
-            "pip": True, "matting": True, "auto_deck": True,
-            "deck_theme": "cream", "transcript": _deck_transcript(),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "matting": True,
+                "auto_deck": True,
+                "deck_theme": "cream",
+                "transcript": _deck_transcript(),
+            },
+            patches,
+        )
 
         # whisper 必须没被调（patch 未启用 — 若被调会真跑转录报错/慢）
         assert gen_mock.await_count == 1
@@ -523,24 +588,31 @@ class TestAutoDeckPip:
         (tmp_path / "work").mkdir()
         cmds: list = []
         deck_pngs = _deck_pngs(tmp_path)
-        sub_mock = MagicMock(return_value=[
-            {"start": 0.0, "end": 3.0, "text": "whisper转的"},
-        ])
+        sub_mock = MagicMock(
+            return_value=[
+                {"start": 0.0, "end": 3.0, "text": "whisper转的"},
+            ]
+        )
 
         patches, gen_mock = _deck_patches(tmp_path, deck_pngs, cmds)
         patches = patches + (
             patch(
-                "capabilities.video.skills.talking_head_overlay."
-                "_transcribe_cpu_subprocess",
+                "capabilities.video.skills.talking_head_overlay." "_transcribe_cpu_subprocess",
                 new=sub_mock,
             ),
         )
         import os
 
         before = os.environ.get("WHISPER_DEVICE")
-        await _run_skill(tmp_path, {
-            "pip": True, "matting": True, "auto_deck": True,
-        }, patches)
+        await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "matting": True,
+                "auto_deck": True,
+            },
+            patches,
+        )
 
         sub_mock.assert_called_once_with(str(tmp_path / "x.mp4"))
         assert gen_mock.call_args.args[0] == "whisper转的"
@@ -553,14 +625,18 @@ class TestAutoDeckPip:
         (tmp_path / "work").mkdir()
         cmds: list = []
         patches, _ = _deck_patches(tmp_path, [], cmds)
-        events = await _run_skill(tmp_path, {
-            "pip": True, "matting": True, "auto_deck": True,
-            "transcript": _deck_transcript(),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "matting": True,
+                "auto_deck": True,
+                "transcript": _deck_transcript(),
+            },
+            patches,
+        )
 
-        assert any(
-            ev.get("event") == "deck_fallback" for ev in events
-        ), "应广播 deck_fallback"
+        assert any(ev.get("event") == "deck_fallback" for ev in events), "应广播 deck_fallback"
         assert cmds, "降级后仍应出合成命令"
         joined = " ".join(str(c) for c in cmds[-1])
         assert "lavfi" in joined and "color=c=0x" in joined, "主画面应为纯色底"
@@ -582,10 +658,17 @@ class TestAutoDeckPip:
                 new=slides_mock,
             ),
         )
-        events = await _run_skill(tmp_path, {
-            "pip": True, "matting": True, "auto_deck": True,
-            "deck_theme": "sunset", "transcript": _deck_transcript(),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "matting": True,
+                "auto_deck": True,
+                "deck_theme": "sunset",
+                "transcript": _deck_transcript(),
+            },
+            patches,
+        )
 
         slides_mock.assert_awaited_once()
         assert [Path(p) for p in slides_mock.call_args.args[0]] == deck_pngs
@@ -639,17 +722,25 @@ class TestTranscribeCpuSubprocess:
 
         with patch(
             "subprocess.run",
-            new=MagicMock(return_value=MagicMock(
-                returncode=1, stdout=b"", stderr=b"boom",
-            )),
+            new=MagicMock(
+                return_value=MagicMock(
+                    returncode=1,
+                    stdout=b"",
+                    stderr=b"boom",
+                )
+            ),
         ):
             assert _transcribe_cpu_subprocess("fake.mp4") == []
 
         with patch(
             "subprocess.run",
-            new=MagicMock(return_value=MagicMock(
-                returncode=0, stdout=b"not json", stderr=b"",
-            )),
+            new=MagicMock(
+                return_value=MagicMock(
+                    returncode=0,
+                    stdout=b"not json",
+                    stderr=b"",
+                )
+            ),
         ):
             assert _transcribe_cpu_subprocess("fake.mp4") == []
 
@@ -663,13 +754,20 @@ def _write_slides_json(tmp_path, theme="midnight"):
     _write_png(d / "slide_01.png")
     _write_png(d / "slide_02.png")
     jp = d / "slides.json"
-    jp.write_text(json.dumps({
-        "theme": theme, "transcript": "第一句\n第二句",
-        "slides": [
-            {"title": "开场", "bullets": ["a", "b"]},
-            {"title": "结尾", "bullets": ["c"]},
-        ],
-    }, ensure_ascii=False), encoding="utf-8")
+    jp.write_text(
+        json.dumps(
+            {
+                "theme": theme,
+                "transcript": "第一句\n第二句",
+                "slides": [
+                    {"title": "开场", "bullets": ["a", "b"]},
+                    {"title": "结尾", "bullets": ["c"]},
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     return jp
 
 
@@ -711,48 +809,53 @@ class TestDeckGate:
         render_mock = MagicMock(return_value=rendered)
 
         return (
-            patch(
-                "capabilities.video.skills.talking_head_overlay."
-                "TalkingHeadOverlaySkill._probe_resolution",
-                new=AsyncMock(return_value=(1080, 1920)),
+            (
+                patch(
+                    "capabilities.video.skills.talking_head_overlay."
+                    "TalkingHeadOverlaySkill._probe_resolution",
+                    new=AsyncMock(return_value=(1080, 1920)),
+                ),
+                patch(
+                    "capabilities.video.skills.smart_cut._run_ffmpeg",
+                    new=AsyncMock(side_effect=_fake_ffmpeg),
+                ),
+                patch(
+                    "capabilities.video.adapters.person_matting.matte_person",
+                    new=AsyncMock(
+                        return_value=MatteResult(
+                            frame_dir=Path("D:/fake/frames"),
+                            count=660,
+                            fps=30.0,
+                            width=1080,
+                            height=1920,
+                        )
+                    ),
+                ),
+                patch(
+                    "capabilities.video.adapters.person_matting." "_probe_image_size",
+                    new=MagicMock(return_value=(1080, 1920)),
+                ),
+                patch(
+                    "capabilities.video.skills.talking_head_overlay." "managed_temp_dir",
+                    new=lambda: _fake_tmp(),
+                ),
+                patch(
+                    "capabilities.video.services.deck_orchestrator." "generate_deck_slides",
+                    new=gen_mock,
+                ),
+                patch(
+                    "capabilities.video.services.deck_orchestrator." "render_deck_from_slides",
+                    new=render_mock,
+                ),
+                patch(
+                    "capabilities.video.skills.talking_head_overlay."
+                    "TalkingHeadOverlaySkill._slides_to_video",
+                    new=AsyncMock(side_effect=_fake_slides_video),
+                ),
             ),
-            patch(
-                "capabilities.video.skills.smart_cut._run_ffmpeg",
-                new=AsyncMock(side_effect=_fake_ffmpeg),
-            ),
-            patch(
-                "capabilities.video.adapters.person_matting.matte_person",
-                new=AsyncMock(return_value=MatteResult(
-                    frame_dir=Path("D:/fake/frames"),
-                    count=660, fps=30.0, width=1080, height=1920,
-                )),
-            ),
-            patch(
-                "capabilities.video.adapters.person_matting."
-                "_probe_image_size",
-                new=MagicMock(return_value=(1080, 1920)),
-            ),
-            patch(
-                "capabilities.video.skills.talking_head_overlay."
-                "managed_temp_dir",
-                new=lambda: _fake_tmp(),
-            ),
-            patch(
-                "capabilities.video.services.deck_orchestrator."
-                "generate_deck_slides",
-                new=gen_mock,
-            ),
-            patch(
-                "capabilities.video.services.deck_orchestrator."
-                "render_deck_from_slides",
-                new=render_mock,
-            ),
-            patch(
-                "capabilities.video.skills.talking_head_overlay."
-                "TalkingHeadOverlaySkill._slides_to_video",
-                new=AsyncMock(side_effect=_fake_slides_video),
-            ),
-        ), gen_mock, render_mock
+            gen_mock,
+            render_mock,
+        )
 
     def test_input_deck_gate_fields(self):
         """10.22 新字段默认值与接受：deck_confirm/deck_slides_json/
@@ -782,24 +885,29 @@ class TestDeckGate:
         (tmp_path / "work").mkdir()
         _write_slides_json(tmp_path)  # mock 产物布局参考（实际产物在 perm_dir/deck_auto）
         patches, _, _ = self._gate_patches(
-            tmp_path, [], gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
+            tmp_path,
+            [],
+            gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
         )
-        events = await _run_skill(tmp_path, {
-            "pip": True, "auto_deck": True, "transcript": _deck_transcript(),
-            "gate_mode": "standalone",
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "auto_deck": True,
+                "transcript": _deck_transcript(),
+                "gate_mode": "standalone",
+            },
+            patches,
+        )
 
         names = [ev.get("event") for ev in events]
         assert "deck_preview_ready" in names
-        gate = next(ev for ev in events
-                    if ev.get("event") == "deck_preview_ready")
+        gate = next(ev for ev in events if ev.get("event") == "deck_preview_ready")
         assert gate["data"]["needs_confirmation"] is True
         assert gate["data"]["theme"] == "midnight"
         assert gate["data"]["count"] == 2
         # slides.json 指向持久化目录（跨 execute 可达）
-        assert gate["data"]["slides_json_path"].replace(
-            "\\", "/"
-        ).endswith("deck_auto/slides.json")
+        assert gate["data"]["slides_json_path"].replace("\\", "/").endswith("deck_auto/slides.json")
         assert "pip_done" not in names, "闸门停点后不得合成"
 
     @pytest.mark.asyncio
@@ -810,17 +918,24 @@ class TestDeckGate:
         (tmp_path / "work").mkdir()
         _write_slides_json(tmp_path)
         patches, _, _ = self._gate_patches(
-            tmp_path, [], gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
+            tmp_path,
+            [],
+            gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
         )
-        events = await _run_skill(tmp_path, {
-            "pip": True, "auto_deck": True, "transcript": _deck_transcript(),
-            "gate_mode": "auto_confirm",
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "auto_deck": True,
+                "transcript": _deck_transcript(),
+                "gate_mode": "auto_confirm",
+            },
+            patches,
+        )
 
         names = [ev.get("event") for ev in events]
         assert "deck_preview_ready" in names
-        gate = next(ev for ev in events
-                    if ev.get("event") == "deck_preview_ready")
+        gate = next(ev for ev in events if ev.get("event") == "deck_preview_ready")
         assert gate["data"]["needs_confirmation"] is False
         assert "pip_done" in names
 
@@ -831,17 +946,21 @@ class TestDeckGate:
         (tmp_path / "work").mkdir()
         jp = _write_slides_json(tmp_path)
         patches, gen_mock, render_mock = self._gate_patches(tmp_path, [])
-        events = await _run_skill(tmp_path, {
-            "pip": True, "deck_confirm": "approve",
-            "deck_slides_json": str(jp),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "deck_confirm": "approve",
+                "deck_slides_json": str(jp),
+            },
+            patches,
+        )
 
         gen_mock.assert_not_awaited()
         names = [ev.get("event") for ev in events]
         assert "pip_done" in names
         assert "deck_preview_ready" not in names, "回调轮不再进闸门"
         assert "deck_ready" in names
-
 
     @pytest.mark.asyncio
     async def test_approve_stale_extra_png_rerenders(self, tmp_path):
@@ -855,20 +974,26 @@ class TestDeckGate:
             _write_png(tmp_path / "rerender_02.png"),
         ]
         patches, gen_mock, render_mock = self._gate_patches(
-            tmp_path, rendered=rerendered,
+            tmp_path,
+            rendered=rerendered,
         )
-        events = await _run_skill(tmp_path, {
-            "pip": True, "deck_confirm": "approve",
-            "deck_slides_json": str(jp),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "deck_confirm": "approve",
+                "deck_slides_json": str(jp),
+            },
+            patches,
+        )
 
         gen_mock.assert_not_awaited()
         render_mock.assert_called_once()
         sv_mock = patches[-1].new  # _slides_to_video mock（patches 末位）
         imgs = [str(p) for p in sv_mock.call_args.args[0]]
-        assert imgs == [str(p) for p in rerendered], (
-            "进合成的是重渲染产物（2 张）而非含残留的 glob 结果"
-        )
+        assert imgs == [
+            str(p) for p in rerendered
+        ], "进合成的是重渲染产物（2 张）而非含残留的 glob 结果"
         assert "pip_done" in [ev.get("event") for ev in events]
 
     @pytest.mark.asyncio
@@ -882,10 +1007,16 @@ class TestDeckGate:
             _write_png(tmp_path / "work" / "slide_02.png"),
         ]
         patches, gen_mock, render_mock = self._gate_patches(tmp_path, new_pngs)
-        events = await _run_skill(tmp_path, {
-            "pip": True, "deck_confirm": "retheme",
-            "deck_theme": "cream", "deck_slides_json": str(jp),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "deck_confirm": "retheme",
+                "deck_theme": "cream",
+                "deck_slides_json": str(jp),
+            },
+            patches,
+        )
 
         gen_mock.assert_not_awaited()
         render_mock.assert_called_once()
@@ -907,15 +1038,19 @@ class TestDeckGate:
             _write_png(tmp_path / "work" / "slide_02.png"),
         ]
         patches, gen_mock, render_mock = self._gate_patches(tmp_path, new_pngs)
-        await _run_skill(tmp_path, {
-            "pip": True, "deck_confirm": "regenerate",
-            "deck_revision": "标题太正式，口语一点",
-            "deck_slides_json": str(jp),
-        }, patches)
+        await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "deck_confirm": "regenerate",
+                "deck_revision": "标题太正式，口语一点",
+                "deck_slides_json": str(jp),
+            },
+            patches,
+        )
 
         gen_mock.assert_awaited_once()
-        assert gen_mock.call_args.kwargs.get(
-            "feedback") == "标题太正式，口语一点"
+        assert gen_mock.call_args.kwargs.get("feedback") == "标题太正式，口语一点"
         assert gen_mock.call_args.args[0] == "第一句\n第二句"
 
     @pytest.mark.asyncio
@@ -925,11 +1060,17 @@ class TestDeckGate:
         (tmp_path / "work").mkdir()
         jp = _write_slides_json(tmp_path)
         patches, gen_mock, render_mock = self._gate_patches(tmp_path, [])
-        events = await _run_skill(tmp_path, {
-            "pip": True, "deck_confirm": "regenerate",
-            "deck_revision": "再改", "deck_revision_round": 6,
-            "deck_slides_json": str(jp),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "deck_confirm": "regenerate",
+                "deck_revision": "再改",
+                "deck_revision_round": 6,
+                "deck_slides_json": str(jp),
+            },
+            patches,
+        )
 
         gen_mock.assert_not_awaited()
         names = [ev.get("event") for ev in events]
@@ -941,9 +1082,15 @@ class TestDeckGate:
         """LLM 空（deck_fallback）→ 无物可审，不进闸门直接纯色底出片。"""
         (tmp_path / "work").mkdir()
         patches, _, _ = self._gate_patches(tmp_path, [])
-        events = await _run_skill(tmp_path, {
-            "pip": True, "auto_deck": True, "transcript": _deck_transcript(),
-        }, patches)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "auto_deck": True,
+                "transcript": _deck_transcript(),
+            },
+            patches,
+        )
 
         names = [ev.get("event") for ev in events]
         assert "deck_fallback" in names
@@ -957,22 +1104,33 @@ class TestDeckGate:
         (tmp_path / "work").mkdir()
         # deck 形态：LLM 产图
         patches_d, _, _ = self._gate_patches(
-            tmp_path, [],
+            tmp_path,
+            [],
             gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
         )
-        ev_d = await _run_skill(tmp_path, {
-            "pip": True, "auto_deck": True, "transcript": _deck_transcript(),
-        }, patches_d)
+        ev_d = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "auto_deck": True,
+                "transcript": _deck_transcript(),
+            },
+            patches_d,
+        )
         # fallback 形态：LLM 空
         patches_f, _, _ = self._gate_patches(tmp_path, [])
-        ev_f = await _run_skill(tmp_path, {
-            "pip": True, "auto_deck": True, "transcript": _deck_transcript(),
-        }, patches_f)
+        ev_f = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "auto_deck": True,
+                "transcript": _deck_transcript(),
+            },
+            patches_f,
+        )
 
-        out_d = next(e for e in ev_d if e.get("event") == "pip_done"
-                     )["data"]["output_path"]
-        out_f = next(e for e in ev_f if e.get("event") == "pip_done"
-                     )["data"]["output_path"]
+        out_d = next(e for e in ev_d if e.get("event") == "pip_done")["data"]["output_path"]
+        out_f = next(e for e in ev_f if e.get("event") == "pip_done")["data"]["output_path"]
         assert out_d != out_f, f"形态指纹未区分：{out_d}"
 
     @pytest.mark.asyncio
@@ -982,7 +1140,9 @@ class TestDeckGate:
         (tmp_path / "work").mkdir()
         _write_slides_json(tmp_path)
         patches, _, _ = self._gate_patches(
-            tmp_path, [], gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
+            tmp_path,
+            [],
+            gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
         )
         from unittest.mock import MagicMock, patch
 
@@ -999,10 +1159,16 @@ class TestDeckGate:
                 new=MagicMock(side_effect=_cap_video),
             ),
         )
-        await _run_skill(tmp_path, {
-            "pip": True, "auto_deck": True, "transcript": _deck_transcript(),
-            "gate_mode": "auto_confirm",
-        }, patches)
+        await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "auto_deck": True,
+                "transcript": _deck_transcript(),
+                "gate_mode": "auto_confirm",
+            },
+            patches,
+        )
 
         durs = captured.get("durations")
         assert durs is not None, "auto_deck 必须传句边界 durations"
@@ -1018,8 +1184,12 @@ class TestSlideBoundaryAlignment:
             _slide_durations_from_transcript,
         )
 
-        rows = [{"start": 0.0, "end": 2.0}, {"start": 2.0, "end": 4.0},
-                {"start": 4.0, "end": 6.0}, {"start": 6.0, "end": 8.0}]
+        rows = [
+            {"start": 0.0, "end": 2.0},
+            {"start": 2.0, "end": 4.0},
+            {"start": 4.0, "end": 6.0},
+            {"start": 6.0, "end": 8.0},
+        ]
         durs = _slide_durations_from_transcript(rows, 2, 8.5)
         assert len(durs) == 2
         assert durs[0] == pytest.approx(4.0)
@@ -1056,7 +1226,9 @@ class TestSlideBoundaryAlignment:
             new=AsyncMock(side_effect=fake_ff),
         ):
             await TalkingHeadOverlaySkill()._slides_to_video(
-                pngs, tmp_path / "out.mp4", slide_duration=5.0,
+                pngs,
+                tmp_path / "out.mp4",
+                slide_duration=5.0,
             )
 
         assert "duration 5.0" in captured["concat"]
@@ -1074,7 +1246,9 @@ class TestXfadeTransitions:
 
         pngs = [Path(f"/x/s{i}.png") for i in range(3)]
         cmd, meta = _build_xfade_cmd(
-            pngs, Path("/x/out.mp4"), durations=[5.8, 11.5, 7.6],
+            pngs,
+            Path("/x/out.mp4"),
+            durations=[5.8, 11.5, 7.6],
         )
         assert meta["e"] == pytest.approx([6.3, 12.0, 8.1])
         assert meta["offsets"] == pytest.approx([5.8, 17.3])
@@ -1091,9 +1265,7 @@ class TestXfadeTransitions:
 
         pngs = [Path(f"/x/s{i}.png") for i in range(4)]
         _, meta = _build_xfade_cmd(pngs, Path("/x/o.mp4"), durations=[2.0] * 4)
-        assert meta["styles"] == [
-            _XFADE_STYLES[i % len(_XFADE_STYLES)] for i in range(3)
-        ]
+        assert meta["styles"] == [_XFADE_STYLES[i % len(_XFADE_STYLES)] for i in range(3)]
         assert meta["styles"][0] == "fade"
 
     def test_xfade_cmd_shape(self):
@@ -1104,7 +1276,9 @@ class TestXfadeTransitions:
 
         pngs = [Path(f"/x/s{i}.png") for i in range(2)]
         cmd, _meta = _build_xfade_cmd(
-            pngs, Path("/x/out.mp4"), durations=[5.0, 6.0],
+            pngs,
+            Path("/x/out.mp4"),
+            durations=[5.0, 6.0],
         )
         s = " ".join(cmd)
         assert s.count("-loop 1") == 2
@@ -1133,8 +1307,10 @@ class TestXfadeTransitions:
             new=AsyncMock(side_effect=fake_ff),
         ):
             await TalkingHeadOverlaySkill()._slides_to_video(
-                pngs, tmp_path / "out.mp4",
-                slide_duration=5.0, durations=[3.0, 6.0],
+                pngs,
+                tmp_path / "out.mp4",
+                slide_duration=5.0,
+                durations=[3.0, 6.0],
             )
 
         s = " ".join(captured["cmd"])
@@ -1151,10 +1327,14 @@ class TestXfadeTransitions:
         )
 
         for shots, kwargs in (
-            ([_write_png(tmp_path / f"s{i}.png") for i in range(2)],
-             {"slide_duration": 5.0}),                                # None 均分
-            ([_write_png(tmp_path / "single.png")],
-             {"slide_duration": 5.0, "durations": [9.0]}),            # 单页
+            (
+                [_write_png(tmp_path / f"s{i}.png") for i in range(2)],
+                {"slide_duration": 5.0},
+            ),  # None 均分
+            (
+                [_write_png(tmp_path / "single.png")],
+                {"slide_duration": 5.0, "durations": [9.0]},
+            ),  # 单页
         ):
             captured: dict = {}
 
@@ -1166,7 +1346,9 @@ class TestXfadeTransitions:
                 new=AsyncMock(side_effect=fake_ff),
             ):
                 await TalkingHeadOverlaySkill()._slides_to_video(
-                    shots, tmp_path / "out.mp4", **kwargs,
+                    shots,
+                    tmp_path / "out.mp4",
+                    **kwargs,
                 )
             assert "xfade=" not in " ".join(captured["cmd"]), kwargs
 
@@ -1185,9 +1367,9 @@ class TestChainedCut:
 
         kept = [[0.0, 2.68], [3.48, 54.1]]
         rows = [
-            {"start": 1.0, "end": 2.0, "text": "a"},   # 保留区内 → 不变
-            {"start": 4.0, "end": 6.0, "text": "b"},   # 删除区后 → -0.8
-            {"start": 3.0, "end": 3.2, "text": "c"},   # 删除区内 → 丢弃
+            {"start": 1.0, "end": 2.0, "text": "a"},  # 保留区内 → 不变
+            {"start": 4.0, "end": 6.0, "text": "b"},  # 删除区后 → -0.8
+            {"start": 3.0, "end": 3.2, "text": "c"},  # 删除区内 → 丢弃
         ]
         out = _remap_transcript_rows(rows, kept)
         assert [(r["start"], r["end"]) for r in out] == [(1.0, 2.0), (3.2, 5.2)]
@@ -1213,19 +1395,25 @@ class TestChainedCut:
             yield {"event": "pip_done", "data": {"output_path": "o.mp4"}}
 
         extra = [
-            patch("capabilities.video.adapters.silence_detect.probe_duration",
-                  new=fake_probe),
-            patch("capabilities.video.skills.talking_head_overlay."
-                  "TalkingHeadOverlaySkill._execute_pip",
-                  new=fake_pip),
+            patch("capabilities.video.adapters.silence_detect.probe_duration", new=fake_probe),
+            patch(
+                "capabilities.video.skills.talking_head_overlay."
+                "TalkingHeadOverlaySkill._execute_pip",
+                new=fake_pip,
+            ),
         ]
         jp = _write_slides_json(tmp_path)
-        events = await _run_skill(tmp_path, {
-            "pip": True, "deck_confirm": "approve",
-            "deck_slides_json": str(jp),
-            "cut_video_path": str(cv),
-            "kept_segments": [[0.0, 2.68], [3.48, 54.1]],
-        }, list(base) + extra)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "deck_confirm": "approve",
+                "deck_slides_json": str(jp),
+                "cut_video_path": str(cv),
+                "kept_segments": [[0.0, 2.68], [3.48, 54.1]],
+            },
+            list(base) + extra,
+        )
 
         assert captured.get("vp") == cv, captured
         assert captured.get("dur") == pytest.approx(53.8), captured
@@ -1246,23 +1434,30 @@ class TestChainedCut:
             yield  # pragma: no cover
 
         extra = [
-            patch("capabilities.video.adapters.silence_detect.probe_duration",
-                  new=fake_probe),
-            patch("capabilities.video.skills.talking_head_overlay."
-                  "TalkingHeadOverlaySkill._execute_pip",
-                  new=reject_pip),
+            patch("capabilities.video.adapters.silence_detect.probe_duration", new=fake_probe),
+            patch(
+                "capabilities.video.skills.talking_head_overlay."
+                "TalkingHeadOverlaySkill._execute_pip",
+                new=reject_pip,
+            ),
         ]
         jp = _write_slides_json(tmp_path)
-        events = await _run_skill(tmp_path, {
-            "pip": True, "deck_confirm": "approve",
-            "deck_slides_json": str(jp),
-            "cut_video_path": str(tmp_path / "ghost_cut.mp4"),
-            "kept_segments": [[0.0, 2.68], [3.48, 54.1]],
-        }, list(base) + extra)
+        events = await _run_skill(
+            tmp_path,
+            {
+                "pip": True,
+                "deck_confirm": "approve",
+                "deck_slides_json": str(jp),
+                "cut_video_path": str(tmp_path / "ghost_cut.mp4"),
+                "kept_segments": [[0.0, 2.68], [3.48, 54.1]],
+            },
+            list(base) + extra,
+        )
 
-        assert any(ev.get("success") is False
-                   and "cut video not found" in str(ev.get("error", ""))
-                   for ev in events), events
+        assert any(
+            ev.get("success") is False and "cut video not found" in str(ev.get("error", ""))
+            for ev in events
+        ), events
 
 
 class TestCrossGapRows:
@@ -1279,12 +1474,13 @@ class TestCrossGapRows:
         kept = [[0.0, 2.68], [3.48, 54.1]]
         rows = [
             {"start": 1.0, "end": 2.0, "text": "a"},
-            {"start": 3.4, "end": 4.5, "text": "d"},   # start 在 gap 内 → 丢
+            {"start": 3.4, "end": 4.5, "text": "d"},  # start 在 gap 内 → 丢
             {"start": 4.0, "end": 6.0, "text": "b"},
         ]
         out = _remap_transcript_rows(rows, kept)
         assert [(r["start"], r["end"]) for r in out] == [
-            (1.0, 2.0), (3.2, 5.2),
+            (1.0, 2.0),
+            (3.2, 5.2),
         ], out
 
     def test_xfade_requires_equal_lengths(self):
@@ -1308,8 +1504,7 @@ class TestDursChunkCount:
             _slide_durations_from_transcript,
         )
 
-        rows = [{"start": float(i), "end": float(i) + 0.8,
-                 "text": "s"} for i in range(11)]
+        rows = [{"start": float(i), "end": float(i) + 0.8, "text": "s"} for i in range(11)]
         durs = _slide_durations_from_transcript(rows, 5, 12.0)
         assert len(durs) == 5, durs
         assert all(d >= 0.5 for d in durs) and sum(durs) <= 12.0, durs
@@ -1319,8 +1514,7 @@ class TestDursChunkCount:
             _slide_durations_from_transcript,
         )
 
-        rows = [{"start": 0.0, "end": 1.0, "text": "a"},
-                {"start": 2.0, "end": 3.0, "text": "b"}]
+        rows = [{"start": 0.0, "end": 1.0, "text": "a"}, {"start": 2.0, "end": 3.0, "text": "b"}]
         durs = _slide_durations_from_transcript(rows, 4, 6.0)
         assert len(durs) == 4 and all(d >= 0.5 for d in durs), durs
 
@@ -1330,12 +1524,21 @@ class TestOverlayDecor:
     用户需求：不抠人、不遮五官、原片为底。"""
 
     SLIDES = [
-        {"title": "老板推单，是你让他待不下去", "bullets": [],
-         "slide_type": "quote", "image": None},
-        {"title": "问题在服务模式", "bullets": [
-            {"text": "群里发需求，半天没人理", "emphasis": "none"},
-            {"text": "点了单，管理不拉群不接待", "emphasis": "keyword"},
-        ], "slide_type": "points", "image": None},
+        {
+            "title": "老板推单，是你让他待不下去",
+            "bullets": [],
+            "slide_type": "quote",
+            "image": None,
+        },
+        {
+            "title": "问题在服务模式",
+            "bullets": [
+                {"text": "群里发需求，半天没人理", "emphasis": "none"},
+                {"text": "点了单，管理不拉群不接待", "emphasis": "keyword"},
+            ],
+            "slide_type": "points",
+            "image": None,
+        },
     ]
 
     def test_decor_card_html_dimensions(self):
@@ -1374,7 +1577,12 @@ class TestOverlayDecor:
         cards = [Path(f"c{i}.png") for i in range(3)]
         bounds = [(0.0, 10.0), (10.0, 20.0), (20.0, 32.62)]
         cmd, meta = _build_decor_cmd(
-            Path("v.mp4"), cards, bounds, 32.62, 720, 1280,
+            Path("v.mp4"),
+            cards,
+            bounds,
+            32.62,
+            720,
+            1280,
         )
         assert cmd.count("-i") == 4  # 视频 + 3 卡
         joined = " ".join(cmd)
@@ -1409,7 +1617,9 @@ class TestOverlayDecor:
             events = []
             async for ev in _execute_decor(
                 {"decor_scale": 0.85, "decor_effect": "fade"},
-                tmp_path / "v.mp4", 20.0, tmp_path,
+                tmp_path / "v.mp4",
+                20.0,
+                tmp_path,
                 cards=[cards[0], cards[1]],
                 bounds=[(0.0, 12.0), (12.0, 20.0)],
             ):
@@ -1421,18 +1631,26 @@ class TestKaraoke:
     """P0-1 词级 karaoke 字幕 — 帧计划纯函数 + 渲染 + ffconcat + 命令接入。"""
 
     ROWS = [
-        {"start": 0.0, "end": 2.0, "text": "老板推单，",
-         "words": [
-             {"text": "老板", "start": 0.0, "end": 0.6},
-             {"text": "推单", "start": 0.6, "end": 1.4},
-             {"text": "，", "start": 1.4, "end": 1.8},
-         ]},
-        {"start": 2.5, "end": 5.0, "text": "你却说不赚钱",
-         "words": [
-             {"text": "你", "start": 2.5, "end": 2.8},
-             {"text": "却说", "start": 2.8, "end": 3.4},
-             {"text": "不赚钱", "start": 3.4, "end": 4.6},
-         ]},
+        {
+            "start": 0.0,
+            "end": 2.0,
+            "text": "老板推单，",
+            "words": [
+                {"text": "老板", "start": 0.0, "end": 0.6},
+                {"text": "推单", "start": 0.6, "end": 1.4},
+                {"text": "，", "start": 1.4, "end": 1.8},
+            ],
+        },
+        {
+            "start": 2.5,
+            "end": 5.0,
+            "text": "你却说不赚钱",
+            "words": [
+                {"text": "你", "start": 2.5, "end": 2.8},
+                {"text": "却说", "start": 2.8, "end": 3.4},
+                {"text": "不赚钱", "start": 3.4, "end": 4.6},
+            ],
+        },
     ]
 
     def test_karaoke_frame_plan_boundaries(self):
@@ -1458,9 +1676,13 @@ class TestKaraoke:
             _karaoke_frame_plan,
         )
 
-        assert _karaoke_frame_plan(
-            [{"start": 0, "end": 2, "text": "无词级"}], 2.0,
-        ) == []
+        assert (
+            _karaoke_frame_plan(
+                [{"start": 0, "end": 2, "text": "无词级"}],
+                2.0,
+            )
+            == []
+        )
         assert _karaoke_frame_plan([], 2.0) == []
 
     def test_render_karaoke_frames_png(self, tmp_path):
@@ -1507,7 +1729,12 @@ class TestKaraoke:
         )
 
         cmd, meta = _build_decor_cmd(
-            Path("v.mp4"), [Path("c0.png")], [(0.0, 5.0)], 5.0, 720, 1280,
+            Path("v.mp4"),
+            [Path("c0.png")],
+            [(0.0, 5.0)],
+            5.0,
+            720,
+            1280,
             subtitle_ffconcat=Path("kao/list.txt"),
         )
         joined = " ".join(cmd)
@@ -1524,8 +1751,7 @@ class TestKaraoke:
         )
 
         data = _karaoke_display_data(
-            [{"text": "的時候沒有",
-              "words": [{"text": "時候"}, {"text": "沒有"}]}]
+            [{"text": "的時候沒有", "words": [{"text": "時候"}, {"text": "沒有"}]}]
         )
         assert [w["text"] for w in data[0]["words"]] == ["时候", "没有"]
 
@@ -1535,20 +1761,24 @@ class TestKaraoke:
             _remap_transcript_rows,
         )
 
-        rows = [{
-            "start": 10.0, "end": 14.0, "text": "留词删词留词",
-            "words": [
-                {"text": "留", "start": 10.0, "end": 10.5},
-                {"text": "删", "start": 11.0, "end": 11.5},
-                {"text": "留2", "start": 12.5, "end": 13.0},
-            ],
-        }]
+        rows = [
+            {
+                "start": 10.0,
+                "end": 14.0,
+                "text": "留词删词留词",
+                "words": [
+                    {"text": "留", "start": 10.0, "end": 10.5},
+                    {"text": "删", "start": 11.0, "end": 11.5},
+                    {"text": "留2", "start": 12.5, "end": 13.0},
+                ],
+            }
+        ]
         out = _remap_transcript_rows(rows, [[0.0, 10.5], [12.5, 20.0]])
         assert len(out) == 1
         ws = out[0]["words"]
         assert [w["text"] for w in ws] == ["留", "留2"]
-        assert ws[0]["start"] == 10.0      # gap 前不动
-        assert ws[1]["start"] == 10.5      # gap 长 2s → 12.5-2
+        assert ws[0]["start"] == 10.0  # gap 前不动
+        assert ws[1]["start"] == 10.5  # gap 长 2s → 12.5-2
 
 
 class TestLightDecor:
@@ -1586,15 +1816,20 @@ class TestLightDecor:
             _decor_card_html,
         )
 
-        slide = {"title": "老板推单，是你让他忍不下去",
-                 "slide_type": "quote", "image": None,
-                 "bullets": [{"text": "要点一", "emphasis": "none"},
-                             {"text": "要点二", "emphasis": "none"},
-                             {"text": "要点三", "emphasis": "none"}]}
+        slide = {
+            "title": "老板推单，是你让他忍不下去",
+            "slide_type": "quote",
+            "image": None,
+            "bullets": [
+                {"text": "要点一", "emphasis": "none"},
+                {"text": "要点二", "emphasis": "none"},
+                {"text": "要点三", "emphasis": "none"},
+            ],
+        }
         html = _decor_card_html(slide, theme="midnight")
-        assert "font-size:46px" in html   # 带要点不再用 64px 海报字
+        assert "font-size:46px" in html  # 带要点不再用 64px 海报字
         assert "要点一" in html and "要点二" in html
-        assert "要点三" not in html        # 封顶 2 条
+        assert "要点三" not in html  # 封顶 2 条
         assert "overflow:hidden" in html
 
     def test_decor_scale_default_60(self):
@@ -1609,18 +1844,26 @@ class TestTriggerDecor:
     触发时刻卡窗 + pop 入场（说到才弹卡，消灭 PPT 感）。"""
 
     ROWS = [
-        {"start": 0.0, "end": 2.0, "text": "老板推单，",
-         "words": [
-             {"text": "老板", "start": 0.0, "end": 0.6},
-             {"text": "推单", "start": 0.6, "end": 1.4},
-             {"text": "，", "start": 1.4, "end": 1.8},
-         ]},
-        {"start": 2.5, "end": 5.0, "text": "你却说不赚钱",
-         "words": [
-             {"text": "你", "start": 2.5, "end": 2.8},
-             {"text": "却说", "start": 2.8, "end": 3.4},
-             {"text": "不赚钱", "start": 3.4, "end": 4.6},
-         ]},
+        {
+            "start": 0.0,
+            "end": 2.0,
+            "text": "老板推单，",
+            "words": [
+                {"text": "老板", "start": 0.0, "end": 0.6},
+                {"text": "推单", "start": 0.6, "end": 1.4},
+                {"text": "，", "start": 1.4, "end": 1.8},
+            ],
+        },
+        {
+            "start": 2.5,
+            "end": 5.0,
+            "text": "你却说不赚钱",
+            "words": [
+                {"text": "你", "start": 2.5, "end": 2.8},
+                {"text": "却说", "start": 2.8, "end": 3.4},
+                {"text": "不赚钱", "start": 3.4, "end": 4.6},
+            ],
+        },
     ]
 
     def test_deck_prompt_trigger_contract(self):
@@ -1639,20 +1882,24 @@ class TestTriggerDecor:
             parse_deck_json,
         )
 
-        raw = json.dumps([
-            {"title": "T1", "bullets": [{"text": "b", "emphasis": "none"}],
-             "trigger": {"text": "老板推单"}},
-            {"title": "T2", "bullets": [{"text": "b"}], "trigger": "點單"},
-            {"title": "T3", "bullets": [{"text": "b"}],
-             "trigger": {"text": "   "}},
-            {"title": "T4", "bullets": [{"text": "b"}],
-             "trigger": {"text": 123}},
-            {"title": "說句扎心的", "bullets": [{"text": "老闆推單"}]},
-        ], ensure_ascii=False)
+        raw = json.dumps(
+            [
+                {
+                    "title": "T1",
+                    "bullets": [{"text": "b", "emphasis": "none"}],
+                    "trigger": {"text": "老板推单"},
+                },
+                {"title": "T2", "bullets": [{"text": "b"}], "trigger": "點單"},
+                {"title": "T3", "bullets": [{"text": "b"}], "trigger": {"text": "   "}},
+                {"title": "T4", "bullets": [{"text": "b"}], "trigger": {"text": 123}},
+                {"title": "說句扎心的", "bullets": [{"text": "老闆推單"}]},
+            ],
+            ensure_ascii=False,
+        )
         slides = parse_deck_json(raw)
         assert len(slides) == 5
         assert slides[0]["trigger"] == {"text": "老板推单"}
-        assert slides[1]["trigger"] == {"text": "点单"}   # 裸 str + 繁→简
+        assert slides[1]["trigger"] == {"text": "点单"}  # 裸 str + 繁→简
         assert "trigger" not in slides[2]
         assert "trigger" not in slides[3]
         assert "trigger" not in slides[4]
@@ -1692,10 +1939,10 @@ class TestTriggerDecor:
         ]
         page = [(0.0, 2.2), (2.2, 5.0), (5.0, 7.0), (7.0, 9.0)]
         b = _trigger_bounds(slides, self.ROWS, page, 9.0)
-        assert b[0] == (0.0, 2.2)          # @0.0 → +min(2.2, 2.5)=2.2
-        assert b[1] == (3.4, 5.9)          # @3.4 → +min(2.8, 2.5)=2.5
-        assert b[2] == (5.0, 7.0)          # 搜不到 → 回退
-        assert b[3] == (7.0, 9.0)          # 旧格式无 trigger → 回退
+        assert b[0] == (0.0, 2.2)  # @0.0 → +min(2.2, 2.5)=2.2
+        assert b[1] == (3.4, 5.9)  # @3.4 → +min(2.8, 2.5)=2.5
+        assert b[2] == (5.0, 7.0)  # 搜不到 → 回退
+        assert b[3] == (7.0, 9.0)  # 旧格式无 trigger → 回退
 
     def test_trigger_bounds_overlap_cap_and_fallback(self):
         """双触发贴脸：前卡 end 封顶所有其它更晚的触发时刻（含页序
@@ -1704,22 +1951,26 @@ class TestTriggerDecor:
             _trigger_bounds,
         )
 
-        rows = [{"words": [
-            {"text": "甲乙", "start": 1.0, "end": 1.4},
-            {"text": "丙", "start": 1.6, "end": 2.0},
-            {"text": "丁", "start": 5.0, "end": 5.4},
-        ]}]
+        rows = [
+            {
+                "words": [
+                    {"text": "甲乙", "start": 1.0, "end": 1.4},
+                    {"text": "丙", "start": 1.6, "end": 2.0},
+                    {"text": "丁", "start": 5.0, "end": 5.4},
+                ]
+            }
+        ]
         slides = [
             {"trigger": {"text": "甲乙"}},
             {"trigger": {"text": "丁"}},
-            {"trigger": {"text": "丙"}},   # 页序与触发顺序颠倒
+            {"trigger": {"text": "丙"}},  # 页序与触发顺序颠倒
         ]
         page = [(0.0, 4.0), (4.0, 8.0), (8.0, 12.0)]
         b = _trigger_bounds(slides, rows, page, 12.0)
         # 卡0 @1.0 原停留至 3.5，被 1.6 封顶 → 0.6s <0.8 回退
         assert b[0] == (0.0, 4.0)
-        assert b[1] == (5.0, 7.5)          # 丁 @5.0 → +min(4.0, 2.5)
-        assert b[2] == (1.6, 4.1)          # 丙 @1.6（被 5.0 封顶不生效）
+        assert b[1] == (5.0, 7.5)  # 丁 @5.0 → +min(4.0, 2.5)
+        assert b[2] == (1.6, 4.1)  # 丙 @1.6（被 5.0 封顶不生效）
 
     def test_build_decor_cmd_pop(self):
         """pop 入场：0.5x/1.08x/1.0x 三档 + 0.06s 快切 enable 窗 +
@@ -1729,13 +1980,19 @@ class TestTriggerDecor:
         )
 
         cmd, meta = _build_decor_cmd(
-            Path("v.mp4"), [Path("c0.png")], [(2.0, 8.0)], 8.0, 720, 1280,
-            scale=0.6, effect="pop",
+            Path("v.mp4"),
+            [Path("c0.png")],
+            [(2.0, 8.0)],
+            8.0,
+            720,
+            1280,
+            scale=0.6,
+            effect="pop",
         )
         joined = " ".join(cmd)
-        assert "scale=216:" in joined    # 432*0.5
-        assert "scale=466:" in joined    # 432*1.08
-        assert "scale=432:" in joined    # 1.0x
+        assert "scale=216:" in joined  # 432*0.5
+        assert "scale=466:" in joined  # 432*1.08
+        assert "scale=432:" in joined  # 1.0x
         assert "enable='between(t,2.00,2.06)'" in joined
         assert "enable='between(t,2.06,2.12)'" in joined
         assert "enable='gte(t,2.12)'" in joined
@@ -1761,15 +2018,24 @@ class TestTriggerDecor:
         )
 
         slides = [
-            {"title": "A", "slide_type": "points", "bullets": [],
-             "trigger": {"text": "老板推单"}, "image": None},
-            {"title": "B", "slide_type": "points", "bullets": [],
-             "trigger": {"text": "不赚钱"}, "image": None},
+            {
+                "title": "A",
+                "slide_type": "points",
+                "bullets": [],
+                "trigger": {"text": "老板推单"},
+                "image": None,
+            },
+            {
+                "title": "B",
+                "slide_type": "points",
+                "bullets": [],
+                "trigger": {"text": "不赚钱"},
+                "image": None,
+            },
         ]
         sj = tmp_path / "slides.json"
         sj.write_text(
-            json.dumps({"theme": "midnight", "slides": slides},
-                       ensure_ascii=False),
+            json.dumps({"theme": "midnight", "slides": slides}, ensure_ascii=False),
             encoding="utf-8",
         )
         imgs = []
@@ -1808,33 +2074,48 @@ class TestTriggerDecor:
             Path(cmd[-1]).write_bytes(b"x")
             return ""
 
-        with patch.object(
-            TalkingHeadOverlaySkill, "_probe_resolution", fake_probe,
-        ), patch.object(
-            TalkingHeadOverlaySkill, "_probe_has_audio", fake_audio,
-        ), patch(
-            "capabilities.video.services.deck_orchestrator."
-            "render_decor_cards", fake_cards,
-        ), patch(
-            "capabilities.video.skills.talking_head_overlay."
-            "_render_karaoke_frames", fake_kao,
-        ), patch(
-            "capabilities.video.skills.smart_cut._run_ffmpeg",
-            side_effect=fake_ff,
+        with (
+            patch.object(
+                TalkingHeadOverlaySkill,
+                "_probe_resolution",
+                fake_probe,
+            ),
+            patch.object(
+                TalkingHeadOverlaySkill,
+                "_probe_has_audio",
+                fake_audio,
+            ),
+            patch(
+                "capabilities.video.services.deck_orchestrator." "render_decor_cards",
+                fake_cards,
+            ),
+            patch(
+                "capabilities.video.skills.talking_head_overlay." "_render_karaoke_frames",
+                fake_kao,
+            ),
+            patch(
+                "capabilities.video.skills.smart_cut._run_ffmpeg",
+                side_effect=fake_ff,
+            ),
         ):
             events = []
             async for ev in TalkingHeadOverlaySkill()._finalize_decor(
                 OverlayInput(video_path="v.mp4", overlay_decor=True),
-                tmp_path / "v.mp4", 5.0, tmp_path, tmp_path,
-                images=imgs, slides_json=sj, transcript_rows=self.ROWS,
+                tmp_path / "v.mp4",
+                5.0,
+                tmp_path,
+                tmp_path,
+                images=imgs,
+                slides_json=sj,
+                transcript_rows=self.ROWS,
             ):
                 events.append(ev)
         done = next(e for e in events if e.get("event") == "decor_done")
         wins = [tuple(w) for w in done["data"]["windows"]]
-        assert wins[0] == (0.0, 2.0)      # 老板推单 @0.0
+        assert wins[0] == (0.0, 2.0)  # 老板推单 @0.0
         # 不赚钱 @3.4 → +min(2.5, 2.5)=2.5，end 夹 duration=5.0
         assert wins[1] == (3.4, 5.0)
-        assert done["data"]["sfx"]        # 音效已混（pop@3.4）
+        assert done["data"]["sfx"]  # 音效已混（pop@3.4）
 
 
 class TestSfx:
@@ -1844,11 +2125,17 @@ class TestSfx:
     def test_sfx_assets_exist(self):
         """6 个免版权音效资产在库（ffmpeg 合成，零外部版权）。"""
         from capabilities.video.skills.talking_head_overlay import (
-            _SFX_DIR, _SFX_LIBRARY,
+            _SFX_DIR,
+            _SFX_LIBRARY,
         )
 
         assert _SFX_LIBRARY == [
-            "pop", "whoosh", "ding", "switch", "riser", "impact",
+            "pop",
+            "whoosh",
+            "ding",
+            "switch",
+            "riser",
+            "impact",
         ]
         for n in _SFX_LIBRARY:
             p = _SFX_DIR / f"{n}.wav"
@@ -1869,7 +2156,8 @@ class TestSfx:
         """混音命令：aformat 48k 立体声 + adelay=ms + volume=0.18 +
         amix normalize=0（主音量不被均分衰减）。"""
         from capabilities.video.skills.talking_head_overlay import (
-            _SFX_DIR, _build_sfx_mix,
+            _SFX_DIR,
+            _build_sfx_mix,
         )
 
         events = [{"name": "pop", "t": 1.5}, {"name": "ding", "t": 3.0}]
@@ -1886,11 +2174,11 @@ class TestSfx:
     def test_build_sfx_mix_missing_file_degrades(self, tmp_path):
         """缺文件/空事件 → 无混音输出（调用方音频直通，不阻断）。"""
         from capabilities.video.skills.talking_head_overlay import (
-            _SFX_DIR, _build_sfx_mix,
+            _SFX_DIR,
+            _build_sfx_mix,
         )
 
-        p, parts, label, meta = _build_sfx_mix(
-            [{"name": "pop", "t": 1.0}], tmp_path)
+        p, parts, label, meta = _build_sfx_mix([{"name": "pop", "t": 1.0}], tmp_path)
         assert p == [] and label is None
         p2, _p2, l2, _m2 = _build_sfx_mix([], _SFX_DIR)
         assert p2 == [] and l2 is None
@@ -1898,16 +2186,22 @@ class TestSfx:
     def test_build_decor_cmd_with_sfx(self):
         """SFX 接进合成命令：输入排在字幕流之后，-map 切 [aout]。"""
         from capabilities.video.skills.talking_head_overlay import (
-            _SFX_DIR, _build_decor_cmd,
+            _SFX_DIR,
+            _build_decor_cmd,
         )
 
         cmd, meta = _build_decor_cmd(
-            Path("v.mp4"), [Path("c0.png")], [(1.0, 5.0)], 5.0, 720, 1280,
+            Path("v.mp4"),
+            [Path("c0.png")],
+            [(1.0, 5.0)],
+            5.0,
+            720,
+            1280,
             subtitle_ffconcat=Path("k/list.txt"),
             sfx_events=[{"name": "pop", "t": 1.0}],
             sfx_dir=_SFX_DIR,
         )
-        assert cmd.count("-i") == 4       # 视频+卡+字幕+sfx
+        assert cmd.count("-i") == 4  # 视频+卡+字幕+sfx
         joined = " ".join(cmd)
         assert "adelay=1000" in joined
         assert "-map" in joined and "[aout]" in joined
@@ -1920,7 +2214,12 @@ class TestSfx:
         )
 
         cmd, meta = _build_decor_cmd(
-            Path("v.mp4"), [Path("c0.png")], [(1.0, 5.0)], 5.0, 720, 1280,
+            Path("v.mp4"),
+            [Path("c0.png")],
+            [(1.0, 5.0)],
+            5.0,
+            720,
+            1280,
         )
         assert "[aout]" not in " ".join(cmd)
         assert meta.get("sfx") in (None, {}) or not meta["sfx"]
@@ -1931,15 +2230,30 @@ class TestTriggerSlides:
     实证改契约：miss 页兜底而非整体回退；全 miss 才 None）。"""
 
     ROWS = [
-        {"start": 0.0, "end": 1.2, "words": [
-            {"text": "今天", "start": 0.0, "end": 0.4},
-            {"text": "讲讲", "start": 0.5, "end": 1.2}]},
-        {"start": 2.0, "end": 3.0, "words": [
-            {"text": "老板", "start": 2.0, "end": 2.4},
-            {"text": "推单", "start": 2.5, "end": 2.9}]},
-        {"start": 4.0, "end": 5.0, "words": [
-            {"text": "体验", "start": 4.0, "end": 4.4},
-            {"text": "崩了", "start": 4.5, "end": 4.9}]},
+        {
+            "start": 0.0,
+            "end": 1.2,
+            "words": [
+                {"text": "今天", "start": 0.0, "end": 0.4},
+                {"text": "讲讲", "start": 0.5, "end": 1.2},
+            ],
+        },
+        {
+            "start": 2.0,
+            "end": 3.0,
+            "words": [
+                {"text": "老板", "start": 2.0, "end": 2.4},
+                {"text": "推单", "start": 2.5, "end": 2.9},
+            ],
+        },
+        {
+            "start": 4.0,
+            "end": 5.0,
+            "words": [
+                {"text": "体验", "start": 4.0, "end": 4.4},
+                {"text": "崩了", "start": 4.5, "end": 4.9},
+            ],
+        },
     ]
 
     def test_trigger_slide_starts_all_hit(self):
@@ -1964,11 +2278,13 @@ class TestTriggerSlides:
         # 中间页 miss → 该页句边界兜底（spans[1].start=2.0，结果与
         # 全命中一致）；其余页仍走触发点
         slides = [
-            {"trigger": {"text": "今天讲讲"}}, {},
+            {"trigger": {"text": "今天讲讲"}},
+            {},
             {"trigger": {"text": "体验崩了"}},
         ]
         assert _trigger_slide_starts(self.ROWS, slides, 12.0) == (
-            0.0, [2.0, 2.0, 8.0],
+            0.0,
+            [2.0, 2.0, 8.0],
         )
         # 乱序命中（顺序扫描后 miss）→ 句边界兜底 + 单调钳制
         slides = [
@@ -1976,7 +2292,8 @@ class TestTriggerSlides:
             {"trigger": {"text": "老板推单"}},
         ]
         assert _trigger_slide_starts(self.ROWS, slides, 12.0) == (
-            4.0, [0.5, 7.5],
+            4.0,
+            [0.5, 7.5],
         )
         # live16 场景：末页触发词只在前文（页 0 命中区）出现过 →
         # 顺序扫描 miss → 末页句边界兜底，计划仍成立
@@ -2002,8 +2319,9 @@ class TestHandoff:
 
         plan = _handoff_plan(5.0, 32.0)
         assert plan == {
-            "t0": 5.0, "td": 0.4,
-            "segA": (0.0, 5.9),   # 多截 0.5s 余量防 xfade 末帧差
+            "t0": 5.0,
+            "td": 0.4,
+            "segA": (0.0, 5.9),  # 多截 0.5s 余量防 xfade 末帧差
             "segB": (5.0, 32.0),
         }
         # t0 过早 / 段B 过短（> dur-2）→ None（走现行为）
@@ -2016,7 +2334,11 @@ class TestHandoff:
         )
 
         argv = _handoff_cmd(
-            Path("a.mp4"), Path("b.mp4"), 5.0, 0.4, Path("o.mp4"),
+            Path("a.mp4"),
+            Path("b.mp4"),
+            5.0,
+            0.4,
+            Path("o.mp4"),
         )
         s = " ".join(argv)
         assert "xfade" in s and "offset=5.000" in s and "duration=0.4" in s
@@ -2031,16 +2353,22 @@ class TestZoom:
     曲线 sqrt ease-in 30% 峰值 + quadratic 回落；找不到绝不阻断。
     """
 
-    ROWS = [{"start": 0.0, "end": 12.0, "text": "成本降了三倍，体验稳定转化率翻番",
-             "words": [
-                 {"text": "成本", "start": 0.0, "end": 0.4},
-                 {"text": "降了", "start": 0.4, "end": 0.9},
-                 {"text": "三倍", "start": 1.0, "end": 1.6},
-                 {"text": "体验", "start": 2.0, "end": 2.4},
-                 {"text": "稳定", "start": 2.5, "end": 3.0},
-                 {"text": "转化率", "start": 5.0, "end": 5.9},
-                 {"text": "翻番", "start": 6.0, "end": 6.4},
-             ]}]
+    ROWS = [
+        {
+            "start": 0.0,
+            "end": 12.0,
+            "text": "成本降了三倍，体验稳定转化率翻番",
+            "words": [
+                {"text": "成本", "start": 0.0, "end": 0.4},
+                {"text": "降了", "start": 0.4, "end": 0.9},
+                {"text": "三倍", "start": 1.0, "end": 1.6},
+                {"text": "体验", "start": 2.0, "end": 2.4},
+                {"text": "稳定", "start": 2.5, "end": 3.0},
+                {"text": "转化率", "start": 5.0, "end": 5.9},
+                {"text": "翻番", "start": 6.0, "end": 6.4},
+            ],
+        }
+    ]
 
     def test_find_trigger_span_cross_word(self):
         """span：跨词拼接命中 → (首词 start, 末词 end)；未命中 None。"""
@@ -2059,26 +2387,32 @@ class TestZoom:
         )
 
         slides = [
-            {"bullets": [
-                {"text": "成本降了三倍", "emphasis": "number"},
-                {"text": "体验稳定", "emphasis": "keyword"},
-            ]},
-            {"bullets": [
-                {"text": "转化率翻番", "emphasis": "number"},
-                {"text": "不存在词", "emphasis": "keyword"},
-            ]},
-            {"bullets": [
-                {"text": "成本降了三倍", "emphasis": "keyword"},  # 重复起点
-            ]},
+            {
+                "bullets": [
+                    {"text": "成本降了三倍", "emphasis": "number"},
+                    {"text": "体验稳定", "emphasis": "keyword"},
+                ]
+            },
+            {
+                "bullets": [
+                    {"text": "转化率翻番", "emphasis": "number"},
+                    {"text": "不存在词", "emphasis": "keyword"},
+                ]
+            },
+            {
+                "bullets": [
+                    {"text": "成本降了三倍", "emphasis": "keyword"},  # 重复起点
+                ]
+            },
         ]
         wins = _zoom_windows(slides, self.ROWS, 12.0)
         starts = [w[0] for w in wins]
         assert starts == sorted(starts)
         assert len(starts) == len(set(starts))
-        assert wins[0] == (0.0, 0.45)       # 「成本降了三倍」整句 span
-        assert wins[0][0] == 0.0            # number 优先
-        assert (5.0, 5.45) in wins          # 转化率翻番（整句 span）
-        assert (2.0, 2.45) in wins          # 体验稳定（keyword 补位）
+        assert wins[0] == (0.0, 0.45)  # 「成本降了三倍」整句 span
+        assert wins[0][0] == 0.0  # number 优先
+        assert (5.0, 5.45) in wins  # 转化率翻番（整句 span）
+        assert (2.0, 2.45) in wins  # 体验稳定（keyword 补位）
 
     def test_relaxed_span_ngram_fallback(self):
         """live15 实证：提炼语措辞漂移 → 整句失手后 4 字滑窗容错。"""
@@ -2099,10 +2433,14 @@ class TestZoom:
             _zoom_windows,
         )
 
-        slides = [{"bullets": [
-            {"text": "成本降了呀", "emphasis": "keyword"},
-            {"text": "完全不存在词", "emphasis": "number"},  # miss 跳过
-        ]}]
+        slides = [
+            {
+                "bullets": [
+                    {"text": "成本降了呀", "emphasis": "keyword"},
+                    {"text": "完全不存在词", "emphasis": "number"},  # miss 跳过
+                ]
+            }
+        ]
         assert _zoom_windows(slides, self.ROWS, 12.0) == [(0.0, 0.45)]
 
     def test_zoom_windows_window_clamp(self):
@@ -2113,11 +2451,11 @@ class TestZoom:
 
         slides = [{"bullets": [{"text": "三倍", "emphasis": "number"}]}]
         wins = _zoom_windows(slides, self.ROWS, 12.0)
-        assert wins == [(1.0, 1.45)]        # 跨度 0.6 → min(0.45) 封顶
+        assert wins == [(1.0, 1.45)]  # 跨度 0.6 → min(0.45) 封顶
         rows2 = [{"words": [{"text": "稳", "start": 3.0, "end": 3.1}]}]
         slides2 = [{"bullets": [{"text": "稳", "emphasis": "keyword"}]}]
         wins2 = _zoom_windows(slides2, rows2, 12.0)
-        assert wins2 == [(3.0, 3.4)]        # 短词 → normal 0.4 基准
+        assert wins2 == [(3.0, 3.4)]  # 短词 → normal 0.4 基准
 
     def test_zoom_windows_nearby_dedup(self):
         """相邻窗间隔 <0.5s → 保首个（杜绝连环推近）。"""
@@ -2125,14 +2463,22 @@ class TestZoom:
             _zoom_windows,
         )
 
-        rows2 = [{"words": [
-            {"text": "三倍", "start": 1.0, "end": 1.6},
-            {"text": "四倍", "start": 1.7, "end": 2.0},
-        ]}]
-        slides = [{"bullets": [
-            {"text": "三倍", "emphasis": "keyword"},
-            {"text": "四倍", "emphasis": "keyword"},
-        ]}]
+        rows2 = [
+            {
+                "words": [
+                    {"text": "三倍", "start": 1.0, "end": 1.6},
+                    {"text": "四倍", "start": 1.7, "end": 2.0},
+                ]
+            }
+        ]
+        slides = [
+            {
+                "bullets": [
+                    {"text": "三倍", "emphasis": "keyword"},
+                    {"text": "四倍", "emphasis": "keyword"},
+                ]
+            }
+        ]
         wins = _zoom_windows(slides, rows2, 12.0)
         assert wins == [(1.0, 1.45)]
 
@@ -2142,17 +2488,23 @@ class TestZoom:
             _zoom_windows,
         )
 
-        assert _zoom_windows(
-            [{"bullets": [{"text": "不存在词", "emphasis": "keyword"}]}],
-            self.ROWS, 12.0,
-        ) == []
-        rows2 = [{"words": [
-            {"text": f"w{i}", "start": float(i) * 3.0, "end": float(i) * 3.0 + 0.8}
-            for i in range(8)
-        ]}]
-        slides = [{"bullets": [
-            {"text": f"w{i}", "emphasis": "keyword"} for i in range(8)
-        ]}]
+        assert (
+            _zoom_windows(
+                [{"bullets": [{"text": "不存在词", "emphasis": "keyword"}]}],
+                self.ROWS,
+                12.0,
+            )
+            == []
+        )
+        rows2 = [
+            {
+                "words": [
+                    {"text": f"w{i}", "start": float(i) * 3.0, "end": float(i) * 3.0 + 0.8}
+                    for i in range(8)
+                ]
+            }
+        ]
+        slides = [{"bullets": [{"text": f"w{i}", "emphasis": "keyword"} for i in range(8)]}]
         assert len(_zoom_windows(slides, rows2, 40.0)) == 5
 
     def test_zoom_curve_math(self):
@@ -2177,7 +2529,7 @@ class TestZoom:
         assert _zoompan_expr([], 30, 720, 1280) is None
         e = _zoompan_expr([(1.0, 1.45)], 30, 720, 1280)
         assert e is not None
-        assert "between(in,30,44)" in e     # round(1.0*30), round(1.45*30)
+        assert "between(in,30,44)" in e  # round(1.0*30), round(1.45*30)
         assert "sqrt(" in e and "pow(" in e
         assert "x='iw/2-(iw/zoom/2)'" in e
         assert "y='ih/2-(ih/zoom/2)'" in e
@@ -2192,7 +2544,12 @@ class TestZoom:
         )
 
         cmd, meta = _build_decor_cmd(
-            Path("v.mp4"), [Path("c.png")], [(1.0, 5.0)], 5.0, 720, 1280,
+            Path("v.mp4"),
+            [Path("c.png")],
+            [(1.0, 5.0)],
+            5.0,
+            720,
+            1280,
             zoom_windows=[(1.0, 1.45)],
         )
         joined = " ".join(cmd)
@@ -2207,7 +2564,12 @@ class TestZoom:
         )
 
         cmd, meta = _build_decor_cmd(
-            Path("v.mp4"), [Path("c.png")], [(1.0, 5.0)], 5.0, 720, 1280,
+            Path("v.mp4"),
+            [Path("c.png")],
+            [(1.0, 5.0)],
+            5.0,
+            720,
+            1280,
         )
         assert "zoompan" not in " ".join(cmd)
         assert meta["zoom"] == []
@@ -2263,7 +2625,8 @@ class TestFitText:
 
         text = "一" * 40
         data = _karaoke_display_data(
-            [{"text": text, "words": [{"text": "一"}]}], width=576,
+            [{"text": text, "words": [{"text": "一"}]}],
+            width=576,
         )
         assert data[0]["px"] == _fit_font_px(text, 576)
 
@@ -2309,7 +2672,12 @@ class TestSafeMargin:
         )
 
         cmd, _ = _build_decor_cmd(
-            Path("v.mp4"), [Path("c.png")], [(1.0, 5.0)], 5.0, 1080, 1920,
+            Path("v.mp4"),
+            [Path("c.png")],
+            [(1.0, 5.0)],
+            5.0,
+            1080,
+            1920,
         )
         # max(_safe_margin(1080)=80, 1920*5%=96) = 96
         assert "overlay=(W-w)/2:96" in " ".join(cmd)
@@ -2328,21 +2696,28 @@ class TestDeckTopClearance:
         from capabilities.video.services.deck_orchestrator import _slide_html
 
         html = _slide_html(
-            "真没空的老板只会存单", self.BULLETS, 2, 6,
+            "真没空的老板只会存单",
+            self.BULLETS,
+            2,
+            6,
             top_right_clear_px=350,
         )
-        assert "margin-right:350px" in html   # h1 右让
-        assert "left:110px" in html           # 页码移左上
-        assert "right:110px" not in html      # 旧右上页码消失
+        assert "margin-right:350px" in html  # h1 右让
+        assert "left:110px" in html  # 页码移左上
+        assert "right:110px" not in html  # 旧右上页码消失
 
     def test_slide_html_top_clear_quote(self):
         from capabilities.video.services.deck_orchestrator import _slide_html
 
         html = _slide_html(
-            "金句标题", self.BULLETS, 3, 6,
-            slide_type="quote", top_right_clear_px=350,
+            "金句标题",
+            self.BULLETS,
+            3,
+            6,
+            slide_type="quote",
+            top_right_clear_px=350,
         )
-        assert "margin-right:350px" in html   # quote-title 右让
+        assert "margin-right:350px" in html  # quote-title 右让
         assert "left:110px" in html
 
     def test_slide_html_default_no_clear(self):
@@ -2350,7 +2725,7 @@ class TestDeckTopClearance:
 
         html = _slide_html("标题", self.BULLETS, 1, 6)
         assert "margin-right:" not in html
-        assert "right:110px" in html          # 页码仍在右上（现行为）
+        assert "right:110px" in html  # 页码仍在右上（现行为）
 
     def test_deck_top_clear_px_helper(self):
         from capabilities.video.skills.talking_head_overlay import (
@@ -2384,10 +2759,10 @@ class TestKenburns:
         )
 
         f = _kenburns_filter(5.0, 30, 1080, 1920, zoom_in=True)
-        assert "scale=iw*2:ih*2" in f          # 防抖 upscale
+        assert "scale=iw*2:ih*2" in f  # 防抖 upscale
         assert "zoompan=" in f
-        assert "1+0.06*on/150" in f            # 5s*30fps=150 帧线性推近
-        assert "s=1080x1920" in f              # 输出回主画布尺寸
+        assert "1+0.06*on/150" in f  # 5s*30fps=150 帧线性推近
+        assert "s=1080x1920" in f  # 输出回主画布尺寸
         assert "fps=30" in f
 
     def test_kenburns_filter_zoom_out(self):
@@ -2396,7 +2771,7 @@ class TestKenburns:
         )
 
         f = _kenburns_filter(3.0, 30, 1080, 1920, zoom_in=False)
-        assert "1.06-0.06*on/90" in f          # 拉远：1.06 → 1.00
+        assert "1.06-0.06*on/90" in f  # 拉远：1.06 → 1.00
         assert "zoompan=" in f
 
     def test_kenburns_filter_directional_center(self):
@@ -2405,7 +2780,7 @@ class TestKenburns:
         )
 
         f = _kenburns_filter(2.0, 30, 720, 1280, zoom_in=True)
-        assert "x='iw/2-(iw/zoom/2)'" in f     # 居中防漂移
+        assert "x='iw/2-(iw/zoom/2)'" in f  # 居中防漂移
         assert "y='ih/2-(ih/zoom/2)'" in f
         assert "s=720x1280" in f
 
@@ -2418,11 +2793,16 @@ class TestKenburns:
 
         shots = [_P(f"s{i}.png") for i in range(3)]
         cmd, meta = _build_xfade_cmd(
-            shots, _P("o.mp4"), [4.0, 4.0, 4.0],
-            fps=30, width=1080, height=1920, kenburns=True,
+            shots,
+            _P("o.mp4"),
+            [4.0, 4.0, 4.0],
+            fps=30,
+            width=1080,
+            height=1920,
+            kenburns=True,
         )
         fc = cmd[cmd.index("-filter_complex") + 1]
-        assert fc.count("zoompan=") == 3       # 每输入一档
+        assert fc.count("zoompan=") == 3  # 每输入一档
         assert meta["kb"] == [True, False, True]  # 方向交替（推/拉/推）
 
     def test_xfade_cmd_kenburns_default_off(self):
@@ -2434,11 +2814,15 @@ class TestKenburns:
 
         shots = [_P(f"s{i}.png") for i in range(2)]
         cmd, _ = _build_xfade_cmd(
-            shots, _P("o.mp4"), [4.0, 4.0],
-            fps=30, width=1080, height=1920,
+            shots,
+            _P("o.mp4"),
+            [4.0, 4.0],
+            fps=30,
+            width=1080,
+            height=1920,
         )
         fc = cmd[cmd.index("-filter_complex") + 1]
-        assert "zoompan=" not in fc            # 现行为不变
+        assert "zoompan=" not in fc  # 现行为不变
 
 
 class TestDeckLayers:
@@ -2462,8 +2846,8 @@ class TestDeckLayers:
 
         plan = _slide_layers_plan(self.SLIDE)
         assert [l["name"] for l in plan] == ["bg", "head", "b0", "b1"]
-        assert plan[1]["t0"] == 0.10          # 标题先落
-        assert plan[2]["t0"] == 0.45          # 要点 stagger
+        assert plan[1]["t0"] == 0.10  # 标题先落
+        assert plan[2]["t0"] == 0.45  # 要点 stagger
         assert plan[3]["t0"] == 0.80
         assert all(l["y0"] == 36 for l in plan[1:])
 
@@ -2479,22 +2863,28 @@ class TestDeckLayers:
         from capabilities.video.services.deck_orchestrator import _slide_html
 
         html = _slide_html(
-            self.SLIDE["title"], self.SLIDE["bullets"], 2, 5,
+            self.SLIDE["title"],
+            self.SLIDE["bullets"],
+            2,
+            5,
             only_layer="bg",
         )
-        assert html.count("visibility:hidden") >= 3   # idx+title+bullets 隐
-        assert 'class="total"' in html                # 页脚留 bg 层
+        assert html.count("visibility:hidden") >= 3  # idx+title+bullets 隐
+        assert 'class="total"' in html  # 页脚留 bg 层
 
     def test_slide_html_only_b1(self):
         from capabilities.video.services.deck_orchestrator import _slide_html
 
         html = _slide_html(
-            self.SLIDE["title"], self.SLIDE["bullets"], 2, 5,
+            self.SLIDE["title"],
+            self.SLIDE["bullets"],
+            2,
+            5,
             only_layer="b1",
         )
         # body 透明（文字层透明底截图）
         assert "background:transparent" in html
-        assert html.count("visibility:hidden") >= 3   # title+idx+另一条
+        assert html.count("visibility:hidden") >= 3  # title+idx+另一条
         # 第二条要点可见（无 hidden）
         seg = html.split("会退：在你这待着难受")[0]
         assert seg.rfind("visibility:hidden") < seg.rfind("<p")
@@ -2507,26 +2897,34 @@ class TestDeckLayers:
         )
 
         pages = [
-            [{"png": _P(f"p0_{j}.png"), "t0": t0, "dur": 0.3, "y0": 36}
-             for j, t0 in enumerate((0.0, 0.10, 0.45))],
-            [{"png": _P(f"p1_{j}.png"), "t0": t0, "dur": 0.3, "y0": 36}
-             for j, t0 in enumerate((0.0, 0.10))],
+            [
+                {"png": _P(f"p0_{j}.png"), "t0": t0, "dur": 0.3, "y0": 36}
+                for j, t0 in enumerate((0.0, 0.10, 0.45))
+            ],
+            [
+                {"png": _P(f"p1_{j}.png"), "t0": t0, "dur": 0.3, "y0": 36}
+                for j, t0 in enumerate((0.0, 0.10))
+            ],
         ]
         cmd, meta = _build_layers_cmd(
-            pages, _P("o.mp4"), [6.0, 4.0],
-            fps=30, width=1080, height=1920,
+            pages,
+            _P("o.mp4"),
+            [6.0, 4.0],
+            fps=30,
+            width=1080,
+            height=1920,
         )
-        assert cmd.count("-i") >= 5               # 每层一输入
+        assert cmd.count("-i") >= 5  # 每层一输入
         fc = cmd[cmd.index("-filter_complex") + 1]
-        assert "fade=t=in:st=0.10" in fc          # 两页标题均页内 0.10 入场
-        assert "fade=t=in:st=0.45" in fc          # 页 0 要点 stagger
+        assert "fade=t=in:st=0.10" in fc  # 两页标题均页内 0.10 入场
+        assert "fade=t=in:st=0.45" in fc  # 页 0 要点 stagger
         # 层 t0 = 页内相对时刻（xfade 重基第二输入到 offset — 输入 PTS
         # 0-based 即页内时间；live20 探针实证 page_start 锚定反而迟到
         # page_start，且短页 e_i < tg 时 fade 永不触发 → 整页无字）
-        assert "fade=t=in:st=6.10" not in fc      # 不锚定页起点
-        assert "1-(t-0.10)" in fc                 # 页 1 标题 y 表达式（页内）
-        assert "overlay=0:" in fc and "36*max(0" in fc   # 上滑落定
-        assert "xfade=transition=" in fc          # 页间转场保持
+        assert "fade=t=in:st=6.10" not in fc  # 不锚定页起点
+        assert "1-(t-0.10)" in fc  # 页 1 标题 y 表达式（页内）
+        assert "overlay=0:" in fc and "36*max(0" in fc  # 上滑落定
+        assert "xfade=transition=" in fc  # 页间转场保持
         assert meta["layers_per_page"] == [3, 2]
 
     def test_pip_full_cmd_handoff_align(self):
@@ -2536,9 +2934,19 @@ class TestDeckLayers:
         from capabilities.video.skills.talking_head_overlay import _pip_full_cmd
 
         cmd = _pip_full_cmd(
-            _P("slides.mp4"), 30.0, _P("frames"), _P("src.mp4"),
-            1080, 1920, 302, 536, 758, 20,
-            duration=30.19, bg_hex="1a1a2e", handoff_t0=7.0,
+            _P("slides.mp4"),
+            30.0,
+            _P("frames"),
+            _P("src.mp4"),
+            1080,
+            1920,
+            302,
+            536,
+            758,
+            20,
+            duration=30.19,
+            bg_hex="1a1a2e",
+            handoff_t0=7.0,
             output_path=_P("pip_full.mp4"),
         )
         joined = " ".join(cmd)
@@ -2549,9 +2957,19 @@ class TestDeckLayers:
         assert cmd[cmd.index("-map", cmd.index("-map") + 1) + 1] == "3:a?"
         # 无 handoff：slides 从 0 直放（现行为不回归）
         cmd2 = _pip_full_cmd(
-            _P("slides.mp4"), 30.0, _P("frames"), _P("src.mp4"),
-            1080, 1920, 302, 536, 758, 20,
-            duration=30.19, bg_hex="1a1a2e", handoff_t0=None,
+            _P("slides.mp4"),
+            30.0,
+            _P("frames"),
+            _P("src.mp4"),
+            1080,
+            1920,
+            302,
+            536,
+            758,
+            20,
+            duration=30.19,
+            bg_hex="1a1a2e",
+            handoff_t0=None,
             output_path=_P("pip_full.mp4"),
         )
         assert "color=c=" not in " ".join(cmd2)
@@ -2566,15 +2984,22 @@ class TestDeckLayers:
             _build_layers_cmd,
         )
 
-        pages = [[
-            {"png": _P("p0_0.png"), "t0": 0.0, "dur": 0.0, "y0": 0},
-            {"png": _P("p0_1.png"), "t0": 0.10, "dur": 0.3, "y0": 36},
-        ]]
+        pages = [
+            [
+                {"png": _P("p0_0.png"), "t0": 0.0, "dur": 0.0, "y0": 0},
+                {"png": _P("p0_1.png"), "t0": 0.10, "dur": 0.3, "y0": 36},
+            ]
+        ]
         cmd, _ = _build_layers_cmd(
-            pages, _P("o.mp4"), [5.0], fps=30, width=1080, height=1920,
+            pages,
+            _P("o.mp4"),
+            [5.0],
+            fps=30,
+            width=1080,
+            height=1920,
         )
         fc = cmd[cmd.index("-filter_complex") + 1]
-        assert "xfade" not in fc                  # 单页无转场
+        assert "xfade" not in fc  # 单页无转场
         assert "overlay=0:" in fc
 
 
@@ -2600,12 +3025,15 @@ class TestTypewriter:
         plan = _typewriter_plan(self.SLIDE)
         assert plan["head"] == {"t0": 0.10, "chars": True}
         assert plan["b0"]["t0"] == 0.45 and plan["b1"]["t0"] == 0.80
-        assert plan["b0"]["chars"] is True   # keyword/none 要点逐字
+        assert plan["b0"]["chars"] is True  # keyword/none 要点逐字
         # number 渐变字整块淡入（background-clip:text 逐字透明度失效）
-        plan2 = _typewriter_plan({
-            "title": "T", "slide_type": "points",
-            "bullets": [{"text": "30%", "emphasis": "number"}],
-        })
+        plan2 = _typewriter_plan(
+            {
+                "title": "T",
+                "slide_type": "points",
+                "bullets": [{"text": "30%", "emphasis": "number"}],
+            }
+        )
         assert plan2["b0"]["chars"] is False
 
     def test_typewriter_plan_non_points_none(self):
@@ -2613,9 +3041,12 @@ class TestTypewriter:
             _typewriter_plan,
         )
 
-        assert _typewriter_plan(
-            {**self.SLIDE, "slide_type": "quote"},
-        ) is None
+        assert (
+            _typewriter_plan(
+                {**self.SLIDE, "slide_type": "quote"},
+            )
+            is None
+        )
 
     def test_typewriter_cps_short_page_speedup(self):
         """短页流不完 → 按比例提速（片尾文字不截断）；长页不提速。"""
@@ -2626,16 +3057,16 @@ class TestTypewriter:
         )
 
         slide = {
-            "title": "T", "slide_type": "points",
-            "bullets": [{"text": "一二三四五六七八九十十一十二十三十四",
-                         "emphasis": "none"}],
+            "title": "T",
+            "slide_type": "points",
+            "bullets": [{"text": "一二三四五六七八九十十一十二十三十四", "emphasis": "none"}],
         }
         plan = _typewriter_plan(slide)
-        assert _typewriter_cps(plan, slide, 10.0) == 9.0   # 长页基准速
+        assert _typewriter_cps(plan, slide, 10.0) == 9.0  # 长页基准速
         short = _typewriter_cps(plan, slide, 1.0)
-        assert short > 9.0                                  # 短页提速
+        assert short > 9.0  # 短页提速
         assert _typewriter_t_done(plan, slide, short) <= 1.0 + 1e-6
-        assert _typewriter_cps(None, slide, 0.5) == 9.0    # 非 points 页
+        assert _typewriter_cps(None, slide, 0.5) == 9.0  # 非 points 页
 
     def test_typewriter_avail_last_page_tail_drain(self):
         """末页 avail 收紧：链路尾漂移（让位 xfade 0.5 + acrossfade 0.6，
@@ -2649,14 +3080,15 @@ class TestTypewriter:
             _typewriter_t_done,
         )
 
-        assert _TAIL_DRAIN >= 1.06          # 覆盖 live24 实测漂移
+        assert _TAIL_DRAIN >= 1.06  # 覆盖 live24 实测漂移
         # 非末页：原公式不变
         assert _typewriter_avail(12.46, False, 0.5) == 12.46 + 0.5 - 0.3
         # 末页：扣尾部漂移
         assert _typewriter_avail(3.02, True, 0.5) == 3.02 - _TAIL_DRAIN
         # live24 实际末页（3.02s / 3 条）：提速后 t_done ≤ 收紧 avail
         slide = {
-            "title": "别让老板忍到推单", "slide_type": "points",
+            "title": "别让老板忍到推单",
+            "slide_type": "points",
             "bullets": [
                 {"text": "推单不是没空，是难受", "emphasis": "keyword"},
                 {"text": "团队服务模式要自查", "emphasis": "none"},
@@ -2673,18 +3105,26 @@ class TestTypewriter:
         from capabilities.video.services.deck_orchestrator import _slide_html
 
         html = _slide_html(
-            "真没空", self.SLIDE["bullets"], 2, 5, typewriter=True,
+            "真没空",
+            self.SLIDE["bullets"],
+            2,
+            5,
+            typewriter=True,
         )
-        assert "window.__twSet" in html            # JS 驱动入口
-        assert 'id="tw-head"' in html              # 标题逐字
+        assert "window.__twSet" in html  # JS 驱动入口
+        assert 'id="tw-head"' in html  # 标题逐字
         assert '<span class="tw">' in html
         assert 'id="tw-b0"' in html and 'id="twc-b0"' in html
         assert 'id="tw-b1"' in html
-        assert '"chars": true' in html             # 调度 JSON 嵌入
+        assert '"chars": true' in html  # 调度 JSON 嵌入
         # tw_cps 覆盖（短页提速）注入 JS
         html_tw = _slide_html(
-            "真没空", self.SLIDE["bullets"], 2, 5,
-            typewriter=True, tw_cps=15.0,
+            "真没空",
+            self.SLIDE["bullets"],
+            2,
+            5,
+            typewriter=True,
+            tw_cps=15.0,
         )
         assert "__twCps=15.0" in html_tw
         # 缺省（层渲染/整页）不带打字机标记
@@ -2692,7 +3132,12 @@ class TestTypewriter:
         assert "__twSet" not in html2
         # 非 points 页不流式（短页金句流式会截断）
         html3 = _slide_html(
-            "金句", [], 1, 2, slide_type="quote", typewriter=True,
+            "金句",
+            [],
+            1,
+            2,
+            slide_type="quote",
+            typewriter=True,
         )
         assert "__twSet" not in html3
 
@@ -2705,18 +3150,22 @@ class TestTypewriter:
 
         dirs = [_P(f"D:/tw/page_{i:02d}") for i in range(2)]
         cmd, meta = _build_typewriter_cmd(
-            dirs, _P("o.mp4"), [2.0, 3.0],
-            fps=30, width=1080, height=1920,
+            dirs,
+            _P("o.mp4"),
+            [2.0, 3.0],
+            fps=30,
+            width=1080,
+            height=1920,
         )
         joined = " ".join(cmd)
-        assert joined.count("%06d.png") == 2      # 每页帧序列一输入
+        assert joined.count("%06d.png") == 2  # 每页帧序列一输入
         assert "-framerate 30" in joined
         # e_i = d_i + td 硬截（offset 契约不因帧数取整漂移）
         assert "-t 2.50" in joined and "-t 3.50" in joined
         fc = cmd[cmd.index("-filter_complex") + 1]
-        assert "fade=t=in" not in fc              # 动画已在帧里，无层 fade
+        assert "fade=t=in" not in fc  # 动画已在帧里，无层 fade
         assert "xfade=transition=" in fc
-        assert "offset=2.00" in fc                # 前缀和
+        assert "offset=2.00" in fc  # 前缀和
         assert meta["offsets"] == [2.0]
         assert meta["styles"]
 
@@ -2745,9 +3194,12 @@ class TestTypewriter:
             new=AsyncMock(side_effect=fake_ff),
         ):
             await TalkingHeadOverlaySkill()._slides_to_video(
-                [Path("a.png")], tmp_path / "out.mp4",
-                durations=[2.0, 3.0], frames=dirs,
-                width=1080, height=1920,
+                [Path("a.png")],
+                tmp_path / "out.mp4",
+                durations=[2.0, 3.0],
+                frames=dirs,
+                width=1080,
+                height=1920,
             )
 
         cmd = captured["cmd"]
@@ -2767,7 +3219,8 @@ class TestTypewriter:
 
         async def _run_once(tw_mock, ly_mock):
             patches, _, _ = TestDeckGate()._gate_patches(
-                tmp_path, [],
+                tmp_path,
+                [],
                 gen_mock=AsyncMock(return_value=_deck_pngs(tmp_path)),
             )
             captured: dict = {}
@@ -2783,27 +3236,31 @@ class TestTypewriter:
                     new=MagicMock(side_effect=_cap_video),
                 ),
                 patch(
-                    "capabilities.video.services.deck_orchestrator."
-                    "render_deck_typewriter",
+                    "capabilities.video.services.deck_orchestrator." "render_deck_typewriter",
                     new=tw_mock,
                 ),
                 patch(
-                    "capabilities.video.services.deck_orchestrator."
-                    "render_deck_layers",
+                    "capabilities.video.services.deck_orchestrator." "render_deck_layers",
                     new=ly_mock,
                 ),
             )
-            await _run_skill(tmp_path, {
-                "pip": True, "auto_deck": True,
-                "transcript": _deck_transcript(),
-                "gate_mode": "auto_confirm",
-                "deck_slides_json": str(jp),
-            }, patches)
+            await _run_skill(
+                tmp_path,
+                {
+                    "pip": True,
+                    "auto_deck": True,
+                    "transcript": _deck_transcript(),
+                    "gate_mode": "auto_confirm",
+                    "deck_slides_json": str(jp),
+                },
+                patches,
+            )
             return captured
 
         tw_dirs = [Path(f"D:/tw/page_{i:02d}") for i in range(2)]
         cap = await _run_once(
-            MagicMock(return_value=tw_dirs), MagicMock(return_value=[]),
+            MagicMock(return_value=tw_dirs),
+            MagicMock(return_value=[]),
         )
         assert cap.get("frames") == tw_dirs, cap
         assert cap.get("layers") is None, cap
@@ -2826,17 +3283,20 @@ class TestTypewriter:
         )
 
         slide = {
-            "title": "你好", "slide_type": "points",
+            "title": "你好",
+            "slide_type": "points",
             "bullets": ["第一条要点"],
         }
         dirs = render_deck_typewriter(
-            [slide], tmp_path / "tw", [3.0], td=0.5, fps=10,
+            [slide],
+            tmp_path / "tw",
+            [3.0],
+            td=0.5,
+            fps=10,
         )
         assert len(dirs) == 1
         frames = sorted(dirs[0].glob("*.png"))
-        assert [f.name for f in frames] == [
-            f"{j:06d}.png" for j in range(35)
-        ]
+        assert [f.name for f in frames] == [f"{j:06d}.png" for j in range(35)]
         # t_done ≈ b0: 0.45 + 5/9 + 0.08 ≈ 1.09 → j>=11 复制（t=j/10）
         done = frames[10].read_bytes()
         assert frames[20].read_bytes() == done, "文字完成帧应复制末帧"

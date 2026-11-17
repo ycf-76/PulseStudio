@@ -12,10 +12,10 @@ import httpx
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from capabilities.messaging.adapters.feishu import FeishuAPIError
 from app.config import get_settings
 from app.crypto.token_crypto import TokenCrypto
 from app.db.models import FeishuOAuthConnection, FeishuOAuthState
+from capabilities.messaging.adapters.feishu import FeishuAPIError
 
 FEISHU_AUTHORIZE_URL = "https://accounts.feishu.cn/open-apis/authen/v1/authorize"
 FEISHU_TOKEN_URL = "https://open.feishu.cn/open-apis/authen/v2/oauth/token"
@@ -35,9 +35,11 @@ def _as_aware(value: datetime | None) -> datetime | None:
 def build_pkce() -> tuple[str, str]:
     """返回 code_verifier、S256 code_challenge。"""
     verifier = secrets.token_urlsafe(64)[:96]
-    challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(verifier.encode("ascii")).digest()
-    ).rstrip(b"=").decode("ascii")
+    challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest())
+        .rstrip(b"=")
+        .decode("ascii")
+    )
     return verifier, challenge
 
 
@@ -93,7 +95,11 @@ async def refresh_user_token(refresh_token: str) -> dict:
     if response.status_code >= 400 or data.get("code", 0) not in (0, None):
         raise FeishuAPIError(
             code=int(data.get("code", response.status_code)),
-            msg=str(data.get("error_description") or data.get("msg") or "飞书 user_access_token 刷新失败"),
+            msg=str(
+                data.get("error_description")
+                or data.get("msg")
+                or "飞书 user_access_token 刷新失败"
+            ),
             api_name="authen.v2.oauth.token(refresh)",
         )
     return data
@@ -190,7 +196,10 @@ async def get_connection_status(db: AsyncSession, user_id: str) -> dict:
     return {
         "connected": bool(
             (expires_at is not None and expires_at > _utcnow())
-            or (connection.refresh_token_encrypted and (refresh_expires_at is None or refresh_expires_at > _utcnow()))
+            or (
+                connection.refresh_token_encrypted
+                and (refresh_expires_at is None or refresh_expires_at > _utcnow())
+            )
         ),
         "account": connection.user_name or connection.open_id or "已绑定飞书账号",
         "open_id": connection.open_id,

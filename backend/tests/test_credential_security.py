@@ -30,6 +30,7 @@ from app.services.url_guard import UnsafeUrlError, validate_outbound_url
 
 # ===== 公共 fixture =====
 
+
 @pytest.fixture(autouse=True)
 def secure_settings(monkeypatch):
     """注入测试用加密/JWT 密钥，并清空限流计数，避免依赖真实 .env。"""
@@ -79,6 +80,7 @@ async def api_client(session_factory):
 
 # ===== 1. AAD 绑定 =====
 
+
 def test_aad_binds_ciphertext_to_user_and_provider():
     crypto = TokenCrypto()
     aad_a = build_credential_aad("user_a", "deepseek")
@@ -99,12 +101,14 @@ def test_decrypt_with_fallback_reads_legacy_ciphertext():
     """历史无 AAD 密文仍可读取，且无需迁移。"""
     crypto = TokenCrypto()
     legacy = crypto.encrypt("sk-legacy-123")
-    assert crypto.decrypt_with_fallback(
-        legacy, aad=build_credential_aad("user_a", "deepseek")
-    ) == "sk-legacy-123"
+    assert (
+        crypto.decrypt_with_fallback(legacy, aad=build_credential_aad("user_a", "deepseek"))
+        == "sk-legacy-123"
+    )
 
 
 # ===== 2. 审计日志 =====
+
 
 async def test_save_writes_audit_and_encrypts_with_aad(api_client, session_factory):
     plaintext_key = "sk-secret-key-abcdef123456"
@@ -125,9 +129,12 @@ async def test_save_writes_audit_and_encrypts_with_aad(api_client, session_facto
     # 密文里不含明文
     assert plaintext_key not in cred.encrypted_api_key
     # 正确 AAD 可解密，错误 AAD 不可解密
-    assert TokenCrypto().decrypt(
-        cred.encrypted_api_key, aad=build_credential_aad("user_a", "deepseek")
-    ) == plaintext_key
+    assert (
+        TokenCrypto().decrypt(
+            cred.encrypted_api_key, aad=build_credential_aad("user_a", "deepseek")
+        )
+        == plaintext_key
+    )
     with pytest.raises(Exception):
         TokenCrypto().decrypt(
             cred.encrypted_api_key, aad=build_credential_aad("user_b", "deepseek")
@@ -157,6 +164,7 @@ async def test_delete_writes_audit(api_client, session_factory):
 
 # ===== 3. SSRF 防护 =====
 
+
 @pytest.mark.parametrize(
     "url",
     [
@@ -176,14 +184,19 @@ def test_url_guard_blocks_unsafe_targets(url):
 
 
 def test_url_guard_allows_public_https():
-    assert validate_outbound_url("https://8.8.8.8/v1", resolve_hostnames=False) == "https://8.8.8.8/v1"
+    assert (
+        validate_outbound_url("https://8.8.8.8/v1", resolve_hostnames=False) == "https://8.8.8.8/v1"
+    )
     assert validate_outbound_url("") == ""
 
 
 async def test_save_rejects_private_base_url_and_audits_denial(api_client, session_factory):
     response = await api_client.put(
         "/api/models/credentials/deepseek",
-        json={"api_key": "sk-secret-key-abcdef123456", "custom_base_url": "http://127.0.0.1:9000/v1"},
+        json={
+            "api_key": "sk-secret-key-abcdef123456",
+            "custom_base_url": "http://127.0.0.1:9000/v1",
+        },
     )
     assert response.status_code == 400
 
@@ -197,6 +210,7 @@ async def test_save_rejects_private_base_url_and_audits_denial(api_client, sessi
 
 # ===== 4. 错误信息脱敏 =====
 
+
 def test_safe_error_hides_api_key():
     from app.api.routers.models import _safe_error
 
@@ -207,6 +221,7 @@ def test_safe_error_hides_api_key():
 
 
 # ===== 5. 限流 =====
+
 
 def test_rate_limit_sliding_window():
     reset_rate_limits()
@@ -224,14 +239,19 @@ def test_rate_limit_sliding_window():
 async def test_save_rate_limit_returns_429(api_client, monkeypatch):
     monkeypatch.setattr(get_settings(), "byok_save_rate_limit", 2)
     payload = {"api_key": "sk-secret-key-abcdef123456"}
-    assert (await api_client.put("/api/models/credentials/deepseek", json=payload)).status_code == 200
-    assert (await api_client.put("/api/models/credentials/deepseek", json=payload)).status_code == 200
+    assert (
+        await api_client.put("/api/models/credentials/deepseek", json=payload)
+    ).status_code == 200
+    assert (
+        await api_client.put("/api/models/credentials/deepseek", json=payload)
+    ).status_code == 200
     third = await api_client.put("/api/models/credentials/deepseek", json=payload)
     assert third.status_code == 429
     assert third.headers.get("retry-after")
 
 
 # ===== 6. 移除 query token =====
+
 
 async def test_jwt_query_token_is_rejected():
     token = create_jwt("user_a")
@@ -249,8 +269,6 @@ async def test_jwt_query_token_is_rejected():
         assert query_response.status_code == 401
 
         # Authorization header 正常通过
-        header_response = await client.get(
-            "/whoami", headers={"Authorization": f"Bearer {token}"}
-        )
+        header_response = await client.get("/whoami", headers={"Authorization": f"Bearer {token}"})
         assert header_response.status_code == 200
         assert header_response.json()["user_id"] == "user_a"

@@ -12,6 +12,7 @@
   4. D 定量断言：transcript_rows.json 存在，映射 durations 与旧均分
      不同（句边界对齐真实生效）
 """
+
 import asyncio
 import json
 import shutil
@@ -32,16 +33,18 @@ async def run_round(params: dict) -> list[dict]:
     )
 
     events = []
-    async for ev in TalkingHeadOverlaySkill().execute({
-        "video_path": str(VIDEO),
-        "gate_mode": "standalone",
-        "pip": True,
-        "matting": True,
-        "slide_duration": 9.0,
-        "pip_scale": 0.3,
-        "pip_position": "bottom_right",
-        **params,
-    }):
+    async for ev in TalkingHeadOverlaySkill().execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": "standalone",
+            "pip": True,
+            "matting": True,
+            "slide_duration": 9.0,
+            "pip_scale": 0.3,
+            "pip_position": "bottom_right",
+            **params,
+        }
+    ):
         events.append(ev)
         name = ev.get("event") or ("success" if ev.get("success") else "error")
         print(f"  event={name} {str(ev.get('message', ev.get('error', '')))[:70]}")
@@ -70,12 +73,13 @@ async def main() -> None:
 
     # ── 阶段2：approve（回调轮回读 rows → 句边界 durations 生效）──
     print("[live5] 阶段2 approve 直合成（句边界对齐）")
-    ev2 = await run_round({
-        "deck_confirm": "approve", "deck_slides_json": str(slides_json),
-    })
-    out2 = Path(next(
-        e for e in ev2 if e.get("event") == "pip_done"
-    )["data"]["output_path"])
+    ev2 = await run_round(
+        {
+            "deck_confirm": "approve",
+            "deck_slides_json": str(slides_json),
+        }
+    )
+    out2 = Path(next(e for e in ev2 if e.get("event") == "pip_done")["data"]["output_path"])
     dur2 = await probe_duration(str(out2))
     assert abs(dur2 - src_dur) < 1.0, f"时长偏差: {dur2} vs {src_dur}"
     print(f"[live5] 断言2 PASS：approve 出片 {out2.name}（{dur2:.2f}s）")
@@ -101,14 +105,19 @@ async def main() -> None:
     )
 
     data = json.loads(slides_json.read_text(encoding="utf-8"))
-    data["slides"][0]["title"] = "这是一个足够长必然换行的超长标题用于验证accent装饰线不再压住下方要点卡片" * 1
+    data["slides"][0]["title"] = (
+        "这是一个足够长必然换行的超长标题用于验证accent装饰线不再压住下方要点卡片" * 1
+    )
     alt = slides_json.parent / "slides_accent_test.json"
     alt.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     out_dir = slides_json.parent / "render_accent_test"
     if out_dir.exists():
         shutil.rmtree(out_dir)
     pngs = await asyncio.to_thread(
-        render_deck_from_slides, alt, out_dir, "midnight",
+        render_deck_from_slides,
+        alt,
+        out_dir,
+        "midnight",
     )
     assert len(pngs) == n and all(p.is_file() for p in pngs)
     print(f"[live5] 断言4 PASS：超长标题重渲染 {len(pngs)} 张 → {out_dir.name}")
@@ -120,13 +129,25 @@ async def main() -> None:
     ff = resolve_ffmpeg()
     # 首个切换点 = durs[0]（句边界），抽切换后 0.5s 帧
     t_switch = durs[0] + 0.5
-    subprocess.run([
-        ff, "-y", "-ss", f"{t_switch:.2f}", "-i", str(out2),
-        "-frames:v", "1", str(OUT_FRAMES / "after_first_switch.png"),
-    ], capture_output=True)
+    subprocess.run(
+        [
+            ff,
+            "-y",
+            "-ss",
+            f"{t_switch:.2f}",
+            "-i",
+            str(out2),
+            "-frames:v",
+            "1",
+            str(OUT_FRAMES / "after_first_switch.png"),
+        ],
+        capture_output=True,
+    )
     shutil.copyfile(pngs[0], OUT_FRAMES / "accent_long_title.png")
-    print(f"[live5] PASS：素材在 {OUT_FRAMES}"
-          f"（after_first_switch 切换点帧 / accent_long_title 版式图）")
+    print(
+        f"[live5] PASS：素材在 {OUT_FRAMES}"
+        f"（after_first_switch 切换点帧 / accent_long_title 版式图）"
+    )
 
 
 async def main_stage4() -> None:
@@ -141,12 +162,15 @@ async def main_stage4() -> None:
     src_dur = await probe_duration(str(VIDEO))
     # 找最新持久化产物（阶段1-2 留下）
     candidates = sorted(
-        glob.glob(str(BACKEND / "outputs" / "talking_head_overlay"
-                      / "**" / "deck_auto" / "slides.json"),
-                  recursive=True),
-        key=lambda p: Path(p).stat().st_mtime, reverse=True,
+        glob.glob(
+            str(BACKEND / "outputs" / "talking_head_overlay" / "**" / "deck_auto" / "slides.json"),
+            recursive=True,
+        ),
+        key=lambda p: Path(p).stat().st_mtime,
+        reverse=True,
     )
     assert candidates, "找不到 deck_auto/slides.json（先跑全流程）"
+
     # 多个残留产物 → 取 transcript_rows 句数最大者（live5 为 24 句全片转录）
     def _rows_count(p):
         rp = Path(p).parent / "transcript_rows.json"
@@ -154,12 +178,11 @@ async def main_stage4() -> None:
             return len(json.loads(rp.read_text(encoding="utf-8")))
         except (OSError, json.JSONDecodeError):
             return -1
+
     slides_json = Path(max(candidates, key=_rows_count))
     print(f"[live5] 复用产物: {slides_json}（rows={_rows_count(str(slides_json))}）")
 
-    rows = json.loads(
-        (slides_json.parent / "transcript_rows.json").read_text(
-            encoding="utf-8"))
+    rows = json.loads((slides_json.parent / "transcript_rows.json").read_text(encoding="utf-8"))
     n = len(json.loads(slides_json.read_text(encoding="utf-8"))["slides"])
     durs = _slide_durations_from_transcript(rows, n, src_dur)
     if len(rows) >= n:
@@ -177,14 +200,19 @@ async def main_stage4() -> None:
     )
 
     data = json.loads(slides_json.read_text(encoding="utf-8"))
-    data["slides"][0]["title"] = "这是一个足够长必然换行的超长标题用于验证accent装饰线不再压住下方要点卡片" * 1
+    data["slides"][0]["title"] = (
+        "这是一个足够长必然换行的超长标题用于验证accent装饰线不再压住下方要点卡片" * 1
+    )
     alt = slides_json.parent / "slides_accent_test.json"
     alt.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     out_dir = slides_json.parent / "render_accent_test"
     if out_dir.exists():
         shutil.rmtree(out_dir)
     pngs = await asyncio.to_thread(
-        render_deck_from_slides, alt, out_dir, "midnight",
+        render_deck_from_slides,
+        alt,
+        out_dir,
+        "midnight",
     )
     assert len(pngs) == n and all(p.is_file() for p in pngs)
     print(f"[live5] 断言4 PASS：超长标题重渲染 {len(pngs)} 张 → {out_dir.name}")

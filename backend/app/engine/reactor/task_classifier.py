@@ -48,12 +48,16 @@ class TaskClassifier:
         creation: set[str] = set()
         operation: set[str] = set()
         for m in manifests:
-            target = creation if m.task_type == TaskType.CREATION \
-                     else operation if m.task_type == TaskType.OPERATION \
-                     else None
+            target = (
+                creation
+                if m.task_type == TaskType.CREATION
+                else operation if m.task_type == TaskType.OPERATION else None
+            )
             if target is not None:
                 target.update(t for t in m.trigger_words if isinstance(t, str) and len(t) >= 2)
-        return cls(_creation_triggers=creation, _operation_triggers=operation, _manifests=list(manifests))
+        return cls(
+            _creation_triggers=creation, _operation_triggers=operation, _manifests=list(manifests)
+        )
 
     def classify(self, user_message: str) -> TaskType:
         msg = user_message.lower()
@@ -69,7 +73,9 @@ class TaskClassifier:
 
     def has_operation_signal(self, user_message: str) -> bool:
         msg = user_message.lower()
-        return any(isinstance(t, str) and len(t) >= 2 and t in msg for t in self._operation_triggers)
+        return any(
+            isinstance(t, str) and len(t) >= 2 and t in msg for t in self._operation_triggers
+        )
 
     def has_signal(self, user_message: str, sub_type: str) -> bool:
         """Check if the message matches any trigger word of manifests with the given sub_type."""
@@ -111,11 +117,13 @@ def build_classifier_from_skills(skills: list[Any] | None) -> TaskClassifier:
                 tt = TaskType.CREATION
             triggers = getattr(s, "trigger_words", None) or []
             triggers = [str(t) for t in triggers if isinstance(t, str) and t]
-            manifests.append(SkillManifest(
-                name=name,
-                task_type=tt,
-                trigger_words=list(triggers),
-            ))
+            manifests.append(
+                SkillManifest(
+                    name=name,
+                    task_type=tt,
+                    trigger_words=list(triggers),
+                )
+            )
 
     return TaskClassifier.from_manifests(manifests)
 
@@ -131,11 +139,44 @@ DEFAULT_MANIFESTS: list[SkillManifest] = [
         name="local_file_search",
         task_type=TaskType.OPERATION,
         sub_type="file_search",
-        trigger_words=["找文件", "查文件", "本地文件", "本地文件夹", "本地文档", "本地目录", "搜索文件", "查找文件"],
+        trigger_words=[
+            "找文件",
+            "查文件",
+            "本地文件",
+            "本地文件夹",
+            "本地文档",
+            "本地目录",
+            "搜索文件",
+            "查找文件",
+        ],
         noise_words=[
-            "帮我", "请", "查找", "搜索", "搜一下", "找一下", "寻找", "看看", "找", "查",
-            "本地文件", "本地文件夹", "本地文档", "本地目录", "文件夹", "工作区", "文件", "文档",
-            "目录", "中的", "里面", "里", "一个", "那份", "那篇", "这个", "有没有",
+            "帮我",
+            "请",
+            "查找",
+            "搜索",
+            "搜一下",
+            "找一下",
+            "寻找",
+            "看看",
+            "找",
+            "查",
+            "本地文件",
+            "本地文件夹",
+            "本地文档",
+            "本地目录",
+            "文件夹",
+            "工作区",
+            "文件",
+            "文档",
+            "目录",
+            "中的",
+            "里面",
+            "里",
+            "一个",
+            "那份",
+            "那篇",
+            "这个",
+            "有没有",
         ],
     ),
 ]

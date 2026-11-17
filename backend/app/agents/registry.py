@@ -84,7 +84,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         description="分析爆款规律、选题方向、数据趋势。当需要数据分析、趋势洞察、竞品对比时主动使用。",
         llm_model="deepseek-v3",
         skills=["vl_analyze"],
-
         soft_semantic={"enabled": True},
         prompt_template=(
             "你是小红书爆款分析专家。\n"
@@ -101,7 +100,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         role="小红书文案创作专家",
         description="创作小红书笔记文案。当需要写文案、创作内容、生成标题和正文时主动使用。",
         llm_model="deepseek-r1",
-
         soft_semantic={"enabled": True},
         prompt_template=(
             "你是小红书文案创作专家。\n"
@@ -118,7 +116,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         role="图片规划专家",
         description="规划小红书卡片配图方案。当需要图片排版、视觉规划时主动使用。",
         llm_model="deepseek-v3",
-
         prompt_template=(
             "你是图片规划专家。\n"
             "请为主题「{topic}」规划小红书卡片配图方案。\n"
@@ -130,7 +127,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         role="图片生成专家",
         description="生成图片方案描述。当需要 AI 生图、图片创作时主动使用。",
         llm_model="deepseek-v3",
-
         prompt_template=(
             "你是图片生成专家。\n"
             "请为主题「{topic}」描述需要生成的图片方案。\n"
@@ -142,7 +138,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         role="图片审核专家",
         description="审核图片方案是否符合小红书规范。当需要图片合规检查时主动使用。",
         llm_model="deepseek-v3",
-
         prompt_template=(
             "你是图片审核专家。\n"
             "请审核图片方案是否符合小红书规范。\n"
@@ -154,7 +149,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         role="合规审核专家",
         description="审核内容合规性，提供独立无偏见的审核视角。当需要检查、审核、验证内容时主动使用。",
         llm_model="deepseek-v3",
-
         soft_semantic={"enabled": True},
         prompt_template=(
             "你是小红书合规审核专家。\n"
@@ -167,7 +161,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         role="终审确认专家",
         description="终审确认内容是否可发布。当需要最终发布前确认时主动使用。",
         llm_model="deepseek-v3",
-
         prompt_template=(
             "你是终审确认专家。\n"
             "请确认内容是否可发布。\n"
@@ -180,7 +173,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         description="发布内容到平台（小红书发布已移除）。",
         llm_model="deepseek-v3",
         skills=[],
-
         recovery={"max_attempts": 2, "strategies": ["retry"]},
     ),
     "explore": AgentDef(
@@ -189,7 +181,6 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         description="综合搜索+分析+文案的探索研究。当需要深度研究某个主题的全链路时主动使用。",
         llm_model="deepseek-r1",
         skills=["trending_search", "url_collect", "vl_analyze", "lively_girl"],
-
     ),
     "chat_agent": AgentDef(
         agent_id="chat_agent",
@@ -197,12 +188,11 @@ BUILTIN_AGENTS: dict[str, AgentDef] = {
         description="主对话 Agent，协调所有子 Agent 完成用户任务。",
         llm_model="deepseek-v3",
         skills=None,
-
         # 2026-11-02：20 → 40。chat_agent 是主对话入口，视频任务 20 步不够
         # （切割+拼接+叠加一条龙），文本任务不受影响。子 Agent 砍半后得 20，
         # 与旧主循环上限持平。
         max_iterations=40,
-         prompt_template=_load_prompt_stack("SOUL", "AGENTS"),
+        prompt_template=_load_prompt_stack("SOUL", "AGENTS"),
         recovery={
             "max_attempts": 3,
             "strategies": ["retry", "simplify_prompt", "switch_model:deepseek-v3"],
@@ -247,7 +237,9 @@ def _resolve_creation_type_skills(creation_type: str | None) -> list[str] | None
         return None
     mapping = CREATION_TYPE_SKILLS.get(creation_type)
     if mapping is None:
-        logger.warning(f"[registry] unknown creation_type={creation_type}, falling back to full skill set")
+        logger.warning(
+            f"[registry] unknown creation_type={creation_type}, falling back to full skill set"
+        )
         return None
     names: list[str] = []
     for group in mapping.values():
@@ -290,7 +282,9 @@ def _build_skills(skill_names: list[str] | None, creation_type: str | None = Non
         name_set = set(resolved)
         filtered = [s for s in _skills_cache if s.name in name_set]
 
-        logger.info(f"[registry] creation_type={creation_type}, skills={len(filtered)}/{len(_skills_cache)}")
+        logger.info(
+            f"[registry] creation_type={creation_type}, skills={len(filtered)}/{len(_skills_cache)}"
+        )
         return filtered
 
     if _skills_cache is not None:
@@ -318,10 +312,7 @@ class AgentRegistry:
         """注册或覆盖一个 Agent 定义（运行时动态注册）。"""
         existing = self._agents.get(agent_def.agent_id)
         if existing is not None and existing is not agent_def:
-            logger.info(
-                f"[AgentRegistry] override existing agent: "
-                f"{agent_def.agent_id}"
-            )
+            logger.info(f"[AgentRegistry] override existing agent: " f"{agent_def.agent_id}")
         self._agents[agent_def.agent_id] = agent_def
         logger.debug(f"[AgentRegistry] registered: {agent_def.agent_id}")
 
@@ -356,12 +347,17 @@ class AgentRegistry:
         llm = None
         if agent_def.llm_model:
             from app.engine.factory import get_deepseek_llm
+
             llm = get_deepseek_llm(model=agent_def.llm_model)
 
         allowed_permissions = {
-            Permission.FILE_READ, Permission.FILE_WRITE, Permission.BASH_EXEC,
-            Permission.XHS_SEARCH, Permission.NET_HTTP_POST,
-            Permission.SKILL_MANAGE, Permission.WORK_WRITE,
+            Permission.FILE_READ,
+            Permission.FILE_WRITE,
+            Permission.BASH_EXEC,
+            Permission.XHS_SEARCH,
+            Permission.NET_HTTP_POST,
+            Permission.SKILL_MANAGE,
+            Permission.WORK_WRITE,
         }
 
         # P0-1：技能必须在 build_reactor_session 之前收集并以 skills= 传入——

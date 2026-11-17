@@ -192,7 +192,7 @@ class SkillRouter:
                     if not tw or not isinstance(tw, str):
                         continue
                     tw_lower = tw.lower()
-                    core_chars = [c for c in tw_lower if c.strip() and '\u4e00' <= c <= '\u9fff']
+                    core_chars = [c for c in tw_lower if c.strip() and "\u4e00" <= c <= "\u9fff"]
                     if len(core_chars) >= 2:
                         overlap = sum(1 for c in core_chars if c in msg_lower)
                         if overlap / len(core_chars) >= 0.6:
@@ -210,16 +210,17 @@ class SkillRouter:
             # 原顺序 hot 在前，而 hot 池可能超过 max_tools（实测 85/140），
             # 会导致触发命中的 warm/cold 技能被 hot 挤出目录。
             triggered = [
-                i for i in skill_info
-                if getattr(i["skill"], "name", "") in trigger_matched_names
+                i for i in skill_info if getattr(i["skill"], "name", "") in trigger_matched_names
             ]
             hot = [i for i in skill_info if i["priority"] == SkillPriority.HOT]
             warm_hit = [
-                i for i in skill_info
+                i
+                for i in skill_info
                 if i["priority"] == SkillPriority.WARM and i["category"] in trigger_matched_cats
             ]
             cold_hit = [
-                i for i in skill_info
+                i
+                for i in skill_info
                 if i["priority"] == SkillPriority.COLD
                 and getattr(i["skill"], "name", "") in trigger_matched_names
             ]
@@ -233,7 +234,9 @@ class SkillRouter:
                 selected_skills=selected,
                 category_hint=category_hint,
                 trigger_matched_skills=sorted(trigger_matched_names),
-                trigger_matched_categories=[c.value for c in sorted(trigger_matched_cats, key=lambda c: c.value)],
+                trigger_matched_categories=[
+                    c.value for c in sorted(trigger_matched_cats, key=lambda c: c.value)
+                ],
                 total_available=len(all_skills),
                 total_selected=len(selected),
             )
@@ -242,7 +245,9 @@ class SkillRouter:
             selected_skills=all_skills,
             category_hint=category_hint,
             trigger_matched_skills=sorted(trigger_matched_names),
-            trigger_matched_categories=[c.value for c in sorted(trigger_matched_cats, key=lambda c: c.value)],
+            trigger_matched_categories=[
+                c.value for c in sorted(trigger_matched_cats, key=lambda c: c.value)
+            ],
             total_available=len(all_skills),
             total_selected=len(all_skills),
         )
@@ -311,7 +316,9 @@ class SkillRouter:
 
         if len(result) <= self.MAX_CHARS:
             if truncated_count > 0:
-                result += f"\n\n⚠️ Skills truncated: included {len(skills)} of {len(selected_skills)}"
+                result += (
+                    f"\n\n⚠️ Skills truncated: included {len(skills)} of {len(selected_skills)}"
+                )
             return result
 
         result = self._compact_routing_table(skills, grouped)
@@ -342,7 +349,9 @@ class SkillRouter:
         if best_lines is not None:
             return "\n".join(best_lines)
 
-        lines = self._build_routing_lines(grouped, desc_limit=self.DESC_COMPACT_MAX, trigger_limit=0)
+        lines = self._build_routing_lines(
+            grouped, desc_limit=self.DESC_COMPACT_MAX, trigger_limit=0
+        )
         text = "\n".join(lines)
         if len(text) <= self.MAX_CHARS:
             return text
@@ -407,7 +416,9 @@ class SkillRouter:
     COMPACT_DESC_MAX = 50
     COMPACT_CATALOG_MAX_CHARS = 5000
 
-    def build_compact_catalog(self, all_skills: list[Any], callable_names: frozenset[str] | None = None) -> str:
+    def build_compact_catalog(
+        self, all_skills: list[Any], callable_names: frozenset[str] | None = None
+    ) -> str:
         """全量紧凑目录：每个 Skill 一行摘要，按 category 分组。
 
         用途：注入 system prompt 的 {skill_routing} 占位符，
@@ -440,11 +451,15 @@ class SkillRouter:
                 name = getattr(s, "name", "?")
                 display = getattr(s, "display_name", "") or name
                 desc = getattr(s, "description", "") or ""
-                short = desc[:self.COMPACT_DESC_MAX] + "…" if len(desc) > self.COMPACT_DESC_MAX else desc
+                short = (
+                    desc[: self.COMPACT_DESC_MAX] + "…"
+                    if len(desc) > self.COMPACT_DESC_MAX
+                    else desc
+                )
                 lines.append(f"- {display}(`{name}`): {short}")
             lines.append("")
 
         result = "\n".join(lines)
         if len(result) > self.COMPACT_CATALOG_MAX_CHARS:
-            result = result[:self.COMPACT_CATALOG_MAX_CHARS] + "\n\n⚠️ 工具目录已截断"
+            result = result[: self.COMPACT_CATALOG_MAX_CHARS] + "\n\n⚠️ 工具目录已截断"
         return result

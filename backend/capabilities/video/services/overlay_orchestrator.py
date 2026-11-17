@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class OverlayTemplate(str, Enum):
     """叠加模板类型 — 对齐 ossclip Zod-typed scene library。"""
+
     CAPTION_POP = "caption_pop"
     CAPTION_KARAOKE = "caption_karaoke"
     CAPTION_TYPEWRITER = "caption_typewriter"
@@ -97,6 +98,7 @@ class OverlaySegment(BaseModel):
     template: 内置 16 模板存 OverlayTemplate（str Enum）；P1 运行时生成
     模板（gen_*）存纯 str — template_name() 统一取名。
     """
+
     segment_id: str
     time_start: float = Field(ge=0)
     time_end: float = Field(gt=0)
@@ -112,6 +114,7 @@ def template_name(t: Any) -> str:
 
 class OverlayPlan(BaseModel):
     """叠加规划 — 闸门 1 的产物。"""
+
     video_id: str
     segments: list[OverlaySegment] = Field(default_factory=list)
     palette: list[str] = Field(default_factory=list)  # v4：全片 3 色撞色盘
@@ -171,10 +174,14 @@ def remap_overlay_anchors(
             logger.info(f"Overlay {seg.segment_id} skipped (source time cut)")
             continue
 
-        new_segments.append(seg.model_copy(update={
-            "time_start": new_start,
-            "time_end": new_end,
-        }))
+        new_segments.append(
+            seg.model_copy(
+                update={
+                    "time_start": new_start,
+                    "time_end": new_end,
+                }
+            )
+        )
 
     return OverlayPlan(
         video_id=plan.video_id,
@@ -251,11 +258,14 @@ def resolve_overlay_conflicts(plan: OverlayPlan) -> OverlayPlan:
     （同优先级先开始者胜出）。
     """
     active_idx = [i for i, s in enumerate(plan.segments) if not s.skipped]
-    ranked = sorted(active_idx, key=lambda i: (
-        -TEMPLATE_PRIORITY.get(plan.segments[i].template, 0),
-        plan.segments[i].time_start,
-        -(plan.segments[i].time_end - plan.segments[i].time_start),
-    ))
+    ranked = sorted(
+        active_idx,
+        key=lambda i: (
+            -TEMPLATE_PRIORITY.get(plan.segments[i].template, 0),
+            plan.segments[i].time_start,
+            -(plan.segments[i].time_end - plan.segments[i].time_start),
+        ),
+    )
 
     kept: list[int] = []
     for i in ranked:
@@ -437,15 +447,17 @@ def _parse_narrative_output(text: str, duration: float) -> dict[str, Any] | None
             te = min(te, duration)
         if te <= ts:
             continue
-        sections.append({
-            "section_id": str(s.get("section_id") or f"s{i + 1}"),
-            "role": str(s.get("role") or "argument"),
-            "time_start": ts,
-            "time_end": te,
-            "summary": str(s.get("summary") or ""),
-            "visual_intent": str(s.get("visual_intent") or ""),
-            "key_points": [str(k) for k in (s.get("key_points") or []) if k],
-        })
+        sections.append(
+            {
+                "section_id": str(s.get("section_id") or f"s{i + 1}"),
+                "role": str(s.get("role") or "argument"),
+                "time_start": ts,
+                "time_end": te,
+                "summary": str(s.get("summary") or ""),
+                "visual_intent": str(s.get("visual_intent") or ""),
+                "key_points": [str(k) for k in (s.get("key_points") or []) if k],
+            }
+        )
     if not sections:
         return None
     sections.sort(key=lambda x: x["time_start"])
@@ -455,11 +467,13 @@ def _parse_narrative_output(text: str, duration: float) -> dict[str, Any] | None
         palette = []
     # 繁→简归一化（v1.4 模式套新层）：转录词流偶发繁体会被叙事步
     # 原样回显进 key_points — 归一化保证中间层与下游引导文案统一简体
-    return _normalize_simplified({
-        "theme": str(payload.get("theme") or ""),
-        "palette": [str(c) for c in palette],
-        "sections": sections,
-    })
+    return _normalize_simplified(
+        {
+            "theme": str(payload.get("theme") or ""),
+            "palette": [str(c) for c in palette],
+            "sections": sections,
+        }
+    )
 
 
 async def generate_narrative(
@@ -526,7 +540,8 @@ def overlay_coverage(plan: OverlayPlan, duration: float) -> float:
 
 
 def largest_overlay_gap(
-    plan: OverlayPlan, duration: float,
+    plan: OverlayPlan,
+    duration: float,
 ) -> tuple[float, float, float]:
     """时间轴上最长的连续无叠加区间：(空白秒数, 起点, 终点)。
 
@@ -628,11 +643,11 @@ def _parse_plan_output(
         raise ValueError("LLM output contains no JSON")
     json_start = min(starts)
     if json_start == brace:
-        payload = json.loads(result_text[json_start:result_text.rfind("}") + 1])
+        payload = json.loads(result_text[json_start : result_text.rfind("}") + 1])
         raw_results = payload.get("overlays") or []
         raw_palette = payload.get("palette") or []
     else:
-        raw_results = json.loads(result_text[json_start:result_text.rfind("]") + 1])
+        raw_results = json.loads(result_text[json_start : result_text.rfind("]") + 1])
         raw_palette = []
 
     palette: list[str] = []
@@ -659,17 +674,21 @@ def _parse_plan_output(
         if end - start < 0.5:
             logger.warning(
                 "skip invalid overlay segment %d: [%s, %s]",
-                i, item.get("time_start"), item.get("time_end"),
+                i,
+                item.get("time_start"),
+                item.get("time_end"),
             )
             continue
 
-        segments.append(OverlaySegment(
-            segment_id=item.get("segment_id", f"o{len(segments)}"),
-            time_start=round(start, 3),
-            time_end=round(end, 3),
-            template=template,
-            params=_normalize_simplified(item.get("params", {})),
-        ))
+        segments.append(
+            OverlaySegment(
+                segment_id=item.get("segment_id", f"o{len(segments)}"),
+                time_start=round(start, 3),
+                time_end=round(end, 3),
+                template=template,
+                params=_normalize_simplified(item.get("params", {})),
+            )
+        )
 
     # 段号唯一化 — 重规划 LLM 偶发输出重复 segment_id（2026-10-27 run9
     # 实证：两个 o20 → 渲染文件 overlay_o20.mp4 互相覆盖 → 成片时间窗
@@ -685,7 +704,9 @@ def _parse_plan_output(
             new_id = f"o{max_num}"
             logger.warning(
                 "duplicate segment_id %s at index %d → renamed %s",
-                s.segment_id, i, new_id,
+                s.segment_id,
+                i,
+                new_id,
             )
             segments[i] = s.model_copy(update={"segment_id": new_id})
             seen_ids.add(new_id)
@@ -728,15 +749,15 @@ def validate_plan_rhythm(plan: OverlayPlan, duration: float) -> list[str]:
     if len([s for s in segs if s.time_start < 3.0]) < 2:
         issues.append("开场 3s 内叠加不足 2 个（缺开场轰炸）")
     if duration >= 10 and not any(
-        s.time_end >= duration - 3.0 and s.template in _CLOSER_TEMPLATES
-        for s in segs
+        s.time_end >= duration - 3.0 and s.template in _CLOSER_TEMPLATES for s in segs
     ):
         issues.append("结尾缺少收束卡（full_card/title_card）")
     if plan.palette:
         allowed = set(plan.palette)
         off = sum(
             1
-            for s in segs for v in s.params.values()
+            for s in segs
+            for v in s.params.values()
             if (h := _normalize_hex(v)) and h not in allowed
         )
         if off:
@@ -777,7 +798,10 @@ async def generate_overlay_plan(
     narrative = None
     if use_two_step:
         narrative = await generate_narrative(
-            llm, transcript_segments, duration, feedback=feedback,
+            llm,
+            transcript_segments,
+            duration,
+            feedback=feedback,
         )
 
     transcript_json = json.dumps(transcript_segments, ensure_ascii=False)
@@ -788,9 +812,13 @@ async def generate_overlay_plan(
         min_segments=min_segments,
     )
     if narrative:
-        prompt = _NARRATIVE_TO_PLAN_HEADER.format(
-            narrative_json=json.dumps(narrative, ensure_ascii=False),
-        ) + "\n\n" + prompt
+        prompt = (
+            _NARRATIVE_TO_PLAN_HEADER.format(
+                narrative_json=json.dumps(narrative, ensure_ascii=False),
+            )
+            + "\n\n"
+            + prompt
+        )
     if feedback:
         prompt = f"{feedback}\n\n{prompt}"
 
@@ -809,8 +837,8 @@ async def generate_overlay_plan(
 
             # 密度自检（ADR-004）：覆盖率过低 → 带反馈重试
             # duration 探测失败时退化为最大段尾（避免 0 分母导致覆盖率恒 0 误判）
-            coverage_duration = duration if duration > 0 else max(
-                (s.time_end for s in segments), default=0.0
+            coverage_duration = (
+                duration if duration > 0 else max((s.time_end for s in segments), default=0.0)
             )
             coverage = overlay_coverage(plan, coverage_duration)
             gap, gap_start, gap_end = largest_overlay_gap(plan, coverage_duration)
@@ -824,7 +852,12 @@ async def generate_overlay_plan(
                 logger.warning(
                     "overlay plan density check failed: coverage %.0f%% "
                     "(min 30%%), max gap %.1fs @%.1f-%.1fs (limit %.1fs), attempt %d",
-                    coverage * 100, gap, gap_start, gap_end, gap_limit, attempt + 1,
+                    coverage * 100,
+                    gap,
+                    gap_start,
+                    gap_end,
+                    gap_limit,
+                    attempt + 1,
                 )
                 problems: list[str] = []
                 if too_sparse:
@@ -875,8 +908,10 @@ async def generate_overlay_plan(
 
 # ── 10.19 对话式修改层：意图解析 + patch 执行器（三重锁） ────────
 
+
 class RevisionAction(str, Enum):
     """修改动作白名单 — ADD 参数空间大，第一期不上（走 global 重规划）。"""
+
     UPDATE = "update"
     DELETE = "delete"
     MOVE = "move"
@@ -884,15 +919,17 @@ class RevisionAction(str, Enum):
 
 class RevisionInstruction(BaseModel):
     """一条修改指令 — LLM 解析产物，纯数据。"""
+
     segment_ids: list[str] = Field(default_factory=list)
     action: RevisionAction
     params: dict[str, Any] = Field(default_factory=dict)
-    locate_hint: str = ""   # LLM 回显的定位依据（定位失败时随问题返给用户）
-    raw_text: str = ""      # 用户原话（审计）
+    locate_hint: str = ""  # LLM 回显的定位依据（定位失败时随问题返给用户）
+    raw_text: str = ""  # 用户原话（审计）
 
 
 class RevisionResult(BaseModel):
     """意图解析结果 — local=代码级 patch，global=feedback 重规划。"""
+
     route: str  # "local" | "global"
     instructions: list[RevisionInstruction] = Field(default_factory=list)
     reason: str = ""
@@ -909,16 +946,18 @@ def _revision_plan_digest(plan: OverlayPlan) -> str:
     for s in plan.segments:
         if s.skipped:
             continue
-        params = {
-            k: v for k, v in list(s.params.items())[:6]
-            if isinstance(v, (str, int, float))
-        }
-        lines.append(json.dumps({
-            "segment_id": s.segment_id,
-            "template": template_name(s.template),
-            "time": f"{s.time_start:.1f}-{s.time_end:.1f}",
-            "params": params,
-        }, ensure_ascii=False))
+        params = {k: v for k, v in list(s.params.items())[:6] if isinstance(v, (str, int, float))}
+        lines.append(
+            json.dumps(
+                {
+                    "segment_id": s.segment_id,
+                    "template": template_name(s.template),
+                    "time": f"{s.time_start:.1f}-{s.time_end:.1f}",
+                    "params": params,
+                },
+                ensure_ascii=False,
+            )
+        )
     return "\n".join(lines)
 
 
@@ -1020,13 +1059,15 @@ async def parse_revision_intent(
                 f"（定位依据：{hint or '未提供'}）"
             )
             continue
-        instructions.append(RevisionInstruction(
-            segment_ids=ids,
-            action=action,
-            params=dict(item.get("params") or {}),
-            locate_hint=hint,
-            raw_text=raw_text.strip(),
-        ))
+        instructions.append(
+            RevisionInstruction(
+                segment_ids=ids,
+                action=action,
+                params=dict(item.get("params") or {}),
+                locate_hint=hint,
+                raw_text=raw_text.strip(),
+            )
+        )
     return RevisionResult(route="local", instructions=instructions), problems
 
 
@@ -1081,18 +1122,18 @@ def apply_revision(
         # UPDATE：禁键校验 + 颜色格式校验 + 数值型字段校验，其余键 merge
         forbidden = [k for k in ins.params if k in _UPDATE_FORBIDDEN_KEYS]
         bad_color = [
-            k for k, v in ins.params.items()
+            k
+            for k, v in ins.params.items()
             if ("color" in k) and not (isinstance(v, str) and _HEX_COLOR_RE.match(v))
         ]
         # 10.23-B：数值型字段（像素类）必须数值且在合理域 — LLM 曾给
         # font_size='larger'（无效 CSS，模板参数是 int px）
         _NUMERIC_KEYS = {"font_size"}
         bad_numeric = [
-            k for k, v in ins.params.items()
-            if k in _NUMERIC_KEYS and not (
-                isinstance(v, (int, float)) and not isinstance(v, bool)
-                and 8 <= v <= 300
-            )
+            k
+            for k, v in ins.params.items()
+            if k in _NUMERIC_KEYS
+            and not (isinstance(v, (int, float)) and not isinstance(v, bool) and 8 <= v <= 300)
         ]
         if forbidden or bad_color or bad_numeric:
             for k in forbidden:
@@ -1101,9 +1142,7 @@ def apply_revision(
                     f"依据：{ins.locate_hint}）"
                 )
             for k in bad_color:
-                problems.append(
-                    f"update 的 {k} 必须是 #rrggbb 格式（依据：{ins.locate_hint}）"
-                )
+                problems.append(f"update 的 {k} 必须是 #rrggbb 格式（依据：{ins.locate_hint}）")
             for k in bad_numeric:
                 problems.append(
                     f"update 的 {k} 必须是数值（像素，8-300）（依据：{ins.locate_hint}）"
@@ -1114,8 +1153,8 @@ def apply_revision(
 
     # patch 后强制自检：同带重叠裁决 + 节奏自检（warning 如实上报）
     patched = resolve_overlay_conflicts(patched)
-    coverage_duration = duration if duration > 0 else max(
-        (s.time_end for s in patched.segments), default=0.0
+    coverage_duration = (
+        duration if duration > 0 else max((s.time_end for s in patched.segments), default=0.0)
     )
     problems.extend(validate_plan_rhythm(patched, coverage_duration))
     return patched, problems

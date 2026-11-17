@@ -1,4 +1,5 @@
 """Test talking_head_overlay via HTTP API with a real video asset."""
+
 import json
 import os
 
@@ -17,7 +18,9 @@ def find_video_asset():
     if not assets:
         return None
     a = assets[0]
-    print(f"  Using: id={a['asset_id']}  file={a['filename']}  size={a['file_size']/1024/1024:.1f}MB")
+    print(
+        f"  Using: id={a['asset_id']}  file={a['filename']}  size={a['file_size']/1024/1024:.1f}MB"
+    )
     return a
 
 
@@ -118,6 +121,7 @@ def test_chat_agent_with_video(asset):
     except Exception as exc:
         print(f"  Request failed: {exc}")
         import traceback
+
         traceback.print_exc()
 
 

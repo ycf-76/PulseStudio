@@ -45,7 +45,9 @@ def _make_grid(path: Path, n=(3, 3), cell=(200, 200), gutter=6) -> Path:
             x0 = c * (cell[0] + gutter)
             y0 = r * (cell[1] + gutter)
             shade = 40 + (r * cols + c) * 20
-            d.rectangle([x0, y0, x0 + cell[0] - 1, y0 + cell[1] - 1], fill=(shade, shade + 10, shade + 20))
+            d.rectangle(
+                [x0, y0, x0 + cell[0] - 1, y0 + cell[1] - 1], fill=(shade, shade + 10, shade + 20)
+            )
     im.save(path)
     return path
 
@@ -85,9 +87,7 @@ class TestExpandGridImages:
         notes: list[str] = []
 
         with patch.dict("sys.modules", {"app.services.asset_library": MagicMock(**fake_asset_lib)}):
-            urls, locals_ = await _expand_grid_images(
-                ["/uploads/grid.png"], [str(g)], "u1", notes
-            )
+            urls, locals_ = await _expand_grid_images(["/uploads/grid.png"], [str(g)], "u1", notes)
 
         assert len(urls) == 9
         assert len(locals_) == 9
@@ -98,9 +98,7 @@ class TestExpandGridImages:
         notes: list[str] = []
 
         with patch.dict("sys.modules", {"app.services.asset_library": MagicMock(**fake_asset_lib)}):
-            urls, locals_ = await _expand_grid_images(
-                ["/uploads/photo.png"], [str(p)], "u1", notes
-            )
+            urls, locals_ = await _expand_grid_images(["/uploads/photo.png"], [str(p)], "u1", notes)
 
         assert urls == ["/uploads/photo.png"]
         assert locals_ == [str(p)]
@@ -111,12 +109,11 @@ class TestExpandGridImages:
         g = _make_grid(workdir / "grid.png", n=(3, 3))
         notes: list[str] = []
 
-        with patch.dict("sys.modules", {"app.services.asset_library": MagicMock(**fake_asset_lib)}), patch(
-            "app.services.grid_detect.split_grid", side_effect=RuntimeError("boom")
+        with (
+            patch.dict("sys.modules", {"app.services.asset_library": MagicMock(**fake_asset_lib)}),
+            patch("app.services.grid_detect.split_grid", side_effect=RuntimeError("boom")),
         ):
-            urls, locals_ = await _expand_grid_images(
-                ["/uploads/grid.png"], [str(g)], "u1", notes
-            )
+            urls, locals_ = await _expand_grid_images(["/uploads/grid.png"], [str(g)], "u1", notes)
 
         assert urls == ["/uploads/grid.png"]
         assert any("拆分失败" in n for n in notes)
@@ -125,8 +122,11 @@ class TestExpandGridImages:
         """检测做不了要写进 degradation，否则"为什么没拆"事后查不出"""
         notes: list[str] = []
 
-        with patch.dict("sys.modules", {"app.services.asset_library": MagicMock(**fake_asset_lib)}), patch(
-            "app.services.grid_detect.detect_grid", return_value=_det(reason="依赖缺失：numpy")
+        with (
+            patch.dict("sys.modules", {"app.services.asset_library": MagicMock(**fake_asset_lib)}),
+            patch(
+                "app.services.grid_detect.detect_grid", return_value=_det(reason="依赖缺失：numpy")
+            ),
         ):
             urls, _ = await _expand_grid_images(
                 ["/uploads/x.png"], [str(workdir / "x.png")], "u1", notes

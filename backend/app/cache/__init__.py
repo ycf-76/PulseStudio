@@ -8,6 +8,6 @@
 - 搜索结果缓存
 """
 
-from app.cache.redis import get_redis, redis_client, RedisClient
+from app.cache.redis import RedisClient, get_redis, redis_client
 
 __all__ = ["get_redis", "redis_client", "RedisClient"]

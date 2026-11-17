@@ -15,7 +15,6 @@ import inspect
 
 import pytest
 
-
 # ============================================================================
 # 1. events.py 契约
 # ============================================================================
@@ -46,21 +45,21 @@ class TestSessionCutPlanGate:
 
     def test_emits_cut_plan_confirmation_required(self):
         source = self._run_source()
-        assert "cut_plan_confirmation_required" in source, (
-            "session.run 应在 overlay_plan_ready 时发 cut_plan_confirmation_required SSE 事件"
-        )
+        assert (
+            "cut_plan_confirmation_required" in source
+        ), "session.run 应在 overlay_plan_ready 时发 cut_plan_confirmation_required SSE 事件"
 
     def test_loop_state_saves_cut_plan(self):
         source = self._run_source()
-        assert '"cut_plan"' in source and "_awaiting_cut_plan_confirmation" in source, (
-            "loop_state 应落盘 cut_plan 数据并标记 _awaiting_cut_plan_confirmation"
-        )
+        assert (
+            '"cut_plan"' in source and "_awaiting_cut_plan_confirmation" in source
+        ), "loop_state 应落盘 cut_plan 数据并标记 _awaiting_cut_plan_confirmation"
 
     def test_ended_reason_cut_plan_paused(self):
         source = self._run_source()
-        assert "EndedReason.CUT_PLAN_PAUSED.value" in source, (
-            "cut_plan 闸门分支应以 CUT_PLAN_PAUSED 终止（暂停而非完成）"
-        )
+        assert (
+            "EndedReason.CUT_PLAN_PAUSED.value" in source
+        ), "cut_plan 闸门分支应以 CUT_PLAN_PAUSED 终止（暂停而非完成）"
 
     def test_cut_plan_branch_before_storyboard_branch(self):
         """cut_plan 分支必须在 storyboard 分支之前。
@@ -84,8 +83,8 @@ class TestSessionCutPlanGate:
         )
 
     def test_paused_reason_includes_cut_plan(self):
-        from app.engine.reactor.session import _paused_reason
         from app.engine.protocol.events import EndedReason
+        from app.engine.reactor.session import _paused_reason
 
         assert _paused_reason(EndedReason.CUT_PLAN_PAUSED.value) is True
         assert _paused_reason("workflow_completed") is False
@@ -95,9 +94,9 @@ class TestSessionCutPlanGate:
         # 取 run 源码尾部 _is_paused 判定
         pos = source.rfind("_is_paused = final_output")
         assert pos != -1
-        assert "CUT_PLAN_PAUSED" in source[pos:pos + 300], (
-            "_is_paused 元组应包含 CUT_PLAN_PAUSED，否则暂停时会误发 workflow_completed"
-        )
+        assert (
+            "CUT_PLAN_PAUSED" in source[pos : pos + 300]
+        ), "_is_paused 元组应包含 CUT_PLAN_PAUSED，否则暂停时会误发 workflow_completed"
 
 
 # ============================================================================
@@ -109,7 +108,9 @@ class TestGateModeInjectionScope:
     def _make_ctx(self):
         from app.engine.protocol.dispatch_hooks import DispatchContext
 
-        return DispatchContext(run_context={"video_asset_ids": ["asset_x"]}, workflow_id="wf_test", turn_id=None)
+        return DispatchContext(
+            run_context={"video_asset_ids": ["asset_x"]}, workflow_id="wf_test", turn_id=None
+        )
 
     @pytest.mark.asyncio
     async def test_main_flow_no_gate_mode_injection(self):
@@ -185,12 +186,12 @@ class TestConfirmCutPlanRoute:
         from app.api.routers.chat_agent import confirm_cut_plan_action
 
         source = inspect.getsource(confirm_cut_plan_action)
-        assert 'call_args["gate_mode"] = "auto_confirm"' in source, (
-            "confirm-cut-plan 回放必须显式 gate_mode=auto_confirm（确定性回放）"
-        )
-        assert "cut_plan_confirmation_resolved" in source, (
-            "确认/取消后应广播 cut_plan_confirmation_resolved"
-        )
+        assert (
+            'call_args["gate_mode"] = "auto_confirm"' in source
+        ), "confirm-cut-plan 回放必须显式 gate_mode=auto_confirm（确定性回放）"
+        assert (
+            "cut_plan_confirmation_resolved" in source
+        ), "确认/取消后应广播 cut_plan_confirmation_resolved"
         assert "cleanup_loop_state" in source
 
     def test_confirm_resolved_payload_carries_version(self):
@@ -198,14 +199,14 @@ class TestConfirmCutPlanRoute:
         from app.api.routers.chat_agent import confirm_cut_plan_action
 
         source = inspect.getsource(confirm_cut_plan_action)
-        assert "version" in source, (
-            "confirm-cut-plan 回放成功时应计算版本号并在 SSE 载荷中携带 version"
-        )
+        assert (
+            "version" in source
+        ), "confirm-cut-plan 回放成功时应计算版本号并在 SSE 载荷中携带 version"
 
     def test_paused_lists_include_cut_plan(self):
         import app.api.routers.chat_agent as router_mod
 
         source = inspect.getsource(router_mod)
-        assert source.count('"cut_plan_paused"') >= 3, (
-            "router 内三处续跑暂停列表都应包含 cut_plan_paused"
-        )
+        assert (
+            source.count('"cut_plan_paused"') >= 3
+        ), "router 内三处续跑暂停列表都应包含 cut_plan_paused"

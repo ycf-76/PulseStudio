@@ -17,6 +17,7 @@
     python scripts/backfill_artifact_owner.py --quarantine   # 顺带隔离无法解析的损坏产物
     python scripts/backfill_artifact_owner.py --store data/creative_artifacts
 """
+
 from __future__ import annotations
 
 import argparse

@@ -31,6 +31,7 @@ APP_DIR = BACKEND_DIR / "app"
 
 class CheckResult(NamedTuple):
     """单项检查结果。"""
+
     name: str
     passed: bool
     detail: str
@@ -51,6 +52,7 @@ def _iter_py_files(root: Path) -> list[Path]:
 # ----------------------------------------------------------------------
 # 检查 1: harness 子包内不 import langgraph
 # ----------------------------------------------------------------------
+
 
 def check_harness_no_langgraph() -> CheckResult:
     """红线 2.1: Harness 不能 import langgraph（架构分层）。"""
@@ -81,6 +83,7 @@ def check_harness_no_langgraph() -> CheckResult:
 # ----------------------------------------------------------------------
 # 检查 2: 没有用 WebSocket
 # ----------------------------------------------------------------------
+
 
 def check_no_websocket() -> CheckResult:
     """红线 5.1: 必须用 SSE + HTTP POST 双通道，禁用 WebSocket。
@@ -127,6 +130,7 @@ def check_no_websocket() -> CheckResult:
 # 检查 3: 没有用 MemorySaver
 # ----------------------------------------------------------------------
 
+
 def check_no_memory_saver() -> CheckResult:
     """红线：必须用 PostgresSaver，禁用 MemorySaver（D6 无 stale state）。
 
@@ -170,6 +174,7 @@ def check_no_memory_saver() -> CheckResult:
 # 检查 4: copywrite_agent 用 R1
 # ----------------------------------------------------------------------
 
+
 def check_copywrite_uses_r1() -> CheckResult:
     """红线 9: 文案 Agent 必须用 DeepSeek-R1。"""
     cfg = APP_DIR / "agents" / "configs" / "copywrite_agent.yaml"
@@ -198,6 +203,7 @@ def check_copywrite_uses_r1() -> CheckResult:
 # ----------------------------------------------------------------------
 # 检查 5: 监督 Agent（软语义）用 V3
 # ----------------------------------------------------------------------
+
 
 def check_supervisor_uses_v3() -> CheckResult:
     """红线 9 + 2.3: 监督软语义必须用 DeepSeek-V3，禁止用 R1。"""
@@ -244,6 +250,7 @@ def check_supervisor_uses_v3() -> CheckResult:
 # ----------------------------------------------------------------------
 # 检查 6: 无明文 Token 存储
 # ----------------------------------------------------------------------
+
 
 def check_no_plaintext_token() -> CheckResult:
     """红线 3.3: XhsAccount 表 Token 必须加密存储。"""
@@ -293,6 +300,7 @@ def check_no_plaintext_token() -> CheckResult:
 # 检查 7: User:Account 是 1:N
 # ----------------------------------------------------------------------
 
+
 def check_user_account_one_to_many() -> CheckResult:
     """红线 7.1: User 与 XhsAccount 必须是 1:N 关系（DB 预留多账号）。"""
     models_py = APP_DIR / "db" / "models.py"
@@ -329,6 +337,7 @@ def check_user_account_one_to_many() -> CheckResult:
 # ----------------------------------------------------------------------
 # 主入口
 # ----------------------------------------------------------------------
+
 
 def run_all_checks() -> int:
     """运行全部 7 项检查，返回退出码。"""

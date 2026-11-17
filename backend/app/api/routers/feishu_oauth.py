@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
-import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
@@ -31,7 +31,9 @@ router = APIRouter(prefix="/api/feishu/oauth", tags=["Feishu OAuth"])
 def _frontend_redirect(status: str, detail: str = "") -> RedirectResponse:
     settings = get_settings()
     query = urlencode({"feishu_oauth": status, **({"detail": detail} if detail else {})})
-    return RedirectResponse(f"{settings.feishu_oauth_frontend_url.rstrip('/')}?{query}", status_code=303)
+    return RedirectResponse(
+        f"{settings.feishu_oauth_frontend_url.rstrip('/')}?{query}", status_code=303
+    )
 
 
 @router.get("/authorize")
@@ -73,7 +75,9 @@ async def callback(
 
     result = await db.execute(select(FeishuOAuthState).where(FeishuOAuthState.state == state))
     oauth_state = result.scalar_one_or_none()
-    if oauth_state is None or oauth_state.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if oauth_state is None or oauth_state.expires_at.replace(tzinfo=timezone.utc) < datetime.now(
+        timezone.utc
+    ):
         return _frontend_redirect("error", "授权状态已失效，请重新点击绑定")
 
     try:

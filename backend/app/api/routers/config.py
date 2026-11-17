@@ -69,6 +69,7 @@ def _update_env_file(updates: dict[str, str]) -> None:
     # 原子写（更抗崩溃），标签会静默丢失 —— 这里幂等重打，防御未来重构。
     try:
         from app.sandbox.win_native import label_file_no_read_up
+
         label_file_no_read_up(env_path)
     except Exception:  # pragma: no cover - 非 Windows / pywin32 缺失时不阻断配置保存
         logger.debug("sandbox relabel skipped for %s", env_path)
@@ -101,15 +102,17 @@ async def get_llm_config(
 ) -> StandardResponse[LLMConfigResponse]:
     """获取 LLM 配置（API Key 只返回是否已设置，不返回明文）"""
     s = get_settings()
-    return StandardResponse(data=LLMConfigResponse(
-        deepseek_api_key_set=bool(s.deepseek_api_key),
-        deepseek_base_url=s.deepseek_base_url,
-        deepseek_model_v3=s.deepseek_model_v3,
-        deepseek_model_r1=s.deepseek_model_r1,
-        dashscope_api_key_set=bool(s.dashscope_api_key),
-        qwen_vl_model=s.qwen_vl_model,
-        wanx_model=s.wanx_model,
-    ))
+    return StandardResponse(
+        data=LLMConfigResponse(
+            deepseek_api_key_set=bool(s.deepseek_api_key),
+            deepseek_base_url=s.deepseek_base_url,
+            deepseek_model_v3=s.deepseek_model_v3,
+            deepseek_model_r1=s.deepseek_model_r1,
+            dashscope_api_key_set=bool(s.dashscope_api_key),
+            qwen_vl_model=s.qwen_vl_model,
+            wanx_model=s.wanx_model,
+        )
+    )
 
 
 @router.put("/llm-config/deepseek")

@@ -7,7 +7,7 @@ name = "creator-platform-backend"
 version = "1.0.0"
 description = "多智能体内容运营创作平台 - 后端服务"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 
 dependencies = [
     "fastapi>=0.110.0",

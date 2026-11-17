@@ -20,7 +20,10 @@ from app.skills.analyze.vl_analyze import VLAnalyzeInput, VLAnalyzeSkill
 class _FakeVL:
     """最小 VL 适配器替身：记录 messages，返回固定 JSON。"""
 
-    def __init__(self, reply: str = '{"tags": ["猫"], "mood": "温暖", "composition": "居中", "color_palette": ["白"]}') -> None:
+    def __init__(
+        self,
+        reply: str = '{"tags": ["猫"], "mood": "温暖", "composition": "居中", "color_palette": ["白"]}',
+    ) -> None:
         self.reply = reply
         self.calls: list[list[dict]] = []
 
@@ -38,6 +41,7 @@ def _clear_cache():
 
 # ── 1. 入参 schema ──────────────────────────────────────────
 
+
 def test_input_accepts_asset_id():
     """场景: 只传 asset_id（最省事的通道）
     预期: 校验通过，其余图片通道留空
@@ -50,18 +54,22 @@ def test_input_accepts_asset_id():
 
 # ── 2. asset_id → base64 ────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_load_asset_as_base64_uses_library():
     """场景: asset_id 存在且属于当前用户
     预期: 通过 original_url 转出 data URI
     """
     inputs = {"_context": {"user_id": "u1"}}
-    with patch(
-        "app.services.asset_library.get_asset",
-        new=AsyncMock(return_value={"original_url": "/uploads/assets/u1/a.png"}),
-    ), patch(
-        "app.services.asset_library.url_to_base64",
-        return_value="data:image/png;base64,AAAA",
+    with (
+        patch(
+            "app.services.asset_library.get_asset",
+            new=AsyncMock(return_value={"original_url": "/uploads/assets/u1/a.png"}),
+        ),
+        patch(
+            "app.services.asset_library.url_to_base64",
+            return_value="data:image/png;base64,AAAA",
+        ),
     ):
         uri = await vl_mod._load_asset_as_base64("a1", inputs)
 
@@ -92,18 +100,22 @@ async def test_load_asset_as_base64_not_found():
 
 # ── 3. execute 主链路 ──────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_execute_with_asset_id_sends_image_block():
     """场景: 传 asset_id，库能解析
     预期: 发给 VL 的 messages 里出现 {"image": data-uri}
     """
     fake = _FakeVL()
-    with patch(
-        "app.services.asset_library.get_asset",
-        new=AsyncMock(return_value={"original_url": "/uploads/assets/u1/a.png"}),
-    ), patch(
-        "app.services.asset_library.url_to_base64",
-        return_value="data:image/png;base64,AAAA",
+    with (
+        patch(
+            "app.services.asset_library.get_asset",
+            new=AsyncMock(return_value={"original_url": "/uploads/assets/u1/a.png"}),
+        ),
+        patch(
+            "app.services.asset_library.url_to_base64",
+            return_value="data:image/png;base64,AAAA",
+        ),
     ):
         result = await VLAnalyzeSkill(llm=fake).execute(
             {"asset_id": "a1", "_context": {"user_id": "u1"}}
@@ -121,12 +133,15 @@ async def test_execute_asset_id_result_cached():
     预期: 第二次命中缓存，不再调用 VL（省钱）
     """
     fake = _FakeVL()
-    with patch(
-        "app.services.asset_library.get_asset",
-        new=AsyncMock(return_value={"original_url": "/uploads/assets/u1/a.png"}),
-    ), patch(
-        "app.services.asset_library.url_to_base64",
-        return_value="data:image/png;base64,AAAA",
+    with (
+        patch(
+            "app.services.asset_library.get_asset",
+            new=AsyncMock(return_value={"original_url": "/uploads/assets/u1/a.png"}),
+        ),
+        patch(
+            "app.services.asset_library.url_to_base64",
+            return_value="data:image/png;base64,AAAA",
+        ),
     ):
         skill = VLAnalyzeSkill(llm=fake)
         await skill.execute({"asset_id": "a1", "_context": {"user_id": "u1"}})
@@ -146,6 +161,7 @@ async def test_execute_without_any_image_source_raises():
 
 
 # ── 4. 钩子兜底 ────────────────────────────────────────────
+
 
 def _ctx(asset_ids):
     return DispatchContext(
@@ -250,15 +266,14 @@ async def test_hook_noop_without_uploaded_images():
 
 # ── 5. image_url 通道（作品配图） ───────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_execute_with_http_url_passes_url_directly():
     """场景: 作品配图是远端 CDN 链接
     预期: 原样交给 VL（DashScope 支持 URL 直传，不必下载转 base64）
     """
     fake = _FakeVL()
-    result = await VLAnalyzeSkill(llm=fake).execute(
-        {"image_url": "https://cdn.example.com/a.png"}
-    )
+    result = await VLAnalyzeSkill(llm=fake).execute({"image_url": "https://cdn.example.com/a.png"})
 
     assert result["ok"] is True
     block = fake.calls[0][0]["content"]
@@ -308,16 +323,13 @@ async def test_execute_url_result_cached():
 
 # ── 6. 本地静态路径映射 ─────────────────────────────────────
 
+
 def test_data_uri_mime_follows_extension(tmp_path):
     """场景: 采集作品缓存图是 webp
     预期: data URI 前缀写 image/webp（统一写 png 会让 VL 解码走错分支）
     """
-    assert vl_mod._to_data_uri("AAAA", tmp_path / "a.webp").startswith(
-        "data:image/webp;base64,"
-    )
-    assert vl_mod._to_data_uri("AAAA", tmp_path / "a.jpg").startswith(
-        "data:image/jpeg;base64,"
-    )
+    assert vl_mod._to_data_uri("AAAA", tmp_path / "a.webp").startswith("data:image/webp;base64,")
+    assert vl_mod._to_data_uri("AAAA", tmp_path / "a.jpg").startswith("data:image/jpeg;base64,")
     assert vl_mod._to_data_uri("AAAA").startswith("data:image/png;base64,")
 
 

@@ -10,6 +10,7 @@
 
 全部离线。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,7 +34,9 @@ trigger_words: [热载测试]
 """
 
 
-def _write_skill(name: str, desc: str = "v1", permissions: list[str] | None = None, body: str = "正文") -> Path:
+def _write_skill(
+    name: str, desc: str = "v1", permissions: list[str] | None = None, body: str = "正文"
+) -> Path:
     from app.core import prompt_skills
 
     skills_dir = Path(prompt_skills._SKILLS_DIR)
@@ -118,9 +121,8 @@ async def test_skill_permissions_metadata(hot_reload_env):
 @pytest.mark.asyncio
 async def test_dispatch_blocks_skill_without_granted_permission(hot_reload_env):
     """门禁：session.allowed_permissions 无声明权限 → denied observation。"""
-    from app.engine.reactor.session import ReactorSession
-
     from app.core.skill_registry import get_skill_class_by_name
+    from app.engine.reactor.session import ReactorSession
 
     _write_skill("perm_gate", permissions=["net:http_post"])
     reload_once()
@@ -149,9 +151,8 @@ async def test_dispatch_blocks_skill_without_granted_permission(hot_reload_env):
 
 @pytest.mark.asyncio
 async def test_dispatch_allows_skill_with_granted_permission(hot_reload_env):
-    from app.engine.reactor.session import ReactorSession
-
     from app.core.skill_registry import get_skill_class_by_name
+    from app.engine.reactor.session import ReactorSession
     from app.engine.schemas import Permission
 
     _write_skill("perm_gate2", permissions=["net:http_post"])
@@ -183,7 +184,10 @@ def test_body_truncation():
     long_body = "长" * 3000
     max_chars = 2000
     if len(long_body) > max_chars:
-        truncated = long_body[:max_chars] + f"\n\n[⚠️ SKILL.md 正文超长已截断：原文 {len(long_body)} 字符，注入前 {max_chars}]"
+        truncated = (
+            long_body[:max_chars]
+            + f"\n\n[⚠️ SKILL.md 正文超长已截断：原文 {len(long_body)} 字符，注入前 {max_chars}]"
+        )
     else:
         truncated = long_body
     assert len(truncated) < 3000

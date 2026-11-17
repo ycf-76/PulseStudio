@@ -41,6 +41,7 @@ COMPLAINT_SIGNALS = re.compile(
 def _safe_sentiment(text: str) -> float:
     try:
         from snownlp import SnowNLP
+
         return SnowNLP(text).sentiments
     except Exception:
         return 0.5
@@ -49,6 +50,7 @@ def _safe_sentiment(text: str) -> float:
 def _safe_keywords(texts: list[str], top_k: int = 20) -> list[tuple[str, int]]:
     try:
         import jieba
+
         all_words: list[str] = []
         for t in texts:
             words = jieba.cut(t)
@@ -107,12 +109,14 @@ def analyze_comments(comments: list[dict], top_k: int = 20) -> dict[str, Any]:
     for i, (text, score) in enumerate(zip(texts, sentiment_scores)):
         sigs = _detect_signals(text)
         if sigs:
-            all_signals.append({
-                "index": i,
-                "text": text[:100],
-                "sentiment": _classify_sentiment(score),
-                "signal_types": sigs,
-            })
+            all_signals.append(
+                {
+                    "index": i,
+                    "text": text[:100],
+                    "sentiment": _classify_sentiment(score),
+                    "signal_types": sigs,
+                }
+            )
 
     signal_type_counter = Counter()
     for s in all_signals:
@@ -163,8 +167,13 @@ class CommentInsightsSkill(Skill):
         "用jieba+snownlp本地计算，不调用LLM。"
     )
     trigger_words = [
-        "评论分析", "评论区洞察", "评论情感", "评论关键词",
-        "评论信号", "评论洞察", "分析评论",
+        "评论分析",
+        "评论区洞察",
+        "评论情感",
+        "评论关键词",
+        "评论信号",
+        "评论洞察",
+        "分析评论",
     ]
     prompt_guidance = "输入评论列表，输出情感分布+关键词+需求信号+摘要。纯本地计算，0 LLM成本。"
 

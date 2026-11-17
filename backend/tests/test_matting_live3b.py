@@ -7,6 +7,7 @@ live3 已实证全链 PASS（DeepSeek 余额恢复，deck_ready 6 张、成片 5
 本脚本补验另一半契约：LLM 失败 → deck_fallback 事件 → 纯色底主画面 →
 仍出片（绝不阻断）。transcript 直接喂现成转录（降级点在 LLM，省 whisper）。
 """
+
 import asyncio
 import os
 import subprocess
@@ -35,28 +36,31 @@ async def main() -> None:
 
     rows = json.loads(TRANSCRIPT.read_text(encoding="utf-8"))
     transcript = [
-        {"text": r.get("text", ""), "start": r.get("start", 0.0),
-         "end": r.get("end", 0.0)}
+        {"text": r.get("text", ""), "start": r.get("start", 0.0), "end": r.get("end", 0.0)}
         for r in rows
     ]
     src_dur = await probe_duration(str(VIDEO))
-    print(f"[live3b] 源 {src_dur:.2f}s，喂 {len(transcript)} 条转录，"
-          f"坏 key 强制 LLM 失败，验降级链")
+    print(
+        f"[live3b] 源 {src_dur:.2f}s，喂 {len(transcript)} 条转录，"
+        f"坏 key 强制 LLM 失败，验降级链"
+    )
 
     events = []
-    async for ev in TalkingHeadOverlaySkill().execute({
-        "video_path": str(VIDEO),
-        "gate_mode": "auto_confirm",
-        "pip": True,
-        "matting": True,
-        "auto_deck": True,
-        "deck_theme": "midnight",
-        "transcript": transcript,
-        "slide_duration": 9.0,
-        "pip_scale": 0.3,
-        "pip_position": "bottom_right",
-        "bg_color": "#141428",
-    }):
+    async for ev in TalkingHeadOverlaySkill().execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": "auto_confirm",
+            "pip": True,
+            "matting": True,
+            "auto_deck": True,
+            "deck_theme": "midnight",
+            "transcript": transcript,
+            "slide_duration": 9.0,
+            "pip_scale": 0.3,
+            "pip_position": "bottom_right",
+            "bg_color": "#141428",
+        }
+    ):
         events.append(ev)
         name = ev.get("event") or ("success" if ev.get("success") else "error")
         print(f"[live3b] event={name} {ev.get('message', ev.get('error', ''))}")
@@ -80,10 +84,20 @@ async def main() -> None:
     ff = resolve_ffmpeg()
     frames_dir = BACKEND / "outputs" / "talking_head_overlay" / "live3b_frames"
     frames_dir.mkdir(exist_ok=True)
-    subprocess.run([
-        ff, "-y", "-ss", "1.5", "-i", str(output),
-        "-frames:v", "1", str(frames_dir / "first.png"),
-    ], capture_output=True)
+    subprocess.run(
+        [
+            ff,
+            "-y",
+            "-ss",
+            "1.5",
+            "-i",
+            str(output),
+            "-frames:v",
+            "1",
+            str(frames_dir / "first.png"),
+        ],
+        capture_output=True,
+    )
     print("[live3b] PASS：降级链（deck_fallback → 纯色底）真机验收完成")
 
 

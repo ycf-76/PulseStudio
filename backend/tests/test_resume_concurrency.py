@@ -7,6 +7,7 @@
 
 全离线，零真机、零网络。
 """
+
 # 注意：本文件故意不启用 `from __future__ import annotations`。
 # 最后一个用例在局部作用域定义 FastAPI 依赖，若注解被延迟成字符串，
 # FastAPI 会解析不到 Request 而把参数当成 query（422）。
@@ -54,9 +55,13 @@ async def test_concurrent_resume_only_first_succeeds(state_name):
             lock.release()
 
     await asyncio.gather(resume("A"), resume("B"))
-    assert trace == ["A:enter", "A:loaded", "A:cleanup", "B:enter", "B:404"], (
-        f"恢复未串行化，会有重复续跑风险：{trace}"
-    )
+    assert trace == [
+        "A:enter",
+        "A:loaded",
+        "A:cleanup",
+        "B:enter",
+        "B:404",
+    ], f"恢复未串行化，会有重复续跑风险：{trace}"
 
 
 def test_same_path_shares_one_async_lock():
@@ -83,12 +88,11 @@ def test_lock_tables_are_bounded():
 def test_all_five_resume_endpoints_are_guarded():
     """覆盖面：3 个端点函数体内用 async 锁，2 个端点由路由依赖保护。"""
     tree = ast.parse(CHAT_AGENT.read_text(encoding="utf-8-sig"))
-    funcs = {
-        n.name: n for n in ast.walk(tree)
-        if isinstance(n, ast.AsyncFunctionDef)
-    }
+    funcs = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.AsyncFunctionDef)}
     inline = (
-        "clarify_action", "confirm_storyboard_action", "confirm_cut_plan_action",
+        "clarify_action",
+        "confirm_storyboard_action",
+        "confirm_cut_plan_action",
     )
     for name in inline:
         src = ast.unparse(funcs[name])
@@ -100,8 +104,7 @@ def test_all_five_resume_endpoints_are_guarded():
     for name in by_dependency:
         decorators = funcs[name].decorator_list
         has_dep = any(
-            isinstance(d, ast.Call)
-            and any(kw.arg == "dependencies" for kw in d.keywords)
+            isinstance(d, ast.Call) and any(kw.arg == "dependencies" for kw in d.keywords)
             for d in decorators
         )
         assert has_dep, f"{name} 缺少串行化依赖"
@@ -131,9 +134,7 @@ def test_yield_dependency_does_not_break_body_parsing():
     async def probe(body: _Body):
         return {"path": body.loop_state_path, "action": body.action}
 
-    resp = TestClient(app).post(
-        "/probe", json={"loop_state_path": "p1", "action": "approve"}
-    )
+    resp = TestClient(app).post("/probe", json={"loop_state_path": "p1", "action": "approve"})
     assert resp.status_code == 200, resp.text
     assert resp.json() == {"path": "p1", "action": "approve"}
     assert seen == ["p1"]

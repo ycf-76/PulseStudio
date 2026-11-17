@@ -50,8 +50,14 @@ async def _handle_shot_image(job: dict[str, Any], report: Any) -> dict[str, Any]
     await report(95)
 
     await video_studio_service.update_shot_field(
-        storyboard_id, job["user_id"], shot_id,
-        {"frame_url": asset["original_url"], "frame_asset_id": asset["id"], "frame_source": provider.name},
+        storyboard_id,
+        job["user_id"],
+        shot_id,
+        {
+            "frame_url": asset["original_url"],
+            "frame_asset_id": asset["id"],
+            "frame_source": provider.name,
+        },
     )
     return {"result_asset_id": asset["id"], "result_url": asset["original_url"]}
 
@@ -81,16 +87,23 @@ async def _handle_shot_video(job: dict[str, Any], report: Any) -> dict[str, Any]
     await report(95)
 
     await video_studio_service.update_shot_field(
-        storyboard_id, job["user_id"], shot_id,
-        {"clip_url": asset["original_url"], "clip_asset_id": asset["asset_id"], "clip_mode": "video", "clip_error": ""},
+        storyboard_id,
+        job["user_id"],
+        shot_id,
+        {
+            "clip_url": asset["original_url"],
+            "clip_asset_id": asset["asset_id"],
+            "clip_mode": "video",
+            "clip_error": "",
+        },
     )
     return {"result_asset_id": asset["asset_id"], "result_url": asset["original_url"]}
 
 
 async def _handle_compose(job: dict[str, Any], report: Any) -> dict[str, Any]:
     """拼接成片：真实 ffmpeg 跑占位/真实片段（阶段 0 即验证拼接路径）。"""
-    from capabilities.video.adapters.video_compose import compose_video_concat
     from app.services.asset_library import save_video_asset, url_to_local_path
+    from capabilities.video.adapters.video_compose import compose_video_concat
 
     storyboard_id = job["storyboard_id"]
     sb = await video_studio_service.get_storyboard(storyboard_id, job["user_id"])

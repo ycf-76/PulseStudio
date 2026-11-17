@@ -51,18 +51,33 @@ def main() -> int:
                     type="png",
                 )
 
-            status_file.write_text(json.dumps({
-                "ok": True, "frames": n_frames, "elapsed": round(time.time() - t0, 2),
-            }), encoding="utf-8")
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "frames": n_frames,
+                        "elapsed": round(time.time() - t0, 2),
+                    }
+                ),
+                encoding="utf-8",
+            )
             # 帧已全部落盘即达成目标；不调 browser.close()（本机会挂起）
             sys.stdout.flush()
             import os
+
             os._exit(0)
     except Exception as e:
-        status_file.write_text(json.dumps({
-            "ok": False, "error": f"{type(e).__name__}: {e}",
-        }), encoding="utf-8")
+        status_file.write_text(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": f"{type(e).__name__}: {e}",
+                }
+            ),
+            encoding="utf-8",
+        )
         import os
+
         os._exit(1)
 
 

@@ -1,18 +1,21 @@
 import pytest
-pytest.skip("app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现",
+    allow_module_level=True,
+)
 
 import asyncio
 import json
 
 import pytest
 
+from app.core.skill_base import Skill
+from app.engine.governance.request_queue import LLMRequestQueue
 from app.engine.harness.executor import loop as loop_module
 from app.engine.harness.executor.loop import LoopExecutor
 from app.engine.harness.runtime import AgentHarness
-from app.engine.schemas import NodeExecutionError, WorkflowContext
-from app.engine.governance.request_queue import LLMRequestQueue
-from app.core.skill_base import Skill
-from app.engine.schemas import Permission
+from app.engine.schemas import NodeExecutionError, Permission, WorkflowContext
 
 
 class _ScriptedLLM:
@@ -73,37 +76,39 @@ def _context() -> WorkflowContext:
 
 def test_loop_executor_runs_react_loop():
     async def run():
-        llm = _ScriptedLLM([
-            {
-                "chunks": [
-                    {
-                        "content": "先搜索",
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [
-                            {
-                                "function": {
-                                    "name": "mock_search",
-                                    "arguments": '{"keyword": "AI"}',
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        {
+                            "content": "先搜索",
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [
+                                {
+                                    "function": {
+                                        "name": "mock_search",
+                                        "arguments": '{"keyword": "AI"}',
+                                    }
                                 }
-                            }
-                        ],
-                    }
-                ]
-            },
-            {
-                "chunks": [
-                    {
-                        "content": "搜索完成",
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [],
-                    }
-                ]
-            },
-        ])
+                            ],
+                        }
+                    ]
+                },
+                {
+                    "chunks": [
+                        {
+                            "content": "搜索完成",
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [],
+                        }
+                    ]
+                },
+            ]
+        )
         harness = AgentHarness(
             agent_id="test",
             role="tester",
@@ -124,26 +129,28 @@ def test_loop_executor_runs_react_loop():
 def test_loop_executor_hits_max_iterations_and_falls_back():
     async def run():
         # 永远不返回 final，验证 max_iterations 兜底
-        llm = _ScriptedLLM([
-            {
-                "chunks": [
-                    {
-                        "content": "继续搜索",
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [
-                            {
-                                "function": {
-                                    "name": "mock_search",
-                                    "arguments": "{}",
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        {
+                            "content": "继续搜索",
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [
+                                {
+                                    "function": {
+                                        "name": "mock_search",
+                                        "arguments": "{}",
+                                    }
                                 }
-                            }
-                        ],
-                    }
-                ]
-            },
-        ])
+                            ],
+                        }
+                    ]
+                },
+            ]
+        )
         harness = AgentHarness(
             agent_id="test",
             role="tester",
@@ -172,37 +179,39 @@ def test_loop_executor_injects_llm_into_skill():
             return {"recorded": True}
 
     async def run():
-        llm = _ScriptedLLM([
-            {
-                "chunks": [
-                    {
-                        "content": "记录",
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [
-                            {
-                                "function": {
-                                    "name": "recorder",
-                                    "arguments": "{}",
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        {
+                            "content": "记录",
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [
+                                {
+                                    "function": {
+                                        "name": "recorder",
+                                        "arguments": "{}",
+                                    }
                                 }
-                            }
-                        ],
-                    }
-                ]
-            },
-            {
-                "chunks": [
-                    {
-                        "content": "已记录",
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [],
-                    }
-                ]
-            },
-        ])
+                            ],
+                        }
+                    ]
+                },
+                {
+                    "chunks": [
+                        {
+                            "content": "已记录",
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [],
+                        }
+                    ]
+                },
+            ]
+        )
         harness = AgentHarness(
             agent_id="test",
             role="tester",
@@ -228,55 +237,57 @@ def test_loop_executor_retries_plan_text_instead_of_returning_it():
             return {"status": "ok", "title": "test", "content": "test", "tags": []}
 
     async def run():
-        llm = _ScriptedLLM([
-            {
-                "chunks": [
-                    {
-                        "content": (
-                            "我来基于这篇梨形穿搭文案，亲笔写这份视觉组图的 brief。"
-                            "核心分析：这是身材痛点共鸣。正在渲染你的视觉组图……"
-                            "让我用完整 brief 驱动风格引擎。"
-                        ),
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [],
-                    }
-                ]
-            },
-            {
-                "chunks": [
-                    {
-                        "content": "",
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [
-                            {
-                                "function": {
-                                    "name": "lively_girl",
-                                    "arguments": (
-                                        '{"title": "梨形穿搭", "content": "上短下长显瘦", '
-                                        '"tags": ["穿搭"], "theme": "sp-hearth-table"}'
-                                    ),
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        {
+                            "content": (
+                                "我来基于这篇梨形穿搭文案，亲笔写这份视觉组图的 brief。"
+                                "核心分析：这是身材痛点共鸣。正在渲染你的视觉组图……"
+                                "让我用完整 brief 驱动风格引擎。"
+                            ),
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [],
+                        }
+                    ]
+                },
+                {
+                    "chunks": [
+                        {
+                            "content": "",
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [
+                                {
+                                    "function": {
+                                        "name": "lively_girl",
+                                        "arguments": (
+                                            '{"title": "梨形穿搭", "content": "上短下长显瘦", '
+                                            '"tags": ["穿搭"], "theme": "sp-hearth-table"}'
+                                        ),
+                                    }
                                 }
-                            }
-                        ],
-                    }
-                ]
-            },
-            {
-                "chunks": [
-                    {
-                        "content": "已为你重新生成梨形穿搭视觉组图。",
-                        "reasoning_content": "",
-                        "is_final": True,
-                        "token_usage": 1,
-                        "tool_calls": [],
-                    }
-                ]
-            },
-        ])
+                            ],
+                        }
+                    ]
+                },
+                {
+                    "chunks": [
+                        {
+                            "content": "已为你重新生成梨形穿搭视觉组图。",
+                            "reasoning_content": "",
+                            "is_final": True,
+                            "token_usage": 1,
+                            "tool_calls": [],
+                        }
+                    ]
+                },
+            ]
+        )
         harness = AgentHarness(
             agent_id="test",
             role="tester",
@@ -332,9 +343,7 @@ class _NeverFinalLLM:
             "content": "继续",
             "reasoning_content": None,
             "token_usage": 1,
-            "tool_calls": [
-                {"function": {"name": "mock_search", "arguments": "{}"}}
-            ],
+            "tool_calls": [{"function": {"name": "mock_search", "arguments": "{}"}}],
         }
 
 
@@ -439,9 +448,7 @@ def _tool_call_response():
                 "reasoning_content": "",
                 "is_final": True,
                 "token_usage": 1,
-                "tool_calls": [
-                    {"function": {"name": "mock_search", "arguments": "{}"}}
-                ],
+                "tool_calls": [{"function": {"name": "mock_search", "arguments": "{}"}}],
             }
         ]
     }
@@ -467,23 +474,25 @@ def test_tool_consecutive_failure_circuit_breaker(caplog):
 
     skill = _CrashingSkill()
     # LLM 脚本：连续 4 轮要求调同一工具，第 5 轮 final
-    llm = _ScriptedLLM([
-        _tool_call_response(),
-        _tool_call_response(),
-        _tool_call_response(),
-        _tool_call_response(),
-        {
-            "chunks": [
-                {
-                    "content": "基于已有信息总结。",
-                    "reasoning_content": "",
-                    "is_final": True,
-                    "token_usage": 1,
-                    "tool_calls": [],
-                }
-            ]
-        },
-    ])
+    llm = _ScriptedLLM(
+        [
+            _tool_call_response(),
+            _tool_call_response(),
+            _tool_call_response(),
+            _tool_call_response(),
+            {
+                "chunks": [
+                    {
+                        "content": "基于已有信息总结。",
+                        "reasoning_content": "",
+                        "is_final": True,
+                        "token_usage": 1,
+                        "tool_calls": [],
+                    }
+                ]
+            },
+        ]
+    )
     executor = LoopExecutor(max_iterations=6)
 
     async def run():
@@ -498,6 +507,7 @@ def test_tool_consecutive_failure_circuit_breaker(caplog):
         return await harness.run({"topic": "AI 教育"}, _context())
 
     import logging as _logging
+
     with caplog.at_level(_logging.WARNING, logger="app.engine.harness.executor.loop"):
         output = asyncio.run(run())
 
@@ -509,9 +519,9 @@ def test_tool_consecutive_failure_circuit_breaker(caplog):
     # P1-a: 日志中的工具失败信息必须含异常类型名（str(NotImplementedError()) 为空串）
     fail_logs = [r.message for r in caplog.records if "failed" in r.message]
     assert fail_logs, "应记录工具失败日志"
-    assert any("NotImplementedError" in m for m in fail_logs), (
-        f"日志须含异常类型名，实际: {fail_logs[:2]}"
-    )
+    assert any(
+        "NotImplementedError" in m for m in fail_logs
+    ), f"日志须含异常类型名，实际: {fail_logs[:2]}"
 
 
 def test_copy_request_gating_for_yiqi_phrasing():
@@ -526,7 +536,9 @@ def test_copy_request_gating_for_yiqi_phrasing():
     # 同类表述
     for phrase in ("出一篇笔记", "来一期干货", "来一篇种草文"):
         assert LoopExecutor._required_tools_for_request(phrase, phrase) == {
-            "lively_girl", "elegant", "professional"
+            "lively_girl",
+            "elegant",
+            "professional",
         }, f"'{phrase}' 应命中文案工具门控"
 
     # 分析类请求不受影响
@@ -543,7 +555,9 @@ class _CapturingLLM(_ScriptedLLM):
 
     async def stream_chat(self, messages, tools=None, response_format=None):
         self.seen_messages.append([dict(m) for m in messages])
-        async for chunk in super().stream_chat(messages, tools=tools, response_format=response_format):
+        async for chunk in super().stream_chat(
+            messages, tools=tools, response_format=response_format
+        ):
             yield chunk
 
 
@@ -552,13 +566,16 @@ def test_sanitize_error_observation_unit():
     s = LoopExecutor._sanitize_error_observation
 
     # 1. 内部细节字段被剔除，业务错误信息保留
-    raw = json.dumps({
-        "error": "build blocked: 01-cover need a hero image",
-        "cmd": "node D:\\secret\\path\\build.mjs build",
-        "stdout": "secret-stdout-content",
-        "stderr": "secret-stderr-content",
-        "returncode": 1,
-    }, ensure_ascii=False)
+    raw = json.dumps(
+        {
+            "error": "build blocked: 01-cover need a hero image",
+            "cmd": "node D:\\secret\\path\\build.mjs build",
+            "stdout": "secret-stdout-content",
+            "stderr": "secret-stderr-content",
+            "returncode": 1,
+        },
+        ensure_ascii=False,
+    )
     out = s(raw)
     assert "secret" not in out
     assert "returncode" not in out
@@ -598,20 +615,22 @@ def test_error_details_not_fed_to_llm():
                 "returncode": 1,
             }
 
-    llm = _CapturingLLM([
-        _tool_call_response(),
-        {
-            "chunks": [
-                {
-                    "content": "渲染失败，我直接给文字版。",
-                    "reasoning_content": "",
-                    "is_final": True,
-                    "token_usage": 1,
-                    "tool_calls": [],
-                }
-            ]
-        },
-    ])
+    llm = _CapturingLLM(
+        [
+            _tool_call_response(),
+            {
+                "chunks": [
+                    {
+                        "content": "渲染失败，我直接给文字版。",
+                        "reasoning_content": "",
+                        "is_final": True,
+                        "token_usage": 1,
+                        "tool_calls": [],
+                    }
+                ]
+            },
+        ]
+    )
 
     async def run():
         harness = AgentHarness(
@@ -628,7 +647,8 @@ def test_error_details_not_fed_to_llm():
     # 第二轮 LLM 调用能看到第一轮的 observation
     assert len(llm.seen_messages) == 2
     observations = [
-        m["content"] for m in llm.seen_messages[1]
+        m["content"]
+        for m in llm.seen_messages[1]
         if m.get("role") == "user" and str(m.get("content", "")).startswith("[observation]")
     ]
     assert observations, "应存在 observation 消息"

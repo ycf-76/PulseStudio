@@ -8,6 +8,7 @@
 - 用户身份从 JWT 解析（get_current_user），记忆按 user_id 隔离
 - 设置偏好用 source="user_explicit"（优先级高于 workflow_inferred）
 """
+
 from __future__ import annotations
 
 import logging

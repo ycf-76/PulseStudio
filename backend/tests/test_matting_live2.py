@@ -6,6 +6,7 @@
 全链：whisper 转录 → LLM 要点幻灯片（deck_orchestrator）→
 talking_head_overlay(pip+matting+deck_images) → 成片 + 抽帧。
 """
+
 import asyncio
 import json
 import os
@@ -33,12 +34,10 @@ async def _transcribe_stage() -> None:
     from capabilities.video.adapters.whisper_transcribe import transcribe
 
     segs = await asyncio.to_thread(transcribe, str(VIDEO), "small", "zh")
-    payload = [
-        {"start": s.start, "end": s.end, "text": s.text.strip()}
-        for s in segs
-    ]
+    payload = [{"start": s.start, "end": s.end, "text": s.text.strip()} for s in segs]
     (WORK / "transcript.json").write_text(
-        json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8",
+        json.dumps(payload, ensure_ascii=False, indent=1),
+        encoding="utf-8",
     )
     print(f"[live2] 转录完成 {len(payload)} 段 → transcript.json")
 
@@ -66,8 +65,11 @@ async def main() -> None:
     deck_dir = WORK / "deck"
     try:
         slides = await generate_deck_slides(
-            text, llm, deck_dir,
-            width=1080, height=1920,
+            text,
+            llm,
+            deck_dir,
+            width=1080,
+            height=1920,
             person_clearance_px=640,  # 人物小窗区（556px+margin）让位
         )
     except Exception as e:
@@ -83,16 +85,21 @@ async def main() -> None:
 
         sents = [r["text"] for r in rows if r["text"].strip()]
         chunk = max(1, len(sents) // 6)
-        groups = [
-            sents[i:i + chunk] for i in range(0, len(sents), chunk)
-        ][:6]
+        groups = [sents[i : i + chunk] for i in range(0, len(sents), chunk)][:6]
         fake = [
-            {"title": (g[0][:12] if g else f"要点 {i+1}"),
-             "bullets": [s[:18] for s in g[:3]] or ["（无内容）"]}
+            {
+                "title": (g[0][:12] if g else f"要点 {i+1}"),
+                "bullets": [s[:18] for s in g[:3]] or ["（无内容）"],
+            }
             for i, g in enumerate(groups)
         ]
         slides = await asyncio.to_thread(
-            render_deck_slides, fake, deck_dir, 1080, 1920, 640,
+            render_deck_slides,
+            fake,
+            deck_dir,
+            1080,
+            1920,
+            640,
         )
     if not slides:
         print("[live2] FAIL：幻灯片生成降级为空")
@@ -105,17 +112,19 @@ async def main() -> None:
     )
 
     events = []
-    async for ev in TalkingHeadOverlaySkill().execute({
-        "video_path": str(VIDEO),
-        "gate_mode": "auto_confirm",
-        "pip": True,
-        "matting": True,
-        "deck_images": [str(p) for p in slides],
-        "slide_duration": 9.0,
-        "pip_scale": 0.3,
-        "pip_position": "bottom_right",
-        "bg_color": "#141428",
-    }):
+    async for ev in TalkingHeadOverlaySkill().execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": "auto_confirm",
+            "pip": True,
+            "matting": True,
+            "deck_images": [str(p) for p in slides],
+            "slide_duration": 9.0,
+            "pip_scale": 0.3,
+            "pip_position": "bottom_right",
+            "bg_color": "#141428",
+        }
+    ):
         events.append(ev)
         name = ev.get("event") or ("success" if ev.get("success") else "error")
         print(f"[live2] event={name} {ev.get('message', ev.get('error', ''))}")
@@ -133,17 +142,28 @@ async def main() -> None:
     out_dur = await probe_duration(str(output))
     print(f"[live2] 成片：{output}（{out_dur:.2f}s）")
 
-    from capabilities.video.adapters.html_to_video import resolve_ffmpeg
     import subprocess
+
+    from capabilities.video.adapters.html_to_video import resolve_ffmpeg
 
     ff = resolve_ffmpeg()
     frames_dir = output.parent / f"{output.stem}_frames"
     frames_dir.mkdir(exist_ok=True)
     for tag, t in (("first", 1.0), ("mid", out_dur / 2), ("end", out_dur - 1.0)):
-        subprocess.run([
-            ff, "-y", "-ss", f"{t:.2f}", "-i", str(output),
-            "-frames:v", "1", str(frames_dir / f"{tag}.png"),
-        ], capture_output=True)
+        subprocess.run(
+            [
+                ff,
+                "-y",
+                "-ss",
+                f"{t:.2f}",
+                "-i",
+                str(output),
+                "-frames:v",
+                "1",
+                str(frames_dir / f"{tag}.png"),
+            ],
+            capture_output=True,
+        )
     print(f"[live2] 抽帧：{[p.name for p in sorted(frames_dir.glob('*.png'))]}")
     print("[live2] PASS：10.20 二期真机验收完成")
 

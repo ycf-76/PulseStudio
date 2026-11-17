@@ -11,6 +11,7 @@
 预期：deck_fallback 事件出现、成片时长 ≈ 源 54.1s、纯色底 + 右下角人物。
 LLM 充值后补跑全链出片（deck_ready 路径 + 三主题首帧人工看版式）。
 """
+
 import asyncio
 import os
 import subprocess
@@ -36,19 +37,21 @@ async def main() -> None:
     print(f"[live3] 源视频 {src_dur:.2f}s，开始 auto_deck 一键降级链验收")
 
     events = []
-    async for ev in TalkingHeadOverlaySkill().execute({
-        "video_path": str(VIDEO),
-        "gate_mode": "auto_confirm",
-        "pip": True,
-        "matting": True,
-        "auto_deck": True,
-        "deck_theme": "midnight",
-        "slide_duration": 9.0,
-        "pip_scale": 0.3,
-        "pip_position": "bottom_right",
-        "bg_color": "#141428",
-        # 故意不传 transcript：验 skill 内 whisper 子进程兜底通道
-    }):
+    async for ev in TalkingHeadOverlaySkill().execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": "auto_confirm",
+            "pip": True,
+            "matting": True,
+            "auto_deck": True,
+            "deck_theme": "midnight",
+            "slide_duration": 9.0,
+            "pip_scale": 0.3,
+            "pip_position": "bottom_right",
+            "bg_color": "#141428",
+            # 故意不传 transcript：验 skill 内 whisper 子进程兜底通道
+        }
+    ):
         events.append(ev)
         name = ev.get("event") or ("success" if ev.get("success") else "error")
         print(f"[live3] event={name} {ev.get('message', ev.get('error', ''))}")
@@ -77,13 +80,22 @@ async def main() -> None:
     frames_dir = output.parent / f"{output.stem}_frames"
     frames_dir.mkdir(exist_ok=True)
     for tag, t in (("first", 1.0), ("mid", out_dur / 2), ("end", out_dur - 1.0)):
-        subprocess.run([
-            ff, "-y", "-ss", f"{t:.2f}", "-i", str(output),
-            "-frames:v", "1", str(frames_dir / f"{tag}.png"),
-        ], capture_output=True)
+        subprocess.run(
+            [
+                ff,
+                "-y",
+                "-ss",
+                f"{t:.2f}",
+                "-i",
+                str(output),
+                "-frames:v",
+                "1",
+                str(frames_dir / f"{tag}.png"),
+            ],
+            capture_output=True,
+        )
     print(f"[live3] 抽帧：{[p.name for p in sorted(frames_dir.glob('*.png'))]}")
-    print("[live3] PASS：10.21 auto_deck 降级链真机验收完成"
-          "（LLM 全链出片待充值后补验）")
+    print("[live3] PASS：10.21 auto_deck 降级链真机验收完成" "（LLM 全链出片待充值后补验）")
 
 
 if __name__ == "__main__":

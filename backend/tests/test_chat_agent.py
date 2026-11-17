@@ -79,9 +79,7 @@ def test_chat_agent_falls_back_when_no_llm():
 
 
 def test_chat_agent_runs_agentic_loop_with_mock_llm():
-    llm = _ScriptedLLM(
-        '{"thought": "完成", "final": true, "output": {"result": "done"}}'
-    )
+    llm = _ScriptedLLM('{"thought": "完成", "final": true, "output": {"result": "done"}}')
     session = _FakeSession(
         llm=llm,
         run_result={"result": "done", "duration_ms": 100},

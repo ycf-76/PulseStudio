@@ -9,6 +9,7 @@
     await pool_startup()          # 注册调度器 + 启动检查
     # 关闭时：from capabilities.pool_monitor.main import pool_shutdown; pool_shutdown()
 """
+
 from __future__ import annotations
 
 import logging
@@ -36,7 +37,9 @@ async def startup_check() -> None:
             )
         ).scalar() or 0
         if count < settings.pool_startup_threshold:
-            logger.info(f"启动检查：monitor 数据 {count} < {settings.pool_startup_threshold}，立即触发抓取")
+            logger.info(
+                f"启动检查：monitor 数据 {count} < {settings.pool_startup_threshold}，立即触发抓取"
+            )
             await MonitorAgent().run(session)
         else:
             logger.info(f"启动检查：monitor 数据 {count}，无需补抓")

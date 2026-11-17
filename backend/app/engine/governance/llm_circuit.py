@@ -130,9 +130,7 @@ class LLMCircuitBreaker:
         if is_unrecoverable:
             self._state = LLMCircuitState.OPEN
             self._open_reason = f"unrecoverable: {error[:200]}"
-            logger.error(
-                f"[llm-circuit] -> OPEN immediately (unrecoverable): {error[:200]}"
-            )
+            logger.error(f"[llm-circuit] -> OPEN immediately (unrecoverable): {error[:200]}")
             return
 
         if self._state == LLMCircuitState.HALF_OPEN:
@@ -145,8 +143,7 @@ class LLMCircuitBreaker:
             self._state = LLMCircuitState.OPEN
             self._open_reason = f"consecutive_failures={self._failure_count}: {error[:200]}"
             logger.error(
-                f"[llm-circuit] CLOSED -> OPEN "
-                f"(consecutive failures={self._failure_count})"
+                f"[llm-circuit] CLOSED -> OPEN " f"(consecutive failures={self._failure_count})"
             )
 
     def check_error(self, error: Exception | str) -> bool:
@@ -159,11 +156,17 @@ class LLMCircuitBreaker:
         is_unrecoverable = any(
             kw in err_str
             for kw in [
-                "402", "401", "403",
-                "payment", "insufficient balance",
-                "unauthorized", "forbidden",
-                "invalid api key", "authentication",
-                "quota exceeded", "billing",
+                "402",
+                "401",
+                "403",
+                "payment",
+                "insufficient balance",
+                "unauthorized",
+                "forbidden",
+                "invalid api key",
+                "authentication",
+                "quota exceeded",
+                "billing",
             ]
         )
         self.record_failure(
@@ -186,7 +189,12 @@ class LLMCircuitBreaker:
             dict with keys: ok, recovered, state, detail
         """
         if self._state == LLMCircuitState.CLOSED:
-            return {"ok": True, "recovered": False, "state": "closed", "detail": "circuit already closed"}
+            return {
+                "ok": True,
+                "recovered": False,
+                "state": "closed",
+                "detail": "circuit already closed",
+            }
 
         now = time.time()
         if now - self._last_probe_time < self._probe_cooldown:
@@ -200,41 +208,72 @@ class LLMCircuitBreaker:
         self._last_probe_time = now
         try:
             import os
+
             from dotenv import load_dotenv
+
             load_dotenv()
             api_key = os.getenv("DEEPSEEK_API_KEY", "")
             api_base = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1").rstrip("/")
             model = os.getenv("DEEPSEEK_MODEL_V3", "deepseek-chat")
 
             if not api_key:
-                return {"ok": False, "recovered": False, "state": self._state.value, "detail": "no API key configured"}
+                return {
+                    "ok": False,
+                    "recovered": False,
+                    "state": self._state.value,
+                    "detail": "no API key configured",
+                }
 
             import json
             import urllib.request
+
             url = f"{api_base}/chat/completions"
-            body = json.dumps({
-                "model": model,
-                "messages": [{"role": "user", "content": "hi"}],
-                "max_tokens": 1,
-            }).encode()
-            req = urllib.request.Request(url, data=body, headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            })
+            body = json.dumps(
+                {
+                    "model": model,
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "max_tokens": 1,
+                }
+            ).encode()
+            req = urllib.request.Request(
+                url,
+                data=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                },
+            )
             loop = asyncio.get_event_loop()
             resp = await loop.run_in_executor(None, lambda: urllib.request.urlopen(req, timeout=15))
             data = json.loads(resp.read())
             if resp.status == 200 and data.get("choices"):
                 old_state = self._state.value
                 self.reset()
-                logger.info(f"[llm-circuit] probe succeeded! {old_state} -> CLOSED (auto-recovered)")
-                return {"ok": True, "recovered": True, "state": "closed", "detail": f"API probe succeeded, circuit recovered from {old_state}"}
+                logger.info(
+                    f"[llm-circuit] probe succeeded! {old_state} -> CLOSED (auto-recovered)"
+                )
+                return {
+                    "ok": True,
+                    "recovered": True,
+                    "state": "closed",
+                    "detail": f"API probe succeeded, circuit recovered from {old_state}",
+                }
             else:
-                return {"ok": False, "recovered": False, "state": self._state.value, "detail": f"API returned status={resp.status}"}
+                return {
+                    "ok": False,
+                    "recovered": False,
+                    "state": self._state.value,
+                    "detail": f"API returned status={resp.status}",
+                }
         except Exception as e:
             err_str = str(e)
             self.check_error(e)
-            return {"ok": False, "recovered": False, "state": self._state.value, "detail": f"probe failed: {err_str[:200]}"}
+            return {
+                "ok": False,
+                "recovered": False,
+                "state": self._state.value,
+                "detail": f"probe failed: {err_str[:200]}",
+            }
 
     def reset(self) -> None:
         """手动重置熔断器（用户充值/更换 API Key 后调用）。"""

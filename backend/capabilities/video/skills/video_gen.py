@@ -20,13 +20,19 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from capabilities.video.adapters.video_gen import VideoGenError, create_video_adapter
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
+from capabilities.video.adapters.video_gen import VideoGenError, create_video_adapter
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["VideoGenError", "GenerateVideoSkill", "VideoGenInput", "_resolve_adapter", "_resolve_image_url"]
+__all__ = [
+    "VideoGenError",
+    "GenerateVideoSkill",
+    "VideoGenInput",
+    "_resolve_adapter",
+    "_resolve_image_url",
+]
 
 
 class VideoGenInput(BaseModel):
@@ -97,7 +103,9 @@ def _resolve_adapter(provider: str | None = None) -> tuple[Any, str]:
             model=getattr(s, "ark_model", "") or "",
         )
     else:
-        raise VideoGenError("bad_provider", f"未知的视频 provider: {provider}（支持: dashscope, kling, ark）")
+        raise VideoGenError(
+            "bad_provider", f"未知的视频 provider: {provider}（支持: dashscope, kling, ark）"
+        )
 
     return adapter, provider
 
@@ -138,9 +146,9 @@ class GenerateVideoSkill(Skill):
     input_schema = VideoGenInput
 
     async def execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        parsed = VideoGenInput.model_validate({
-            k: v for k, v in inputs.items() if k in VideoGenInput.model_fields
-        })
+        parsed = VideoGenInput.model_validate(
+            {k: v for k, v in inputs.items() if k in VideoGenInput.model_fields}
+        )
         user_id = inputs.get("_user_id", "default")
 
         try:
@@ -149,7 +157,9 @@ class GenerateVideoSkill(Skill):
             return {"success": False, "error": e.message, "error_type": e.error_type}
 
         def _on_progress(elapsed: float, max_wait: float, status: str) -> None:
-            logger.info(f"[generate_video] {provider_name} 生成中 {elapsed:.0f}/{max_wait:.0f}s status={status}")
+            logger.info(
+                f"[generate_video] {provider_name} 生成中 {elapsed:.0f}/{max_wait:.0f}s status={status}"
+            )
 
         model = parsed.model
         try:

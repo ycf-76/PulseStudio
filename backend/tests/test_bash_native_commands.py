@@ -28,6 +28,7 @@ def workspace(tmp_path, monkeypatch):
 
 async def run(command: str, **kwargs) -> dict:
     from app.tools.dev_tools import BashSkill
+
     return await BashSkill().execute({"command": command, **kwargs})
 
 

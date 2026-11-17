@@ -21,6 +21,7 @@
 
 当前阶段以 JSON 文件持久化，后续可平滑迁移到数据库。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -99,14 +100,13 @@ async def artifact_lock(artifact_id: str, timeout: float | None = None):
             if _try_lock(fh):
                 break
             if time.monotonic() >= deadline:
-                raise RuntimeError(
-                    f"artifact {artifact_id} 正在被其他操作修改，请稍后重试"
-                )
+                raise RuntimeError(f"artifact {artifact_id} 正在被其他操作修改，请稍后重试")
             await asyncio.sleep(0.01)
         yield
     finally:
         _release_lock(fh)
         fh.close()
+
 
 # 页面类型 → 默认语义角色
 _PAGE_ROLE_MAP: dict[str, str] = {
@@ -189,6 +189,7 @@ def infer_role(page_type: str, index: int, total: int) -> str:
 
 class SourceRef(BaseModel):
     """创作来源。"""
+
     work_id: str = ""
     session_id: str = ""
     workflow_id: str = ""
@@ -197,6 +198,7 @@ class SourceRef(BaseModel):
 
 class AnalysisRef(BaseModel):
     """作品分析引用：只存结论与来源，不复制整篇报告。"""
+
     analysis_id: str = ""
     source_work_ids: list[str] = Field(default_factory=list)
     confidence: float = 0.0
@@ -207,6 +209,7 @@ class AnalysisRef(BaseModel):
 
 class CreativeBrief(BaseModel):
     """创作简报：把分析结果翻译成可执行创作方向。"""
+
     goal: str = ""
     audience: str = ""
     tone: str = ""
@@ -220,6 +223,7 @@ class CreativeBrief(BaseModel):
 
 class PageComponent(BaseModel):
     """页面使用的组件。"""
+
     semantic_type: str = ""
     page_type: str = "content"
     template_id: str = ""
@@ -228,6 +232,7 @@ class PageComponent(BaseModel):
 
 class StoryboardPage(BaseModel):
     """分镜页：比 card page 多一层「为什么这样设计」。"""
+
     page_id: str = ""
     index: int = 0
     role: str = "explanation"
@@ -271,6 +276,7 @@ class ArtifactHistoryEntry(BaseModel):
 
 class CreativeArtifact(BaseModel):
     """统一创作对象。"""
+
     artifact_id: str = ""
     version: int = 1
     created_at: float = 0.0
@@ -292,9 +298,7 @@ class CreativeArtifact(BaseModel):
             self.created_at = now
         self.updated_at = now
         if action:
-            self.history.append(
-                ArtifactHistoryEntry(at=now, action=action, detail=detail)
-            )
+            self.history.append(ArtifactHistoryEntry(at=now, action=action, detail=detail))
 
 
 def build_storyboard(
@@ -333,9 +337,7 @@ def build_storyboard(
             )
         )
     if analysis and analysis.keep_patterns and storyboard:
-        storyboard[0].source_evidence = (
-            storyboard[0].source_evidence or analysis.keep_patterns[0]
-        )
+        storyboard[0].source_evidence = storyboard[0].source_evidence or analysis.keep_patterns[0]
     return storyboard
 
 
@@ -427,15 +429,11 @@ def delete_artifact(artifact_id: str) -> bool:
 def _summarize(data: dict[str, Any], path: Path) -> dict[str, Any]:
     """把落盘 JSON 压成列表项。列表/详情共用同一套推导，避免两处漂移。"""
     storyboard = data.get("storyboard") or []
-    page_images = [
-        p.get("image_url", "")
-        for p in storyboard
-        if p.get("image_url")
-    ]
+    page_images = [p.get("image_url", "") for p in storyboard if p.get("image_url")]
     cover_url = page_images[0] if page_images else ""
     first_page_html = ""
     if storyboard:
-        first_content = (storyboard[0].get("content") or {})
+        first_content = storyboard[0].get("content") or {}
         first_page_html = first_content.get("htmlContent", "")
     if not cover_url:
         card_draft = data.get("card_draft") or {}
@@ -445,9 +443,7 @@ def _summarize(data: dict[str, Any], path: Path) -> dict[str, Any]:
             if img:
                 cover_url = img
                 page_images = [img] + [
-                    pp.get("imageUrl", "")
-                    for pp in cd_pages
-                    if pp.get("imageUrl") and pp is not p
+                    pp.get("imageUrl", "") for pp in cd_pages if pp.get("imageUrl") and pp is not p
                 ]
                 break
         if not cover_url:
@@ -526,6 +522,7 @@ async def session_owner(session_id: str) -> str:
         return ""
     try:
         from app.services.chat_session import get_session
+
         session = await get_session(session_id)
     except Exception as exc:  # noqa: BLE001 - 归属查询失败必须降级为"不可验证"，不能放行
         logger.warning("查询会话归属失败 session=%s: %s", session_id, exc)
@@ -629,7 +626,7 @@ async def save_card_draft_artifact(
 
     existing_id = ""
     if work_id.startswith("artifact:"):
-        candidate = work_id[len("artifact:"):]
+        candidate = work_id[len("artifact:") :]
         candidate_artifact = load_artifact(candidate)
         if candidate_artifact is not None:
             try:

@@ -20,11 +20,13 @@ from app.services import creative_artifact as ca
 
 class FakeLLM:
     async def chat(self, **kwargs):
-        return {"content": '{"subtitle":"三点速览","sections":['
-                '{"kind":"list","title":"准备物品","items":["雨衣","充电宝"]},'
-                '{"kind":"steps","title":"出门步骤","items":["看天气","收拾背包"]},'
-                '{"kind":"compare","title":"方式对比","left_title":"旧","right_title":"新",'
-                '"rows":[["慢","快"],["多","少"]]}],"closing":"收藏清单"}'}
+        return {
+            "content": '{"subtitle":"三点速览","sections":['
+            '{"kind":"list","title":"准备物品","items":["雨衣","充电宝"]},'
+            '{"kind":"steps","title":"出门步骤","items":["看天气","收拾背包"]},'
+            '{"kind":"compare","title":"方式对比","left_title":"旧","right_title":"新",'
+            '"rows":[["慢","快"],["多","少"]]}],"closing":"收藏清单"}'
+        }
 
 
 @pytest.fixture
@@ -40,7 +42,9 @@ async def _draft() -> dict:
 
 @pytest.mark.asyncio
 async def test_save_artifact_is_atomic_and_round_trips(store):
-    artifact = ca.build_artifact(artifact_id="ca_atomic", owner_user_id="u1", card_draft=await _draft())
+    artifact = ca.build_artifact(
+        artifact_id="ca_atomic", owner_user_id="u1", card_draft=await _draft()
+    )
     ca.save_artifact(artifact)
 
     loaded = ca.load_artifact("ca_atomic")
@@ -53,7 +57,9 @@ async def test_save_artifact_is_atomic_and_round_trips(store):
 
 @pytest.mark.asyncio
 async def test_failed_write_keeps_the_previous_artifact(store):
-    first = ca.build_artifact(artifact_id="ca_atomic", owner_user_id="u1", card_draft=await _draft())
+    first = ca.build_artifact(
+        artifact_id="ca_atomic", owner_user_id="u1", card_draft=await _draft()
+    )
     first.brief.title = "旧标题"
     ca.save_artifact(first)
 
@@ -92,7 +98,9 @@ async def test_artifact_lock_times_out_instead_of_deadlocking(store):
 
 @pytest.mark.asyncio
 async def test_concurrent_card_edits_do_not_overwrite_each_other(store):
-    artifact = ca.build_artifact(artifact_id="ca_race", owner_user_id="u1", card_draft=await _draft())
+    artifact = ca.build_artifact(
+        artifact_id="ca_race", owner_user_id="u1", card_draft=await _draft()
+    )
     ca.save_artifact(artifact)
 
     deck = CardDeck.model_validate(artifact.card_deck)

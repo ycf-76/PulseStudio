@@ -24,20 +24,27 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-_TERMINAL_TYPES = frozenset({
-    'workflow_completed', 'workflow_error', 'workflow_terminated',
-    'workflow_failed', 'workflow_suspended', 'workflow_cancelled',
-    'shortcut_completed', 'agent_loop_done',
-})
+_TERMINAL_TYPES = frozenset(
+    {
+        "workflow_completed",
+        "workflow_error",
+        "workflow_terminated",
+        "workflow_failed",
+        "workflow_suspended",
+        "workflow_cancelled",
+        "shortcut_completed",
+        "agent_loop_done",
+    }
+)
 
 _CLEANUP_DELAY_SECONDS = 300
 
 # Chat 驱动 Agent 适配层新增事件类型（PRD v2 3.3）。SSE 总线本身按字符串接受
 # 任意事件类型，这里只做显式声明，便于引用与文档对齐。
-EVENT_INTENT_PARSED = 'intent_parsed'
-EVENT_AGENT_CHAT_ERROR = 'agent_chat_error'
-EVENT_DRAFT_PATCH = 'draft_patch'
-EVENT_CARD_DRAFT_READY = 'card_draft_ready'
+EVENT_INTENT_PARSED = "intent_parsed"
+EVENT_AGENT_CHAT_ERROR = "agent_chat_error"
+EVENT_DRAFT_PATCH = "draft_patch"
+EVENT_CARD_DRAFT_READY = "card_draft_ready"
 
 
 class SSEEvent(BaseModel):
@@ -152,10 +159,10 @@ class SSEEventBus:
             # 幽灵 agent_loop_done 关流"却无从定位发布方，补调用栈摘要。
             try:
                 import traceback
+
                 _frames = traceback.extract_stack()
                 _caller_chain = " <- ".join(
-                    f"{f.filename.rsplit('/', 1)[-1]}:{f.lineno}:{f.name}"
-                    for f in _frames[-6:-1]
+                    f"{f.filename.rsplit('/', 1)[-1]}:{f.lineno}:{f.name}" for f in _frames[-6:-1]
                 )
                 logger.info(
                     f"[{workflow_id}] TERMINAL '{event_type}' published by: {_caller_chain}"
@@ -321,7 +328,9 @@ class SSEEventBus:
                     yield self._format_sse(event)
                     # 终态事件：结束订阅，关闭 SSE 流
                     if event.event_type in _TERMINAL_TYPES:
-                        logger.debug(f"[{workflow_id}] Stream ended after terminal event {event.event_type}")
+                        logger.debug(
+                            f"[{workflow_id}] Stream ended after terminal event {event.event_type}"
+                        )
                         return
                 except TimeoutError:
                     # Send heartbeat every 5 seconds
@@ -345,9 +354,7 @@ class SSEEventBus:
         finally:
             self._subscribers[workflow_id].discard(queue)
 
-    def _replay_events(
-        self, workflow_id: str, last_event_id: str
-    ) -> list[SSEEvent]:
+    def _replay_events(self, workflow_id: str, last_event_id: str) -> list[SSEEvent]:
         """Replay events after last_event_id."""
         events = self._event_history.get(workflow_id, [])
         found = False

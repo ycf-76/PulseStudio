@@ -29,8 +29,8 @@ from capabilities.video.adapters.video_gen import (
     create_video_adapter,
 )
 
-
 # ── 1. ABC contract ──────────────────────────────────────────
+
 
 class TestVideoGenAdapterABC:
     def test_cannot_instantiate_abc(self):
@@ -39,8 +39,11 @@ class TestVideoGenAdapterABC:
 
     def test_subclass_must_implement_text2video(self):
         class Incomplete(VideoGenAdapter):
-            async def image2video(self, image, prompt="", *, ratio="9:16", duration=5.0, model=None):
+            async def image2video(
+                self, image, prompt="", *, ratio="9:16", duration=5.0, model=None
+            ):
                 return b""
+
         with pytest.raises(TypeError):
             Incomplete()
 
@@ -48,11 +51,13 @@ class TestVideoGenAdapterABC:
         class Incomplete(VideoGenAdapter):
             async def text2video(self, prompt, *, ratio="9:16", duration=5.0, model=None):
                 return b""
+
         with pytest.raises(TypeError):
             Incomplete()
 
 
 # ── 2. DashScopeVideoAdapter ────────────────────────────────
+
 
 class TestDashScopeVideoAdapter:
     def test_init_defaults(self):
@@ -84,6 +89,7 @@ class TestDashScopeVideoAdapter:
 
 # ── 3. KlingVideoAdapter JWT ────────────────────────────────
 
+
 class TestKlingJWT:
     def test_jwt_structure(self):
         """JWT 应该是 header.payload.signature 三段式。"""
@@ -94,6 +100,7 @@ class TestKlingJWT:
     def test_jwt_header_is_hs256(self):
         """JWT header 应该声明 alg=HS256, typ=JWT。"""
         import base64
+
         token = KlingVideoAdapter._jwt("test_ak", "test_sk")
         header_b64 = token.split(".")[0]
         padding = 4 - len(header_b64) % 4
@@ -105,6 +112,7 @@ class TestKlingJWT:
     def test_jwt_payload_contains_iss(self):
         """JWT payload 应该包含 iss=access_key。"""
         import base64
+
         token = KlingVideoAdapter._jwt("my_access_key", "my_secret_key")
         payload_b64 = token.split(".")[1]
         padding = 4 - len(payload_b64) % 4
@@ -143,6 +151,7 @@ class TestKlingVideoAdapter:
 
 # ── 4. ArkVideoAdapter ──────────────────────────────────────
 
+
 class TestArkVideoAdapter:
     def test_init_defaults(self):
         adapter = ArkVideoAdapter(api_key="test-key")
@@ -163,6 +172,7 @@ class TestArkVideoAdapter:
 
 
 # ── 5. create_video_adapter factory ──────────────────────────
+
 
 class TestCreateVideoAdapter:
     def test_dashscope(self):
@@ -187,6 +197,7 @@ class TestCreateVideoAdapter:
 
 
 # ── 6. _find_video_url ──────────────────────────────────────
+
 
 class TestFindVideoUrl:
     def test_output_video_url(self):
@@ -220,6 +231,7 @@ class TestFindVideoUrl:
 
 # ── 7. _poll ────────────────────────────────────────────────
 
+
 class TestPoll:
     @pytest.mark.asyncio
     async def test_poll_timeout(self):
@@ -240,8 +252,9 @@ class TestPoll:
     @pytest.mark.asyncio
     async def test_poll_bad_status(self):
         """任务 FAILED 应抛 VideoGenError("task_failed")。"""
-        import httpx
         from unittest.mock import AsyncMock, patch
+
+        import httpx
 
         mock_resp = httpx.Response(
             200,
@@ -264,6 +277,7 @@ class TestPoll:
 
 # ── 8. VideoGenError ────────────────────────────────────────
 
+
 class TestVideoGenError:
     def test_error_type_and_message(self):
         err = VideoGenError("rate_limited", "请求过于频繁")
@@ -278,9 +292,11 @@ class TestVideoGenError:
 
 # ── 9. GenerateVideoSkill input validation ──────────────────
 
+
 class TestVideoGenInput:
     def test_valid_input(self):
         from capabilities.video.skills.video_gen import VideoGenInput
+
         # 2026-10 schema 重构：mode 字段移除，image_asset_id 缺省 = text2video
         inp = VideoGenInput(prompt="一只猫在阳光下伸懒腰")
         assert inp.image_asset_id is None
@@ -289,17 +305,20 @@ class TestVideoGenInput:
 
     def test_prompt_too_short(self):
         from capabilities.video.skills.video_gen import VideoGenInput
+
         # min_length=2，"太短"恰好 2 字符不触发；用 1 字符验证下限
         with pytest.raises(Exception):
             VideoGenInput(prompt="短")
 
     def test_prompt_too_long(self):
         from capabilities.video.skills.video_gen import VideoGenInput
+
         with pytest.raises(Exception):
             VideoGenInput(prompt="x" * 2001)
 
     def test_duration_range(self):
         from capabilities.video.skills.video_gen import VideoGenInput
+
         with pytest.raises(Exception):
             VideoGenInput(prompt="valid prompt", duration=0.5)
         with pytest.raises(Exception):
@@ -307,6 +326,7 @@ class TestVideoGenInput:
 
     def test_image2video_mode(self):
         from capabilities.video.skills.video_gen import VideoGenInput
+
         inp = VideoGenInput(
             prompt="画面缓缓推进",
             image_asset_id="01JQX123",
@@ -315,6 +335,7 @@ class TestVideoGenInput:
 
     def test_provider_optional(self):
         from capabilities.video.skills.video_gen import VideoGenInput
+
         inp = VideoGenInput(prompt="valid prompt", provider="kling")
         assert inp.provider == "kling"
         inp2 = VideoGenInput(prompt="valid prompt")
@@ -323,25 +344,35 @@ class TestVideoGenInput:
 
 # ── 10. asset_library save_video_asset ──────────────────────
 
+
 class TestSaveVideoAsset:
-    @pytest.mark.skip(reason="_ext_for_content_type 已删除（save_video_asset 改用 filename 后缀推导 ext）——旧实现契约，视频保存回归由链路测试覆盖")
+    @pytest.mark.skip(
+        reason="_ext_for_content_type 已删除（save_video_asset 改用 filename 后缀推导 ext）——旧实现契约，视频保存回归由链路测试覆盖"
+    )
     def test_ext_for_content_type(self):
         from app.services.asset_library import _ext_for_content_type
+
         assert _ext_for_content_type("video/mp4") == ".mp4"
         assert _ext_for_content_type("video/webm") == ".webm"
         assert _ext_for_content_type("audio/mpeg") == ".mp3"
         assert _ext_for_content_type("audio/wav") == ".wav"
         assert _ext_for_content_type("application/octet-stream") == ".bin"
 
-    @pytest.mark.skip(reason="产品缺口：ALLOWED_CONTENT_TYPES 未放开 video/audio 类型——上传放开属安全决策，待大哥定夺")
+    @pytest.mark.skip(
+        reason="产品缺口：ALLOWED_CONTENT_TYPES 未放开 video/audio 类型——上传放开属安全决策，待大哥定夺"
+    )
     def test_allowed_content_types_includes_video(self):
         from app.services.asset_library import ALLOWED_CONTENT_TYPES
+
         assert "video/mp4" in ALLOWED_CONTENT_TYPES
         assert "video/webm" in ALLOWED_CONTENT_TYPES
         assert "audio/mpeg" in ALLOWED_CONTENT_TYPES
         assert "audio/wav" in ALLOWED_CONTENT_TYPES
 
-    @pytest.mark.skip(reason="产品缺口：MAX_UPLOAD_BYTES 仍是 10MB，未放到测试期望的 50MB——上传放开属安全决策，待大哥定夺")
+    @pytest.mark.skip(
+        reason="产品缺口：MAX_UPLOAD_BYTES 仍是 10MB，未放到测试期望的 50MB——上传放开属安全决策，待大哥定夺"
+    )
     def test_max_upload_bytes_increased(self):
         from app.services.asset_library import MAX_UPLOAD_BYTES
+
         assert MAX_UPLOAD_BYTES == 50 * 1024 * 1024

@@ -24,8 +24,8 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 from app.core.skill_base import Skill
-from app.engine.schemas import Permission
 from app.core.skill_registry import register
+from app.engine.schemas import Permission
 
 if TYPE_CHECKING:
     from app.adapters.llm_base import LLMProtocol
@@ -34,23 +34,38 @@ logger = logging.getLogger(__name__)
 
 # hotboard key → 展示用短平台名
 _PLATFORM_KEY_LABEL: dict[str, str] = {
-    "hb-weibo": "微博", "hb-douyin": "抖音", "hb-zhihu": "知乎",
-    "hb-toutiao": "头条", "hb-baidu": "百度", "hb-bilibili": "B站",
+    "hb-weibo": "微博",
+    "hb-douyin": "抖音",
+    "hb-zhihu": "知乎",
+    "hb-toutiao": "头条",
+    "hb-baidu": "百度",
+    "hb-bilibili": "B站",
     "hb-rednote": "小红书",
 }
 
 _PER_PLATFORM_TIMEOUT = 25.0  # 公益 API 并发时不稳（2026-11-03 真机：知乎/头条超时），放宽
-_RETRY_PER_PLATFORM = 1        # 单平台失败自动重试次数（瞬时不稳定常见）
+_RETRY_PER_PLATFORM = 1  # 单平台失败自动重试次数（瞬时不稳定常见）
 
 # 平台别名 → hotboard_sources.json 的 key（大小写不敏感，中文别名直配）
 _PLATFORM_ALIAS: dict[str, str] = {
-    "weibo": "hb-weibo", "微博": "hb-weibo",
-    "douyin": "hb-douyin", "抖音": "hb-douyin",
-    "zhihu": "hb-zhihu", "知乎": "hb-zhihu",
-    "toutiao": "hb-toutiao", "头条": "hb-toutiao", "今日头条": "hb-toutiao",
-    "baidu": "hb-baidu", "百度": "hb-baidu",
-    "bilibili": "hb-bilibili", "bili": "hb-bilibili", "b站": "hb-bilibili", "哔哩哔哩": "hb-bilibili",
-    "rednote": "hb-rednote", "小红书": "hb-rednote", "xhs": "hb-rednote",
+    "weibo": "hb-weibo",
+    "微博": "hb-weibo",
+    "douyin": "hb-douyin",
+    "抖音": "hb-douyin",
+    "zhihu": "hb-zhihu",
+    "知乎": "hb-zhihu",
+    "toutiao": "hb-toutiao",
+    "头条": "hb-toutiao",
+    "今日头条": "hb-toutiao",
+    "baidu": "hb-baidu",
+    "百度": "hb-baidu",
+    "bilibili": "hb-bilibili",
+    "bili": "hb-bilibili",
+    "b站": "hb-bilibili",
+    "哔哩哔哩": "hb-bilibili",
+    "rednote": "hb-rednote",
+    "小红书": "hb-rednote",
+    "xhs": "hb-rednote",
 }
 
 
@@ -101,8 +116,16 @@ class TrendingTopicsSkill(Skill):
 
     # ===== 目录/skill_doc 展示（替代原 trending-topics.md frontmatter） =====
     trigger_words = [
-        "热搜", "热点", "追热点", "蹭热点", "二创选题", "热搜榜",
-        "trending", "热点雷达", "最近在聊什么", "今天有什么热搜",
+        "热搜",
+        "热点",
+        "追热点",
+        "蹭热点",
+        "二创选题",
+        "热搜榜",
+        "trending",
+        "热点雷达",
+        "最近在聊什么",
+        "今天有什么热搜",
     ]
     prompt_guidance = (
         "返回结构化热搜数据（results: platform/title/hot/url/rank/relevance + report: "
@@ -195,9 +218,7 @@ class TrendingTopicsSkill(Skill):
                     failed.append(key)
                 except Exception as e:
                     if attempt < _RETRY_PER_PLATFORM:
-                        logger.warning(
-                            f"[skill] trending_topics {key}: {e}, retry {attempt + 1}"
-                        )
+                        logger.warning(f"[skill] trending_topics {key}: {e}, retry {attempt + 1}")
                         continue
                     logger.error(f"[skill] trending_topics failed on {key}: {e}")
                     failed.append(key)
@@ -223,8 +244,7 @@ class TrendingTopicsSkill(Skill):
 
         summary = (
             f"抓取 {len(targets)} 个平台：成功 {len(fetched)}，失败 {len(failed)}；"
-            f"共 {len(flat)} 条热搜"
-            + (f"，耗时 {elapsed}s" if elapsed else "")
+            f"共 {len(flat)} 条热搜" + (f"，耗时 {elapsed}s" if elapsed else "")
         )
         logger.info(f"[skill] trending_topics: {summary}, failed={failed}")
 
@@ -238,8 +258,7 @@ class TrendingTopicsSkill(Skill):
             "failed_platforms": failed,
             "track": in_.track,
             "note": (
-                "赛道过滤与二创建议请基于本 results 数据自行分析输出，"
-                "不需要再调用其他抓取工具"
+                "赛道过滤与二创建议请基于本 results 数据自行分析输出，" "不需要再调用其他抓取工具"
             ),
         }
 
@@ -296,15 +315,17 @@ class TrendingTopicsSkill(Skill):
                     relevance = "中"
                 else:
                     relevance = "低"
-                flat.append({
-                    "platform": platform,
-                    "title": title,
-                    "hot": it["hot"],
-                    "url": it["url"],
-                    "rank": it["rank"],
-                    "cross_platform": title_counter.get(title, 0) > 1,
-                    "relevance": relevance,
-                })
+                flat.append(
+                    {
+                        "platform": platform,
+                        "title": title,
+                        "hot": it["hot"],
+                        "url": it["url"],
+                        "rank": it["rank"],
+                        "cross_platform": title_counter.get(title, 0) > 1,
+                        "relevance": relevance,
+                    }
+                )
 
         # 排序：热度降序（无热度值的按 rank）
         flat.sort(key=lambda x: (x["hot"], -x["rank"]), reverse=True)
@@ -325,7 +346,11 @@ class TrendingTopicsSkill(Skill):
             "# 热点速报",
             f"日期: {datetime.date.today().isoformat()}",
             f"平台: {', '.join(TrendingTopicsSkill._short_label(k) for k in fetched)}"
-            + (f"（失败: {', '.join(TrendingTopicsSkill._short_label(k) for k in failed)}）" if failed else ""),
+            + (
+                f"（失败: {', '.join(TrendingTopicsSkill._short_label(k) for k in failed)}）"
+                if failed
+                else ""
+            ),
             "",
             "## 🔥 全平台热搜 Top 15",
             "| # | 平台 | 话题 | 热度 | 相关度 |",
@@ -340,13 +365,22 @@ class TrendingTopicsSkill(Skill):
         cross = [it for it in flat if it["cross_platform"]][:5]
         if cross:
             lines += ["", "## 📊 跨平台重合话题（大事件信号）"]
-            lines += [f"- {' / '.join(it['platform'] for it in flat if it['title'] == c['title'])}: {c['title']}" for c in cross]
+            lines += [
+                f"- {' / '.join(it['platform'] for it in flat if it['title'] == c['title'])}: {c['title']}"
+                for c in cross
+            ]
         if track:
             related = [it for it in flat if it["relevance"] == "高"]
             if related:
                 lines += ["", f"## 🎯 与赛道「{track}」相关"]
-                lines += [f"- [{it['platform']}] {it['title']}（热度 {it['hot']}）" for it in related[:10]]
+                lines += [
+                    f"- [{it['platform']}] {it['title']}（热度 {it['hot']}）" for it in related[:10]
+                ]
             else:
-                lines += ["", f"## 🎯 与赛道「{track}」相关", "（本轮热搜中未发现直接相关话题，可从全量 Top 中挑选泛相关角度）"]
+                lines += [
+                    "",
+                    f"## 🎯 与赛道「{track}」相关",
+                    "（本轮热搜中未发现直接相关话题，可从全量 Top 中挑选泛相关角度）",
+                ]
         lines += ["", f"_{len(flat)} 条 · 抓取耗时 {elapsed}s · 数据源: 60s/xxapi 公益 API_"]
         return "\n".join(lines)

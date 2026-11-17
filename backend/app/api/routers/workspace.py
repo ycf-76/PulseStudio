@@ -6,6 +6,7 @@
 - Agent 通过 file_list / file_read / file_write / file_delete 工具操控
 - 沙箱隔离：Agent 只能访问绑定的工作区根目录内的文件
 """
+
 from __future__ import annotations
 
 import json
@@ -83,7 +84,9 @@ if ($fb.ShowDialog() -eq 'OK') {
             try:
                 proc = subprocess.run(
                     ["powershell", "-NoProfile", "-Command", ps_script],
-                    capture_output=True, text=True, timeout=120,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
                 )
                 return proc.stdout.strip()
             except Exception as e:
@@ -93,9 +96,11 @@ if ($fb.ShowDialog() -eq 'OK') {
         loop = asyncio.get_event_loop()
         selected = await loop.run_in_executor(None, _run_powershell)
     else:
+
         def _run_tkinter() -> str:
             import tkinter as tk
             from tkinter import filedialog
+
             root = tk.Tk()
             root.withdraw()
             root.attributes("-topmost", True)
@@ -174,6 +179,7 @@ async def bind_workspace(
         raise HTTPException(status_code=400, detail=f"不是文件夹: {payload.local_path}")
 
     import uuid
+
     ws_id = uuid.uuid4().hex[:12]
     name = payload.name or local_path.name
     meta = {
@@ -187,12 +193,14 @@ async def bind_workspace(
 
     file_count = sum(1 for _ in local_path.rglob("*") if _.is_file())
 
-    return StandardResponse(data={
-        "id": ws_id,
-        "name": name,
-        "local_path": str(local_path.resolve()),
-        "file_count": file_count,
-    })
+    return StandardResponse(
+        data={
+            "id": ws_id,
+            "name": name,
+            "local_path": str(local_path.resolve()),
+            "file_count": file_count,
+        }
+    )
 
 
 @router.get("")
@@ -244,7 +252,9 @@ async def rename_workspace(
     info = json.loads(meta_file.read_text(encoding="utf-8"))
     info["name"] = name
     meta_file.write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
-    return StandardResponse(data={"id": workspace_id, "name": name, "local_path": info.get("local_path")})
+    return StandardResponse(
+        data={"id": workspace_id, "name": name, "local_path": info.get("local_path")}
+    )
 
 
 @router.get("/{workspace_id}/list")
@@ -304,11 +314,21 @@ async def read_file(
         raise HTTPException(status_code=404, detail="文件不存在")
     try:
         content = target.read_text(encoding="utf-8")
-        return StandardResponse(data={"path": payload.path, "content": content, "size": target.stat().st_size})
+        return StandardResponse(
+            data={"path": payload.path, "content": content, "size": target.stat().st_size}
+        )
     except UnicodeDecodeError:
         import base64
+
         raw = target.read_bytes()
-        return StandardResponse(data={"path": payload.path, "content_base64": base64.b64encode(raw).decode(), "size": len(raw), "binary": True})
+        return StandardResponse(
+            data={
+                "path": payload.path,
+                "content_base64": base64.b64encode(raw).decode(),
+                "size": len(raw),
+                "binary": True,
+            }
+        )
 
 
 class FileWriteRequest(BaseModel):
@@ -370,12 +390,14 @@ async def search_files(
             if not str(resolved).startswith(str(root.resolve())):
                 continue
             rel = str(p.relative_to(root))
-            results.append({
-                "name": p.name,
-                "path": rel,
-                "size": p.stat().st_size if p.is_file() else 0,
-                "is_dir": p.is_dir(),
-            })
+            results.append(
+                {
+                    "name": p.name,
+                    "path": rel,
+                    "size": p.stat().st_size if p.is_file() else 0,
+                    "is_dir": p.is_dir(),
+                }
+            )
         except (PermissionError, OSError):
             continue
     return StandardResponse(data={"results": results, "count": len(results)})

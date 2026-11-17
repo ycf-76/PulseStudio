@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 
 import pytest
-
 from helpers import (
     AWAITING_STATUSES,
     PAUSE_EVENTS,
@@ -82,7 +81,9 @@ def test_sse_stream_emits_turn_events(qa_turn):
     assert events, "SSE 未收到任何事件"
     types = event_types(events)
     assert "chat_turn_started" in types, f"缺少回合开始事件: {types}"
-    assert any(t in {"workflow_completed", "agent_loop_done"} for t in types), f"缺少终态事件: {types}"
+    assert any(
+        t in {"workflow_completed", "agent_loop_done"} for t in types
+    ), f"缺少终态事件: {types}"
 
     for item in events[:3]:
         data = item["data"]
@@ -126,7 +127,9 @@ def test_multi_turn_keeps_conversation_context(client, qa_turn):
     body = resp.json()
     reply = extract_message(body)
     assert reply.strip(), "追问回合回复为空"
-    assert ("帮我做什么" in reply) or ("你能" in reply), f"上下文丢失，回复未复述首轮问题: {reply[:120]}"
+    assert ("帮我做什么" in reply) or (
+        "你能" in reply
+    ), f"上下文丢失，回复未复述首轮问题: {reply[:120]}"
 
 
 def test_session_crud_lifecycle(client):
@@ -192,7 +195,9 @@ def test_side_session_lifecycle(client, qa_turn):
         f"/api/chat/sessions/{side_id}/messages",
         json={"role": "user", "content": "归档后不应可写"},
     )
-    assert blocked.status_code == 403, f"归档侧会话仍可写: {blocked.status_code} {blocked.text[:200]}"
+    assert (
+        blocked.status_code == 403
+    ), f"归档侧会话仍可写: {blocked.status_code} {blocked.text[:200]}"
 
     removed = client.delete(f"/api/side-sessions/{side_id}")
     assert removed.status_code in (200, 204), removed.text
@@ -210,15 +215,22 @@ def test_cross_user_cannot_read_others_session(client, second_user_client, qa_tu
     session_id = qa_turn["body"]["session_id"]
 
     read = second_user_client.get(f"/api/chat/sessions/{session_id}/messages")
-    assert read.status_code in (403, 404), (
-        f"越权读取会话消息成功（疑似越权漏洞）: {read.status_code} {read.text[:300]}"
-    )
+    assert read.status_code in (
+        403,
+        404,
+    ), f"越权读取会话消息成功（疑似越权漏洞）: {read.status_code} {read.text[:300]}"
 
     rename = second_user_client.patch(f"/api/chat/sessions/{session_id}", json={"title": "hijack"})
-    assert rename.status_code in (403, 404), f"越权改名成功: {rename.status_code} {rename.text[:200]}"
+    assert rename.status_code in (
+        403,
+        404,
+    ), f"越权改名成功: {rename.status_code} {rename.text[:200]}"
 
     removed = second_user_client.delete(f"/api/chat/sessions/{session_id}")
-    assert removed.status_code in (403, 404), f"越权删除成功: {removed.status_code} {removed.text[:200]}"
+    assert removed.status_code in (
+        403,
+        404,
+    ), f"越权删除成功: {removed.status_code} {removed.text[:200]}"
     still_there = client.get(f"/api/chat/sessions/{session_id}/messages")
     assert still_there.status_code == 200, "会话被他人删除"
 
@@ -262,24 +274,23 @@ def test_creation_workflow_image_text_real(client):
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert is_success_status(body["status"]) or body["status"] in AWAITING_STATUSES, (
-        f"创作回合异常结束: {body['status']} / {str(body)[:300]}"
-    )
+    assert (
+        is_success_status(body["status"]) or body["status"] in AWAITING_STATUSES
+    ), f"创作回合异常结束: {body['status']} / {str(body)[:300]}"
     assert body["session_id"]
 
     events = collect_sse(client, body["session_id"], turn_id=turn, timeout=300.0)
     types = event_types(events)
-    assert "workflow_error" not in types, (
-        "创作流程报错: "
-        + str([e["data"]["payload"] for e in events if e["event"] == "workflow_error"][:1])
+    assert "workflow_error" not in types, "创作流程报错: " + str(
+        [e["data"]["payload"] for e in events if e["event"] == "workflow_error"][:1]
     )
     assert "tool_call_start" in types, f"创作回合没有任何工具调用: {types}"
 
     paused = any(t in PAUSE_EVENTS for t in types)
     if paused:
-        assert body["status"] in AWAITING_STATUSES, (
-            f"SSE 已暂停在闸门，但 HTTP 响应状态未体现暂停: {body['status']}"
-        )
+        assert (
+            body["status"] in AWAITING_STATUSES
+        ), f"SSE 已暂停在闸门，但 HTTP 响应状态未体现暂停: {body['status']}"
         assert body.get("loop_state_path"), "暂停回合未返回 loop_state_path，无法续跑"
         resume = client.post(
             "/api/v1/chat/clarify",
@@ -294,22 +305,24 @@ def test_creation_workflow_image_text_real(client):
         )
         assert resume.status_code == 200, f"澄清续跑失败: {resume.status_code} {resume.text[:300]}"
         resumed_events = collect_sse(
-            client, body["session_id"], turn_id=turn, timeout=RESUME_TIMEOUT,
+            client,
+            body["session_id"],
+            turn_id=turn,
+            timeout=RESUME_TIMEOUT,
             stop_on_pause=False,
         )
         resumed_types = event_types(resumed_events)
-        assert "workflow_error" not in resumed_types, (
-            "澄清续跑报错: "
-            + str([e["data"]["payload"] for e in resumed_events if e["event"] == "workflow_error"][:1])
+        assert "workflow_error" not in resumed_types, "澄清续跑报错: " + str(
+            [e["data"]["payload"] for e in resumed_events if e["event"] == "workflow_error"][:1]
         )
-        assert any(t in {"workflow_completed", "agent_loop_done"} for t in resumed_types), (
-            f"澄清续跑后仍无终态事件: {resumed_types[-10:]}"
-        )
+        assert any(
+            t in {"workflow_completed", "agent_loop_done"} for t in resumed_types
+        ), f"澄清续跑后仍无终态事件: {resumed_types[-10:]}"
         return
 
-    assert any(t in {"workflow_completed", "agent_loop_done"} for t in types), (
-        f"缺少终态事件: {types[-10:]}"
-    )
+    assert any(
+        t in {"workflow_completed", "agent_loop_done"} for t in types
+    ), f"缺少终态事件: {types[-10:]}"
 
     card_events = [e for e in events if e["event"] == "card_draft_ready"]
     if card_events:
@@ -335,7 +348,9 @@ def test_clarify_and_confirm_reject_missing_loop_state(client):
             "action": "cancel",
         },
     )
-    assert clarify.status_code == 404, f"澄清接口未返回 404: {clarify.status_code} {clarify.text[:200]}"
+    assert (
+        clarify.status_code == 404
+    ), f"澄清接口未返回 404: {clarify.status_code} {clarify.text[:200]}"
 
     confirm = client.post(
         "/api/v1/chat/confirm",
@@ -345,7 +360,9 @@ def test_clarify_and_confirm_reject_missing_loop_state(client):
             "action": "approve",
         },
     )
-    assert confirm.status_code == 404, f"确认接口未返回 404: {confirm.status_code} {confirm.text[:200]}"
+    assert (
+        confirm.status_code == 404
+    ), f"确认接口未返回 404: {confirm.status_code} {confirm.text[:200]}"
 
 
 def test_llm_circuit_status_is_readable(client):

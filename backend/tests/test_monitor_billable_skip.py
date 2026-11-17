@@ -1,4 +1,5 @@
 """选题池自动抓取不得消耗付费搜索源（DeepSeek）的契约测试。"""
+
 from __future__ import annotations
 
 from capabilities.content_search.sources.base import ContentSource, TrendingContent
@@ -13,7 +14,9 @@ class _FreeSource(ContentSource):
     def name(self) -> str:
         return self._name
 
-    async def search_trending(self, keyword: str, limit: int = 20, time_range: str = "week") -> list[TrendingContent]:
+    async def search_trending(
+        self, keyword: str, limit: int = 20, time_range: str = "week"
+    ) -> list[TrendingContent]:
         return []
 
     async def get_trending(self, category: str = "", limit: int = 20) -> list[TrendingContent]:
@@ -53,12 +56,14 @@ def test_deepseek_sources_are_billable():
 
 
 def test_auto_crawl_skips_billable_sources():
-    mgr = _FakeManager([
-        _FreeSource("sogou"),
-        _FreeSource("builtin"),
-        _BillableSource("deepseek"),
-        _BillableSource("deepseek_api"),
-    ])
+    mgr = _FakeManager(
+        [
+            _FreeSource("sogou"),
+            _FreeSource("builtin"),
+            _BillableSource("deepseek"),
+            _BillableSource("deepseek_api"),
+        ]
+    )
     platforms, skipped = auto_crawl_platforms(mgr)
     assert platforms == ["sogou", "builtin"]
     assert sorted(skipped) == ["deepseek", "deepseek_api"]

@@ -31,6 +31,7 @@ def _chars(text: str, start: float, step: float):
 
 # ── 1. split_words ────────────────────────────────────────
 
+
 class TestSplitWords:
     def test_中文分词_返回多词(self):
         words = split_words("今天天气真不错")
@@ -49,6 +50,7 @@ class TestSplitWords:
 
 
 # ── 2. align_word_timing：字级时间戳 → 词级 ───────────────
+
 
 class TestAlignWordTiming:
     def test_中文字级_拼接为词级(self):
@@ -78,7 +80,10 @@ class TestAlignWordTiming:
         chars = _chars("增长200非常惊人", start=0.0, step=0.1)
         result = align_word_timing(text, chars, duration=2.0)
 
-        assert "".join(w.text for w in result).replace("，", "").replace("！", "") == "增长200%非常惊人"
+        assert (
+            "".join(w.text for w in result).replace("，", "").replace("！", "")
+            == "增长200%非常惊人"
+        )
         assert result[0].start == pytest.approx(0.0, abs=0.05)
 
     def test_词级whisper输出_直接映射(self):
@@ -115,6 +120,7 @@ class TestAlignWordTiming:
 
 
 # ── 3. TimedWord 模型 ─────────────────────────────────────
+
 
 class TestTimedWord:
     def test_dataclass_fields(self):

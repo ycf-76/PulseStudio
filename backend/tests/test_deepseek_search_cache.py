@@ -134,9 +134,7 @@ async def test_concurrent_same_key_single_flight(source: DeepSeekSearchSource):
     """同 key 并发请求应合并成一次上游调用。"""
     calls = _install_counter(source, delay=0.05)
 
-    results = await asyncio.gather(
-        *[source.search_trending("露营装备", limit=5) for _ in range(5)]
-    )
+    results = await asyncio.gather(*[source.search_trending("露营装备", limit=5) for _ in range(5)])
 
     assert calls["n"] == 1, f"并发 5 次应只打 1 次上游，实际 {calls['n']}"
     assert all(len(r) == 5 for r in results)

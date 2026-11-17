@@ -9,24 +9,33 @@
 
 全部离线 mock。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 
-from app.engine.protocol.dispatch_hooks import DispatchContext, SkillCallUnwrapHook, unwrap_skill_call
+from app.engine.protocol.dispatch_hooks import (
+    DispatchContext,
+    SkillCallUnwrapHook,
+    unwrap_skill_call,
+)
 from app.engine.protocol.transport import InProcessTransport
 
-
 # ---------- 1. 内核纯净度 ----------
+
 
 def test_session_kernel_has_no_business_tool_names():
     """验收标准自动化：内核文件里不得出现业务工具名（防业务回潮）。"""
     src = Path("app/engine/reactor/session.py").read_text(encoding="utf-8")
     forbidden = [
-        "multi_image_video", "auto_short_video", "card_design",
-        "xhs_note_creator", "publish_checklist", "image_asset_ids",
+        "multi_image_video",
+        "auto_short_video",
+        "card_design",
+        "xhs_note_creator",
+        "publish_checklist",
+        "image_asset_ids",
     ]
     leaked = [n for n in forbidden if n in src]
     assert not leaked, f"业务名渗入内核: {leaked}"
@@ -41,6 +50,7 @@ def test_business_hook_lives_in_agents_layer():
 
 
 # ---------- 2. InProcessTransport 行为等价 ----------
+
 
 class _OkPrimitive:
     name = "ok_tool"
@@ -116,14 +126,19 @@ def test_transport_metadata():
 
 # ---------- 3. 钩子链 ----------
 
+
 def _ctx(**kw):
-    return DispatchContext(run_context=kw.get("run_context", {}), workflow_id=kw.get("wf", "wf1"), turn_id=None)
+    return DispatchContext(
+        run_context=kw.get("run_context", {}), workflow_id=kw.get("wf", "wf1"), turn_id=None
+    )
 
 
 @pytest.mark.asyncio
 async def test_skill_call_unwrap_pre_clarify():
     hook = SkillCallUnwrapHook()
-    name, args = await hook.pre_clarify("skill_call", {"skill": "copywriting", "arguments": {"topic": "咖啡"}}, _ctx())
+    name, args = await hook.pre_clarify(
+        "skill_call", {"skill": "copywriting", "arguments": {"topic": "咖啡"}}, _ctx()
+    )
     assert name == "copywriting"
     assert args == {"topic": "咖啡"}
 
@@ -139,7 +154,9 @@ async def test_skill_call_unwrap_passthrough():
 async def test_skill_call_context_passthrough_pre_execute():
     hook = SkillCallUnwrapHook()
     args = {"skill": "copywriting", "arguments": {"topic": "咖啡"}}
-    _, out = await hook.pre_execute("skill_call", args, _ctx(wf="wf9", run_context={"user_id": "u1"}))
+    _, out = await hook.pre_execute(
+        "skill_call", args, _ctx(wf="wf9", run_context={"user_id": "u1"})
+    )
     assert out["_user_id"] == "u1"
     assert out["_workflow_id"] == "wf9"
 
@@ -151,12 +168,18 @@ def test_unwrap_pure_function():
 
 # ---------- 4. CREATION_TYPE_SKILLS 搬家后链路 ----------
 
+
 def test_creation_type_map_importable_and_resolvable():
-    from app.skills.creation_type_map import CREATION_TYPE_SKILLS
     from app.agents.registry import _resolve_creation_type_skills
+    from app.skills.creation_type_map import CREATION_TYPE_SKILLS
 
     assert set(CREATION_TYPE_SKILLS) == {
-        "image_text", "voiceover", "short_video", "ai_edit", "long_article", "live_clip",
+        "image_text",
+        "voiceover",
+        "short_video",
+        "ai_edit",
+        "long_article",
+        "live_clip",
     }
     resolved = _resolve_creation_type_skills("image_text")
     assert "file_read" in resolved  # ALWAYS_LOAD_SKILLS 兜底
@@ -167,6 +190,7 @@ def test_creation_type_map_importable_and_resolvable():
 
 
 # ---------- 5. SkillRouter 两模式 ----------
+
 
 class _FakeSkill:
     def __init__(self, name: str, priority: str, triggers: list[str]):

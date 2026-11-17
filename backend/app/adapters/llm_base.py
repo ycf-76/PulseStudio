@@ -92,7 +92,9 @@ class BaseLLM(ABC):
 
 
 async def llm_prompt_to_text(
-    llm: Any, prompt: str, max_tokens: int | None = None,
+    llm: Any,
+    prompt: str,
+    max_tokens: int | None = None,
 ) -> str:
     """把单条 prompt 通过适配器的对话接口发出，取回纯文本。
 

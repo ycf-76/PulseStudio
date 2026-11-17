@@ -33,8 +33,10 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 # Pydantic Schema
 # ════════════════════════════════════════════════════════════════════
 
+
 class FeedbackType(str, Enum):
     """反馈类型：赞 / 踩 / 重试。"""
+
     LIKE = "like"
     DISLIKE = "dislike"
     RETRY = "retry"
@@ -45,13 +47,16 @@ class FeedbackEventCreate(BaseModel):
 
     type: FeedbackType = Field(..., description="反馈类型")
     session_id: Optional[str] = Field(None, max_length=26, description="关联的会话 ID")
-    workflow_id: Optional[str] = Field(None, max_length=26, description="关联的工作流 ID（兼容旧数据）")
+    workflow_id: Optional[str] = Field(
+        None, max_length=26, description="关联的工作流 ID（兼容旧数据）"
+    )
     dimension: Optional[str] = Field(None, max_length=64, description="点踩的维度标签")
 
 
 # ══════════════════════════════════════════════════════════════════
 # Core logic
 # ══════════════════════════════════════════════════════════════════
+
 
 async def create_feedback_event(
     user_id: str,
@@ -64,7 +69,8 @@ async def create_feedback_event(
     （用户对产出结果不满意 → LLM 分析执行轨迹生成改进建议）。
     复盘异步执行，不阻塞反馈落库；同一 session 幂等去重。
     """
-    from app.db.models import FeedbackEvent, FeedbackEventType as DBFeedbackEventType
+    from app.db.models import FeedbackEvent
+    from app.db.models import FeedbackEventType as DBFeedbackEventType
 
     event_type = DBFeedbackEventType(payload.type)
 
@@ -96,6 +102,7 @@ async def create_feedback_event(
 # Endpoints
 # ════════════════════════════════════════════════════════════════════
 
+
 @router.post("", response_model=StandardResponse[dict])
 async def record_feedback(
     payload: FeedbackEventCreate,
@@ -109,7 +116,9 @@ async def record_feedback(
 
     if event.event_type == FeedbackEventType.DISLIKE and event.session_id:
         import asyncio
+
         from app.services.retrospect_trigger import trigger_retrospect_if_needed
+
         asyncio.create_task(
             trigger_retrospect_if_needed(
                 user_id=user_id,

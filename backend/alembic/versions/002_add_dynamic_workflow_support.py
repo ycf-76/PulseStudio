@@ -15,10 +15,10 @@ Create Date: 2026-08-16
 - 现有代码无需修改即可继续工作
 """
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite, postgresql
+from sqlalchemy.dialects import postgresql, sqlite
 
+from alembic import op
 
 revision = '002'
 down_revision = '001_plugin_system'

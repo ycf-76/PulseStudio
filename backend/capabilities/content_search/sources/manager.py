@@ -191,7 +191,9 @@ async def init_sources() -> None:
             source_manager.register(bilibili)
 
             # --- 抖音替代：搜 36kr.com / ifanr.com 等科技媒体的短视频/热点报道 ---
-            douyin_alt = TavilySiteSource("douyin", "36kr.com ifanr.com jiemian.com", tavily_instance)
+            douyin_alt = TavilySiteSource(
+                "douyin", "36kr.com ifanr.com jiemian.com", tavily_instance
+            )
             source_manager.register(douyin_alt)
 
             # --- 海外生活方式平台 ---
@@ -199,7 +201,9 @@ async def init_sources() -> None:
             source_manager.register(pinterest)
 
             # Instagram 对搜索引擎屏蔽，改搜海外时尚媒体
-            insta_alt = TavilySiteSource("instagram", "vogue.com elle.com cosmopolitan.com", tavily_instance)
+            insta_alt = TavilySiteSource(
+                "instagram", "vogue.com elle.com cosmopolitan.com", tavily_instance
+            )
             source_manager.register(insta_alt)
 
             # --- 海外社媒（Tavily 站搜，零风控）---
@@ -322,7 +326,9 @@ async def init_sources() -> None:
         xhs_spider = XhsSpiderSource()
         if xhs_spider._check_storage_state():
             source_manager.register(xhs_spider)
-            logger.info("[sources] XhsSpiderSource registered (Scrapling-based, login state available)")
+            logger.info(
+                "[sources] XhsSpiderSource registered (Scrapling-based, login state available)"
+            )
         else:
             logger.warning(
                 "[sources] XhsSpiderSource: storageState 不存在，跳过注册。"
@@ -336,7 +342,10 @@ async def init_sources() -> None:
     #    添加/删除/禁用源只需改 JSON，无需改代码
     if settings.hotboard_enabled:
         try:
-            from capabilities.content_search.sources.hotboard_source import HotboardSource, load_hotboard_config
+            from capabilities.content_search.sources.hotboard_source import (
+                HotboardSource,
+                load_hotboard_config,
+            )
 
             hotboard_cfg = load_hotboard_config()
             for platform_key, cfg in hotboard_cfg.items():
@@ -349,8 +358,7 @@ async def init_sources() -> None:
                 source_manager.register(src)
             if hotboard_cfg:
                 logger.info(
-                    f"[sources] hotboard sources registered: "
-                    f"{list(hotboard_cfg.keys())}"
+                    f"[sources] hotboard sources registered: " f"{list(hotboard_cfg.keys())}"
                 )
         except Exception as e:
             logger.error(f"[sources] init HotboardSource failed: {e}")

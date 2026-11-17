@@ -68,6 +68,7 @@ def resolve_ffmpeg() -> str | None:
     # imageio-ffmpeg 包自带完整静态二进制（含 libx264）
     try:
         import imageio_ffmpeg
+
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:
         return None
@@ -79,7 +80,8 @@ def _kill_process_tree(pid: int) -> None:
         return
     subprocess.run(
         ["taskkill", "/PID", str(pid), "/T", "/F"],
-        capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW,
+        capture_output=True,
+        creationflags=subprocess.CREATE_NO_WINDOW,
     )
 
 
@@ -117,10 +119,16 @@ async def render_html_to_video(
 
     timeout = _WORKER_LAUNCH_BUDGET + n_frames * _PER_FRAME_BUDGET
     proc = await asyncio.create_subprocess_exec(
-        sys.executable, str(worker),
-        str(html_file), str(frames_dir),
-        str(width), str(height), str(duration), str(fps),
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        sys.executable,
+        str(worker),
+        str(html_file),
+        str(frames_dir),
+        str(width),
+        str(height),
+        str(duration),
+        str(fps),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     try:
         await asyncio.wait_for(proc.communicate(), timeout=timeout)
@@ -148,13 +156,20 @@ async def render_html_to_video(
     frames = sorted(frames_dir.glob("frame_*.png"))
     if len(frames) != n_frames:
         logger.error(
-            "frame count mismatch: %d produced, %d expected", len(frames), n_frames,
+            "frame count mismatch: %d produced, %d expected",
+            len(frames),
+            n_frames,
         )
         return None
 
     # 黑底预览版（人工闸门用；PNG 帧序列供 compose rgba 叠加）
     if not await _encode_preview(
-        frames_dir, output, fps, width, height, duration=n_frames / fps,
+        frames_dir,
+        output,
+        fps,
+        width,
+        height,
+        duration=n_frames / fps,
     ):
         return None
     return output
@@ -163,14 +178,20 @@ async def render_html_to_video(
 async def _run_ffmpeg(cmd: list[str]) -> tuple[int, str]:
     """异步执行 ffmpeg，返回 (returncode, stderr 尾部)。"""
     proc = await asyncio.create_subprocess_exec(
-        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     _, stderr = await proc.communicate()
     return proc.returncode, stderr.decode(errors="replace")[-600:]
 
 
 async def _encode_preview(
-    frames_dir: Path, output: Path, fps: int, width: int, height: int,
+    frames_dir: Path,
+    output: Path,
+    fps: int,
+    width: int,
+    height: int,
     duration: float | None = None,
 ) -> bool:
     """帧序列 → 黑底 mp4 预览（h264，正常播放器可看）。
@@ -188,16 +209,33 @@ async def _encode_preview(
         n = len(list(frames_dir.glob("frame_*.png")))
         duration = n / fps if n else 0.0
 
-    rc, err = await _run_ffmpeg([
-        ffmpeg, "-y", "-loglevel", "error",
-        "-framerate", str(fps), "-i", str(frames_dir / _FRAME_PATTERN),
-        "-f", "lavfi", "-i",
-        f"color=c=black:s={width}x{height}:d={duration:.3f}:r={fps}",
-        "-filter_complex",
-        "[0:v]format=rgba[fg];[1:v][fg]overlay=shortest=1,format=yuv420p[v]",
-        "-map", "[v]", "-c:v", "libx264", "-preset", "fast", "-crf", "20",
-        str(output),
-    ])
+    rc, err = await _run_ffmpeg(
+        [
+            ffmpeg,
+            "-y",
+            "-loglevel",
+            "error",
+            "-framerate",
+            str(fps),
+            "-i",
+            str(frames_dir / _FRAME_PATTERN),
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c=black:s={width}x{height}:d={duration:.3f}:r={fps}",
+            "-filter_complex",
+            "[0:v]format=rgba[fg];[1:v][fg]overlay=shortest=1,format=yuv420p[v]",
+            "-map",
+            "[v]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "20",
+            str(output),
+        ]
+    )
     if rc != 0:
         logger.error("preview encode failed: %s", err)
         return False
@@ -224,14 +262,22 @@ async def _probe_video_size(video_path: str | Path) -> tuple[int, int] | None:
         pass
 
     cmd = [
-        "ffprobe", "-v", "error",
-        "-select_streams", "v:0",
-        "-show_entries", "stream=width,height",
-        "-of", "csv=p=0:s=x", str(video_path),
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "csv=p=0:s=x",
+        str(video_path),
     ]
     try:
         proc = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         stdout, _ = await proc.communicate()
         w, _, h = stdout.decode().strip().partition("x")
@@ -263,9 +309,7 @@ async def compose_with_overlays(
         raise RuntimeError("ffmpeg not available (PATH / Playwright bundled / FFMPEG_PATH)")
 
     base_size = await _probe_video_size(base_video)
-    scale_expr = (
-        f"scale={base_size[0]}:{base_size[1]}" if base_size else ""
-    )
+    scale_expr = f"scale={base_size[0]}:{base_size[1]}" if base_size else ""
 
     inputs: list[str] = ["-i", str(base_video)]
     overlay_specs: list[tuple[int, float, float]] = []  # (input_idx, start, end)
@@ -285,8 +329,9 @@ async def compose_with_overlays(
 
     if not overlay_specs:
         # 无叠加：直接流复制（不重编码）
-        rc, err = await _run_ffmpeg([ffmpeg, "-y", "-loglevel", "error",
-                                     "-i", str(base_video), "-c", "copy", str(output)])
+        rc, err = await _run_ffmpeg(
+            [ffmpeg, "-y", "-loglevel", "error", "-i", str(base_video), "-c", "copy", str(output)]
+        )
         if rc == 0:
             return output
         logger.warning("stream copy failed (%s), fallback to file copy", err[:150])
@@ -313,10 +358,25 @@ async def compose_with_overlays(
     filter_parts.append(f"{cur}format=yuv420p[vout]")
 
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error", *inputs,
-        "-filter_complex", ";".join(filter_parts),
-        "-map", "[vout]", "-map", "0:a?", "-c:v", "libx264",
-        "-preset", "medium", "-crf", "19", "-c:a", "copy",
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        *inputs,
+        "-filter_complex",
+        ";".join(filter_parts),
+        "-map",
+        "[vout]",
+        "-map",
+        "0:a?",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "19",
+        "-c:a",
+        "copy",
         str(output),
     ]
     rc, err = await _run_ffmpeg(cmd)

@@ -1,5 +1,9 @@
 import pytest
-pytest.skip("Windows 沙箱子进程测试（低完整性令牌/进程树 kill），需要目标机管理员环境与回收站；当前 agent 执行环境 exit_code=1 无 stderr（子进程被杀）", allow_module_level=True)
+
+pytest.skip(
+    "Windows 沙箱子进程测试（低完整性令牌/进程树 kill），需要目标机管理员环境与回收站；当前 agent 执行环境 exit_code=1 无 stderr（子进程被杀）",
+    allow_module_level=True,
+)
 
 """沙箱模块 pytest 回归（快速子集；完整验收跑 py -m app.sandbox.selftest）。
 
@@ -56,8 +60,8 @@ def test_child_runs_low_and_env_isolated(ws: Path):
         os.environ.pop("SB_TEST_SECRET", None)
     out = r.stdout.decode()
     assert r.exit_code == 0
-    assert "S-1-16-4096" in out          # Low 完整性
-    assert "sk-leak" not in out          # 密钥未透传
+    assert "S-1-16-4096" in out  # Low 完整性
+    assert "sk-leak" not in out  # 密钥未透传
     assert "ABSENT" in out
 
 

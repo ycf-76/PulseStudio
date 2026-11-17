@@ -46,7 +46,9 @@ async def create_session(
     payload: CreateSessionRequest,
     user_id: str = Depends(get_current_user),
 ) -> StandardResponse[dict]:
-    data = await chat_session.create_session(user_id, payload.title, work_id=payload.work_id, folder_id=payload.folder_id)
+    data = await chat_session.create_session(
+        user_id, payload.title, work_id=payload.work_id, folder_id=payload.folder_id
+    )
     return StandardResponse(data=data)
 
 

@@ -21,8 +21,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.engine.schemas import Permission
 from app.api.deps import get_current_user
+from app.engine.schemas import Permission
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +108,8 @@ async def reactor_stream(
     user_id: str = Depends(get_current_user),
 ) -> StreamingResponse:
     """Run a task in Reactor mode with SSE streaming."""
-    from app.engine.reactor.session import ReactorSession, collect_reactor_skills
     from app.engine.factory import get_deepseek_llm
+    from app.engine.reactor.session import ReactorSession, collect_reactor_skills
 
     permissions = _parse_permissions(request.permissions)
     context = request.context or {}
@@ -141,10 +141,12 @@ async def reactor_stream(
             await session.run(request.intent, context=context)
         except Exception as e:
             logger.exception("[reactor/stream] session.run failed")
-            await event_queue.put({
-                "event_type": "workflow_error",
-                "payload": {"error": str(e)},
-            })
+            await event_queue.put(
+                {
+                    "event_type": "workflow_error",
+                    "payload": {"error": str(e)},
+                }
+            )
         finally:
             await event_queue.put(None)
 

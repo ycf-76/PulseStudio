@@ -16,9 +16,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
-from capabilities.video.adapters.video_compose import ComposeError, compose_video
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
+from capabilities.video.adapters.video_compose import ComposeError, compose_video
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class VideoComposeInput(BaseModel):
         （auto/stretch/loop/freeze/trim，默认 auto）
       sub_font: Pulse assemble.py DEFAULT_SUB_FONT（字幕字体）
     """
+
     storyboard: dict[str, Any] = Field(
         description="分镜 JSON（shots/narration/bgm/subtitle/size/image_motion）",
     )
@@ -58,6 +59,7 @@ class ComposeVideoSkill(Skill):
     依据：Pulse assemble.py cmd_assemble，把分镜素材（图/片段 + 配音 + BGM + 字幕）
     确定性合成一条成品短视频（ffmpeg）。
     """
+
     node_type = "produce"
     name = "compose_video"
     display_name = "视频合成"
@@ -97,6 +99,7 @@ class ComposeVideoSkill(Skill):
             }
 
         import tempfile
+
         from app.services.asset_library import save_video_asset
 
         user_id = inputs.get("_user_id", "default")
@@ -135,9 +138,7 @@ class ComposeVideoSkill(Skill):
                 "pad_mode": parsed.pad_mode,
                 "has_narration": bool(sb.get("narration")),
                 "has_bgm": bool(sb.get("bgm")),
-                "has_subtitle": bool(sb.get("subtitle")) or any(
-                    s.get("caption") for s in shots
-                ),
+                "has_subtitle": bool(sb.get("subtitle")) or any(s.get("caption") for s in shots),
             }
 
             asset = await save_video_asset(

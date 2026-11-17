@@ -69,6 +69,7 @@ class TavilySource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             self._client = await create_async_client(
                 timeout=httpx.Timeout(self.timeout),
@@ -81,9 +82,7 @@ class TavilySource(ContentSource):
             )
         return self._client
 
-    async def _translate_results(
-        self, results: list[TrendingContent]
-    ) -> list[TrendingContent]:
+    async def _translate_results(self, results: list[TrendingContent]) -> list[TrendingContent]:
         """批量翻译 title + summary 为中文（原文保留在 *_original）。
 
         翻译失败时降级为原文，不阻塞流程。
@@ -237,9 +236,7 @@ class TavilySource(ContentSource):
                     )
                     await asyncio.sleep(wait)
                     continue
-                logger.error(
-                    f"[tavily] HTTP {status_code}: {e.response.text[:300]}"
-                )
+                logger.error(f"[tavily] HTTP {status_code}: {e.response.text[:300]}")
                 if status_code == 432:
                     logger.warning(
                         "[tavily] API key usage limit exceeded. "
@@ -316,10 +313,7 @@ class TavilySource(ContentSource):
                     content.likes = 100
                 results.append(content)
 
-        logger.info(
-            f"[tavily] get_trending category={category}: "
-            f"got {len(results)} results"
-        )
+        logger.info(f"[tavily] get_trending category={category}: " f"got {len(results)} results")
 
         sliced = results[:limit]
         return await self._translate_results(sliced)

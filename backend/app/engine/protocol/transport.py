@@ -7,6 +7,7 @@
 
 红线：session 只经 transport 执行工具，不直接触碰 primitive 实现。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -132,9 +133,7 @@ class HttpTransport(ToolTransport):
         if self._client is None:
             import httpx
 
-            self._client = httpx.AsyncClient(
-                base_url=self._base_url, timeout=self._timeout
-            )
+            self._client = httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout)
         return self._client
 
     def get_tool(self, name: str) -> ToolHandle | None:
@@ -164,9 +163,7 @@ class HttpTransport(ToolTransport):
     async def call(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         client = self._ensure_client()
         try:
-            resp = await client.post(
-                f"/tools/{name}/call", json={"arguments": args}
-            )
+            resp = await client.post(f"/tools/{name}/call", json={"arguments": args})
             resp.raise_for_status()
             data = resp.json()
             result = data.get("result", data)

@@ -81,11 +81,17 @@ def render_scene(
     t0 = time.time()
     proc = subprocess.Popen(
         [
-            sys.executable, str(worker),
-            str(scene_html), str(frames_dir),
-            str(width), str(height), str(duration), str(fps),
+            sys.executable,
+            str(worker),
+            str(scene_html),
+            str(frames_dir),
+            str(width),
+            str(height),
+            str(duration),
+            str(fps),
         ],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
     )
     try:
@@ -104,9 +110,7 @@ def render_scene(
 
     err_tail = (stderr or b"").decode(errors="replace")[-600:]
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"studio render worker failed (rc={proc.returncode}): {err_tail}"
-        )
+        raise RuntimeError(f"studio render worker failed (rc={proc.returncode}): {err_tail}")
     try:
         status = json.loads(status_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
@@ -121,17 +125,26 @@ def render_scene(
     video_path: Path | None = None
     if out_video is not None:
         video_path = _encode_video(
-            frames_dir, Path(out_video), fps, audio_path,
+            frames_dir,
+            Path(out_video),
+            fps,
+            audio_path,
             video_duration=n_frames / fps,
         )
     return RenderResult(
-        frames_dir=frames_dir, count=count, fps=float(fps),
-        elapsed=elapsed, video_path=video_path,
+        frames_dir=frames_dir,
+        count=count,
+        fps=float(fps),
+        elapsed=elapsed,
+        video_path=video_path,
     )
 
 
 def _encode_video(
-    frames_dir: Path, out_video: Path, fps: int, audio_path: str | None,
+    frames_dir: Path,
+    out_video: Path,
+    fps: int,
+    audio_path: str | None,
     video_duration: float,
 ) -> Path:
     """帧序列 → h264 yuv420p mp4；-shortest 混音（无音轨时合成静音轨）。"""
@@ -147,16 +160,31 @@ def _encode_video(
         # （自验 0.5s 视频编出 0.998s；教训同 html_to_video「无限源必须定长」）
         # → -t 把输入截到视频时长，-shortest 语义不变
         audio_input = [
-            "-f", "lavfi", "-t", f"{video_duration:.3f}",
-            "-i", "anullsrc=r=44100:cl=mono",
+            "-f",
+            "lavfi",
+            "-t",
+            f"{video_duration:.3f}",
+            "-i",
+            "anullsrc=r=44100:cl=mono",
         ]
 
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error",
-        "-r", str(fps), "-i", str(frames_dir / FRAME_PATTERN),
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-r",
+        str(fps),
+        "-i",
+        str(frames_dir / FRAME_PATTERN),
         *audio_input,
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-shortest",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-shortest",
         str(out_video),
     ]
     # ffmpeg 输出落临时文件再读（Windows 编码安全，与 studio_assets 同法）
@@ -164,7 +192,10 @@ def _encode_video(
         log = Path(td) / "ffmpeg.log"
         with open(log, "wb") as f:
             proc = subprocess.run(
-                cmd, stdout=f, stderr=f, check=False,
+                cmd,
+                stdout=f,
+                stderr=f,
+                check=False,
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
         text = log.read_text(encoding="utf-8", errors="replace")
@@ -179,5 +210,6 @@ def _kill_process_tree(pid: int) -> None:
         return
     subprocess.run(
         ["taskkill", "/PID", str(pid), "/T", "/F"],
-        capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW,
+        capture_output=True,
+        creationflags=subprocess.CREATE_NO_WINDOW,
     )

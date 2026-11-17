@@ -17,6 +17,7 @@
 - 注入用精简摘要（不塞完整内容，控制 prompt 长度）
 - 工作流推断的偏好可被用户显式设置覆盖
 """
+
 from __future__ import annotations
 
 import logging
@@ -81,6 +82,7 @@ def _upsert_stmt(memory: AgentMemory) -> Any:
         )
     # PostgreSQL（fallback，非主路径）
     from sqlalchemy.dialects.postgresql import insert as pg_insert
+
     stmt = pg_insert(AgentMemory).values(**values)
     return stmt.on_conflict_do_update(
         index_elements=[AgentMemory.user_id, AgentMemory.memory_type, AgentMemory.memory_key],
@@ -125,8 +127,10 @@ async def _list_memory(
 
 async def _ensure_user_exists(db: AsyncSession, user_id: str) -> None:
     """确保 user_id 在 users 表中存在，避免外键约束错误。"""
-    from app.db.models import User
     from sqlalchemy import select
+
+    from app.db.models import User
+
     stmt = select(User.id).where(User.id == user_id)
     result = await db.scalar(stmt)
     if result is None:
@@ -177,8 +181,13 @@ async def save_memory(
     try:
         async with AsyncSessionLocal() as db:
             await _save_memory(
-                db, user_id, memory_type, memory_key,
-                memory_value, source, workflow_id=workflow_id,
+                db,
+                user_id,
+                memory_type,
+                memory_key,
+                memory_value,
+                source,
+                workflow_id=workflow_id,
                 importance=importance,
             )
         logger.info(
@@ -243,7 +252,9 @@ async def load_for_workflow(user_id: str) -> dict[str, Any]:
                 result["avoided_topics"] = list(avoid_topics.memory_value.get("items", []))
 
             # 我的归因处方（SelfAttributionEngine 产出）
-            my_attr = await _get_memory(db, user_id, MemoryType.MY_ATTRIBUTION, "writing_prescription")
+            my_attr = await _get_memory(
+                db, user_id, MemoryType.MY_ATTRIBUTION, "writing_prescription"
+            )
             if my_attr and my_attr.memory_value:
                 result["my_attribution"] = my_attr.memory_value
 
@@ -257,7 +268,9 @@ async def load_for_workflow(user_id: str) -> dict[str, Any]:
                     result["avoid_patterns"] = list(mv)
 
             # 历史选题（按更新时间倒序，取前 N 条）
-            topic_items = await _list_memory(db, user_id, MemoryType.TOPIC_HISTORY, _INJECT_TOPIC_LIMIT)
+            topic_items = await _list_memory(
+                db, user_id, MemoryType.TOPIC_HISTORY, _INJECT_TOPIC_LIMIT
+            )
             result["recent_topics"] = [
                 str(t.memory_value.get("topic", ""))
                 for t in topic_items
@@ -265,7 +278,9 @@ async def load_for_workflow(user_id: str) -> dict[str, Any]:
             ]
 
             # 历史文案（取前 N 条摘要）
-            copy_items = await _list_memory(db, user_id, MemoryType.COPYWRITE_HISTORY, _INJECT_COPYWRITE_LIMIT)
+            copy_items = await _list_memory(
+                db, user_id, MemoryType.COPYWRITE_HISTORY, _INJECT_COPYWRITE_LIMIT
+            )
             result["recent_copywrites"] = [
                 {
                     "title": str(c.memory_value.get("title", ""))[:40],
@@ -296,9 +311,7 @@ async def get_latest_copywrite(user_id: str, limit: int = 20) -> dict[str, Any] 
     """
     try:
         async with AsyncSessionLocal() as db:
-            copy_items = await _list_memory(
-                db, user_id, MemoryType.COPYWRITE_HISTORY, limit
-            )
+            copy_items = await _list_memory(db, user_id, MemoryType.COPYWRITE_HISTORY, limit)
             for item in copy_items:
                 mv = item.memory_value or {}
                 if not mv.get("title"):
@@ -355,7 +368,10 @@ async def record_workflow_result(
             # 同一 topic 重复创作时 upsert 更新时间（让最近创作的排前面）
             topic_key = f"topic_{abs(hash(topic)) % 100000}"
             await _save_memory(
-                db, user_id, MemoryType.TOPIC_HISTORY, topic_key,
+                db,
+                user_id,
+                MemoryType.TOPIC_HISTORY,
+                topic_key,
                 {"topic": topic, "workflow_id": workflow_id, "created_at": now},
                 source="workflow_inferred",
                 workflow_id=workflow_id,
@@ -374,7 +390,10 @@ async def record_workflow_result(
                 content_summary = content[:120] if content else ""
                 copy_key = f"copy_{abs(hash(title)) % 100000}"
                 await _save_memory(
-                    db, user_id, MemoryType.COPYWRITE_HISTORY, copy_key,
+                    db,
+                    user_id,
+                    MemoryType.COPYWRITE_HISTORY,
+                    copy_key,
                     {
                         "title": title,
                         "topic": topic[:60],
@@ -431,7 +450,10 @@ async def record_publish(
             now = datetime.now(UTC).isoformat()
             pub_key = f"pub_{abs(hash(title + workflow_id)) % 100000}"
             await _save_memory(
-                db, user_id, MemoryType.PUBLISH_HISTORY, pub_key,
+                db,
+                user_id,
+                MemoryType.PUBLISH_HISTORY,
+                pub_key,
                 {
                     "title": title[:100],
                     "topic": topic[:60],
@@ -465,28 +487,40 @@ async def update_preferences(
         async with AsyncSessionLocal() as db:
             if writing_style is not None and writing_style.strip():
                 await _save_memory(
-                    db, user_id, MemoryType.PREFERENCES, "writing_style",
+                    db,
+                    user_id,
+                    MemoryType.PREFERENCES,
+                    "writing_style",
                     {"value": writing_style.strip()},
                     source="user_explicit",
                     importance=1.0,
                 )
             if image_style is not None and image_style.strip():
                 await _save_memory(
-                    db, user_id, MemoryType.PREFERENCES, "image_style",
+                    db,
+                    user_id,
+                    MemoryType.PREFERENCES,
+                    "image_style",
                     {"value": image_style.strip()},
                     source="user_explicit",
                     importance=1.0,
                 )
             if preferred_topics is not None:
                 await _save_memory(
-                    db, user_id, MemoryType.PREFERENCES, "preferred_topics",
+                    db,
+                    user_id,
+                    MemoryType.PREFERENCES,
+                    "preferred_topics",
                     {"items": [t.strip() for t in preferred_topics if t.strip()][:20]},
                     source="user_explicit",
                     importance=1.0,
                 )
             if avoided_topics is not None:
                 await _save_memory(
-                    db, user_id, MemoryType.PREFERENCES, "avoided_topics",
+                    db,
+                    user_id,
+                    MemoryType.PREFERENCES,
+                    "avoided_topics",
                     {"items": [t.strip() for t in avoided_topics if t.strip()][:20]},
                     source="user_explicit",
                     importance=1.0,
@@ -594,7 +628,11 @@ async def _increment_preference_counter(
         source = "workflow_inferred"
 
     await _save_memory(
-        db, user_id, MemoryType.PREFERENCES, key, new_value,
+        db,
+        user_id,
+        MemoryType.PREFERENCES,
+        key,
+        new_value,
         source=source,
         workflow_id=workflow_id,
         importance=0.8,
@@ -624,9 +662,7 @@ async def _trim_history(
     ids_to_delete = list(result.all())
     if not ids_to_delete:
         return
-    await db.execute(
-        AgentMemory.__table__.delete().where(AgentMemory.id.in_(ids_to_delete))
-    )
+    await db.execute(AgentMemory.__table__.delete().where(AgentMemory.id.in_(ids_to_delete)))
     await db.commit()
     logger.debug(
         f"[memory] trimmed {len(ids_to_delete)} old {memory_type.value} records "
@@ -682,15 +718,17 @@ async def record_search_keyword(user_id: str, keyword: str, weight: int = 1) -> 
             items = items[:_MAX_SEARCH_KEYWORDS]
 
             await _save_memory(
-                db, user_id, MemoryType.PREFERENCES, "search_keywords",
+                db,
+                user_id,
+                MemoryType.PREFERENCES,
+                "search_keywords",
                 {"items": items},
                 source="search_history",
                 importance=0.7,
             )
 
         logger.debug(
-            f"[memory] recorded search keyword: user={user_id}, "
-            f"keyword={kw!r}, weight={weight}"
+            f"[memory] recorded search keyword: user={user_id}, " f"keyword={kw!r}, weight={weight}"
         )
     except Exception as e:
         logger.warning(f"[memory] record_search_keyword failed: {e}")

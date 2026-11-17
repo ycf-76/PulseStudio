@@ -28,8 +28,7 @@ def _fail(msg: str) -> None:
 def _builtin_names() -> list[str]:
     """枚举包内可用打法名：含 method.md 的子目录（新增内置打法无需改代码）。"""
     return sorted(
-        p.name for p in _BUILTIN_ROOT.iterdir()
-        if p.is_dir() and (p / _METHOD_FILE).is_file()
+        p.name for p in _BUILTIN_ROOT.iterdir() if p.is_dir() and (p / _METHOD_FILE).is_file()
     )
 
 
@@ -44,7 +43,9 @@ def _read_builtin(name: object) -> str:
 
 def _read_path(value: object) -> str:
     if not isinstance(value, str):
-        _fail(f"path 应为字符串（目录或 .md 文件路径），实际为 {type(value).__name__}（值={value!r}）")
+        _fail(
+            f"path 应为字符串（目录或 .md 文件路径），实际为 {type(value).__name__}（值={value!r}）"
+        )
     p = Path(value)
     if p.is_dir():
         target = p / _METHOD_FILE

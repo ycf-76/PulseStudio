@@ -9,6 +9,7 @@
     async def handler(user_id: str = Depends(get_current_user)):
         ...
 """
+
 from __future__ import annotations
 
 from fastapi import Depends, HTTPException, Request, status

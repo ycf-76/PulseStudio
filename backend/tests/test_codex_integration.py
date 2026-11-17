@@ -1,5 +1,9 @@
 import pytest
-pytest.skip("app.engine.codex 已删除（集成链路由 reactor 链路替代），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.engine.codex 已删除（集成链路由 reactor 链路替代），本文件测退役实现",
+    allow_module_level=True,
+)
 
 """Integration test: Codex mode end-to-end with mock LLM.
 
@@ -22,27 +26,58 @@ class _StepByStepMockLLM:
         self._steps = [
             {
                 "thought": "用户想做手冲咖啡内容，先搜小红书看看什么火",
-                "tool_calls": [{"name": "xhs_search", "arguments": {"keyword": "手冲咖啡", "limit": 5}}],
+                "tool_calls": [
+                    {"name": "xhs_search", "arguments": {"keyword": "手冲咖啡", "limit": 5}}
+                ],
                 "final": False,
             },
             {
                 "thought": "搜到了结果，用爆款评分分析一下",
-                "tool_calls": [{"name": "viral_score", "arguments": {"results": [{"title": "3个手冲技巧", "likes": 5000, "comments": 200, "author_fans": 10000}]}}],
+                "tool_calls": [
+                    {
+                        "name": "viral_score",
+                        "arguments": {
+                            "results": [
+                                {
+                                    "title": "3个手冲技巧",
+                                    "likes": 5000,
+                                    "comments": 200,
+                                    "author_fans": 10000,
+                                }
+                            ]
+                        },
+                    }
+                ],
                 "final": False,
             },
             {
                 "thought": "爆款因子不错，写文案",
-                "tool_calls": [{"name": "llm_generate", "arguments": {"prompt": "写一篇小红书手冲咖啡文案"}}],
+                "tool_calls": [
+                    {"name": "llm_generate", "arguments": {"prompt": "写一篇小红书手冲咖啡文案"}}
+                ],
                 "final": False,
             },
             {
                 "thought": "文案写好了，做合规检查",
-                "tool_calls": [{"name": "content_check", "arguments": {"text": "3个让你手冲咖啡更好喝的小技巧"}}],
+                "tool_calls": [
+                    {
+                        "name": "content_check",
+                        "arguments": {"text": "3个让你手冲咖啡更好喝的小技巧"},
+                    }
+                ],
                 "final": False,
             },
             {
                 "thought": "合规通过，存到本地文件",
-                "tool_calls": [{"name": "file_write", "arguments": {"path": "output/手冲咖啡.md", "content": "# 3个让你手冲咖啡更好喝的小技巧\n\n1. 控制水温\n2. 预热滤杯\n3. 缓慢注水"}}],
+                "tool_calls": [
+                    {
+                        "name": "file_write",
+                        "arguments": {
+                            "path": "output/手冲咖啡.md",
+                            "content": "# 3个让你手冲咖啡更好喝的小技巧\n\n1. 控制水温\n2. 预热滤杯\n3. 缓慢注水",
+                        },
+                    }
+                ],
                 "final": False,
             },
             {
@@ -62,7 +97,10 @@ class _StepByStepMockLLM:
             step = self._steps[self._index]
             self._index += 1
             return {"content": json.dumps(step, ensure_ascii=False), "token_usage": 50}
-        return {"content": json.dumps({"final": True, "output": {"status": "done"}}), "token_usage": 10}
+        return {
+            "content": json.dumps({"final": True, "output": {"status": "done"}}),
+            "token_usage": 10,
+        }
 
 
 class TestCodexIntegration:
@@ -107,7 +145,12 @@ class TestCodexIntegration:
         steps = [
             {
                 "thought": "先写一个文件",
-                "tool_calls": [{"name": "file_write", "arguments": {"path": "test.txt", "content": "hello world"}}],
+                "tool_calls": [
+                    {
+                        "name": "file_write",
+                        "arguments": {"path": "test.txt", "content": "hello world"},
+                    }
+                ],
                 "final": False,
             },
             {
@@ -117,7 +160,16 @@ class TestCodexIntegration:
             },
             {
                 "thought": "修改内容",
-                "tool_calls": [{"name": "file_edit", "arguments": {"path": "test.txt", "old_string": "world", "new_string": "codex"}}],
+                "tool_calls": [
+                    {
+                        "name": "file_edit",
+                        "arguments": {
+                            "path": "test.txt",
+                            "old_string": "world",
+                            "new_string": "codex",
+                        },
+                    }
+                ],
                 "final": False,
             },
             {
@@ -130,6 +182,7 @@ class TestCodexIntegration:
         class _LocalMockLLM:
             def __init__(self):
                 self._index = 0
+
             async def chat(self, messages, **kwargs):
                 if self._index < len(steps):
                     step = steps[self._index]
@@ -178,6 +231,7 @@ class TestCodexIntegration:
         class _LocalMockLLM:
             def __init__(self):
                 self._index = 0
+
             async def chat(self, messages, **kwargs):
                 if self._index < len(steps):
                     step = steps[self._index]

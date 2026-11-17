@@ -59,6 +59,8 @@ def _paused_reason(reason: str) -> bool:
         EndedReason.CUT_PLAN_PAUSED.value,
         EndedReason.SIDE_WRITE_PAUSED.value,
     )
+
+
 _DISPATCH_TIMEOUT_SECONDS = 120
 _MESSAGES_MAX_LEN = 60
 # P1 目录路由：技能目录完整条目上限（业界经验线 ~40-50 后选择精度下降；
@@ -139,12 +141,14 @@ class ReactorSession:
         self.side_session_id: str | None = None
         self._side_write_allow_once: str | None = None
         from app.engine.governance.guardian import Guardian
+
         self._guardian = Guardian()
         self.turn_id: str | None = None
         self._token_count = 0
         self._max_tokens = max_token_budget
         self._steps: list[dict[str, Any]] = []
         from app.engine.protocol.clarify_policy import CLARIFY_TRIGGER_NODE_TYPES
+
         self._CLARIFY_TRIGGER_NODE_TYPES = CLARIFY_TRIGGER_NODE_TYPES
 
         # 协作基础设施：AgentManager + InterAgentBus + ConcurrencyPool
@@ -275,9 +279,7 @@ class ReactorSession:
             # ContextManager 从 DB 重建历史时这条已在末尾；再无脑 append 会让
             # 同一句话在 prompt 里出现两遍（E2E 实测：追问「我上一条消息问的是
             # 什么」时，模型把当前这句当成上一句原样复述）。
-            _last = next(
-                (m for m in reversed(messages) if m.get("role") != "system"), None
-            )
+            _last = next((m for m in reversed(messages) if m.get("role") != "system"), None)
             _already_present = (
                 _last is not None
                 and _last.get("role") == "user"
@@ -321,11 +323,10 @@ class ReactorSession:
         _intent_skill = self._resolve_intent_skill(user_intent)
         _pre_clarification = None
         if _intent_skill is not None:
-            _pre_clarification = self._check_user_ask_rules(
-                getattr(_intent_skill, "name", "")
-            )
+            _pre_clarification = self._check_user_ask_rules(getattr(_intent_skill, "name", ""))
         if _pre_clarification is not None:
             from app.engine.reactor.loop_state import save_loop_state
+
             loop_state: dict[str, Any] = {
                 "messages": messages,
                 "iteration": 0,
@@ -336,14 +337,17 @@ class ReactorSession:
             _loop_state_path = save_loop_state(loop_state)
             _pre_clarification["_loop_state_path"] = _loop_state_path
 
-            await self._emit_sse("agent_clarification_required", {
-                "node_id": "reactor",
-                "iteration": 0,
-                "clarification_prompt": _pre_clarification.get("_clarification_prompt", ""),
-                "clarification_skill": _pre_clarification.get("_clarification_skill", ""),
-                "clarification_batches": _pre_clarification.get("_clarification_batches", []),
-                "loop_state_path": _loop_state_path,
-            })
+            await self._emit_sse(
+                "agent_clarification_required",
+                {
+                    "node_id": "reactor",
+                    "iteration": 0,
+                    "clarification_prompt": _pre_clarification.get("_clarification_prompt", ""),
+                    "clarification_skill": _pre_clarification.get("_clarification_skill", ""),
+                    "clarification_batches": _pre_clarification.get("_clarification_batches", []),
+                    "loop_state_path": _loop_state_path,
+                },
+            )
 
             logger.info(
                 f"[reactor] pre-flight clarification triggered for intent={user_intent[:60]!r} "
@@ -363,16 +367,22 @@ class ReactorSession:
             final_output["ended_reason"] = EndedReason.CLARIFICATION_PAUSED.value
             return final_output
 
-        await self._emit_sse("workflow_started", {
-            "intent": user_intent,
-            "max_iterations": self.max_iterations,
-            "primitives": list(self.primitives.keys()),
-        })
-        await self._emit_sse("node_started", {
-            "node_id": "reactor",
-            "node_type": "reactor_react",
-            "intent": user_intent,
-        })
+        await self._emit_sse(
+            "workflow_started",
+            {
+                "intent": user_intent,
+                "max_iterations": self.max_iterations,
+                "primitives": list(self.primitives.keys()),
+            },
+        )
+        await self._emit_sse(
+            "node_started",
+            {
+                "node_id": "reactor",
+                "node_type": "reactor_react",
+                "intent": user_intent,
+            },
+        )
 
         _nudge_count = 0
         _MAX_NUDGE = 2
@@ -411,13 +421,22 @@ class ReactorSession:
 
             logger.debug(f"[reactor] iteration {iteration}/{self.max_iterations}")
 
-            await self._emit_sse("progress_update", {
-                "node_id": "reactor",
-                "current": iteration,
-                "total": self.max_iterations,
-                "label": f"第 {iteration} 步推理",
-            })
-            await self._emit_observer("emit_progress", "reactor", iteration, self.max_iterations, f"ReAct iter {iteration}")
+            await self._emit_sse(
+                "progress_update",
+                {
+                    "node_id": "reactor",
+                    "current": iteration,
+                    "total": self.max_iterations,
+                    "label": f"第 {iteration} 步推理",
+                },
+            )
+            await self._emit_observer(
+                "emit_progress",
+                "reactor",
+                iteration,
+                self.max_iterations,
+                f"ReAct iter {iteration}",
+            )
 
             # emit_delta=False：本循环的 LLM 输出恒为 ReAct 协议 JSON
             # （prompt.py L64-77 规定 {"thought", "tool_calls", "final", "output"}），
@@ -447,11 +466,14 @@ class ReactorSession:
                 break
 
             if reasoning:
-                await self._emit_sse("reasoning_completed", {
-                    "node_id": "reactor",
-                    "iteration": iteration,
-                    "summary_parts": [reasoning],
-                })
+                await self._emit_sse(
+                    "reasoning_completed",
+                    {
+                        "node_id": "reactor",
+                        "iteration": iteration,
+                        "summary_parts": [reasoning],
+                    },
+                )
 
             parsed = self._parse_step(content)
             thought = parsed.get("thought") or ""
@@ -473,7 +495,9 @@ class ReactorSession:
                     fail_log = Path("logs/reactor_parse_failures.log")
                     fail_log.parent.mkdir(parents=True, exist_ok=True)
                     with fail_log.open("a", encoding="utf-8") as fh:
-                        fh.write(f"=== {time.strftime('%Y-%m-%d %H:%M:%S')} iter={iteration} ===\n{content}\n")
+                        fh.write(
+                            f"=== {time.strftime('%Y-%m-%d %H:%M:%S')} iter={iteration} ===\n{content}\n"
+                        )
                 except OSError:
                     pass
 
@@ -486,11 +510,14 @@ class ReactorSession:
 
             if thought:
                 last_thought = thought
-                await self._emit_sse("decision_made", {
-                    "node_id": "reactor",
-                    "iteration": iteration,
-                    "decision": thought,
-                })
+                await self._emit_sse(
+                    "decision_made",
+                    {
+                        "node_id": "reactor",
+                        "iteration": iteration,
+                        "decision": thought,
+                    },
+                )
                 await self._emit_observer("emit_decision", "reactor", thought)
 
             if is_final:
@@ -507,7 +534,13 @@ class ReactorSession:
                 _has_artifacts = bool(self._observed_artifacts)
                 if not _any_tool_executed and not _has_artifacts:
                     _is_pure_qa = True
-                if not _any_tool_executed and not _has_artifacts and not _llm_call_failed_this_iter and _fake_final_nudge < _MAX_FAKE_FINAL_NUDGE and not _is_pure_qa:
+                if (
+                    not _any_tool_executed
+                    and not _has_artifacts
+                    and not _llm_call_failed_this_iter
+                    and _fake_final_nudge < _MAX_FAKE_FINAL_NUDGE
+                    and not _is_pure_qa
+                ):
                     _fake_final_nudge += 1
                     logger.warning(
                         f"[reactor] iter={iteration} FAKE FINAL detected: "
@@ -515,9 +548,7 @@ class ReactorSession:
                         f"Nudging ({_fake_final_nudge}/{_MAX_FAKE_FINAL_NUDGE})"
                     )
                     messages.append({"role": "assistant", "content": content})
-                    _nudge_msg = (
-                        "[system] 你声称任务已完成，但实际没有调用任何工具、也没有产出任何产物（card_draft/asset_ids 等）。"
-                    )
+                    _nudge_msg = "[system] 你声称任务已完成，但实际没有调用任何工具、也没有产出任何产物（card_draft/asset_ids 等）。"
                     if _fake_final_nudge == 1:
                         _nudge_msg += (
                             "\n请判断任务类型："
@@ -532,17 +563,24 @@ class ReactorSession:
                             "请立即选择合适的工具执行任务，不要再说'做好了'。输出格式：\n"
                             '{"thought": "你的思考", "tool_calls": [{"name": "工具名", "arguments": {...}}], "final": false}'
                         )
-                    messages.append({
-                        "role": "user",
-                        "content": _nudge_msg,
-                    })
-                    step_record["observations"].append("⚠️ 空转检测：LLM 声称完成但无实际产出，已强制继续")
-                    await self._emit_sse("progress_update", {
-                        "node_id": "reactor",
-                        "current": iteration,
-                        "total": self.max_iterations,
-                        "label": "⚠️ 检测到空转，强制继续执行",
-                    })
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": _nudge_msg,
+                        }
+                    )
+                    step_record["observations"].append(
+                        "⚠️ 空转检测：LLM 声称完成但无实际产出，已强制继续"
+                    )
+                    await self._emit_sse(
+                        "progress_update",
+                        {
+                            "node_id": "reactor",
+                            "current": iteration,
+                            "total": self.max_iterations,
+                            "label": "⚠️ 检测到空转，强制继续执行",
+                        },
+                    )
                     continue
 
                 final_output = parsed.get("output") or self._extract_output_from_messages(messages)
@@ -609,9 +647,7 @@ class ReactorSession:
                         f"nudging LLM to continue in ReAct JSON format ({_nudge_count}/{_MAX_NUDGE})"
                     )
                     messages.append({"role": "assistant", "content": content})
-                    _format_nudge_msg = (
-                        "[system] 请按 ReAct JSON 格式输出：\n"
-                    )
+                    _format_nudge_msg = "[system] 请按 ReAct JSON 格式输出：\n"
                     if _nudge_count == 1:
                         _format_nudge_msg += (
                             "请判断任务类型：\n"
@@ -628,10 +664,12 @@ class ReactorSession:
                             "或如果已完成：\n"
                             '{"thought": "完成", "final": true, "output": {...}}'
                         )
-                    messages.append({
-                        "role": "user",
-                        "content": _format_nudge_msg,
-                    })
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": _format_nudge_msg,
+                        }
+                    )
                     step_record["observations"].append("⏳ LLM 输出非结构化，已引导继续")
                     continue
                 else:
@@ -700,10 +738,7 @@ class ReactorSession:
                     tool_args = {}
                 # 判重签名必须在 dispatch 之前取：pre_execute 钩子会原地
                 # 改写 args，dispatch 后再算签名就与计数表里的对不上了
-                _call_sig = (
-                    f"{tool_name}|"
-                    f"{json.dumps(tool_args, sort_keys=True, default=str)}"
-                )
+                _call_sig = f"{tool_name}|" f"{json.dumps(tool_args, sort_keys=True, default=str)}"
 
                 display_args = self._summarize_tool_args(tool_name, tool_args)
 
@@ -734,9 +769,7 @@ class ReactorSession:
                         _sg_sig = call_signature(tool_name, tool_args)
                         if self._side_write_allow_once == _sg_sig:
                             # 逐次放行：只放这一发，之后恢复拦截（Q9 无会话级放行）
-                            logger.info(
-                                f"[reactor] side write allow-once matched: {tool_name}"
-                            )
+                            logger.info(f"[reactor] side write allow-once matched: {tool_name}")
                             self._side_write_allow_once = None
                         else:
                             _sg_perms = write_permissions_of(_sg_required, _sg_declared)
@@ -759,14 +792,17 @@ class ReactorSession:
                                     f"[reactor] side pending_write persist failed: {_sg_db_err}"
                                 )
 
-                            await self._emit_sse("tool_call_end", {
-                                "node_id": "reactor",
-                                "iteration": iteration,
-                                "tool_name": tool_name,
-                                "success": True,
-                                "summary": "⏸ 侧会话写操作待用户确认",
-                                "duration_ms": 0,
-                            })
+                            await self._emit_sse(
+                                "tool_call_end",
+                                {
+                                    "node_id": "reactor",
+                                    "iteration": iteration,
+                                    "tool_name": tool_name,
+                                    "success": True,
+                                    "summary": "⏸ 侧会话写操作待用户确认",
+                                    "duration_ms": 0,
+                                },
+                            )
                             from app.engine.reactor.loop_state import save_loop_state
 
                             loop_state: dict[str, Any] = {
@@ -782,15 +818,18 @@ class ReactorSession:
                             }
                             _loop_state_path = save_loop_state(loop_state)
 
-                            await self._emit_sse("side_write_confirmation_required", {
-                                "node_id": "reactor",
-                                "iteration": iteration,
-                                "tool_name": tool_name,
-                                "description": _sg_desc,
-                                "permissions": _sg_info["permissions"],
-                                "side_session_id": self.side_session_id,
-                                "loop_state_path": _loop_state_path,
-                            })
+                            await self._emit_sse(
+                                "side_write_confirmation_required",
+                                {
+                                    "node_id": "reactor",
+                                    "iteration": iteration,
+                                    "tool_name": tool_name,
+                                    "description": _sg_desc,
+                                    "permissions": _sg_info["permissions"],
+                                    "side_session_id": self.side_session_id,
+                                    "loop_state_path": _loop_state_path,
+                                },
+                            )
 
                             final_output = {
                                 "ok": False,
@@ -800,13 +839,15 @@ class ReactorSession:
                                 "side_write": _sg_info,
                             }
                             ended_reason = EndedReason.SIDE_WRITE_PAUSED.value
-                            step_record["tool_calls"].append({
-                                "name": tool_name,
-                                "args": display_args,
-                                "ok": True,
-                                "summary": "⏸ 侧会话写操作待用户确认",
-                                "duration_ms": 0,
-                            })
+                            step_record["tool_calls"].append(
+                                {
+                                    "name": tool_name,
+                                    "args": display_args,
+                                    "ok": True,
+                                    "summary": "⏸ 侧会话写操作待用户确认",
+                                    "duration_ms": 0,
+                                }
+                            )
                             self._clarification_break = True
                             break
 
@@ -816,19 +857,26 @@ class ReactorSession:
                 # 这里只下发「调用前已知」的部分；权威值由下方 tool_call_end 用
                 # dispatch 返回值（obs.agent_id / obs.name）补齐。
                 _sub_id = str(tool_args.get("agent_id") or "")
-                _sub_name = str(
-                    tool_args.get("task_name") or tool_args.get("name") or ""
-                ) if tool_name == "spawn_agent" else ""
+                _sub_name = (
+                    str(tool_args.get("task_name") or tool_args.get("name") or "")
+                    if tool_name == "spawn_agent"
+                    else ""
+                )
 
-                await self._emit_sse("tool_call_start", {
-                    "node_id": "reactor",
-                    "iteration": iteration,
-                    "tool_name": tool_name,
-                    "inputs": display_args,
-                    "sub_agent_id": _sub_id,
-                    "sub_agent_name": _sub_name,
-                })
-                await self._emit_observer("emit_tool_call_start", "reactor", tool_name, display_args)
+                await self._emit_sse(
+                    "tool_call_start",
+                    {
+                        "node_id": "reactor",
+                        "iteration": iteration,
+                        "tool_name": tool_name,
+                        "inputs": display_args,
+                        "sub_agent_id": _sub_id,
+                        "sub_agent_name": _sub_name,
+                    },
+                )
+                await self._emit_observer(
+                    "emit_tool_call_start", "reactor", tool_name, display_args
+                )
 
                 tool_start = time.monotonic()
                 obs = await self._dispatch(call)
@@ -836,18 +884,24 @@ class ReactorSession:
 
                 # --- clarification break signal ---
                 if isinstance(obs, dict) and obs.get("_awaiting_clarification"):
-                    logger.debug(f"[reactor] clarification signal received for {tool_name}, saving loop state and breaking")
+                    logger.debug(
+                        f"[reactor] clarification signal received for {tool_name}, saving loop state and breaking"
+                    )
 
-                    await self._emit_sse("tool_call_end", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "tool_name": tool_name,
-                        "success": True,
-                        "summary": "⏸ 需要用户确认创作偏好",
-                        "duration_ms": tool_duration,
-                    })
+                    await self._emit_sse(
+                        "tool_call_end",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "tool_name": tool_name,
+                            "success": True,
+                            "summary": "⏸ 需要用户确认创作偏好",
+                            "duration_ms": tool_duration,
+                        },
+                    )
 
                     from app.engine.reactor.loop_state import save_loop_state
+
                     loop_state: dict[str, Any] = {
                         "messages": messages,
                         "iteration": iteration,
@@ -862,24 +916,29 @@ class ReactorSession:
 
                     obs["_loop_state_path"] = _loop_state_path
 
-                    await self._emit_sse("agent_clarification_required", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "clarification_prompt": obs.get("_clarification_prompt", ""),
-                        "clarification_skill": obs.get("_clarification_skill", ""),
-                        "clarification_batches": obs.get("_clarification_batches", []),
-                        "loop_state_path": _loop_state_path,
-                    })
+                    await self._emit_sse(
+                        "agent_clarification_required",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "clarification_prompt": obs.get("_clarification_prompt", ""),
+                            "clarification_skill": obs.get("_clarification_skill", ""),
+                            "clarification_batches": obs.get("_clarification_batches", []),
+                            "loop_state_path": _loop_state_path,
+                        },
+                    )
 
                     final_output = obs
                     ended_reason = EndedReason.CLARIFICATION_PAUSED.value
-                    step_record["tool_calls"].append({
-                        "name": tool_name,
-                        "args": display_args,
-                        "ok": True,
-                        "summary": "⏸ 需要用户确认创作偏好",
-                        "duration_ms": tool_duration,
-                    })
+                    step_record["tool_calls"].append(
+                        {
+                            "name": tool_name,
+                            "args": display_args,
+                            "ok": True,
+                            "summary": "⏸ 需要用户确认创作偏好",
+                            "duration_ms": tool_duration,
+                        }
+                    )
                     self._clarification_break = True
                     break
 
@@ -902,14 +961,17 @@ class ReactorSession:
                         f"[reactor] cut_plan confirmation signal for {tool_name}, saving loop state"
                     )
 
-                    await self._emit_sse("tool_call_end", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "tool_name": tool_name,
-                        "success": True,
-                        "summary": "⏸ 叠加方案已规划，等待用户确认",
-                        "duration_ms": tool_duration,
-                    })
+                    await self._emit_sse(
+                        "tool_call_end",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "tool_name": tool_name,
+                            "success": True,
+                            "summary": "⏸ 叠加方案已规划，等待用户确认",
+                            "duration_ms": tool_duration,
+                        },
+                    )
                     from app.engine.reactor.loop_state import save_loop_state
 
                     # 与 dispatch 钩子的自动注入同一套取法：skill_call 时取内层技能名/参数。
@@ -934,22 +996,27 @@ class ReactorSession:
                     _loop_state_path = save_loop_state(loop_state)
                     obs["_loop_state_path"] = _loop_state_path
 
-                    await self._emit_sse("cut_plan_confirmation_required", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "skill": _cp_inner_name,
-                        "plan": obs.get("data", {}),
-                        "message": obs.get("message", ""),
-                        "loop_state_path": _loop_state_path,
-                    })
+                    await self._emit_sse(
+                        "cut_plan_confirmation_required",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "skill": _cp_inner_name,
+                            "plan": obs.get("data", {}),
+                            "message": obs.get("message", ""),
+                            "loop_state_path": _loop_state_path,
+                        },
+                    )
 
-                    step_record["tool_calls"].append({
-                        "name": tool_name,
-                        "args": display_args,
-                        "ok": True,
-                        "summary": "⏸ 叠加方案已规划，等待用户确认",
-                        "duration_ms": tool_duration,
-                    })
+                    step_record["tool_calls"].append(
+                        {
+                            "name": tool_name,
+                            "args": display_args,
+                            "ok": True,
+                            "summary": "⏸ 叠加方案已规划，等待用户确认",
+                            "duration_ms": tool_duration,
+                        }
+                    )
                     final_output = obs
                     obs["_awaiting_cut_plan_confirmation"] = True
                     obs["_loop_state_path"] = _loop_state_path
@@ -968,14 +1035,17 @@ class ReactorSession:
                         f"[reactor] Guardian confirmation required for {tool_name}, saving loop state"
                     )
 
-                    await self._emit_sse("tool_call_end", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "tool_name": tool_name,
-                        "success": False,
-                        "summary": f"⏸ Guardian: 需要用户确认 ({obs.get('error', '')})",
-                        "duration_ms": tool_duration,
-                    })
+                    await self._emit_sse(
+                        "tool_call_end",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "tool_name": tool_name,
+                            "success": False,
+                            "summary": f"⏸ Guardian: 需要用户确认 ({obs.get('error', '')})",
+                            "duration_ms": tool_duration,
+                        },
+                    )
                     from app.engine.reactor.loop_state import save_loop_state
 
                     loop_state: dict[str, Any] = {
@@ -992,14 +1062,17 @@ class ReactorSession:
                     _loop_state_path = save_loop_state(loop_state)
                     obs["_loop_state_path"] = _loop_state_path
 
-                    await self._emit_sse("guardian_confirmation_required", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "tool_name": tool_name,
-                        "confirmation_prompt": obs.get("confirmation_prompt", ""),
-                        "risk_info": obs.get("error", ""),
-                        "loop_state_path": _loop_state_path,
-                    })
+                    await self._emit_sse(
+                        "guardian_confirmation_required",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "tool_name": tool_name,
+                            "confirmation_prompt": obs.get("confirmation_prompt", ""),
+                            "risk_info": obs.get("error", ""),
+                            "loop_state_path": _loop_state_path,
+                        },
+                    )
 
                     final_output = obs
                     obs["_awaiting_guardian_confirmation"] = True
@@ -1019,14 +1092,17 @@ class ReactorSession:
                         f"[reactor] storyboard confirmation signal for {tool_name}, saving loop state"
                     )
 
-                    await self._emit_sse("tool_call_end", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "tool_name": tool_name,
-                        "success": True,
-                        "summary": "⏸ 分镜草稿已生成，等待用户确认",
-                        "duration_ms": tool_duration,
-                    })
+                    await self._emit_sse(
+                        "tool_call_end",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "tool_name": tool_name,
+                            "success": True,
+                            "summary": "⏸ 分镜草稿已生成，等待用户确认",
+                            "duration_ms": tool_duration,
+                        },
+                    )
                     from app.engine.reactor.loop_state import save_loop_state
 
                     # 与 dispatch 钩子的自动注入同一套取法：skill_call 时取内层技能名/参数。
@@ -1058,23 +1134,28 @@ class ReactorSession:
                     _loop_state_path = save_loop_state(loop_state)
                     obs["_loop_state_path"] = _loop_state_path
 
-                    await self._emit_sse("storyboard_confirmation_required", {
-                        "node_id": "reactor",
-                        "iteration": iteration,
-                        "skill": _sb_inner_name,
-                        "title": obs.get("title", ""),
-                        "shots": obs.get("shots", []),
-                        "estimated_duration": obs.get("estimated_duration"),
-                        "loop_state_path": _loop_state_path,
-                    })
+                    await self._emit_sse(
+                        "storyboard_confirmation_required",
+                        {
+                            "node_id": "reactor",
+                            "iteration": iteration,
+                            "skill": _sb_inner_name,
+                            "title": obs.get("title", ""),
+                            "shots": obs.get("shots", []),
+                            "estimated_duration": obs.get("estimated_duration"),
+                            "loop_state_path": _loop_state_path,
+                        },
+                    )
 
-                    step_record["tool_calls"].append({
-                        "name": tool_name,
-                        "args": display_args,
-                        "ok": True,
-                        "summary": "⏸ 分镜草稿已生成，等待用户确认",
-                        "duration_ms": tool_duration,
-                    })
+                    step_record["tool_calls"].append(
+                        {
+                            "name": tool_name,
+                            "args": display_args,
+                            "ok": True,
+                            "summary": "⏸ 分镜草稿已生成，等待用户确认",
+                            "duration_ms": tool_duration,
+                        }
+                    )
                     # 把"待确认分镜"信号透传到 final_output，让 ChatAgent
                     # 能识别并返回 awaiting_storyboard_confirmation 状态
                     # （与 _awaiting_clarification 同样的处理路径）。
@@ -1096,9 +1177,7 @@ class ReactorSession:
                 # - 成功（含轮询 ok=true 但状态未就绪）→ 视为有效重试，计数归 1
                 # - 空探针（probe）→ 技能根本没执行，同样无进展，必须累计；
                 #   否则 LLM 反复探同一个技能会因 ok=true 而永远刹不住
-                _progressed = bool(obs_ok) and not (
-                    isinstance(obs, dict) and obs.get("probe")
-                )
+                _progressed = bool(obs_ok) and not (isinstance(obs, dict) and obs.get("probe"))
                 _last_call_ok[_call_sig] = _progressed
                 if not obs_ok:
                     _last_call_error[_call_sig] = obs_summary
@@ -1110,7 +1189,9 @@ class ReactorSession:
                     try:
                         self._context_manager.ingest_tool_output(tool_name, obs)
                     except Exception as _ws_err:
-                        logger.debug(f"[reactor] WorldState ingest failed for {tool_name}: {_ws_err}")
+                        logger.debug(
+                            f"[reactor] WorldState ingest failed for {tool_name}: {_ws_err}"
+                        )
 
                 # 子智能体身份的权威值来自 dispatch 返回值：spawn_agent 的
                 # {"agent_id","name"}，其余工具按调用参数里已有的 agent_id 传。
@@ -1118,17 +1199,22 @@ class ReactorSession:
                     _sub_id = str(obs.get("agent_id"))
                     _sub_name = str(obs.get("name") or _sub_name)
 
-                await self._emit_sse("tool_call_end", {
-                    "node_id": "reactor",
-                    "iteration": iteration,
-                    "tool_name": tool_name,
-                    "success": obs_ok,
-                    "summary": obs_summary,
-                    "duration_ms": tool_duration,
-                    "sub_agent_id": _sub_id,
-                    "sub_agent_name": _sub_name,
-                })
-                await self._emit_observer("emit_tool_call_end", "reactor", tool_name, obs_ok, obs_summary)
+                await self._emit_sse(
+                    "tool_call_end",
+                    {
+                        "node_id": "reactor",
+                        "iteration": iteration,
+                        "tool_name": tool_name,
+                        "success": obs_ok,
+                        "summary": obs_summary,
+                        "duration_ms": tool_duration,
+                        "sub_agent_id": _sub_id,
+                        "sub_agent_name": _sub_name,
+                    },
+                )
+                await self._emit_observer(
+                    "emit_tool_call_end", "reactor", tool_name, obs_ok, obs_summary
+                )
 
                 # 2026-10-22：工具失败必须留 INFO 痕迹（此前 obs_summary
                 # 只进 SSE 不进日志，skill_call 九连败时无据可查）
@@ -1138,21 +1224,25 @@ class ReactorSession:
                         f"({tool_duration}ms): {obs_summary[:300]}"
                     )
 
-                step_record["tool_calls"].append({
-                    "name": tool_name,
-                    "args": display_args,
-                    "ok": obs_ok,
-                    "summary": obs_summary,
-                    "duration_ms": tool_duration,
-                })
+                step_record["tool_calls"].append(
+                    {
+                        "name": tool_name,
+                        "args": display_args,
+                        "ok": obs_ok,
+                        "summary": obs_summary,
+                        "duration_ms": tool_duration,
+                    }
+                )
 
                 obs_str = json.dumps(obs, ensure_ascii=False, default=str)
                 if len(obs_str) > _OBSERVATION_MAX_LEN:
                     obs_str = obs_str[:_OBSERVATION_MAX_LEN] + "...(truncated)"
-                messages.append({
-                    "role": "user",
-                    "content": f"[observation] {tool_name} -> {obs_str}",
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": f"[observation] {tool_name} -> {obs_str}",
+                    }
+                )
 
                 step_record["observations"].append(obs_summary)
 
@@ -1162,8 +1252,14 @@ class ReactorSession:
                 # final 只剩一句话总结，前端无卡可渲染（10:57 实锤）。
                 # 现在系统侧直接累积，循环出口统一合并进 final_output。
                 if isinstance(obs, dict) and obs.get("ok", True):
-                    for _a_key in ("card_draft", "asset_ids", "file_path",
-                                   "html_path", "image_url", "title"):
+                    for _a_key in (
+                        "card_draft",
+                        "asset_ids",
+                        "file_path",
+                        "html_path",
+                        "image_url",
+                        "title",
+                    ):
                         _a_val = obs.get(_a_key)
                         if _a_val and _a_key not in self._observed_artifacts:
                             self._observed_artifacts[_a_key] = _a_val
@@ -1171,42 +1267,59 @@ class ReactorSession:
                                 # 先落盘再推事件：前端拿到的 artifact_id 是真实
                                 # 产物 id，可直接替换本地 draft- 占位，刷新后不丢。
                                 _artifact_id = await self._persist_card_draft(_a_val)
-                                await self._emit_sse("card_draft_ready", {
-                                    "node_id": "reactor",
-                                    "iteration": iteration,
-                                    "card_draft": _a_val,
-                                    "artifact_id": _artifact_id,
-                                })
+                                await self._emit_sse(
+                                    "card_draft_ready",
+                                    {
+                                        "node_id": "reactor",
+                                        "iteration": iteration,
+                                        "card_draft": _a_val,
+                                        "artifact_id": _artifact_id,
+                                    },
+                                )
 
                     # 作品内容修改（work_edit）：与 card_draft 不同，这是「就地改」
                     # 而不是「新建产物」，因此必须每次调用都推送——同一回合连续
                     # 改标题再改正文，前端要按顺序叠加，不能被去重吃掉。
                     _work_patch = obs.get("work_patch")
                     if isinstance(_work_patch, dict) and _work_patch:
-                        await self._emit_sse("work_patch_ready", {
-                            "node_id": "reactor",
-                            "iteration": iteration,
-                            "work_patch": _work_patch,
-                        })
+                        await self._emit_sse(
+                            "work_patch_ready",
+                            {
+                                "node_id": "reactor",
+                                "iteration": iteration,
+                                "work_patch": _work_patch,
+                            },
+                        )
 
                 # 2026-10-23：Receipt Ledger —— 工具执行后自动建一条不可
                 # 伪造的回执。Output Gate 据此校验 final output 中的产物
                 # 声明：无回执背书的产物 key 会被删除（Type-2 幻觉出口）。
                 _receipt_artifacts: dict[str, Any] = {}
                 if isinstance(obs, dict) and obs_ok:
-                    for _rk in ("card_draft", "asset_ids", "file_path",
-                                "html_path", "image_url", "title", "pages",
-                                "deck", "schema_version", "work_patch"):
+                    for _rk in (
+                        "card_draft",
+                        "asset_ids",
+                        "file_path",
+                        "html_path",
+                        "image_url",
+                        "title",
+                        "pages",
+                        "deck",
+                        "schema_version",
+                        "work_patch",
+                    ):
                         _rv = obs.get(_rk)
                         if _rv is not None:
                             _receipt_artifacts[_rk] = _rv
-                self._receipt_ledger.append({
-                    "call_id": f"call_{iteration}_{len(step_record['tool_calls'])}",
-                    "tool": tool_name,
-                    "ok": obs_ok,
-                    "artifacts": _receipt_artifacts,
-                    "iter": iteration,
-                })
+                self._receipt_ledger.append(
+                    {
+                        "call_id": f"call_{iteration}_{len(step_record['tool_calls'])}",
+                        "tool": tool_name,
+                        "ok": obs_ok,
+                        "artifacts": _receipt_artifacts,
+                        "iter": iteration,
+                    }
+                )
 
             step_record["duration_ms"] = int((time.monotonic() - step_start) * 1000)
             self._steps.append(step_record)
@@ -1250,34 +1363,35 @@ class ReactorSession:
                     str((self._run_context or {}).get("user_id") or ""),
                 )
             except Exception as _media_exc:  # noqa: BLE001 - 发布失败不能连累对话
-                logger.warning(
-                    f"[reactor] 工作区媒体产物发布失败: {_media_exc}"
-                )
+                logger.warning(f"[reactor] 工作区媒体产物发布失败: {_media_exc}")
             if _media_items:
-                _primary_video = next(
-                    (m for m in _media_items if m["kind"] == "video"), None
-                )
+                _primary_video = next((m for m in _media_items if m["kind"] == "video"), None)
                 final_output["media_artifacts"] = _media_items
                 if _primary_video:
                     final_output.setdefault("video_url", _primary_video["url"])
                 # 即时推给前端：不等落库/刷新，本回合就能看到成片
-                await self._emit_sse("media_artifact_ready", {
-                    "node_id": "reactor",
-                    "iteration": iteration,
-                    "media_artifacts": _media_items,
-                    "video_url": _primary_video["url"] if _primary_video else "",
-                })
-                # 回执背书：媒体产物是系统侧真实落盘的，登记后 Output Gate 放行
-                self._receipt_ledger.append({
-                    "call_id": f"media_publish_{len(self._receipt_ledger)}",
-                    "tool": "agent_media_publish",
-                    "ok": True,
-                    "artifacts": {
+                await self._emit_sse(
+                    "media_artifact_ready",
+                    {
+                        "node_id": "reactor",
+                        "iteration": iteration,
                         "media_artifacts": _media_items,
                         "video_url": _primary_video["url"] if _primary_video else "",
                     },
-                    "iter": iteration,
-                })
+                )
+                # 回执背书：媒体产物是系统侧真实落盘的，登记后 Output Gate 放行
+                self._receipt_ledger.append(
+                    {
+                        "call_id": f"media_publish_{len(self._receipt_ledger)}",
+                        "tool": "agent_media_publish",
+                        "ok": True,
+                        "artifacts": {
+                            "media_artifacts": _media_items,
+                            "video_url": _primary_video["url"] if _primary_video else "",
+                        },
+                        "iter": iteration,
+                    }
+                )
 
         # 2026-10-23：Output Gate —— Receipt Ledger + 产物校验。
         # 替代原来的 setdefault 透传，改为三步：
@@ -1286,10 +1400,18 @@ class ReactorSession:
         #   3. 补全：ledger 背书但 output 漏掉的产物，从 _observed_artifacts 注入
         # 暂停轮（clarification/guardian）不合并——产物属于下一次续跑。
         if not _paused_reason(ended_reason):
-            _PRODUCT_ARTIFACT_KEYS = frozenset({
-                "card_draft", "asset_ids", "file_path",
-                "html_path", "image_url", "title", "pages", "deck",
-            })
+            _PRODUCT_ARTIFACT_KEYS = frozenset(
+                {
+                    "card_draft",
+                    "asset_ids",
+                    "file_path",
+                    "html_path",
+                    "image_url",
+                    "title",
+                    "pages",
+                    "deck",
+                }
+            )
             _proven_artifacts: set[str] = set()
             for _rcpt in self._receipt_ledger:
                 if _rcpt["ok"]:
@@ -1350,15 +1472,18 @@ class ReactorSession:
             EndedReason.CUT_PLAN_PAUSED.value,
         )
 
-        await self._emit_sse("node_completed", {
-            "node_id": "reactor",
-            "node_type": "reactor_react",
-            "output": display_output,
-            "iterations": iteration,
-            "token_usage": total_token_usage,
-            "ended_reason": final_output["ended_reason"],
-            "schema_version": "1.0",
-        })
+        await self._emit_sse(
+            "node_completed",
+            {
+                "node_id": "reactor",
+                "node_type": "reactor_react",
+                "output": display_output,
+                "iterations": iteration,
+                "token_usage": total_token_usage,
+                "ended_reason": final_output["ended_reason"],
+                "schema_version": "1.0",
+            },
+        )
         # 暂停等待用户（clarification/guardian/storyboard）时不发 workflow_completed：
         # workflow_completed 是终态事件，SSE 总线收到后关闭流，前端收到后
         # 调 finishStream + transitionTurn('done')，链路彻底断开。
@@ -1367,13 +1492,16 @@ class ReactorSession:
         # 会在 run() 返回后落库并发布带正文的 agent_loop_done，内部这个
         # 不带正文的终态只会把流提前关掉（2026-11-04 正文丢失实锤）。
         if not _is_paused and emit_workflow_completed:
-            await self._emit_sse("workflow_completed", {
-                "output": display_output,
-                "iterations": iteration,
-                "token_usage": total_token_usage,
-                "ended_reason": final_output["ended_reason"],
-                "schema_version": "1.0",
-            })
+            await self._emit_sse(
+                "workflow_completed",
+                {
+                    "output": display_output,
+                    "iterations": iteration,
+                    "token_usage": total_token_usage,
+                    "ended_reason": final_output["ended_reason"],
+                    "schema_version": "1.0",
+                },
+            )
 
         # 协作资源清理：session 结束时 shutdown AgentManager，取消所有子 Agent
         if self._collab_tools is not None:
@@ -1432,9 +1560,20 @@ class ReactorSession:
         # 2026-10-22：白名单加入产物字段（产物透传链最后一环）——
         # card_draft/asset_ids/html_path/image_url 不放行的话，SSE 与
         # POST 响应里前端永远拿不到卡片数据，无从渲染
-        for key in ("title", "content", "status", "tags", "file", "path",
-                    "card_draft", "asset_ids", "html_path", "image_url",
-                    "pages", "deck"):
+        for key in (
+            "title",
+            "content",
+            "status",
+            "tags",
+            "file",
+            "path",
+            "card_draft",
+            "asset_ids",
+            "html_path",
+            "image_url",
+            "pages",
+            "deck",
+        ):
             if key in output:
                 display[key] = output[key]
 
@@ -1489,12 +1628,14 @@ class ReactorSession:
                 for n in (getattr(s, "name", "") for s in self._skills)
                 if n and n not in selected_names
             ]
-            self.system_prompt = self._with_persona(get_reactor_system_prompt(
-                skills=selected,
-                user_message=user_intent,
-                creation_type=self._creation_type,
-                extra_skill_names=extra_names,
-            ))
+            self.system_prompt = self._with_persona(
+                get_reactor_system_prompt(
+                    skills=selected,
+                    user_message=user_intent,
+                    creation_type=self._creation_type,
+                    extra_skill_names=extra_names,
+                )
+            )
         except Exception:
             logger.exception("[reactor] skill catalog routing failed; keep full catalog")
 
@@ -1521,22 +1662,28 @@ class ReactorSession:
             # 消息完整注入（与 context_manager 分支同待遇）。
             _work_prompt = context.pop("work_context_prompt", None)
             if _work_prompt and isinstance(_work_prompt, str):
-                messages.append({
-                    "role": "system",
-                    "content": _work_prompt,
-                })
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": _work_prompt,
+                    }
+                )
             # AI 人格注入：提取 personality_prompt 作为独立 system message，
             # 不埋进 context JSON（否则 JSON 转义会破坏 prompt 效果）。
             _personality = context.pop("personality_prompt", None)
             if _personality and isinstance(_personality, str):
-                messages.append({
-                    "role": "system",
-                    "content": _personality,
-                })
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": _personality,
+                    }
+                )
             _ctx_summary: dict[str, Any] = {}
             _large_keys: set[str] = set()
             for k, v in context.items():
-                v_str = json.dumps(v, ensure_ascii=False, default=str) if not isinstance(v, str) else v
+                v_str = (
+                    json.dumps(v, ensure_ascii=False, default=str) if not isinstance(v, str) else v
+                )
                 if len(v_str) > 800:
                     _large_keys.add(k)
                     _ctx_summary[k] = v_str[:200] + f"... [truncated, {len(v_str)} chars total]"
@@ -1544,11 +1691,13 @@ class ReactorSession:
                     _ctx_summary[k] = v
             context_str = json.dumps(_ctx_summary, ensure_ascii=False, default=str)
             if len(context_str) > self._CONTEXT_SUMMARY_MAX_CHARS:
-                context_str = context_str[:self._CONTEXT_SUMMARY_MAX_CHARS] + "... [truncated]"
-            messages.append({
-                "role": "system",
-                "content": f"[context] {context_str}",
-            })
+                context_str = context_str[: self._CONTEXT_SUMMARY_MAX_CHARS] + "... [truncated]"
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"[context] {context_str}",
+                }
+            )
         messages.append({"role": "user", "content": user_intent})
         return messages
 
@@ -1645,34 +1794,48 @@ class ReactorSession:
                                             "proto" if head in ("{", "[", "`") else "nl"
                                         )
                                 if reasoning_gate == "nl":
-                                    await self._emit_sse("reasoning_summary_text_delta", {
-                                        "node_id": "reactor",
-                                        "delta": reasoning,
-                                    })
+                                    await self._emit_sse(
+                                        "reasoning_summary_text_delta",
+                                        {
+                                            "node_id": "reactor",
+                                            "delta": reasoning,
+                                        },
+                                    )
                             if text:
                                 content_parts.append(text)
                                 if emit_delta:
-                                    await self._emit_sse("agent_message_delta", {
-                                        "node_id": "reactor",
-                                        "delta": text,
-                                    })
+                                    await self._emit_sse(
+                                        "agent_message_delta",
+                                        {
+                                            "node_id": "reactor",
+                                            "delta": text,
+                                        },
+                                    )
                             if chunk.get("is_final"):
                                 token_usage = chunk.get("token_usage", 0) or token_usage
 
                         content = "".join(content_parts)
                         reasoning = self._sanitize_reasoning("".join(reasoning_parts))
                         if reasoning != "".join(reasoning_parts):
-                            logger.info("[reactor] reasoning was ReAct protocol JSON — sanitized for display")
+                            logger.info(
+                                "[reactor] reasoning was ReAct protocol JSON — sanitized for display"
+                            )
                             # 协议原文已拦下，补发消洗后的人话 thought，思维链行不留空
-                            await self._emit_sse("reasoning_summary_text_delta", {
-                                "node_id": "reactor",
-                                "delta": reasoning,
-                            })
+                            await self._emit_sse(
+                                "reasoning_summary_text_delta",
+                                {
+                                    "node_id": "reactor",
+                                    "delta": reasoning,
+                                },
+                            )
                         if reasoning_parts:
-                            await self._emit_sse("reasoning_completed", {
-                                "node_id": "reactor",
-                                "summary_parts": [],
-                            })
+                            await self._emit_sse(
+                                "reasoning_completed",
+                                {
+                                    "node_id": "reactor",
+                                    "summary_parts": [],
+                                },
+                            )
                         circuit.record_success()
                         return content, token_usage, reasoning
 
@@ -1692,7 +1855,17 @@ class ReactorSession:
                 if action == RetryAction.GIVE_UP:
                     logger.error(f"[reactor] LLM call unrecoverable: {e}")
                     _err_str = str(e).lower()
-                    _is_unrecov = any(kw in _err_str for kw in ["402", "401", "403", "payment", "unauthorized", "invalid api key"])
+                    _is_unrecov = any(
+                        kw in _err_str
+                        for kw in [
+                            "402",
+                            "401",
+                            "403",
+                            "payment",
+                            "unauthorized",
+                            "invalid api key",
+                        ]
+                    )
                     circuit.record_failure(str(e), is_unrecoverable=_is_unrecov)
                     # 重试耗尽后给用户明确报错（2026-11-07：原来静默返回英文
                     # 异常原文，用户只看到 3 分钟无回复后蹦出一串英文）。
@@ -1702,17 +1875,26 @@ class ReactorSession:
                         if not _is_unrecov
                         else "模型服务鉴权失败（API Key 无效或余额不足），请检查配置后重试。"
                     )
-                    await self._emit_sse("llm_retry_status", {
-                        "node_id": "reactor",
-                        "attempt": max(state.retries, state.connection_retries),
-                        "final": True,
-                        "label": _friendly_err,
-                    })
-                    return json.dumps({
-                        "thought": _friendly_err,
-                        "final": True,
-                        "output": {"error": _friendly_err},
-                    }), 0, ""
+                    await self._emit_sse(
+                        "llm_retry_status",
+                        {
+                            "node_id": "reactor",
+                            "attempt": max(state.retries, state.connection_retries),
+                            "final": True,
+                            "label": _friendly_err,
+                        },
+                    )
+                    return (
+                        json.dumps(
+                            {
+                                "thought": _friendly_err,
+                                "final": True,
+                                "output": {"error": _friendly_err},
+                            }
+                        ),
+                        0,
+                        "",
+                    )
 
                 if action == RetryAction.FALLBACK:
                     if _fallback_used:
@@ -1723,23 +1905,35 @@ class ReactorSession:
                             "若持续出现请检查网络或 DeepSeek 服务状态。"
                         )
                         circuit.record_failure(str(e))
-                        await self._emit_sse("llm_retry_status", {
+                        await self._emit_sse(
+                            "llm_retry_status",
+                            {
+                                "node_id": "reactor",
+                                "attempt": max(state.retries, state.connection_retries),
+                                "final": True,
+                                "label": _fallback_err,
+                            },
+                        )
+                        return (
+                            json.dumps(
+                                {
+                                    "thought": _fallback_err,
+                                    "final": True,
+                                    "output": {"error": _fallback_err},
+                                }
+                            ),
+                            0,
+                            "",
+                        )
+                    logger.info("[reactor] falling back to non-streaming LLM call")
+                    await self._emit_sse(
+                        "llm_retry_status",
+                        {
                             "node_id": "reactor",
                             "attempt": max(state.retries, state.connection_retries),
-                            "final": True,
-                            "label": _fallback_err,
-                        })
-                        return json.dumps({
-                            "thought": _fallback_err,
-                            "final": True,
-                            "output": {"error": _fallback_err},
-                        }), 0, ""
-                    logger.info("[reactor] falling back to non-streaming LLM call")
-                    await self._emit_sse("llm_retry_status", {
-                        "node_id": "reactor",
-                        "attempt": max(state.retries, state.connection_retries),
-                        "label": "模型服务响应异常，正在切换备用调用方式…",
-                    })
+                            "label": "模型服务响应异常，正在切换备用调用方式…",
+                        },
+                    )
                     _fallback_used = True
                     use_stream = False
                     state.retries = 0
@@ -1748,8 +1942,7 @@ class ReactorSession:
                 if action == RetryAction.RETRY:
                     delay = state.next_delay()
                     logger.warning(
-                        f"[reactor] LLM call retry {state.retries} "
-                        f"(delay={delay:.1f}s): {e}"
+                        f"[reactor] LLM call retry {state.retries} " f"(delay={delay:.1f}s): {e}"
                     )
                     # 重试进度推给前端，避免长退避期间用户端完全静默
                     # （2026-11-07「3 分钟无回复」根因之一）。
@@ -1759,29 +1952,36 @@ class ReactorSession:
                         else state.max_retries
                     )
                     _retry_cur = (
-                        state.connection_retries
-                        if state.connection_retries > 0
-                        else state.retries
+                        state.connection_retries if state.connection_retries > 0 else state.retries
                     )
-                    await self._emit_sse("llm_retry_status", {
-                        "node_id": "reactor",
-                        "attempt": _retry_cur,
-                        "total": _retry_total,
-                        "delay": delay,
-                        "label": (
-                            f"模型服务连接不稳定，正在重试（{_retry_cur}/{_retry_total}），"
-                            f"{delay:.0f} 秒后自动继续…"
-                        ),
-                    })
+                    await self._emit_sse(
+                        "llm_retry_status",
+                        {
+                            "node_id": "reactor",
+                            "attempt": _retry_cur,
+                            "total": _retry_total,
+                            "delay": delay,
+                            "label": (
+                                f"模型服务连接不稳定，正在重试（{_retry_cur}/{_retry_total}），"
+                                f"{delay:.0f} 秒后自动继续…"
+                            ),
+                        },
+                    )
                     await asyncio.sleep(delay)
                     continue
 
                 logger.error(f"[reactor] unexpected RetryAction: {action}")
-                return json.dumps({
-                    "thought": f"LLM call failed: {e}",
-                    "final": True,
-                    "output": {"error": str(e)},
-                }), 0, ""
+                return (
+                    json.dumps(
+                        {
+                            "thought": f"LLM call failed: {e}",
+                            "final": True,
+                            "output": {"error": str(e)},
+                        }
+                    ),
+                    0,
+                    "",
+                )
 
     def _resolve_intent_skill(self, user_intent: str) -> Any | None:
         """用 trigger_words 把用户意图解析到目标技能（预检澄清专用）。
@@ -1820,7 +2020,9 @@ class ReactorSession:
             if score > 0:
                 scored.append((score, skill))
         if not scored:
-            logger.info(f"[reactor] pre-flight: no trigger_words matched for intent={user_intent[:60]!r}")
+            logger.info(
+                f"[reactor] pre-flight: no trigger_words matched for intent={user_intent[:60]!r}"
+            )
             return None
         best_score = max(s for s, _ in scored)
         winners = [sk for s, sk in scored if s == best_score]
@@ -1861,9 +2063,7 @@ class ReactorSession:
         if not batches:
             return None
 
-        logger.info(
-            f"[reactor] Layer 3: user ask rule triggered for skill={tool_name}"
-        )
+        logger.info(f"[reactor] Layer 3: user ask rule triggered for skill={tool_name}")
         return {
             "_awaiting_clarification": True,
             "_clarification_prompt": batches[0].title,
@@ -1948,13 +2148,9 @@ class ReactorSession:
         #    只有 LLM 传了部分参数，或用户之前答过部分字段时，才说明
         #    确实要用这个技能，此时 Layer 2 补弹才合理。
         _llm_committed = any(
-            fname in tool_args and tool_args[fname] is not None
-            for fname in clarify_meta
+            fname in tool_args and tool_args[fname] is not None for fname in clarify_meta
         )
-        _user_committed = any(
-            fname in _clarification_result
-            for fname in clarify_meta
-        )
+        _user_committed = any(fname in _clarification_result for fname in clarify_meta)
         if not _llm_committed and not _user_committed:
             logger.info(
                 f"[reactor] Layer 2: skipping clarification for skill={tool_name} "
@@ -1985,7 +2181,10 @@ class ReactorSession:
                 continue
 
             # 有默认值且 auto_default=True → 跳过（用默认值）
-            if getattr(fmeta, "auto_default", False) and getattr(fmeta, "default", None) is not None:
+            if (
+                getattr(fmeta, "auto_default", False)
+                and getattr(fmeta, "default", None) is not None
+            ):
                 continue
 
             # 确实缺失 → 需要补弹
@@ -2074,9 +2273,11 @@ class ReactorSession:
                 if adef is not None:
                     if adef.llm_model:
                         from app.engine.factory import get_deepseek_llm
+
                         sub_llm = get_deepseek_llm(model=adef.llm_model) or self.llm
                     if adef.skills is not None:
                         from app.agents.registry import _build_skills
+
                         sub_skills = _build_skills(adef.skills, self._creation_type)
                     sub_max_iter = adef.max_iterations
                     sub_prefix = adef.persona or None
@@ -2142,11 +2343,17 @@ class ReactorSession:
                 _maybe_skill = args.get("name", "")
                 if _maybe_skill and _maybe_skill != "skill_call" and _maybe_skill != name:
                     args["skill"] = _maybe_skill
-                    logger.info(f"[reactor] skill_call: promoted args.name='{_maybe_skill}' → args.skill")
-            logger.info(f"[reactor] skill_call dispatch: args_keys={list(args.keys())}, args_preview={json.dumps(args, ensure_ascii=False, default=str)[:500]}")
+                    logger.info(
+                        f"[reactor] skill_call: promoted args.name='{_maybe_skill}' → args.skill"
+                    )
+            logger.info(
+                f"[reactor] skill_call dispatch: args_keys={list(args.keys())}, args_preview={json.dumps(args, ensure_ascii=False, default=str)[:500]}"
+            )
             _deep_args = args.get("arguments") or args.get("args") or args.get("parameters") or {}
             if _deep_args and isinstance(_deep_args, dict):
-                logger.info(f"[reactor] skill_call deep arguments: keys={list(_deep_args.keys())}, preview={json.dumps(_deep_args, ensure_ascii=False, default=str)[:500]}")
+                logger.info(
+                    f"[reactor] skill_call deep arguments: keys={list(_deep_args.keys())}, preview={json.dumps(_deep_args, ensure_ascii=False, default=str)[:500]}"
+                )
 
         # 二期钩子链（pre_clarify）：协议解包只影响澄清判定目标，不改主调用形态
         clarify_name, clarify_args = name, args
@@ -2163,7 +2370,9 @@ class ReactorSession:
         # ① Layer 3: 用户显式规则
         _layer3_signal = self._check_user_ask_rules(clarify_name)
         if _layer3_signal is not None:
-            logger.warning(f"[reactor] Layer 3 clarification triggered in _dispatch for tool={clarify_name}, args_keys={list(clarify_args.keys()) if isinstance(clarify_args, dict) else 'N/A'}")
+            logger.warning(
+                f"[reactor] Layer 3 clarification triggered in _dispatch for tool={clarify_name}, args_keys={list(clarify_args.keys()) if isinstance(clarify_args, dict) else 'N/A'}"
+            )
             return _layer3_signal
 
         # ② Layer 1: LLM 自决策——如果 LLM 调了 ask_user_question，
@@ -2174,7 +2383,9 @@ class ReactorSession:
         # ③ Layer 2: 分类器兜底——只在 LLM 漏判时补弹
         _clarification_signal = self._classifier_fallback_check(clarify_name, clarify_args)
         if _clarification_signal is not None:
-            logger.warning(f"[reactor] Layer 2 clarification triggered in _dispatch for tool={clarify_name}, args_keys={list(clarify_args.keys()) if isinstance(clarify_args, dict) else 'N/A'}")
+            logger.warning(
+                f"[reactor] Layer 2 clarification triggered in _dispatch for tool={clarify_name}, args_keys={list(clarify_args.keys()) if isinstance(clarify_args, dict) else 'N/A'}"
+            )
             return _clarification_signal
 
         # 二期钩子链（pre_execute）：上下文注入等参数准备，产出交给 transport
@@ -2203,9 +2414,13 @@ class ReactorSession:
             _is_skill_call = name == "skill_call"
             _inner_skill = ""
             if _is_skill_call:
-                _inner_skill = str((args.get("arguments") or {}).get("skill") or args.get("skill") or "")
+                _inner_skill = str(
+                    (args.get("arguments") or {}).get("skill") or args.get("skill") or ""
+                )
                 if not _inner_skill:
-                    logger.warning(f"[reactor] skill_call args keys={list(args.keys())}, args_preview={str(args)[:200]}")
+                    logger.warning(
+                        f"[reactor] skill_call args keys={list(args.keys())}, args_preview={str(args)[:200]}"
+                    )
             if self.auto_approve:
                 # 自动放行 = 用户在输入框上显式授权「免确认」：Guardian 判
                 # NEEDS_CONFIRM 的工具一律放行，只保留 DENY（危险参数硬拒）。
@@ -2229,13 +2444,16 @@ class ReactorSession:
                     f"[reactor] skill_call one-shot confirm already granted, auto-approving: {_inner_skill or name} (risk={decision.risk_level})"
                 )
             else:
-                logger.warning(f"[reactor] guardian needs confirm for {name} (risk={decision.risk_level})")
+                logger.warning(
+                    f"[reactor] guardian needs confirm for {name} (risk={decision.risk_level})"
+                )
                 if _is_skill_call:
                     return {
                         "ok": False,
                         "error": f"skill '{_inner_skill}' requires user confirmation. {decision.hint or decision.user_hint or '是否执行此操作？'}",
                         "needs_confirmation": True,
-                        "confirmation_prompt": decision.confirmation_prompt or f"技能 {_inner_skill} 即将执行，是否继续？",
+                        "confirmation_prompt": decision.confirmation_prompt
+                        or f"技能 {_inner_skill} 即将执行，是否继续？",
                     }
                 return {
                     "ok": False,
@@ -2251,7 +2469,9 @@ class ReactorSession:
                 from app.core.skill_registry import get_skill_class_by_name
 
                 _skill_cls = get_skill_class_by_name(clarify_name)
-                _declared = tuple(getattr(_skill_cls, "skill_permissions", ()) or ()) if _skill_cls else ()
+                _declared = (
+                    tuple(getattr(_skill_cls, "skill_permissions", ()) or ()) if _skill_cls else ()
+                )
                 for perm_value in _declared:
                     perm = Permission(perm_value)
                     if perm not in self.allowed_permissions:
@@ -2264,7 +2484,9 @@ class ReactorSession:
                             "required": perm.value,
                         }
             except ValueError:
-                logger.warning(f"[reactor] skill '{clarify_name}' declared invalid permission value")
+                logger.warning(
+                    f"[reactor] skill '{clarify_name}' declared invalid permission value"
+                )
             except Exception:
                 logger.debug("[reactor] skill permission lookup skipped", exc_info=True)
 
@@ -2280,7 +2502,13 @@ class ReactorSession:
         # _message_bus / _concurrency_pool / _caller_agent_id / _observer
         if name == "skill_call":
             inner_skill = str((args.get("arguments") or {}).get("skill") or args.get("skill") or "")
-            _COLLAB_SKILLS = {"spawn_agent", "send_message", "wait_agent", "interrupt_agent", "list_agents"}
+            _COLLAB_SKILLS = {
+                "spawn_agent",
+                "send_message",
+                "wait_agent",
+                "interrupt_agent",
+                "list_agents",
+            }
             if inner_skill in _COLLAB_SKILLS:
                 collab = self._ensure_collab()
                 if collab is not None:
@@ -2319,9 +2547,7 @@ class ReactorSession:
             return result
         nested = args.get("arguments")
         inner_skill = str(
-            (nested if isinstance(nested, dict) else {}).get("skill")
-            or args.get("skill")
-            or ""
+            (nested if isinstance(nested, dict) else {}).get("skill") or args.get("skill") or ""
         )
         if not inner_skill or inner_skill in self._skill_doc_sent:
             return result
@@ -2382,7 +2608,7 @@ class ReactorSession:
         t = text.strip()
         if t.startswith("```"):
             first_nl = t.find("\n")
-            t = (t[first_nl + 1:] if first_nl >= 0 else t).strip()
+            t = (t[first_nl + 1 :] if first_nl >= 0 else t).strip()
         if not t.startswith("{"):
             return False
         return '"tool_calls"' in t or '"thought"' in t or '"final"' in t
@@ -2498,8 +2724,11 @@ class ReactorSession:
 
         tool_calls = []
         invoke_pattern = re.compile(r'<｜｜DSML｜｜ invoke name="([^"]+)">')
-        param_pattern = re.compile(r'<｜｜DSML｜｜ parameter name="([^"]+)"(?:\s+string="true")?>(.*?)</｜｜DSML｜｜ parameter>', re.DOTALL)
-        invoke_end_pattern = re.compile(r'</｜｜DSML｜｜ invoke>')
+        param_pattern = re.compile(
+            r'<｜｜DSML｜｜ parameter name="([^"]+)"(?:\s+string="true")?>(.*?)</｜｜DSML｜｜ parameter>',
+            re.DOTALL,
+        )
+        invoke_end_pattern = re.compile(r"</｜｜DSML｜｜ invoke>")
 
         pos = 0
         while pos < len(text):
@@ -2513,7 +2742,7 @@ class ReactorSession:
             if not invoke_end_match:
                 break
 
-            invoke_body = text[invoke_start:invoke_end_match.start()]
+            invoke_body = text[invoke_start : invoke_end_match.start()]
             arguments = {}
             for param_match in param_pattern.finditer(invoke_body):
                 param_name = param_match.group(1)
@@ -2592,16 +2821,16 @@ class ReactorSession:
         to the next candidate position.
         """
         for i, ch in enumerate(text):
-            if ch == '{':
+            if ch == "{":
                 depth = 0
                 for j in range(i, len(text)):
-                    if text[j] == '{':
+                    if text[j] == "{":
                         depth += 1
-                    elif text[j] == '}':
+                    elif text[j] == "}":
                         depth -= 1
                         if depth == 0:
                             try:
-                                parsed = json.loads(text[i:j + 1])
+                                parsed = json.loads(text[i : j + 1])
                                 if isinstance(parsed, dict):
                                     return parsed
                             except json.JSONDecodeError:
@@ -2638,7 +2867,11 @@ class ReactorSession:
         # Protect assistant-observation pairing: if the first kept message
         # is an observation (role=user, starts with [observation]) without
         # its preceding assistant thought, drop it to avoid orphaned obs.
-        if tail and tail[0].get("role") == "user" and str(tail[0].get("content", "")).startswith("[observation]"):
+        if (
+            tail
+            and tail[0].get("role") == "user"
+            and str(tail[0].get("content", "")).startswith("[observation]")
+        ):
             logger.warning("[reactor] truncation would orphan observation, dropping it")
             tail = tail[1:]
 
@@ -2733,6 +2966,7 @@ def build_reactor_session(
     """
     if llm is None:
         from app.engine.factory import get_deepseek_llm
+
         llm = get_deepseek_llm(model="deepseek-chat")
         if llm is None:
             logger.error(
@@ -2758,11 +2992,13 @@ def build_reactor_session(
     if workflow_id:
         try:
             from app.engine.factory import _make_observer
+
             observer = _make_observer(workflow_id)
         except Exception:
             pass
         try:
             from app.services.sse_bus import sse_bus as _sse_bus
+
             sse_bus = _sse_bus
         except Exception:
             pass

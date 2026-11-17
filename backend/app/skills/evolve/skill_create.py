@@ -26,15 +26,12 @@ _SKILLS_DIR = Path(__file__).resolve().parent.parent.parent / "agents" / "prompt
 
 
 class SkillCreateInput(BaseModel):
-    filename: str = Field(
-        description="Skill 文件名（如 'my-copywrite-style.md'），只允许 .md 后缀"
-    )
+    filename: str = Field(description="Skill 文件名（如 'my-copywrite-style.md'），只允许 .md 后缀")
     content: str = Field(
         description="Skill 完整内容，必须包含 YAML frontmatter（node_type/name/description）"
     )
     overwrite: bool = Field(
-        default=False,
-        description="是否覆盖已有 skill（默认 false，防止误覆盖）"
+        default=False, description="是否覆盖已有 skill（默认 false，防止误覆盖）"
     )
 
 
@@ -54,8 +51,8 @@ def _validate_frontmatter(content: str) -> tuple[bool, str, str]:
         return False, "", ""
 
     fm = parts[1].strip()
-    node_type_match = re.search(r'^node_type:\s*(.+)$', fm, re.MULTILINE)
-    name_match = re.search(r'^name:\s*(.+)$', fm, re.MULTILINE)
+    node_type_match = re.search(r"^node_type:\s*(.+)$", fm, re.MULTILINE)
+    name_match = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE)
 
     node_type = node_type_match.group(1).strip().strip('"').strip("'") if node_type_match else ""
     name = name_match.group(1).strip().strip('"').strip("'") if name_match else ""
@@ -110,7 +107,7 @@ class SkillCreate(Skill):
                 message="只允许创建 .md 后缀的 skill 文件",
             ).model_dump()
 
-        if not re.match(r'^[a-z0-9][a-z0-9\-]*\.md$', filename):
+        if not re.match(r"^[a-z0-9][a-z0-9\-]*\.md$", filename):
             return SkillCreateOutput(
                 success=False,
                 message="文件名只允许小写字母、数字、连字符（如 my-copywrite-style.md）",
@@ -136,6 +133,7 @@ class SkillCreate(Skill):
 
         try:
             from app.core.prompt_skills import register_prompt_skill_from_content
+
             skill_cls = register_prompt_skill_from_content(filename, content, user_id=user_id)
 
             logger.info(

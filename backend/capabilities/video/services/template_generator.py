@@ -39,26 +39,43 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # 落盘目录（测试 monkeypatch 此符号）
-_STORE_DIR = Path(__file__).resolve().parent.parent.parent.parent / "outputs" / "generated_templates"
+_STORE_DIR = (
+    Path(__file__).resolve().parent.parent.parent.parent / "outputs" / "generated_templates"
+)
 
 # 进程内注册表：name -> GeneratedTemplate
 GENERATED: dict[str, "GeneratedTemplate"] = {}
 
 # 占位符白名单：渲染器注入 3 个 + params 常用键（键名别名在包装层归一）
 _ALLOWED_VARS = {
-    "width", "height", "duration",
-    "text", "sub", "title", "keyword", "label", "number",
-    "color", "x", "y", "size", "icon",
+    "width",
+    "height",
+    "duration",
+    "text",
+    "sub",
+    "title",
+    "keyword",
+    "label",
+    "number",
+    "color",
+    "x",
+    "y",
+    "size",
+    "icon",
 }
 
 # 真实时钟黑名单（确定性渲染铁律）
 # CSS animation/@keyframes/transition 同理：由真实时间驱动，
 # 逐帧截图时状态取决于墙钟 → 每次渲染结果不同，审片闭环失效
 _CLOCK_PATTERNS = [
-    r"setInterval\s*\(", r"setTimeout\s*\(",
+    r"setInterval\s*\(",
+    r"setTimeout\s*\(",
     r"requestAnimationFrame\s*\(",
-    r"performance\.now\s*\(", r"new\s+Date\s*\(",
-    r"@keyframes\b", r"animation\s*:", r"transition\s*:",
+    r"performance\.now\s*\(",
+    r"new\s+Date\s*\(",
+    r"@keyframes\b",
+    r"animation\s*:",
+    r"transition\s*:",
 ]
 
 # 占位符形态：{identifier}（CSS 花括号含冒号/分号/空格，天然不匹配）
@@ -108,7 +125,8 @@ def validate_generated_html(html: str) -> list[str]:
         body = body_m.group(1)
         js = "".join(re.findall(r"<script>(.*?)</script>", html, re.S | re.I))
         for sel_m in re.finditer(
-            r"querySelector(?:All)?\(\s*['\"]([^'\"]+)['\"]", js,
+            r"querySelector(?:All)?\(\s*['\"]([^'\"]+)['\"]",
+            js,
         ):
             sel = sel_m.group(1)
             if not sel.startswith("."):
@@ -116,7 +134,8 @@ def validate_generated_html(html: str) -> list[str]:
             # null guard 豁免：const v = querySelector(sel) 且有 if (v)
             var_m = re.search(
                 rf"const (\w+) = document\.querySelector(?:All)?\(\s*['\"]"
-                + re.escape(sel) + "['\"]",
+                + re.escape(sel)
+                + "['\"]",
                 js,
             )
             if var_m and re.search(rf"if\s*\(\s*{var_m.group(1)}\s*\)", js):
@@ -356,18 +375,21 @@ async def generate_template(
             return tpl
 
         last_errors = errors
-        feedback = (
-            "你上一次的输出违反了以下契约，逐条修复后重新输出完整 HTML：\n- "
-            + "\n- ".join(errors)
+        feedback = "你上一次的输出违反了以下契约，逐条修复后重新输出完整 HTML：\n- " + "\n- ".join(
+            errors
         )
         logger.warning(
             "[template_generator] %s 契约校验失败 attempt=%d: %s",
-            name, attempt, errors,
+            name,
+            attempt,
+            errors,
         )
 
     logger.error(
         "[template_generator] %s 生成失败（%d 次），降级回内置模板。错误：%s",
-        name, max_attempts, last_errors,
+        name,
+        max_attempts,
+        last_errors,
     )
     return None
 
@@ -377,11 +399,15 @@ def _persist(name: str, html: str, requirement: str) -> None:
     try:
         _STORE_DIR.mkdir(parents=True, exist_ok=True)
         (_STORE_DIR / f"{name}.json").write_text(
-            json.dumps({
-                "name": name,
-                "html": html,
-                "requirement": requirement,
-            }, ensure_ascii=False, indent=2),
+            json.dumps(
+                {
+                    "name": name,
+                    "html": html,
+                    "requirement": requirement,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
     except Exception as e:  # 写盘失败不影响本次运行

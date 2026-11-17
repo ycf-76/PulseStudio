@@ -5,6 +5,7 @@
 预期: 见 docs/FEATURE_yt-dlp媒体下载接入.md 验收标准
 文档依据: docs/FEATURE_yt-dlp媒体下载接入.md
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -59,6 +60,7 @@ def fake_ydl(monkeypatch):
     FakeYoutubeDL.last_opts = None
     FakeYoutubeDL.fail = False
     import yt_dlp
+
     monkeypatch.setattr(yt_dlp, "YoutubeDL", FakeYoutubeDL)
     return FakeYoutubeDL
 
@@ -78,13 +80,17 @@ def test_download_media_bilibili_success_returns_filepath(tmp_path, fake_ydl):
 
 def test_download_media_format_has_height_cap(tmp_path, fake_ydl):
     """测试: 画质上限参数；场景: max_height=720；预期: format 含高度限制。"""
-    download_media("https://www.bilibili.com/video/BV1xx", "bilibili", out_dir=tmp_path, max_height=720)
+    download_media(
+        "https://www.bilibili.com/video/BV1xx", "bilibili", out_dir=tmp_path, max_height=720
+    )
     assert "height<=720" in fake_ydl.last_opts["format"]
 
 
 def test_download_media_no_height_cap(tmp_path, fake_ydl):
     """测试: 画质不限制；场景: max_height=None；预期: format 无高度过滤。"""
-    download_media("https://www.bilibili.com/video/BV1xx", "bilibili", out_dir=tmp_path, max_height=None)
+    download_media(
+        "https://www.bilibili.com/video/BV1xx", "bilibili", out_dir=tmp_path, max_height=None
+    )
     assert "height" not in fake_ydl.last_opts["format"]
 
 
@@ -115,8 +121,13 @@ def test_download_media_ytdlp_failure_wrapped(tmp_path, fake_ydl):
 
 def test_download_media_missing_product_raises(tmp_path, fake_ydl, monkeypatch):
     """测试: 错误路径；场景: extract_info 成功但未产出文件；预期: 抛 MediaDownloadError。"""
+
     def fake_extract(self, url, download=True):
-        return {"id": "BV1xx", "title": "t", "requested_downloads": [{"filepath": str(tmp_path / "ghost.mp4")}]}
+        return {
+            "id": "BV1xx",
+            "title": "t",
+            "requested_downloads": [{"filepath": str(tmp_path / "ghost.mp4")}],
+        }
 
     monkeypatch.setattr(FakeYoutubeDL, "extract_info", fake_extract)
     with pytest.raises(MediaDownloadError, match="未找到产物文件"):
@@ -126,7 +137,9 @@ def test_download_media_missing_product_raises(tmp_path, fake_ydl, monkeypatch):
 def test_download_media_cookies_passed_as_netscape_file(tmp_path, fake_ydl):
     """测试: 登录态透传；场景: 传入 dict cookies；预期: 生成临时 Netscape cookiefile 且用后清理。"""
     cookies = {"SESSDATA": "abc123", "buvid3": {"value": "xyz", "domain": ".bilibili.com"}}
-    download_media("https://www.bilibili.com/video/BV1xx", "bilibili", out_dir=tmp_path, cookies=cookies)
+    download_media(
+        "https://www.bilibili.com/video/BV1xx", "bilibili", out_dir=tmp_path, cookies=cookies
+    )
 
     cookiefile = fake_ydl.last_opts.get("cookiefile")
     assert cookiefile, "cookies 传入时 opts 应包含 cookiefile"
@@ -139,7 +152,11 @@ def test_write_netscape_cookiefile_both_value_forms(tmp_path):
     out = tmp_path / "cookies.txt"
     write_netscape_cookiefile(cookies, ".bilibili.com", out)
 
-    rows = [line.split("\t") for line in out.read_text(encoding="utf-8").splitlines() if not line.startswith("#")]
+    rows = [
+        line.split("\t")
+        for line in out.read_text(encoding="utf-8").splitlines()
+        if not line.startswith("#")
+    ]
     by_name = {r[5]: r for r in rows}
     assert by_name["SESSDATA"][0] == ".bilibili.com"
     assert by_name["SESSDATA"][6] == "abc"
@@ -151,6 +168,7 @@ def test_write_netscape_cookiefile_both_value_forms(tmp_path):
 def test_download_media_ytdlp_not_installed(tmp_path, monkeypatch):
     """测试: 依赖缺失；场景: yt_dlp 导入失败；预期: 抛可读 MediaDownloadError（含安装提示）。"""
     import sys
+
     monkeypatch.setitem(sys.modules, "yt_dlp", None)
     with pytest.raises(MediaDownloadError, match="pip install yt-dlp"):
         download_media("https://www.bilibili.com/video/BV1xx", "bilibili", out_dir=tmp_path)
@@ -159,6 +177,7 @@ def test_download_media_ytdlp_not_installed(tmp_path, monkeypatch):
 def test_download_media_ffmpeg_location_resolved(tmp_path, fake_ydl, monkeypatch):
     """测试: ffmpeg 探测；场景: PATH 无 ffmpeg 但 imageio_ffmpeg 可用；预期: opts 指向自带二进制。"""
     import shutil as _shutil
+
     import imageio_ffmpeg
 
     monkeypatch.setattr(_shutil, "which", lambda _: None)

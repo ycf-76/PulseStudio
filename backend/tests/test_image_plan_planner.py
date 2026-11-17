@@ -1,5 +1,9 @@
 import pytest
-pytest.skip("app.agents.nodes 模块已不存在（规划逻辑并入 draft_schema/registry），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.agents.nodes 模块已不存在（规划逻辑并入 draft_schema/registry），本文件测退役实现",
+    allow_module_level=True,
+)
 
 import asyncio
 

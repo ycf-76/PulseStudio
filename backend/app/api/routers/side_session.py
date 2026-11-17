@@ -148,6 +148,7 @@ async def delete_side_session(
 
 # ---------- 提炼式回写（PRD FR-B）----------
 
+
 class BringBackRequest(BaseModel):
     digest: str = Field(..., min_length=1)
 
@@ -186,6 +187,7 @@ async def bring_back(
 
 
 # ---------- 写确认（逐次生效，PRD Q9）----------
+
 
 class SideWriteConfirmRequest(BaseModel):
     action: str = Field(..., pattern="^(approve|reject)$")
@@ -235,7 +237,9 @@ async def confirm_side_write(
 
         if payload.action == "approve":
             await side_session.approve_side_write(side_session_id)
-            obs = f"[observation] 用户已批准此写操作：{pending.get('description', '')}。请继续执行。"
+            obs = (
+                f"[observation] 用户已批准此写操作：{pending.get('description', '')}。请继续执行。"
+            )
         else:
             await side_session.deny_side_write(side_session_id)
             obs = (
@@ -286,22 +290,34 @@ async def confirm_side_write(
                     pass
 
             _ended = output.get("ended_reason", "") if isinstance(output, dict) else ""
-            if _ended in ("side_write_paused", "clarification_paused", "guardian_paused",
-                          "storyboard_paused", "cut_plan_paused"):
+            if _ended in (
+                "side_write_paused",
+                "clarification_paused",
+                "guardian_paused",
+                "storyboard_paused",
+                "cut_plan_paused",
+            ):
                 return  # 再次暂停，等待下一次确认
 
             output_data = output if isinstance(output, dict) else {}
             final_message = str(output_data.get("summary", "") or "").strip() or "本轮执行结束。"
             await _chat_svc.add_message(
-                _resume_session_id, "assistant", final_message,
+                _resume_session_id,
+                "assistant",
+                final_message,
                 {"workflow_status": "completed", "source": "react_loop"},
             )
             try:
-                await sse_bus.publish(_resume_session_id, "agent_loop_done", {
-                    "status": "completed",
-                    "message": final_message,
-                    "ended_reason": _ended or "completed",
-                }, turn_id=payload.turn_id)
+                await sse_bus.publish(
+                    _resume_session_id,
+                    "agent_loop_done",
+                    {
+                        "status": "completed",
+                        "message": final_message,
+                        "ended_reason": _ended or "completed",
+                    },
+                    turn_id=payload.turn_id,
+                )
             except Exception:
                 pass
 
@@ -316,10 +332,12 @@ async def confirm_side_write(
 
         _bg_task.add_done_callback(_on_done)
 
-    return StandardResponse(data={
-        "side_session_id": side_session_id,
-        "status": "approved" if payload.action == "approve" else "rejected",
-    })
+    return StandardResponse(
+        data={
+            "side_session_id": side_session_id,
+            "status": "approved" if payload.action == "approve" else "rejected",
+        }
+    )
 
 
 # include 必须在全部端点定义之后，否则后定义的路由不会注册

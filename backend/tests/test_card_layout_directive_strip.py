@@ -36,14 +36,24 @@ class _CaptureLLM:
 
     async def chat(self, messages, max_tokens=None, **kwargs):
         self.captured_prompt = messages[-1]["content"]
-        return {"content": json.dumps({
-            "subtitle": "计算机没有寒冬，只有分层",
-            "sections": [
-                {"kind": "list", "title": "数据反差",
-                 "items": [{"text": "整体就业率88.3%", "note": "985/211超95%，二本68.65%"}]},
-            ],
-            "closing": "评论区扣1",
-        }, ensure_ascii=False)}
+        return {
+            "content": json.dumps(
+                {
+                    "subtitle": "计算机没有寒冬，只有分层",
+                    "sections": [
+                        {
+                            "kind": "list",
+                            "title": "数据反差",
+                            "items": [
+                                {"text": "整体就业率88.3%", "note": "985/211超95%，二本68.65%"}
+                            ],
+                        },
+                    ],
+                    "closing": "评论区扣1",
+                },
+                ensure_ascii=False,
+            )
+        }
 
 
 def test_strip_layout_directives_removes_page_markers():

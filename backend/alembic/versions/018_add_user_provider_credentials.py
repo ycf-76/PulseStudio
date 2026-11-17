@@ -11,8 +11,9 @@ Create Date: 2026-10-21
   - 同一用户同一 Provider 唯一约束
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "018_byok"
 down_revision = "017_feedback_events"

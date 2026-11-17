@@ -1,4 +1,5 @@
 """五期-E 专项验证：spider-service（Scrapling+Playwright 隔离）。"""
+
 from __future__ import annotations
 
 import sys

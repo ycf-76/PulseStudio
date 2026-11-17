@@ -91,16 +91,18 @@ def parse_results(payload: Any) -> list[dict[str, str]] | None:
 
         if _is_homepage(url):
             continue
-        items.append({
-            "url": url,
-            "title": title.strip(),
-            "snippet": snippet,
-            "summary": summary or "",
-            "date": date or "",
-            "site_name": _opt_str(raw.get("site_name")),
-            "authority": str(raw.get("authority") or ""),
-            "rerank_score": str(raw.get("rerank_score") or ""),
-        })
+        items.append(
+            {
+                "url": url,
+                "title": title.strip(),
+                "snippet": snippet,
+                "summary": summary or "",
+                "date": date or "",
+                "site_name": _opt_str(raw.get("site_name")),
+                "authority": str(raw.get("authority") or ""),
+                "rerank_score": str(raw.get("rerank_score") or ""),
+            }
+        )
     return items
 
 
@@ -203,7 +205,7 @@ class DeepSeekApiSource(ContentSource):
                 if resp.status_code == 200:
                     return resp.json()
                 if resp.status_code in _RETRY_STATUS and attempt < self.max_retries:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[deepseek_api] HTTP {resp.status_code} "
                         f"(attempt {attempt + 1}/{self.max_retries + 1}), retry in {wait}s"
@@ -211,8 +213,7 @@ class DeepSeekApiSource(ContentSource):
                     await asyncio.sleep(wait)
                     continue
                 logger.error(
-                    f"[deepseek_api] HTTP {resp.status_code} from {endpoint}: "
-                    f"{resp.text[:300]}"
+                    f"[deepseek_api] HTTP {resp.status_code} from {endpoint}: " f"{resp.text[:300]}"
                 )
                 return None
             except Exception as e:
@@ -250,10 +251,9 @@ class DeepSeekApiSource(ContentSource):
         if not self.fetch_enabled or self.fetch_max_urls <= 0:
             return results
 
-        targets = [
-            r for r in results
-            if len(r.content) < self.fetch_min_chars
-        ][: self.fetch_max_urls]
+        targets = [r for r in results if len(r.content) < self.fetch_min_chars][
+            : self.fetch_max_urls
+        ]
         if not targets:
             return results
 
@@ -280,9 +280,7 @@ class DeepSeekApiSource(ContentSource):
 
         await asyncio.gather(*(_one(item) for item in targets), return_exceptions=True)
         filled = sum(1 for item in targets if item.raw.get("fetched"))
-        logger.info(
-            f"[deepseek_api] fetch enrichment: {filled}/{len(targets)} pages filled"
-        )
+        logger.info(f"[deepseek_api] fetch enrichment: {filled}/{len(targets)} pages filled")
         return results
 
     def _normalize(self, items: list[dict[str, str]]) -> list[TrendingContent]:
@@ -297,32 +295,34 @@ class DeepSeekApiSource(ContentSource):
             title = item["title"] or url
             snippet = item["snippet"]
             body = item["summary"]
-            results.append(TrendingContent(
-                platform="deepseek_api",
-                content_id=_content_id(url),
-                title=title,
-                summary=(snippet or body or title)[:200],
-                content=body or snippet or title,
-                author=item["site_name"],
-                url=url,
-                likes=0,
-                comments=0,
-                shares=0,
-                views=0,
-                cover_img="",
-                published_at=item["date"],
-                tags=[],
-                title_original=title,
-                summary_original=snippet,
-                content_original=body,
-                raw={
-                    "rank": idx + 1,
-                    "site_name": item["site_name"],
-                    "authority": item["authority"],
-                    "rerank_score": item["rerank_score"],
-                    "date": item["date"],
-                },
-            ))
+            results.append(
+                TrendingContent(
+                    platform="deepseek_api",
+                    content_id=_content_id(url),
+                    title=title,
+                    summary=(snippet or body or title)[:200],
+                    content=body or snippet or title,
+                    author=item["site_name"],
+                    url=url,
+                    likes=0,
+                    comments=0,
+                    shares=0,
+                    views=0,
+                    cover_img="",
+                    published_at=item["date"],
+                    tags=[],
+                    title_original=title,
+                    summary_original=snippet,
+                    content_original=body,
+                    raw={
+                        "rank": idx + 1,
+                        "site_name": item["site_name"],
+                        "authority": item["authority"],
+                        "rerank_score": item["rerank_score"],
+                        "date": item["date"],
+                    },
+                )
+            )
         return results
 
     async def _search_remote(self, query: str, count: int) -> list[TrendingContent]:

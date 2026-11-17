@@ -8,8 +8,9 @@ User 表新增 avatar_url 字段，存储根据邮箱自动解析的头像 URL�
 策略：QQ 邮箱 → QQ 头像，其他邮箱 → Gravatar identicon，无邮箱 → 本地默认 SVG。
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "020_user_avatar"
 down_revision = "019_ai_personality"

@@ -19,12 +19,12 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
-from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
 from app.api.deps import get_current_user
 from app.api.schemas.common import StandardResponse
+from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
 
 logger = logging.getLogger(__name__)
 
@@ -103,13 +103,15 @@ def _load_and_register_skill(
 def _invalidate_skill_caches() -> None:
     """热插拔后失效全局缓存，确保新 Skill 对 Agent 可见。"""
     try:
-        from app.agents.registry import _skills_cache
         import app.agents.registry as _ar
+        from app.agents.registry import _skills_cache
+
         _ar._skills_cache = None
     except Exception:
         pass
     try:
         import app.api.routers.chat_agent as _ca
+
         _ca._trigger_words_cache = None
     except Exception:
         pass
@@ -127,7 +129,9 @@ def _ensure_builtin_skills_registered() -> None:
 
 @router.get("")
 async def list_skills(
-    node_type: str | None = Query(default=None, description="按节点类型过滤（如 copywrite/image_gen/analyze/audit）"),
+    node_type: str | None = Query(
+        default=None, description="按节点类型过滤（如 copywrite/image_gen/analyze/audit）"
+    ),
     user_id: str = Depends(get_current_user),
 ) -> StandardResponse[dict[str, list[dict]]]:
     """列出所有可用的 Skill（按 node_type 分组）。
@@ -182,20 +186,24 @@ def _skill_detail_payload(cls: type) -> dict[str, Any]:
     model_fields = getattr(schema, "model_fields", {}) or {}
     for fname, finfo in model_fields.items():
         required_fn = getattr(finfo, "is_required", None)
-        fields.append({
-            "name": fname,
-            "type": _type_label(getattr(finfo, "annotation", "")),
-            "description": getattr(finfo, "description", "") or "",
-            "required": bool(required_fn()) if callable(required_fn) else False,
-        })
-    payload.update({
-        "trigger_words": [str(t) for t in (getattr(cls, "trigger_words", []) or [])],
-        "prompt_guidance": getattr(cls, "prompt_guidance", "") or "",
-        "platform": getattr(cls, "platform", "") or "",
-        "input_fields": fields,
-        "reference_paths": list(getattr(cls, "reference_paths", []) or []),
-        "prompt_content": "",
-    })
+        fields.append(
+            {
+                "name": fname,
+                "type": _type_label(getattr(finfo, "annotation", "")),
+                "description": getattr(finfo, "description", "") or "",
+                "required": bool(required_fn()) if callable(required_fn) else False,
+            }
+        )
+    payload.update(
+        {
+            "trigger_words": [str(t) for t in (getattr(cls, "trigger_words", []) or [])],
+            "prompt_guidance": getattr(cls, "prompt_guidance", "") or "",
+            "platform": getattr(cls, "platform", "") or "",
+            "input_fields": fields,
+            "reference_paths": list(getattr(cls, "reference_paths", []) or []),
+            "prompt_content": "",
+        }
+    )
     if payload.get("is_prompt_skill"):
         loader = getattr(cls, "_load_skill_md", None)
         if callable(loader):
@@ -313,6 +321,7 @@ async def unregister_skill(
                     logger.info(f"[unregister_skill] deleted file {p}")
                 if target_dir and target_dir.exists():
                     import shutil
+
                     shutil.rmtree(target_dir, ignore_errors=True)
                     logger.info(f"[unregister_skill] deleted dir {target_dir}")
         del sys.modules[module_name]
@@ -336,9 +345,15 @@ class PromptSkillCreateRequest(BaseModel):
     name: str = Field(..., description="Skill 唯一标识（英文小写+下划线），如 my_checker")
     display_name: str = Field(..., description="前端展示名，如 我的检查器")
     description: str = Field(default="", description="Skill 描述")
-    trigger_words: list[str] = Field(default_factory=list, description="触发词列表，如 ['检查', '审核']")
-    prompt_guidance: str = Field(default="", description="给 Agent 的简短提示，说明何时使用此 Skill")
-    skill_body: str = Field(..., description="SKILL.md 正文（提示词内容，YAML frontmatter 后的部分）")
+    trigger_words: list[str] = Field(
+        default_factory=list, description="触发词列表，如 ['检查', '审核']"
+    )
+    prompt_guidance: str = Field(
+        default="", description="给 Agent 的简短提示，说明何时使用此 Skill"
+    )
+    skill_body: str = Field(
+        ..., description="SKILL.md 正文（提示词内容，YAML frontmatter 后的部分）"
+    )
 
 
 class PromptSkillCreateResult(BaseModel):
@@ -418,7 +433,9 @@ async def create_prompt_skill(
 
 @router.post("/prompt/upload", response_model=StandardResponse[PromptSkillCreateResult])
 async def upload_prompt_skill(
-    file: UploadFile = File(..., description="Skill Markdown 文件（.md），含 YAML frontmatter + SKILL.md 正文"),
+    file: UploadFile = File(
+        ..., description="Skill Markdown 文件（.md），含 YAML frontmatter + SKILL.md 正文"
+    ),
     user_id: str = Depends(get_current_user),
 ) -> StandardResponse[PromptSkillCreateResult]:
     """上传 .md 文件注册提示词型 Skill。
@@ -461,7 +478,9 @@ async def upload_prompt_skill(
         display_name=skill_cls.display_name or skill_cls.name,
         description=skill_cls.description,
     )
-    return StandardResponse(data=result, message=f"提示词型 Skill '{result.display_name}' 上传注册成功")
+    return StandardResponse(
+        data=result, message=f"提示词型 Skill '{result.display_name}' 上传注册成功"
+    )
 
 
 @router.delete("/prompt/{node_type}/{skill_name}", response_model=StandardResponse[str])
@@ -486,7 +505,9 @@ async def delete_prompt_skill(
     owner = getattr(skill_cls, "owner_user_id", "") or ""
     if owner and owner != user_id:
         raise HTTPException(status_code=403, detail="不能删除其他用户的 Skill")
-    if not module_name.startswith("app.tools.prompt_skills.") and not module_name.startswith("app.core.prompt_skills."):
+    if not module_name.startswith("app.tools.prompt_skills.") and not module_name.startswith(
+        "app.core.prompt_skills."
+    ):
         raise HTTPException(status_code=403, detail="仅支持删除提示词型 Skill（.md 文件创建的）")
 
     md_filename = getattr(skill_cls, "skill_md_path", "")
@@ -523,10 +544,12 @@ async def import_skill(
     """
     import ast as _ast
 
+    from app.core.permissions import Permission, permission_gate
     from app.engine.schemas import PermissionDeniedError, WorkflowContext
-    from app.core.permissions import permission_gate, Permission
 
-    context = WorkflowContext(workflow_id="skill_import", node_id="skill_import", user_id=user_id, account_id="")
+    context = WorkflowContext(
+        workflow_id="skill_import", node_id="skill_import", user_id=user_id, account_id=""
+    )
     try:
         await permission_gate.require([Permission.SKILL_IMPORT], context)
     except PermissionDeniedError as e:
@@ -615,7 +638,9 @@ async def install_skill_from_github(
     gh_pattern = r"https?://github\.com/([^/]+)/([^/]+)(?:/tree/([^/]+)(/.*)?)?"
     m = re.match(gh_pattern, url)
     if not m:
-        raise HTTPException(status_code=400, detail="无效的 GitHub URL，格式: https://github.com/owner/repo")
+        raise HTTPException(
+            status_code=400, detail="无效的 GitHub URL，格式: https://github.com/owner/repo"
+        )
 
     owner = m.group(1)
     repo_name = m.group(2)
@@ -624,17 +649,21 @@ async def install_skill_from_github(
     effective_subpath = url_subpath or subpath
 
     clone_url = f"https://github.com/{owner}/{repo_name}.git"
-    logger.info(f"[install-github] installing {owner}/{repo_name} (branch={branch}, subpath={effective_subpath})")
+    logger.info(
+        f"[install-github] installing {owner}/{repo_name} (branch={branch}, subpath={effective_subpath})"
+    )
 
+    import io
     import tempfile
     import zipfile
-    import io
+
     tmp_dir = tempfile.mkdtemp(prefix="skill_install_")
     try:
         # Strategy 1: Download zip via GitHub API (no git required, works without proxy)
         zip_url = f"https://api.github.com/repos/{owner}/{repo_name}/zipball/{branch}"
         logger.info(f"[install-github] downloading zip: {zip_url}")
         import httpx as _httpx
+
         try:
             async with _httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
                 resp = await client.get(zip_url)
@@ -662,7 +691,10 @@ async def install_skill_from_github(
 
             result = subprocess.run(
                 [git_cmd, "clone", "--depth", "1", "--branch", branch, clone_url, tmp_dir],
-                capture_output=True, text=True, timeout=60, env=env,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                env=env,
             )
             if result.returncode != 0:
                 raise HTTPException(
@@ -710,7 +742,14 @@ async def install_skill_from_github(
                 continue
             # 安全检查
             code = py_file.read_text(encoding="utf-8", errors="ignore")
-            safety_keywords = ["os.system", "subprocess", "eval(", "exec(", "__import__", "shutil.rmtree"]
+            safety_keywords = [
+                "os.system",
+                "subprocess",
+                "eval(",
+                "exec(",
+                "__import__",
+                "shutil.rmtree",
+            ]
             for kw in safety_keywords:
                 if kw in code:
                     logger.warning(f"[install-github] skipping {py_file.name}: contains '{kw}'")
@@ -775,10 +814,14 @@ async def install_skill_from_github(
                 npm_result = subprocess.run(
                     ["npm", "install"],
                     cwd=str(target_dir),
-                    capture_output=True, text=True, timeout=120,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
                 )
                 if npm_result.returncode != 0:
-                    logger.warning(f"[install-github] npm install failed: {npm_result.stderr[:300]}")
+                    logger.warning(
+                        f"[install-github] npm install failed: {npm_result.stderr[:300]}"
+                    )
             except FileNotFoundError:
                 logger.info("[install-github] npm not found, skipping npm install")
 
@@ -837,7 +880,10 @@ async def install_skill_from_github(
                 skill_md=skill_md_content[:2000],
                 installed_files=installed_files,
             )
-            return StandardResponse(data=result, message=f"Skill '{extracted_name}' 安装成功（非 Python Skill，文件已保存）")
+            return StandardResponse(
+                data=result,
+                message=f"Skill '{extracted_name}' 安装成功（非 Python Skill，文件已保存）",
+            )
 
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=422, detail="git clone 超时（60秒）")

@@ -61,6 +61,7 @@ class YouTubeSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             self._client = await create_async_client(
                 timeout=httpx.Timeout(self.timeout),
@@ -70,9 +71,7 @@ class YouTubeSource(ContentSource):
             )
         return self._client
 
-    async def _translate_results(
-        self, results: list[TrendingContent]
-    ) -> list[TrendingContent]:
+    async def _translate_results(self, results: list[TrendingContent]) -> list[TrendingContent]:
         if not results:
             return results
         client = await self._ensure_client()
@@ -91,6 +90,7 @@ class YouTubeSource(ContentSource):
     def _parse_iso_duration(self, duration: str) -> str:
         """ISO 8601 duration (PT#H#M#S) → 可读字符串。"""
         import re
+
         match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
         if not match:
             return duration
@@ -154,24 +154,26 @@ class YouTubeSource(ContentSource):
                     cover = thumb[quality]["url"]
                     break
 
-            results.append(TrendingContent(
-                platform="youtube",
-                content_id=vid,
-                title=snippet.get("title", ""),
-                summary=snippet.get("description", "")[:200],
-                content=snippet.get("description", ""),
-                author=snippet.get("channelTitle", ""),
-                url=f"https://www.youtube.com/watch?v={vid}",
-                likes=int(stats.get("likeCount", 0)),
-                views=int(stats.get("viewCount", 0)),
-                comments=int(stats.get("commentCount", 0)),
-                cover_img=cover,
-                published_at=snippet.get("publishedAt", ""),
-                tags=["youtube", "video"],
-                title_original=snippet.get("title", ""),
-                summary_original=snippet.get("description", "")[:200],
-                content_original=snippet.get("description", ""),
-            ))
+            results.append(
+                TrendingContent(
+                    platform="youtube",
+                    content_id=vid,
+                    title=snippet.get("title", ""),
+                    summary=snippet.get("description", "")[:200],
+                    content=snippet.get("description", ""),
+                    author=snippet.get("channelTitle", ""),
+                    url=f"https://www.youtube.com/watch?v={vid}",
+                    likes=int(stats.get("likeCount", 0)),
+                    views=int(stats.get("viewCount", 0)),
+                    comments=int(stats.get("commentCount", 0)),
+                    cover_img=cover,
+                    published_at=snippet.get("publishedAt", ""),
+                    tags=["youtube", "video"],
+                    title_original=snippet.get("title", ""),
+                    summary_original=snippet.get("description", "")[:200],
+                    content_original=snippet.get("description", ""),
+                )
+            )
 
         results = await self._translate_results(results)
         logger.info(f"[youtube] search '{keyword}': got {len(results)} results")
@@ -220,24 +222,26 @@ class YouTubeSource(ContentSource):
 
             duration = content_details.get("duration", "")
 
-            results.append(TrendingContent(
-                platform="youtube",
-                content_id=vid,
-                title=snippet.get("title", ""),
-                summary=snippet.get("description", "")[:200],
-                content=snippet.get("description", ""),
-                author=snippet.get("channelTitle", ""),
-                url=f"https://www.youtube.com/watch?v={vid}",
-                likes=int(stats.get("likeCount", 0)),
-                views=int(stats.get("viewCount", 0)),
-                comments=int(stats.get("commentCount", 0)),
-                cover_img=cover,
-                published_at=snippet.get("publishedAt", ""),
-                tags=["youtube", "video", "trending"] + ([duration] if duration else []),
-                title_original=snippet.get("title", ""),
-                summary_original=snippet.get("description", "")[:200],
-                content_original=snippet.get("description", ""),
-            ))
+            results.append(
+                TrendingContent(
+                    platform="youtube",
+                    content_id=vid,
+                    title=snippet.get("title", ""),
+                    summary=snippet.get("description", "")[:200],
+                    content=snippet.get("description", ""),
+                    author=snippet.get("channelTitle", ""),
+                    url=f"https://www.youtube.com/watch?v={vid}",
+                    likes=int(stats.get("likeCount", 0)),
+                    views=int(stats.get("viewCount", 0)),
+                    comments=int(stats.get("commentCount", 0)),
+                    cover_img=cover,
+                    published_at=snippet.get("publishedAt", ""),
+                    tags=["youtube", "video", "trending"] + ([duration] if duration else []),
+                    title_original=snippet.get("title", ""),
+                    summary_original=snippet.get("description", "")[:200],
+                    content_original=snippet.get("description", ""),
+                )
+            )
 
         results = await self._translate_results(results)
         logger.info(f"[youtube] get_trending: got {len(results)} results")
@@ -254,7 +258,7 @@ class YouTubeSource(ContentSource):
         stats_map: dict[str, dict[str, Any]] = {}
         batch_size = 50
         for i in range(0, len(video_ids), batch_size):
-            batch = video_ids[i:i + batch_size]
+            batch = video_ids[i : i + batch_size]
             params = {
                 "part": "statistics",
                 "id": ",".join(batch),
@@ -273,6 +277,7 @@ class YouTubeSource(ContentSource):
 
     def _time_range_to_iso(self, time_range: str) -> str:
         from datetime import timedelta
+
         now = datetime.now(timezone.utc)
         deltas = {
             "day": timedelta(days=1),

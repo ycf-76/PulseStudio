@@ -1,9 +1,9 @@
 """ReAct Loop 七轮诊断 — P0-2 Guardian 路由安全漏洞 + P1-5/P1-7/P1-10。
 
-  Step 31: Guardian needs_confirmation 与 storyboard needs_confirmation 区分
-  Step 32: 主入口 agent_chat 异常时发 workflow_error SSE
-  Step 33: /clarify cancel 路径 cleanup_loop_state 在 finally 中
-  Step 34: _build_initial_messages 截断大 context
+Step 31: Guardian needs_confirmation 与 storyboard needs_confirmation 区分
+Step 32: 主入口 agent_chat 异常时发 workflow_error SSE
+Step 33: /clarify cancel 路径 cleanup_loop_state 在 finally 中
+Step 34: _build_initial_messages 截断大 context
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ class TestStep31GuardianVsStoryboardRouting:
     def test_guardian_confirmation_has_dedicated_sse_event(self):
         """Guardian 确认应发 guardian_confirmation_required SSE 事件（不是 storyboard）。"""
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession.run)
 
         has_guardian_event = "guardian_confirmation_required" in source
@@ -40,6 +41,7 @@ class TestStep31GuardianVsStoryboardRouting:
     def test_storyboard_check_requires_shots_field(self):
         """分镜确认检查应要求 obs 中有 shots 字段。"""
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession.run)
 
         # 找 storyboard confirmation 分支
@@ -57,6 +59,7 @@ class TestStep31GuardianVsStoryboardRouting:
     def test_guardian_confirmation_saves_awaiting_guardian(self):
         """Guardian 确认应保存 _awaiting_guardian_confirmation 到 loop_state。"""
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession.run)
 
         has_guardian_awaiting = "_awaiting_guardian_confirmation" in source
@@ -68,6 +71,7 @@ class TestStep31GuardianVsStoryboardRouting:
     def test_guardian_confirmation_not_routed_to_storyboard(self):
         """Guardian 确认不应设置 _awaiting_storyboard_confirmation。"""
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession.run)
 
         # 找 Guardian 确认分支
@@ -75,7 +79,7 @@ class TestStep31GuardianVsStoryboardRouting:
         if guardian_pos == -1:
             pytest.fail("guardian_confirmation_required 不存在")
         # Guardian 分支内不应有 _awaiting_storyboard_confirmation
-        guardian_block = source[guardian_pos:guardian_pos + 800]
+        guardian_block = source[guardian_pos : guardian_pos + 800]
         has_storyboard_in_guardian = "_awaiting_storyboard_confirmation" in guardian_block
         assert not has_storyboard_in_guardian, (
             "Guardian 确认分支内不应设置 _awaiting_storyboard_confirmation，"
@@ -98,6 +102,7 @@ class TestStep32AgentChatExceptionSse:
     def test_agent_process_in_try_except(self):
         """agent.process() 应在 try/except 中调用。"""
         from app.api.routers.chat_agent import agent_chat
+
         source = inspect.getsource(agent_chat)
 
         process_pos = source.find("agent.process(")
@@ -112,13 +117,12 @@ class TestStep32AgentChatExceptionSse:
         )
         # try: 和 agent.process 之间不应有 except（即 try 仍有效）
         between = before_process[last_try_pos:]
-        assert "except" not in between, (
-            "agent.process() 应在最近的 try 块内。"
-        )
+        assert "except" not in between, "agent.process() 应在最近的 try 块内。"
 
     def test_exception_handler_publishes_workflow_error(self):
         """异常处理应发 workflow_error SSE 事件。"""
         from app.api.routers.chat_agent import agent_chat
+
         source = inspect.getsource(agent_chat)
 
         # 找 agent.process 后的 except 块
@@ -145,6 +149,7 @@ class TestStep33ClarifyCancelCleanupInFinally:
     def test_cancel_path_cleanup_in_finally(self):
         """cancel 路径的 cleanup_loop_state 应在 finally 块中。"""
         from app.api.routers.chat_agent import clarify_action
+
         source = inspect.getsource(clarify_action)
 
         # 找 cancel 分支
@@ -182,6 +187,7 @@ class TestStep34BuildContextTruncation:
     def test_has_truncation_logic(self):
         """_build_initial_messages 应有截断逻辑。"""
         from app.engine.reactor.session import ReactorSession
+
         source = inspect.getsource(ReactorSession._build_initial_messages)
 
         has_truncation = "truncated" in source.lower()
@@ -220,18 +226,10 @@ class TestStep34BuildContextTruncation:
         messages = session._build_initial_messages("test intent", large_context)
         # 动态设计块会以独立 system 消息插在 system_prompt 之后，
         # 故不能按固定下标取 context 消息，按前缀查找。
-        context_msg = next(
-            m["content"] for m in messages if m["content"].startswith("[context]")
-        )
+        context_msg = next(m["content"] for m in messages if m["content"].startswith("[context]"))
 
         # work_context 应被截断（不会出现 5000 个 x）
-        assert "x" * 5000 not in context_msg, (
-            "大字段应被截断，不应完整序列化进 system message。"
-        )
-        assert "truncated" in context_msg, (
-            "截断后应有 truncated 标记。"
-        )
+        assert "x" * 5000 not in context_msg, "大字段应被截断，不应完整序列化进 system message。"
+        assert "truncated" in context_msg, "截断后应有 truncated 标记。"
         # 小字段应完整保留
-        assert "small_field" in context_msg, (
-            "小字段应完整保留，不应被截断。"
-        )
+        assert "small_field" in context_msg, "小字段应完整保留，不应被截断。"

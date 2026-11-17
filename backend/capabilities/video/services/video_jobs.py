@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 
 # job_type → 并发上限（Worker 按类型取最小值调度）
 JOB_TYPE_CONCURRENCY = {
-    "shot_image": 2,   # 复用 multi_image_video_max_concurrent_frames 语义
-    "shot_video": 1,   # 串行，保护 API 配额
-    "compose": 1,      # ffmpeg 拼接独立跑
+    "shot_image": 2,  # 复用 multi_image_video_max_concurrent_frames 语义
+    "shot_video": 1,  # 串行，保护 API 配额
+    "compose": 1,  # ffmpeg 拼接独立跑
 }
 MAX_JOB_ATTEMPTS = 3
 
@@ -329,7 +329,9 @@ class VideoStudioService:
                         result = await session.execute(
                             update(VideoJob)
                             .where(VideoJob.id == row.id, VideoJob.status == "queued")
-                            .values(status="running", started_at=_now(), attempts=VideoJob.attempts + 1)
+                            .values(
+                                status="running", started_at=_now(), attempts=VideoJob.attempts + 1
+                            )
                         )
                         if result.rowcount == 1:
                             took.append(row)
@@ -419,9 +421,7 @@ class VideoStudioService:
             if job.status != "failed":
                 raise PermissionError(f"任务状态 {job.status} 不可重试")
             if job.attempts >= MAX_JOB_ATTEMPTS:
-                raise PermissionError(
-                    f"任务已重试 {job.attempts} 次达上限，请调整参数后重新提交"
-                )
+                raise PermissionError(f"任务已重试 {job.attempts} 次达上限，请调整参数后重新提交")
             job.status = "queued"
             job.error = ""
             job.progress = 0

@@ -81,9 +81,12 @@ def install_audit_sink() -> None:
 # 域名白名单管理
 # ---------------------------------------------------------------------------
 
+
 class DomainAllowRequest(BaseModel):
     domain: str = Field(..., description="要临时放行的域名，如 example.com（域后缀匹配）")
-    ttl_minutes: int = Field(default=60, ge=1, le=24 * 60, description="放行时长（分钟），到期自动失效")
+    ttl_minutes: int = Field(
+        default=60, ge=1, le=24 * 60, description="放行时长（分钟），到期自动失效"
+    )
 
 
 @router.get("/domains")
@@ -125,7 +128,9 @@ def _get_proxy_client() -> httpx.AsyncClient:
         _proxy_client = httpx.AsyncClient(
             timeout=30.0,
             follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+            },
         )
     return _proxy_client
 
@@ -189,6 +194,7 @@ async def proxy_request(request: Request, path: str):
             content = html_text.encode("utf-8")
 
         from fastapi.responses import Response
+
         return Response(
             content=content,
             status_code=resp.status_code,
@@ -204,8 +210,11 @@ async def proxy_request(request: Request, path: str):
 # 远程浏览器交互 API（前端侧面板调用）
 # ---------------------------------------------------------------------------
 
+
 class InteractRequest(BaseModel):
-    action: str = Field(..., description="操作类型: click / dblclick / scroll / type / refresh / back / forward")
+    action: str = Field(
+        ..., description="操作类型: click / dblclick / scroll / type / refresh / back / forward"
+    )
     x: int | None = Field(default=None, description="点击/滚动 X 坐标（页面内坐标）")
     y: int | None = Field(default=None, description="点击/滚动 Y 坐标（页面内坐标）")
     deltaY: int | None = Field(default=None, description="滚动量")
@@ -242,40 +251,54 @@ async def browser_interact(
             result = await client.screenshot(quality=60)
 
         elif action == "click" and body.x is not None and body.y is not None:
-            await client.evaluate(f"() => {{ const e = new MouseEvent('click', {{ clientX: {body.x}, clientY: {body.y}, bubbles: true }}); document.elementFromPoint({body.x}, {body.y})?.dispatchEvent(e) }}")
+            await client.evaluate(
+                f"() => {{ const e = new MouseEvent('click', {{ clientX: {body.x}, clientY: {body.y}, bubbles: true }}); document.elementFromPoint({body.x}, {body.y})?.dispatchEvent(e) }}"
+            )
             import asyncio
+
             await asyncio.sleep(0.3)
             result = await client.screenshot(quality=60)
 
         elif action == "dblclick" and body.x is not None and body.y is not None:
-            await client.evaluate(f"() => {{ const el = document.elementFromPoint({body.x}, {body.y}); if(el) {{ el.dispatchEvent(new MouseEvent('dblclick', {{ clientX: {body.x}, clientY: {body.y}, bubbles: true }})) }} }}")
+            await client.evaluate(
+                f"() => {{ const el = document.elementFromPoint({body.x}, {body.y}); if(el) {{ el.dispatchEvent(new MouseEvent('dblclick', {{ clientX: {body.x}, clientY: {body.y}, bubbles: true }})) }} }}"
+            )
             import asyncio
+
             await asyncio.sleep(0.3)
             result = await client.screenshot(quality=60)
 
         elif action == "scroll" and body.x is not None and body.y is not None:
             delta_y = body.deltaY or 100
-            await client.evaluate(f"() => {{ window.scrollBy({{ top: {delta_y}, left: 0, behavior: 'instant' }}) }}")
+            await client.evaluate(
+                f"() => {{ window.scrollBy({{ top: {delta_y}, left: 0, behavior: 'instant' }}) }}"
+            )
             import asyncio
+
             await asyncio.sleep(0.2)
             result = await client.screenshot(quality=60)
 
         elif action == "type" and body.text:
             js_text = body.text.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${}")
-            await client.evaluate(f"() => {{ const el = document.activeElement; if(el && (el.tagName==='INPUT'||el.tagName=='TEXTAREA'||el.isContentEditable)) {{ const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; nativeInputValueSetter.call(el, `{js_text}`); el.dispatchEvent(new Event('input', {{ bubbles: true }})); el.dispatchEvent(new Event('change', {{ bubbles: true }})) }} }}")
+            await client.evaluate(
+                f"() => {{ const el = document.activeElement; if(el && (el.tagName==='INPUT'||el.tagName=='TEXTAREA'||el.isContentEditable)) {{ const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; nativeInputValueSetter.call(el, `{js_text}`); el.dispatchEvent(new Event('input', {{ bubbles: true }})); el.dispatchEvent(new Event('change', {{ bubbles: true }})) }} }}"
+            )
             import asyncio
+
             await asyncio.sleep(0.2)
             result = await client.screenshot(quality=60)
 
         elif action == "back":
             await client.evaluate("() => window.history.back()")
             import asyncio
+
             await asyncio.sleep(0.5)
             result = await client.screenshot(quality=60)
 
         elif action == "forward":
             await client.evaluate("() => window.history.forward()")
             import asyncio
+
             await asyncio.sleep(0.5)
             result = await client.screenshot(quality=60)
 
@@ -299,6 +322,7 @@ async def browser_interact(
 # ---------------------------------------------------------------------------
 # 导航 + 截图 REST 端点（前端侧边栏浏览器面板调用）
 # ---------------------------------------------------------------------------
+
 
 class NavigateRequest(BaseModel):
     url: str = Field(..., description="目标 URL")
@@ -371,7 +395,9 @@ PUBLISHER_DOMAINS = {
 
 
 class PublishNavigateRequest(BaseModel):
-    platform: str = Field(..., description="平台标识: xiaohongshu/douyin/kuaishou/bilibili/zhihu/wechat")
+    platform: str = Field(
+        ..., description="平台标识: xiaohongshu/douyin/kuaishou/bilibili/zhihu/wechat"
+    )
 
 
 @router.post("/publish/navigate")
@@ -387,6 +413,7 @@ async def publish_navigate(
 
     client = get_browser_client()
     from urllib.parse import urlparse
+
     domain = urlparse(url).hostname or ""
     if domain and domain not in client._static_domains():
         try:
@@ -416,15 +443,22 @@ async def publish_navigate(
 # 发布提交：用 Scrapling StealthyFetcher 自动填写 + 提交
 # ---------------------------------------------------------------------------
 
+
 class PublishSubmitRequest(BaseModel):
-    platform: str = Field(..., description="平台标识: xiaohongshu/douyin/kuaishou/bilibili/zhihu/wechat")
+    platform: str = Field(
+        ..., description="平台标识: xiaohongshu/douyin/kuaishou/bilibili/zhihu/wechat"
+    )
     title: str = Field(..., description="作品标题")
     content: str = Field(..., description="作品正文/描述")
     tags: list[str] = Field(default=[], description="标签列表")
     images_base64: list[str] = Field(default=[], description="图片 base64 列表（不含 data: 前缀）")
     images_urls: list[str] = Field(default=[], description="图片 URL 列表（后端自动下载转 base64）")
-    page_htmls: list[str] = Field(default=[], description="卡片页面 HTML 列表（后端自动渲染为图片并上传）")
-    auto_submit: bool = Field(default=False, description="是否自动点击发布按钮（默认半自动，只填写不提交）")
+    page_htmls: list[str] = Field(
+        default=[], description="卡片页面 HTML 列表（后端自动渲染为图片并上传）"
+    )
+    auto_submit: bool = Field(
+        default=False, description="是否自动点击发布按钮（默认半自动，只填写不提交）"
+    )
 
 
 @router.post("/publish/submit")
@@ -444,8 +478,8 @@ async def publish_submit(
     半自动模式（默认）：只填写内容，用户在浏览器中确认后手动点击发布
     全自动模式：填写 + 点击发布一步完成
     """
-    from capabilities.messaging.services.platform_publisher import publish_to_platform
     from app.config import get_settings
+    from capabilities.messaging.services.platform_publisher import publish_to_platform
 
     if not get_settings().automation_enabled:
         raise HTTPException(
@@ -462,6 +496,7 @@ async def publish_submit(
 
     if body.images_urls:
         import httpx
+
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             for img_url in body.images_urls:
                 if not img_url:
@@ -479,7 +514,9 @@ async def publish_submit(
             from playwright.async_api import async_playwright
 
             async with async_playwright() as pw:
-                browser = await pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-gpu"])
+                browser = await pw.chromium.launch(
+                    headless=True, args=["--no-sandbox", "--disable-gpu"]
+                )
                 ctx = await browser.new_context(viewport={"width": 1080, "height": 1440})
                 for i, html_content in enumerate(body.page_htmls):
                     if not html_content:
@@ -515,6 +552,7 @@ async def publish_submit(
 # ---------------------------------------------------------------------------
 # 发布状态查询：检查平台发布页是否已成功发布
 # ---------------------------------------------------------------------------
+
 
 class PublishCheckRequest(BaseModel):
     platform: str = Field(..., description="平台标识")
@@ -554,9 +592,10 @@ async def publish_check(
 
         if published:
             try:
+                from sqlalchemy import select as sa_select
+
                 from app.db.models import PublishedContentPerformance
                 from app.db.session import AsyncSessionLocal
-                from sqlalchemy import select as sa_select
 
                 async with AsyncSessionLocal() as db:
                     stmt = sa_select(PublishedContentPerformance).where(
@@ -587,6 +626,7 @@ async def publish_check(
 # ---------------------------------------------------------------------------
 # 审计查询
 # ---------------------------------------------------------------------------
+
 
 @router.get("/audit")
 async def query_audit(
@@ -663,7 +703,10 @@ def _tool_specs() -> list[dict]:
                 "type": "object",
                 "properties": {
                     "url": {"type": "string", "description": "目标网址（http/https）"},
-                    "profile_id": {"type": "string", "description": "可选：持久化 Profile ID（跨会话保留登录态）"},
+                    "profile_id": {
+                        "type": "string",
+                        "description": "可选：持久化 Profile ID（跨会话保留登录态）",
+                    },
                 },
                 "required": ["url"],
             },
@@ -712,7 +755,9 @@ def _tool_specs() -> list[dict]:
             "description": "在当前页面执行 JS 表达式提取数据（如取全文/表格/隐藏数据），返回求值结果。",
             "inputSchema": {
                 "type": "object",
-                "properties": {"js": {"type": "string", "description": "JS 表达式，如 () => document.title"}},
+                "properties": {
+                    "js": {"type": "string", "description": "JS 表达式，如 () => document.title"}
+                },
                 "required": ["js"],
             },
         },
@@ -740,7 +785,10 @@ def _tool_specs() -> list[dict]:
                 "properties": {
                     "domain": {"type": "string", "description": "要放行的域名，如 github.com"},
                     "ttl_minutes": {"type": "integer", "description": "放行时长（分钟），默认 60"},
-                    "user_confirmed": {"type": "boolean", "description": "用户已明确同意放行才为 true"},
+                    "user_confirmed": {
+                        "type": "boolean",
+                        "description": "用户已明确同意放行才为 true",
+                    },
                 },
                 "required": ["domain", "user_confirmed"],
             },
@@ -758,7 +806,9 @@ async def _tool_call(name: str, args: dict[str, Any]) -> dict:
     if name == "browser_click":
         return await client.act("click", ref=args["ref"], nav_seq=args.get("nav_seq"))
     if name == "browser_fill":
-        return await client.act("fill", ref=args["ref"], text=args["text"], nav_seq=args.get("nav_seq"))
+        return await client.act(
+            "fill", ref=args["ref"], text=args["text"], nav_seq=args.get("nav_seq")
+        )
     if name == "browser_press":
         return await client.act("press", key=args["key"])
     if name == "browser_extract":
@@ -811,11 +861,14 @@ async def mcp_endpoint(request: Request):
     params = body.get("params") or {}
 
     if method == "initialize":
-        return _rpc_ok(req_id, {
-            "protocolVersion": _MCP_PROTOCOL_VERSION,
-            "capabilities": {"tools": {}},
-            "serverInfo": _MCP_SERVER_INFO,
-        })
+        return _rpc_ok(
+            req_id,
+            {
+                "protocolVersion": _MCP_PROTOCOL_VERSION,
+                "capabilities": {"tools": {}},
+                "serverInfo": _MCP_SERVER_INFO,
+            },
+        )
 
     if method == "ping":
         return _rpc_ok(req_id, {})
@@ -835,18 +888,24 @@ async def mcp_endpoint(request: Request):
                 return _rpc_err(req_id, -32602, f"Unknown tool: {name}")
             except DomainNotAllowedError as e:
                 # 白名单拒绝：返回结构化错误（非 isError，客户端可读详情）
-                return _rpc_ok(req_id, {
-                    "content": [{"type": "text", "text": str(e)}],
-                    "isError": True,
-                })
+                return _rpc_ok(
+                    req_id,
+                    {
+                        "content": [{"type": "text", "text": str(e)}],
+                        "isError": True,
+                    },
+                )
             # 截断超长字段（截图 base64 除外，单结果上限 512KB）
             text = json.dumps(result, ensure_ascii=False, default=str)
             if len(text) > 512 * 1024:
                 text = text[: 512 * 1024] + "…(truncated)"
-            return _rpc_ok(req_id, {
-                "content": [{"type": "text", "text": text}],
-                "isError": bool(result.get("ok") is False),
-            })
+            return _rpc_ok(
+                req_id,
+                {
+                    "content": [{"type": "text", "text": text}],
+                    "isError": bool(result.get("ok") is False),
+                },
+            )
         finally:
             _current_source.reset(tok)
 

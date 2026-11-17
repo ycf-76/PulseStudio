@@ -4,17 +4,19 @@ Plugin API Schemas (Pydantic v2)
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PluginBase(BaseModel):
     """插件基础字段"""
+
     name: str = Field(..., min_length=1, max_length=128)
     description: Optional[str] = Field(None, max_length=2000)
     category: str  # PluginCategory enum value
     author_name: str = Field(..., min_length=1, max_length=64)
-    author_email: Optional[str] = Field(None, pattern=r'^[^@]+@[^@]+\.[^@]+$')
+    author_email: Optional[str] = Field(None, pattern=r"^[^@]+@[^@]+\.[^@]+$")
     display_icon: Optional[str] = "📦"
     display_color: Optional[str] = "#6366f1"
     pricing_model: str = "free"  # PricingModel enum value
@@ -23,8 +25,9 @@ class PluginBase(BaseModel):
 
 class PluginCreate(PluginBase):
     """创建插件请求"""
-    id: str = Field(..., min_length=1, max_length=64, pattern=r'^[a-z0-9][a-z0-9_-]*$')
-    version: str = Field(..., pattern=r'^\d+\.\d+\.\d+$')
+
+    id: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
     entry_point: str = "main.py"
     capabilities: List[str] = []
     permissions: List[str] = []
@@ -36,9 +39,10 @@ class PluginCreate(PluginBase):
 
 class PluginUpdate(BaseModel):
     """更新插件请求（部分更新）"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=128)
     description: Optional[str] = Field(None, max_length=2000)
-    version: Optional[str] = Field(None, pattern=r'^\d+\.\d+\.\d+$')
+    version: Optional[str] = Field(None, pattern=r"^\d+\.\d+\.\d+$")
     status: Optional[str] = None  # PluginStatus enum value
     pricing_model: Optional[str] = None
     price_monthly: Optional[float] = Field(None, ge=0)
@@ -51,6 +55,7 @@ class PluginUpdate(BaseModel):
 
 class PluginResponse(PluginBase):
     """插件响应（完整信息）"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -65,19 +70,20 @@ class PluginResponse(PluginBase):
     review_count: int = 0
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     capabilities: List[str] = []
     permissions: List[str] = []
     config_schema: Optional[Dict[str, Any]] = None
     events_publishes: List[str] = []
     events_subscribes: List[str] = []
     dependencies: Optional[Any] = None
-    
-    stats: Optional['PluginStatsResponse'] = None
+
+    stats: Optional["PluginStatsResponse"] = None
 
 
 class PluginListResponse(BaseModel):
     """插件列表响应"""
+
     total: int
     page: int
     page_size: int
@@ -86,6 +92,7 @@ class PluginListResponse(BaseModel):
 
 class PluginStatsResponse(BaseModel):
     """插件统计响应"""
+
     model_config = ConfigDict(from_attributes=True)
 
     total_executions: int
@@ -99,7 +106,8 @@ class PluginStatsResponse(BaseModel):
 
 class PluginVersionCreate(BaseModel):
     """创建版本请求"""
-    version: str = Field(..., pattern=r'^\d+\.\d+\.\d+$')
+
+    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
     changelog: Optional[str] = None
     release_notes: Optional[str] = None
     package_url: Optional[str] = None
@@ -111,6 +119,7 @@ class PluginVersionCreate(BaseModel):
 
 class PluginVersionResponse(BaseModel):
     """版本响应"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -130,6 +139,7 @@ class PluginVersionResponse(BaseModel):
 
 class PluginConfigRequest(BaseModel):
     """配置写入请求"""
+
     config_json: Dict[str, Any] = {}
     encrypted_fields: Optional[Dict[str, str]] = None
     is_enabled: bool = True
@@ -137,6 +147,7 @@ class PluginConfigRequest(BaseModel):
 
 class PluginConfigResponse(BaseModel):
     """配置响应"""
+
     model_config = ConfigDict(from_attributes=True)
 
     user_id: str
@@ -150,6 +161,7 @@ class PluginConfigResponse(BaseModel):
 
 class PluginReviewCreate(BaseModel):
     """创建评价请求"""
+
     rating: int = Field(..., ge=1, le=5)
     title: Optional[str] = Field(None, max_length=100)
     content: Optional[str] = Field(None, max_length=2000)
@@ -157,6 +169,7 @@ class PluginReviewCreate(BaseModel):
 
 class PluginReviewResponse(BaseModel):
     """评价响应"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -173,12 +186,14 @@ class PluginReviewResponse(BaseModel):
 
 class PluginInstallRequest(BaseModel):
     """安装插件请求"""
+
     version: Optional[str] = None  # 指定版本，默认最新
     config: Optional[Dict[str, Any]] = None  # 初始配置
 
 
 class PluginActionResponse(BaseModel):
     """操作响应（安装/卸载/启用/禁用）"""
+
     success: bool
     message: str
     plugin_id: str
@@ -188,6 +203,7 @@ class PluginActionResponse(BaseModel):
 
 class PluginSearchQuery(BaseModel):
     """搜索查询参数"""
+
     q: Optional[str] = None  # 关键词搜索
     category: Optional[str] = None  # 分类过滤
     status: Optional[str] = None  # 状态过滤
@@ -201,12 +217,14 @@ class PluginSearchQuery(BaseModel):
 
 class BulkActionRequest(BaseModel):
     """批量操作请求"""
+
     plugin_ids: List[str] = Field(..., min_length=1, max_length=50)
     action: str  # enable/disable/uninstall
 
 
 class BulkActionResponse(BaseModel):
     """批量操作响应"""
+
     total_requested: int
     succeeded: int
     failed: int
@@ -215,6 +233,7 @@ class BulkActionResponse(BaseModel):
 
 class MarketplaceQuery(BaseModel):
     """插件市场查询"""
+
     featured: bool = False  # 精选推荐
     trending: bool = False  # 热门趋势
     new_releases: bool = False  # 最新发布

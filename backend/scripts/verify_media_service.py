@@ -1,4 +1,5 @@
 """五期-D 专项验证：media-service（onnx/ffmpeg 隔离）。"""
+
 from __future__ import annotations
 
 import sys

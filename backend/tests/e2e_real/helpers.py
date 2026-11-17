@@ -15,33 +15,39 @@ from pathlib import Path
 
 import httpx
 
-TERMINAL_EVENTS = frozenset({
-    "workflow_completed",
-    "workflow_error",
-    "workflow_terminated",
-    "workflow_failed",
-    "workflow_suspended",
-    "workflow_cancelled",
-    "shortcut_completed",
-    "agent_loop_done",
-})
+TERMINAL_EVENTS = frozenset(
+    {
+        "workflow_completed",
+        "workflow_error",
+        "workflow_terminated",
+        "workflow_failed",
+        "workflow_suspended",
+        "workflow_cancelled",
+        "shortcut_completed",
+        "agent_loop_done",
+    }
+)
 
-AWAITING_STATUSES = frozenset({
-    "awaiting_clarification",
-    "awaiting_confirmation",
-    "awaiting_storyboard_confirmation",
-    "awaiting_cut_plan_confirmation",
-    "awaiting_guardian_confirmation",
-    "awaiting_side_write_confirmation",
-})
+AWAITING_STATUSES = frozenset(
+    {
+        "awaiting_clarification",
+        "awaiting_confirmation",
+        "awaiting_storyboard_confirmation",
+        "awaiting_cut_plan_confirmation",
+        "awaiting_guardian_confirmation",
+        "awaiting_side_write_confirmation",
+    }
+)
 
-PAUSE_EVENTS = frozenset({
-    "agent_clarification_required",
-    "guardian_confirmation_required",
-    "storyboard_confirmation_required",
-    "cut_plan_confirmation_required",
-    "side_write_confirmation_required",
-})
+PAUSE_EVENTS = frozenset(
+    {
+        "agent_clarification_required",
+        "guardian_confirmation_required",
+        "storyboard_confirmation_required",
+        "cut_plan_confirmation_required",
+        "side_write_confirmation_required",
+    }
+)
 
 
 def new_turn_id(prefix: str = "e2e") -> str:
@@ -84,10 +90,10 @@ def collect_sse(
             if not line or line.startswith(":"):
                 continue
             if line.startswith("event:"):
-                current = line[len("event:"):].strip()
+                current = line[len("event:") :].strip()
                 continue
             if line.startswith("data:"):
-                raw = line[len("data:"):].strip()
+                raw = line[len("data:") :].strip()
                 try:
                     data = json.loads(raw)
                 except json.JSONDecodeError:
@@ -117,7 +123,7 @@ def collect_openai_stream(
                 break
             if not line.startswith("data:"):
                 continue
-            raw = line[len("data:"):].strip()
+            raw = line[len("data:") :].strip()
             if raw == "[DONE]":
                 chunks.append("[DONE]")
                 break

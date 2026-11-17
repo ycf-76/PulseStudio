@@ -16,6 +16,7 @@ LLM 只需传 video_path。
   - overlay 无产出 → success False 带错误
   - cut_enabled=False → 跳过裁剪直接 overlay
 """
+
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -67,24 +68,42 @@ class TestTalkingHeadDemo:
         video.write_bytes(b"")
         cut_calls, overlay_captured = [], []
         events = [
-            {"event": "deck_ready", "data": {"count": 5, "theme": "midnight"},
-             "needs_confirmation": False},
-            {"event": "pip_done",
-             "data": {"output_path": "D:/fake/out.mp4", "pip_position": "top_right",
-                      "matting": True, "handoff": {"t0": 7.0}},
-             "needs_confirmation": False},
+            {
+                "event": "deck_ready",
+                "data": {"count": 5, "theme": "midnight"},
+                "needs_confirmation": False,
+            },
+            {
+                "event": "pip_done",
+                "data": {
+                    "output_path": "D:/fake/out.mp4",
+                    "pip_position": "top_right",
+                    "matting": True,
+                    "handoff": {"t0": 7.0},
+                },
+                "needs_confirmation": False,
+            },
         ]
-        with patch(
-            "capabilities.video.skills.talking_head_demo.SmartCutSkill",
-            return_value=_fake_smart_cut(cut_calls),
-        ), patch(
-            "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
-            return_value=_fake_overlay(overlay_captured, events),
+        with (
+            patch(
+                "capabilities.video.skills.talking_head_demo.SmartCutSkill",
+                return_value=_fake_smart_cut(cut_calls),
+            ),
+            patch(
+                "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
+                return_value=_fake_overlay(overlay_captured, events),
+            ),
         ):
-            results = [chunk async for chunk in _demo().execute({
-                "video_path": str(video),
-                "_user_id": "u1", "_workflow_id": "w1",
-            })]
+            results = [
+                chunk
+                async for chunk in _demo().execute(
+                    {
+                        "video_path": str(video),
+                        "_user_id": "u1",
+                        "_workflow_id": "w1",
+                    }
+                )
+            ]
 
         # smart_cut 两轮：plan 带 chain_with_overlay，refine 吃 candidates
         assert len(cut_calls) == 2
@@ -97,7 +116,7 @@ class TestTalkingHeadDemo:
         assert op["matting"] is True
         assert op["auto_deck"] is True
         assert op["handoff"] is True
-        assert op["gate_mode"] == "auto_confirm"      # 无人值守直通
+        assert op["gate_mode"] == "auto_confirm"  # 无人值守直通
         assert op["deck_theme"] == "auto"
         assert op["pip_position"] == "top_right"
         assert op["cut_video_path"] == "D:/fake/cut.mp4"
@@ -121,19 +140,31 @@ class TestTalkingHeadDemo:
 
         fake_cut.execute = _boom
         overlay_captured = []
-        events = [{"event": "pip_done",
-                   "data": {"output_path": "D:/fake/out.mp4"},
-                   "needs_confirmation": False}]
-        with patch(
-            "capabilities.video.skills.talking_head_demo.SmartCutSkill",
-            return_value=fake_cut,
-        ), patch(
-            "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
-            return_value=_fake_overlay(overlay_captured, events),
+        events = [
+            {
+                "event": "pip_done",
+                "data": {"output_path": "D:/fake/out.mp4"},
+                "needs_confirmation": False,
+            }
+        ]
+        with (
+            patch(
+                "capabilities.video.skills.talking_head_demo.SmartCutSkill",
+                return_value=fake_cut,
+            ),
+            patch(
+                "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
+                return_value=_fake_overlay(overlay_captured, events),
+            ),
         ):
-            results = [chunk async for chunk in _demo().execute({
-                "video_path": str(video),
-            })]
+            results = [
+                chunk
+                async for chunk in _demo().execute(
+                    {
+                        "video_path": str(video),
+                    }
+                )
+            ]
         assert len(overlay_captured) == 1
         assert "cut_video_path" not in overlay_captured[0]
         assert "kept_segments" not in overlay_captured[0]
@@ -145,19 +176,31 @@ class TestTalkingHeadDemo:
         video = tmp_path / "src.mp4"
         video.write_bytes(b"")
         overlay_captured = []
-        events = [{"event": "overlay_error",
-                   "data": {"error": "render failed"},
-                   "needs_confirmation": False}]
-        with patch(
-            "capabilities.video.skills.talking_head_demo.SmartCutSkill",
-            return_value=_fake_smart_cut([]),
-        ), patch(
-            "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
-            return_value=_fake_overlay(overlay_captured, events),
+        events = [
+            {
+                "event": "overlay_error",
+                "data": {"error": "render failed"},
+                "needs_confirmation": False,
+            }
+        ]
+        with (
+            patch(
+                "capabilities.video.skills.talking_head_demo.SmartCutSkill",
+                return_value=_fake_smart_cut([]),
+            ),
+            patch(
+                "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
+                return_value=_fake_overlay(overlay_captured, events),
+            ),
         ):
-            results = [chunk async for chunk in _demo().execute({
-                "video_path": str(video),
-            })]
+            results = [
+                chunk
+                async for chunk in _demo().execute(
+                    {
+                        "video_path": str(video),
+                    }
+                )
+            ]
         assert results[-1]["success"] is False
         assert "render failed" in results[-1]["error"]
 
@@ -166,27 +209,45 @@ class TestTalkingHeadDemo:
         video = tmp_path / "src.mp4"
         video.write_bytes(b"")
         cut_calls, overlay_captured = [], []
-        events = [{"event": "pip_done",
-                   "data": {"output_path": "D:/fake/out.mp4"},
-                   "needs_confirmation": False}]
-        with patch(
-            "capabilities.video.skills.talking_head_demo.SmartCutSkill",
-            return_value=_fake_smart_cut(cut_calls),
-        ), patch(
-            "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
-            return_value=_fake_overlay(overlay_captured, events),
+        events = [
+            {
+                "event": "pip_done",
+                "data": {"output_path": "D:/fake/out.mp4"},
+                "needs_confirmation": False,
+            }
+        ]
+        with (
+            patch(
+                "capabilities.video.skills.talking_head_demo.SmartCutSkill",
+                return_value=_fake_smart_cut(cut_calls),
+            ),
+            patch(
+                "capabilities.video.skills.talking_head_demo.TalkingHeadOverlaySkill",
+                return_value=_fake_overlay(overlay_captured, events),
+            ),
         ):
-            results = [chunk async for chunk in _demo().execute({
-                "video_path": str(video), "cut_enabled": False,
-            })]
+            results = [
+                chunk
+                async for chunk in _demo().execute(
+                    {
+                        "video_path": str(video),
+                        "cut_enabled": False,
+                    }
+                )
+            ]
         assert cut_calls == []
         assert "cut_video_path" not in overlay_captured[0]
         assert results[-1]["success"] is True
 
     @pytest.mark.asyncio
     async def test_missing_video_reports(self, tmp_path):
-        results = [chunk async for chunk in _demo().execute({
-            "video_path": str(tmp_path / "no.mp4"),
-        })]
+        results = [
+            chunk
+            async for chunk in _demo().execute(
+                {
+                    "video_path": str(tmp_path / "no.mp4"),
+                }
+            )
+        ]
         assert results[-1]["success"] is False
         assert "not found" in results[-1]["error"]

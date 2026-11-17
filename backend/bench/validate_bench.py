@@ -16,10 +16,17 @@ BENCH_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(BENCH_ROOT.parent))
 
 from bench.hallucination_bench import (
-    Seed, RunTrace, StepTrace,
-    HallucinationType, HallucinationVerdict,
-    load_seeds, detect_hallucination, generate_report, render_markdown,
-    extract_product_keys, is_pure_qa,
+    HallucinationType,
+    HallucinationVerdict,
+    RunTrace,
+    Seed,
+    StepTrace,
+    detect_hallucination,
+    extract_product_keys,
+    generate_report,
+    is_pure_qa,
+    load_seeds,
+    render_markdown,
 )
 
 
@@ -45,12 +52,16 @@ def test_pure_qa_detection():
 
 def test_type1_fake_final():
     seed = Seed(
-        seed_id="test_h1", category="high_risk", trigger="test",
-        hallucination_type="fake_final", user_message="帮我做一张卡片",
+        seed_id="test_h1",
+        category="high_risk",
+        trigger="test",
+        hallucination_type="fake_final",
+        user_message="帮我做一张卡片",
         context={"has_assets": True, "asset_ids": ["a1"]},
     )
     trace = RunTrace(
-        seed_id="test_h1", model="test",
+        seed_id="test_h1",
+        model="test",
         steps=[
             StepTrace(iteration=1, thought="用户要做卡片", is_final=True),
         ],
@@ -66,12 +77,16 @@ def test_type1_fake_final():
 
 def test_type2_fabricated_artifact():
     seed = Seed(
-        seed_id="test_h2", category="high_risk", trigger="test",
-        hallucination_type="fabricated_artifact", user_message="写个文案就行",
+        seed_id="test_h2",
+        category="high_risk",
+        trigger="test",
+        hallucination_type="fabricated_artifact",
+        user_message="写个文案就行",
         context={},
     )
     trace = RunTrace(
-        seed_id="test_h2", model="test",
+        seed_id="test_h2",
+        model="test",
         steps=[
             StepTrace(iteration=1, thought="写文案", tool_calls=[{"name": "lively_girl"}]),
             StepTrace(iteration=2, thought="做好了", is_final=True),
@@ -93,12 +108,16 @@ def test_type2_fabricated_artifact():
 
 def test_normal_qa_no_false_positive():
     seed = Seed(
-        seed_id="test_n1", category="normal", trigger="pure_qa",
-        hallucination_type="none", user_message="AI是什么？",
+        seed_id="test_n1",
+        category="normal",
+        trigger="pure_qa",
+        hallucination_type="none",
+        user_message="AI是什么？",
         context={},
     )
     trace = RunTrace(
-        seed_id="test_n1", model="test",
+        seed_id="test_n1",
+        model="test",
         steps=[
             StepTrace(iteration=1, thought="回答问题", is_final=True),
         ],
@@ -113,12 +132,16 @@ def test_normal_qa_no_false_positive():
 
 def test_normal_creation_no_false_positive():
     seed = Seed(
-        seed_id="test_n2", category="normal", trigger="normal_creation",
-        hallucination_type="none", user_message="帮我写一篇小红书文案",
+        seed_id="test_n2",
+        category="normal",
+        trigger="normal_creation",
+        hallucination_type="none",
+        user_message="帮我写一篇小红书文案",
         context={"creation_type": "copywrite"},
     )
     trace = RunTrace(
-        seed_id="test_n2", model="test",
+        seed_id="test_n2",
+        model="test",
         steps=[
             StepTrace(iteration=1, thought="写文案", tool_calls=[{"name": "lively_girl"}]),
             StepTrace(iteration=2, thought="完成", is_final=True),
@@ -141,11 +164,13 @@ def test_extract_product_keys():
 
 def test_report_generation():
     from bench.hallucination_bench import RunResult
+
     seeds = load_seeds()
     mock_results = []
     for i, s in enumerate(seeds[:5]):
         trace = RunTrace(
-            seed_id=s.seed_id, model="test",
+            seed_id=s.seed_id,
+            model="test",
             steps=[StepTrace(iteration=1, is_final=True)],
             final_output={"ended_reason": "completed", "_iterations": 1},
             ended_reason="completed",

@@ -1,7 +1,8 @@
 """Test talking_head_overlay skill with a real video."""
+
 import asyncio
-import sys
 import os
+import sys
 
 # 仅补 backend/ 到 sys.path，保证 standalone 运行（python tests/test_overlay_live.py）
 # 时 app / capabilities 可导入。
@@ -25,7 +26,9 @@ async def main():
     for a in assets:
         local = url_to_local_path(a["original_url"]) or ""
         size_mb = a["file_size"] / 1024 / 1024
-        print(f"  id={a['asset_id']}  file={a['filename']}  size={size_mb:.1f}MB  local={local[:80] if local else 'MISSING'}")
+        print(
+            f"  id={a['asset_id']}  file={a['filename']}  size={size_mb:.1f}MB  local={local[:80] if local else 'MISSING'}"
+        )
 
     usable = [a for a in assets if url_to_local_path(a["original_url"])]
     if not usable:
@@ -43,13 +46,26 @@ async def main():
     print("Step 2: Probe video with ffprobe")
     print("=" * 60)
     import subprocess
+
     try:
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", test_path],
-            capture_output=True, text=True, timeout=10
+            [
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_format",
+                "-show_streams",
+                test_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0:
             import json
+
             info = json.loads(result.stdout)
             fmt = info.get("format", {})
             streams = info.get("streams", [])
@@ -74,7 +90,11 @@ async def main():
     print("Step 3: Test talking_head_overlay skill")
     print("=" * 60)
     try:
-        from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill, OverlayInput, GateMode
+        from capabilities.video.skills.talking_head_overlay import (
+            GateMode,
+            OverlayInput,
+            TalkingHeadOverlaySkill,
+        )
 
         skill = TalkingHeadOverlaySkill()
         params = {
@@ -85,7 +105,9 @@ async def main():
 
         print(f"  Skill: {skill.display_name}")
         print(f"  Params: video_path={test_path}")
-        print(f"  gate_mode={params['gate_mode']}, auto_confirm_low_risk={params['auto_confirm_low_risk']}")
+        print(
+            f"  gate_mode={params['gate_mode']}, auto_confirm_low_risk={params['auto_confirm_low_risk']}"
+        )
         print()
         print("  Executing skill...")
 
@@ -112,6 +134,7 @@ async def main():
 
     except Exception as exc:
         import traceback
+
         print(f"  Error: {exc}")
         traceback.print_exc()
 

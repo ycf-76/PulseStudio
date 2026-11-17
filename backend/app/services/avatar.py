@@ -5,6 +5,7 @@
   2. 其他邮箱 → Gravatar identicon（每个邮箱唯一图案，无需注册）
   3. 无邮箱 → 本地默认头像 SVG
 """
+
 from __future__ import annotations
 
 import hashlib

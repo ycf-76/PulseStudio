@@ -8,25 +8,60 @@ from pydantic import BaseModel, Field
 
 from app.cards.renderer import to_card_draft
 from app.cards.schema import (
-    DIRECTIONS, LAYOUTS, THEMES, VARIANT_OPTIONS, BentoGrid, CardDeck, Compare, CompareRow,
+    DIRECTIONS,
+    LAYOUTS,
+    THEMES,
+    VARIANT_OPTIONS,
+    BentoGrid,
+    CardDeck,
+    Compare,
+    CompareRow,
+    Cta,
+    Heading,
+    ImageBlock,
+    Item,
+    ListBlock,
+    Quote,
+    Stat,
+    Steps,
+    Text,
+    Timeline,
+    TimelineItem,
     _accessible_accents,
-    Cta, Heading, ImageBlock, Item, ListBlock, Quote, Stat, Steps, Text, Timeline,
-    TimelineItem, apply_direction, compatible_layouts,
+    apply_direction,
+    compatible_layouts,
 )
 from app.services.asset_library import list_assets
 from app.services.chat_session import update_creative_state
 from app.services.creative_artifact import (
-    artifact_lock, build_storyboard, load_artifact, save_artifact, verify_owner,
+    artifact_lock,
+    build_storyboard,
+    load_artifact,
+    save_artifact,
+    verify_owner,
 )
 
-
 EDIT_OPS: tuple[str, ...] = (
-    "set_text", "set_image",
-    "set_item", "add_item", "remove_item",
-    "set_cell", "add_row", "remove_row", "set_title",
-    "set_bento_cell", "set_stat_value",
-    "set_timeline_item", "add_timeline_item", "remove_timeline_item",
-    "set_quote", "set_layout", "set_direction", "set_theme", "set_variant", "set_accent",
+    "set_text",
+    "set_image",
+    "set_item",
+    "add_item",
+    "remove_item",
+    "set_cell",
+    "add_row",
+    "remove_row",
+    "set_title",
+    "set_bento_cell",
+    "set_stat_value",
+    "set_timeline_item",
+    "add_timeline_item",
+    "remove_timeline_item",
+    "set_quote",
+    "set_layout",
+    "set_direction",
+    "set_theme",
+    "set_variant",
+    "set_accent",
 )
 
 
@@ -36,12 +71,26 @@ class CardEdit(BaseModel):
     page_id: str = Field(default="", max_length=32)
     block_id: str = Field(default="", max_length=32)
     op: Literal[
-        "set_text", "set_image",
-        "set_item", "add_item", "remove_item",
-        "set_cell", "add_row", "remove_row", "set_title",
-        "set_bento_cell", "set_stat_value",
-        "set_timeline_item", "add_timeline_item", "remove_timeline_item",
-        "set_quote", "set_layout", "set_direction", "set_theme", "set_variant", "set_accent",
+        "set_text",
+        "set_image",
+        "set_item",
+        "add_item",
+        "remove_item",
+        "set_cell",
+        "add_row",
+        "remove_row",
+        "set_title",
+        "set_bento_cell",
+        "set_stat_value",
+        "set_timeline_item",
+        "add_timeline_item",
+        "remove_timeline_item",
+        "set_quote",
+        "set_layout",
+        "set_direction",
+        "set_theme",
+        "set_variant",
+        "set_accent",
     ]
     index: int | None = Field(default=None, ge=0, le=32)
     column: Literal["left", "right"] | None = None
@@ -59,7 +108,7 @@ class CardEdit(BaseModel):
 async def get_owned_artifact(artifact_id: str, user_id: str):
     # 「我的空间」列表给的是 `artifact:ca_xxx` 这种带前缀的合成 id，
     # 卡片编辑链路只认裸 artifact_id，这里统一剥掉前缀再查。
-    raw_id = artifact_id[len("artifact:"):] if artifact_id.startswith("artifact:") else artifact_id
+    raw_id = artifact_id[len("artifact:") :] if artifact_id.startswith("artifact:") else artifact_id
     artifact = load_artifact(raw_id)
     if artifact is None or artifact.artifact_id != raw_id:
         raise LookupError("创作作品不存在")
@@ -85,7 +134,9 @@ async def read_card(artifact_id: str, user_id: str) -> dict:
 
 
 async def verify_assets(deck: CardDeck, user_id: str) -> None:
-    images = [block for page in deck.pages for block in page.blocks if isinstance(block, ImageBlock)]
+    images = [
+        block for page in deck.pages for block in page.blocks if isinstance(block, ImageBlock)
+    ]
     if not images:
         return
     assets = {asset["asset_id"]: asset for asset in await list_assets(user_id)}
@@ -96,8 +147,13 @@ async def verify_assets(deck: CardDeck, user_id: str) -> None:
 
 
 async def update_card(
-    artifact_id: str, user_id: str, expected_version: int, page_id: str,
-    block_id: str, new_text: str | None = None, new_asset_id: str | None = None,
+    artifact_id: str,
+    user_id: str,
+    expected_version: int,
+    page_id: str,
+    block_id: str,
+    new_text: str | None = None,
+    new_asset_id: str | None = None,
 ) -> dict:
     """旧版接口：整块换文字或换图。保留以兼容已发出的调用。"""
     if new_text is not None and new_asset_id is not None:
@@ -108,12 +164,22 @@ async def update_card(
         op, value = "set_text", new_text
     else:
         raise ValueError("必须提供文字或图片")
-    return await apply_card_edit(artifact_id, user_id, expected_version, CardEdit(
-        page_id=page_id, block_id=block_id, op=op, value=value,
-    ))
+    return await apply_card_edit(
+        artifact_id,
+        user_id,
+        expected_version,
+        CardEdit(
+            page_id=page_id,
+            block_id=block_id,
+            op=op,
+            value=value,
+        ),
+    )
 
 
-async def apply_card_edit(artifact_id: str, user_id: str, expected_version: int, edit: CardEdit) -> dict:
+async def apply_card_edit(
+    artifact_id: str, user_id: str, expected_version: int, edit: CardEdit
+) -> dict:
     """整条读-改-写必须在锁内完成。
 
     否则两个并发编辑会各自读到同一 version，都通过乐观校验，
@@ -123,7 +189,9 @@ async def apply_card_edit(artifact_id: str, user_id: str, expected_version: int,
         return await _apply_edit_locked(artifact_id, user_id, expected_version, edit)
 
 
-async def _apply_edit_locked(artifact_id: str, user_id: str, expected_version: int, edit: CardEdit) -> dict:
+async def _apply_edit_locked(
+    artifact_id: str, user_id: str, expected_version: int, edit: CardEdit
+) -> dict:
     artifact, deck = await get_owned_card(artifact_id, user_id)
     if expected_version != artifact.version:
         raise RuntimeError("卡片版本已更新，请刷新后重试")
@@ -180,13 +248,17 @@ async def _apply_edit_locked(artifact_id: str, user_id: str, expected_version: i
         asset_id = (edit.value or "").strip()
         if not asset_id:
             raise ValueError("必须选择一张图片")
-        asset = next((item for item in await list_assets(user_id) if item["asset_id"] == asset_id), None)
+        asset = next(
+            (item for item in await list_assets(user_id) if item["asset_id"] == asset_id), None
+        )
         if not asset:
             raise ValueError("图片不存在或不属于当前用户")
         page.blocks[page.blocks.index(block)] = ImageBlock(
-            id=block.id, media_id=asset["asset_id"],
+            id=block.id,
+            media_id=asset["asset_id"],
             source="ai" if asset.get("source") == "ai" else "upload",
-            resolved_url=asset["original_url"], alt=asset["filename"][:80],
+            resolved_url=asset["original_url"],
+            alt=asset["filename"][:80],
         )
     elif edit.op == "set_item":
         items = _items_of(block)
@@ -202,9 +274,13 @@ async def _apply_edit_locked(artifact_id: str, user_id: str, expected_version: i
         limit = 8 if isinstance(block, ListBlock) else 7
         if len(items) >= limit:
             raise ValueError(f"最多只能有 {limit} 项")
-        items.append(Item(text=_text(edit.value),
-                          note=_optional_text(edit.note, 120),
-                          tag=_optional_text(edit.tag, 16)))
+        items.append(
+            Item(
+                text=_text(edit.value),
+                note=_optional_text(edit.note, 120),
+                tag=_optional_text(edit.tag, 16),
+            )
+        )
     elif edit.op == "remove_item":
         items = _items_of(block)
         minimum = 1 if isinstance(block, ListBlock) else 2
@@ -228,10 +304,13 @@ async def _apply_edit_locked(artifact_id: str, user_id: str, expected_version: i
         if len(compare.rows) >= 6:
             raise ValueError("最多只能有 6 行")
         # value_pair 是左右两列；value 若同时给出则作为这一行的维度标签。
-        compare.rows.append(CompareRow(
-            label=_optional_text(edit.value, 30),
-            left=_text(edit.value_pair[0], limit=60),
-            right=_text(edit.value_pair[1], limit=60)))
+        compare.rows.append(
+            CompareRow(
+                label=_optional_text(edit.value, 30),
+                left=_text(edit.value_pair[0], limit=60),
+                right=_text(edit.value_pair[1], limit=60),
+            )
+        )
     elif edit.op == "remove_row":
         compare = _compare_of(block)
         if len(compare.rows) <= 2:
@@ -296,11 +375,13 @@ async def _apply_edit_locked(artifact_id: str, user_id: str, expected_version: i
         items = block.items
         if len(items) >= 8:
             raise ValueError("最多只能有 8 条时间锚点")
-        items.append(TimelineItem(
-            date=_text(edit.value, limit=20),
-            text=_text(edit.note, limit=90),
-            note=_optional_text(edit.tag, 120),
-        ))
+        items.append(
+            TimelineItem(
+                date=_text(edit.value, limit=20),
+                text=_text(edit.note, limit=90),
+                note=_optional_text(edit.tag, 120),
+            )
+        )
     elif edit.op == "remove_timeline_item":
         if not isinstance(block, Timeline):
             raise ValueError("此组件不是时间线")

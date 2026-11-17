@@ -9,8 +9,9 @@ Create Date: 2026-11-04
 此处显式修复该列约束，保证升级后各环境一致。
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "023_pcp_wf_nullable"
 down_revision = "022_side_sessions"

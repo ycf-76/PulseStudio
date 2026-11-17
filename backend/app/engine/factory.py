@@ -96,9 +96,24 @@ class _MockLLM:
     ) -> AsyncIterator[dict[str, Any]]:
         resp = self._pick_response(messages)
         if resp.get("reasoning_content"):
-            yield {"content": None, "reasoning_content": resp["reasoning_content"], "is_final": False, "token_usage": None}
-        yield {"content": resp["content"], "reasoning_content": None, "is_final": False, "token_usage": None}
-        yield {"content": None, "reasoning_content": None, "is_final": True, "token_usage": resp["token_usage"]}
+            yield {
+                "content": None,
+                "reasoning_content": resp["reasoning_content"],
+                "is_final": False,
+                "token_usage": None,
+            }
+        yield {
+            "content": resp["content"],
+            "reasoning_content": None,
+            "is_final": False,
+            "token_usage": None,
+        }
+        yield {
+            "content": None,
+            "reasoning_content": None,
+            "is_final": True,
+            "token_usage": resp["token_usage"],
+        }
 
 
 _llm_cache: dict[str, Any] = {}
@@ -257,17 +272,31 @@ def _make_observer(workflow_id: str) -> Any:
         async def emit(self, node_id: str, event_type: str, payload: dict[str, Any]) -> None:
             await sse_bus.publish(workflow_id, event_type, {"node_id": node_id, **payload})
 
-        async def emit_progress(self, node_id: str, current: int, total: int, label: str = "") -> None:
-            await self.emit(node_id, "progress_update", {"current": current, "total": total, "label": label})
+        async def emit_progress(
+            self, node_id: str, current: int, total: int, label: str = ""
+        ) -> None:
+            await self.emit(
+                node_id, "progress_update", {"current": current, "total": total, "label": label}
+            )
 
         async def emit_decision(self, node_id: str, decision_text: str) -> None:
             await self.emit(node_id, "decision_made", {"decision": decision_text})
 
-        async def emit_tool_call_start(self, node_id: str, tool_name: str, inputs: dict[str, Any] | None = None) -> None:
-            await self.emit(node_id, "tool_call_start", {"tool_name": tool_name, "inputs": inputs or {}})
+        async def emit_tool_call_start(
+            self, node_id: str, tool_name: str, inputs: dict[str, Any] | None = None
+        ) -> None:
+            await self.emit(
+                node_id, "tool_call_start", {"tool_name": tool_name, "inputs": inputs or {}}
+            )
 
-        async def emit_tool_call_end(self, node_id: str, tool_name: str, success: bool, summary: str = "") -> None:
-            await self.emit(node_id, "tool_call_end", {"tool_name": tool_name, "success": success, "summary": summary})
+        async def emit_tool_call_end(
+            self, node_id: str, tool_name: str, success: bool, summary: str = ""
+        ) -> None:
+            await self.emit(
+                node_id,
+                "tool_call_end",
+                {"tool_name": tool_name, "success": success, "summary": summary},
+            )
 
     return _SSEObserver()
 
@@ -282,16 +311,30 @@ def _make_chat_observer(session_id: str) -> Any:
         async def emit(self, node_id: str, event_type: str, payload: dict[str, Any]) -> None:
             await sse_bus.publish(session_id, event_type, {"node_id": node_id, **payload})
 
-        async def emit_progress(self, node_id: str, current: int, total: int, label: str = "") -> None:
-            await self.emit(node_id, "progress_update", {"current": current, "total": total, "label": label})
+        async def emit_progress(
+            self, node_id: str, current: int, total: int, label: str = ""
+        ) -> None:
+            await self.emit(
+                node_id, "progress_update", {"current": current, "total": total, "label": label}
+            )
 
         async def emit_decision(self, node_id: str, decision_text: str) -> None:
             await self.emit(node_id, "decision_made", {"decision": decision_text})
 
-        async def emit_tool_call_start(self, node_id: str, tool_name: str, inputs: dict[str, Any] | None = None) -> None:
-            await self.emit(node_id, "tool_call_start", {"tool_name": tool_name, "inputs": inputs or {}})
+        async def emit_tool_call_start(
+            self, node_id: str, tool_name: str, inputs: dict[str, Any] | None = None
+        ) -> None:
+            await self.emit(
+                node_id, "tool_call_start", {"tool_name": tool_name, "inputs": inputs or {}}
+            )
 
-        async def emit_tool_call_end(self, node_id: str, tool_name: str, success: bool, summary: str = "") -> None:
-            await self.emit(node_id, "tool_call_end", {"tool_name": tool_name, "success": success, "summary": summary})
+        async def emit_tool_call_end(
+            self, node_id: str, tool_name: str, success: bool, summary: str = ""
+        ) -> None:
+            await self.emit(
+                node_id,
+                "tool_call_end",
+                {"tool_name": tool_name, "success": success, "summary": summary},
+            )
 
     return _SSEObserver()

@@ -13,6 +13,7 @@
 tests/test_overlay_revision.py::TestSkillRevisionRoute 单测覆盖（mock LLM），
 本脚本只验真实 LLM 的意图解析与 patch 语义。
 """
+
 import asyncio
 import json
 import sys
@@ -53,10 +54,15 @@ async def main() -> None:
     transcript, t = [], 0.0
     for i, shot in enumerate(sb["shots"]):
         d = float(shot.get("duration", 3.0))
-        transcript.append({
-            "index": i, "start": t, "end": t + d,
-            "text": shot["caption"], "words": [],
-        })
+        transcript.append(
+            {
+                "index": i,
+                "start": t,
+                "end": t + d,
+                "text": shot["caption"],
+                "words": [],
+            }
+        )
         t += d
 
     duration = await probe_duration(str(VIDEO))
@@ -64,6 +70,7 @@ async def main() -> None:
 
     from app.adapters.deepseek import DeepSeekAdapter
     from app.config import Settings
+
     llm = DeepSeekAdapter(api_key=Settings().deepseek_api_key)
 
     # ── Step 1: 初次规划（两步链）──
@@ -73,8 +80,10 @@ async def main() -> None:
         sys.exit(1)
     print(f"[live] 初次规划 {len(plan.segments)} 段：")
     for s in plan.segments:
-        print(f"  {s.segment_id}: {s.time_start:.1f}-{s.time_end:.1f}s "
-              f"{s.template}（skipped={s.skipped}）")
+        print(
+            f"  {s.segment_id}: {s.time_start:.1f}-{s.time_end:.1f}s "
+            f"{s.template}（skipped={s.skipped}）"
+        )
 
     # ── Step 2: local 路由 — 改第 2 个字幕的字号 ──
     result, problems = await parse_revision_intent(llm, LOCAL_RAW, plan, duration)
@@ -84,8 +93,10 @@ async def main() -> None:
         print(f"[live] FAIL：local 解析 route={route} instructions={n_ins} problems={problems}")
         sys.exit(1)
     for ins in result.instructions:
-        print(f"[live] local 指令：{ins.action} → {ins.segment_ids}（依据：{ins.locate_hint}）"
-              + (f" params={ins.params}" if ins.params else ""))
+        print(
+            f"[live] local 指令：{ins.action} → {ins.segment_ids}（依据：{ins.locate_hint}）"
+            + (f" params={ins.params}" if ins.params else "")
+        )
 
     patched, patch_problems = apply_revision(plan, result.instructions, duration)
     if patch_problems:
@@ -120,7 +131,11 @@ async def main() -> None:
     print(f"[live] global 解析 OK：{result2.reason}")
 
     replan, _ = await generate_overlay_plan(
-        transcript, duration, llm, feedback=GLOBAL_RAW, use_two_step=True,
+        transcript,
+        duration,
+        llm,
+        feedback=GLOBAL_RAW,
+        use_two_step=True,
     )
     if not replan.segments:
         print("[live] FAIL：global 重规划为空")

@@ -9,9 +9,9 @@ Changes:
 2. primary_domain / tone / visual_style 三个枚举列
 3. taboo_topics / taboo_words JSON 列
 """
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision = "009"
 down_revision = "008"

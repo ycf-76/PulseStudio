@@ -77,7 +77,9 @@ class UserProfile(BaseModel):
     content_rhythm: str | None = None  # 内容节奏（短平快/中等/深度长内容/图文为主）
     signature_elements: str | None = None  # 标志性元素（口头禅/固定栏目/BGM等辨识度元素）
     ai_personality: str | None = "default"  # AI 人格预设名
-    ai_personality_custom: str | None = None  # 用户自建人格 prompt（仅 ai_personality=custom 时使用）
+    ai_personality_custom: str | None = (
+        None  # 用户自建人格 prompt（仅 ai_personality=custom 时使用）
+    )
 
     @field_validator("sub_domain")
     @classmethod
@@ -95,15 +97,22 @@ class UserProfile(BaseModel):
         供文案 Agent（全量注入）等场景使用。禁忌清单为空时对应行消失，
         避免 prompt 膨胀。
         """
-        domain = self.primary_domain.value if isinstance(self.primary_domain, PrimaryDomain) else str(self.primary_domain)
+        domain = (
+            self.primary_domain.value
+            if isinstance(self.primary_domain, PrimaryDomain)
+            else str(self.primary_domain)
+        )
         domain_label = _DOMAIN_LABELS.get(domain, domain)
         tone_val = self.tone.value if isinstance(self.tone, CreatorTone) else str(self.tone)
-        visual_val = self.visual_style.value if isinstance(self.visual_style, VisualStyle) else str(self.visual_style)
+        visual_val = (
+            self.visual_style.value
+            if isinstance(self.visual_style, VisualStyle)
+            else str(self.visual_style)
+        )
 
         lines = [
             "【创作者画像】",
-            f"主领域: {domain_label}"
-            + (f" ({self.sub_domain})" if self.sub_domain else ""),
+            f"主领域: {domain_label}" + (f" ({self.sub_domain})" if self.sub_domain else ""),
             f"调性: {_TONE_LABELS.get(tone_val, tone_val)}",
             f"视觉风格: {_VISUAL_LABELS.get(visual_val, visual_val)}",
         ]

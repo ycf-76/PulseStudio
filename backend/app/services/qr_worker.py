@@ -5,6 +5,7 @@
   - 第一行：二维码数据 {"qr_base64": "..."} 或 {"error": "..."}
   - 第二行：登录结果 {"ok": true, "cookies": [...], "user_info": {...}} 或 {"ok": false, "error": "..."}
 """
+
 from __future__ import annotations
 
 import base64
@@ -65,8 +66,11 @@ def _extract_uid_from_cookies(cookies_raw: list, platform: str) -> str:
 def _try_click_login(page, platform: str) -> None:
     sels = {
         "xiaohongshu": [
-            ".login-btn", "[class*='login-btn']", "a[href*='login']",
-            "[class*='Login-btn']", "[class*='loginBtn']",
+            ".login-btn",
+            "[class*='login-btn']",
+            "a[href*='login']",
+            "[class*='Login-btn']",
+            "[class*='loginBtn']",
             "div.login-container .login-btn",
         ],
         "douyin": [".login-btn", "[class*='login-btn']"],
@@ -86,8 +90,11 @@ def _try_click_login(page, platform: str) -> None:
 def _try_switch_qr_tab(page, platform: str) -> None:
     sels = {
         "xiaohongshu": [
-            "[class*='qrcode-tab']", "[class*='scan-login']", "[class*='qr-login']",
-            "[class*='Qrcode-tab']", "[class*='icon-qrcode']",
+            "[class*='qrcode-tab']",
+            "[class*='scan-login']",
+            "[class*='qr-login']",
+            "[class*='Qrcode-tab']",
+            "[class*='icon-qrcode']",
             "div[class*='login-container'] [class*='qrcode']",
         ],
         "douyin": ["[class*='qrcode-tab']", "[class*='scan-login']"],
@@ -107,9 +114,15 @@ def _try_switch_qr_tab(page, platform: str) -> None:
 def _extract_qr_code(page, platform: str) -> dict:
     qr_sels = {
         "xiaohongshu": [
-            ".login-qrcode", ".qrcode", "[class*='qr-code']", "[class*='qrcode']",
-            ".login-container", "[class*='Qrcode']", "[class*='login-qr']",
-            "img[src*='qrcode']", "canvas",
+            ".login-qrcode",
+            ".qrcode",
+            "[class*='qr-code']",
+            "[class*='qrcode']",
+            ".login-container",
+            "[class*='Qrcode']",
+            "[class*='login-qr']",
+            "img[src*='qrcode']",
+            "canvas",
         ],
         "douyin": [".qrcode", "[class*='qrcode']", "[class*='qr-code']"],
         "bilibili": [".qrcode-img", "[class*='qrcode']", ".login-qr"],
@@ -142,7 +155,14 @@ def _extract_qr_code(page, platform: str) -> dict:
 def _extract_user_info(page, platform: str) -> dict:
     info = {}
     nick_sels = {
-        "xiaohongshu": [".user-nickname", ".nickname", ".user-name", "[class*='nickname']", "[class*='user-name']", ".side-nav .user-name"],
+        "xiaohongshu": [
+            ".user-nickname",
+            ".nickname",
+            ".user-name",
+            "[class*='nickname']",
+            "[class*='user-name']",
+            ".side-nav .user-name",
+        ],
         "douyin": [".nickname", ".user-nickname", "[class*='nickname']"],
         "bilibili": [".nickname", ".header-entry-mini", "[class*='nickname']"],
     }
@@ -172,7 +192,11 @@ def _extract_user_info(page, platform: str) -> dict:
         except Exception:
             continue
     uid_sels = {
-        "xiaohongshu": [".user-info a[href*='profile']", "a[href*='/user/profile/']", "[class*='user-id']"],
+        "xiaohongshu": [
+            ".user-info a[href*='profile']",
+            "a[href*='/user/profile/']",
+            "[class*='user-id']",
+        ],
         "douyin": ["a[href*='/user/']", "[class*='user-id']"],
         "bilibili": ["a[href*='space.bilibili.com']", "[class*='user-id']"],
     }
@@ -199,9 +223,9 @@ def _extract_user_info(page, platform: str) -> dict:
 
 def _parse_uid_from_url(url: str, platform: str) -> str:
     patterns = {
-        "xiaohongshu": [r'/user/profile/([0-9a-fA-F]{24})', r'/user/profile/(\w+)'],
-        "douyin": [r'/user/(\w+)', r'/u/(\d+)'],
-        "bilibili": [r'space\.bilibili\.com/(\d+)', r'/(\d{6,})'],
+        "xiaohongshu": [r"/user/profile/([0-9a-fA-F]{24})", r"/user/profile/(\w+)"],
+        "douyin": [r"/user/(\w+)", r"/u/(\d+)"],
+        "bilibili": [r"space\.bilibili\.com/(\d+)", r"/(\d{6,})"],
     }
     for pat in patterns.get(platform, []):
         m = re.search(pat, url)
@@ -225,7 +249,11 @@ def main() -> None:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        _emit({"error": "Playwright 未安装，请运行: pip install playwright && playwright install chromium"})
+        _emit(
+            {
+                "error": "Playwright 未安装，请运行: pip install playwright && playwright install chromium"
+            }
+        )
         return
 
     url = LOGIN_URLS.get(platform)
@@ -284,13 +312,19 @@ def main() -> None:
                     try:
                         current_url = page.url
                         if "login" in current_url.lower():
-                            page.goto(f"https://www.{platform}.com", wait_until="networkidle", timeout=15000)
+                            page.goto(
+                                f"https://www.{platform}.com",
+                                wait_until="networkidle",
+                                timeout=15000,
+                            )
                             time.sleep(2)
                             final_url = page.url
                             if "login" not in final_url.lower():
                                 login_detected = True
                                 current_cookies = {c["name"] for c in context.cookies()}
-                                login_cookie_found = bool(_find_login_cookies(current_cookies, platform))
+                                login_cookie_found = bool(
+                                    _find_login_cookies(current_cookies, platform)
+                                )
                                 user_info = _extract_user_info(page, platform)
                                 nickname = user_info.get("nickname", "")
                     except Exception:
@@ -317,23 +351,35 @@ def main() -> None:
                     if not user_info.get("uid"):
                         try:
                             if platform == "xiaohongshu":
-                                page.goto("https://www.xiaohongshu.com", wait_until="networkidle", timeout=15000)
+                                page.goto(
+                                    "https://www.xiaohongshu.com",
+                                    wait_until="networkidle",
+                                    timeout=15000,
+                                )
                                 time.sleep(2)
                                 try:
-                                    uid_js = page.evaluate("() => { try { return window.__INITIAL_STATE__?.user?.id || ''; } catch(e) { return ''; } }")
+                                    uid_js = page.evaluate(
+                                        "() => { try { return window.__INITIAL_STATE__?.user?.id || ''; } catch(e) { return ''; } }"
+                                    )
                                     if uid_js and len(str(uid_js)) > 5:
                                         user_info["uid"] = str(uid_js)
                                 except Exception:
                                     pass
                                 if not user_info.get("uid"):
                                     try:
-                                        uid_js2 = page.evaluate("() => { try { const m = document.cookie.match(/galaxy_creator_user_id=([^;]+)/); return m ? m[1] : ''; } catch(e) { return ''; } }")
+                                        uid_js2 = page.evaluate(
+                                            "() => { try { const m = document.cookie.match(/galaxy_creator_user_id=([^;]+)/); return m ? m[1] : ''; } catch(e) { return ''; } }"
+                                        )
                                         if uid_js2 and len(str(uid_js2)) > 5:
                                             user_info["uid"] = str(uid_js2)
                                     except Exception:
                                         pass
                             else:
-                                page.goto(f"https://www.{platform}.com", wait_until="networkidle", timeout=15000)
+                                page.goto(
+                                    f"https://www.{platform}.com",
+                                    wait_until="networkidle",
+                                    timeout=15000,
+                                )
                                 time.sleep(2)
                         except Exception:
                             pass
@@ -363,7 +409,9 @@ def main() -> None:
                     try:
                         STORAGE_DIR.mkdir(parents=True, exist_ok=True)
                         state = context.storage_state()
-                        storage_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+                        storage_path.write_text(
+                            json.dumps(state, ensure_ascii=False), encoding="utf-8"
+                        )
                     except Exception:
                         pass
 

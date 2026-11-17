@@ -49,8 +49,17 @@ def test_registry_has_all_builtin_agents():
 def test_registry_has_ops_team():
     registry = AgentRegistry()
     ops_ids = {
-        "trend-hunter", "strategist", "copywriter", "longform", "visual",
-        "meme", "video", "sound", "community", "inspector", "reviewer",
+        "trend-hunter",
+        "strategist",
+        "copywriter",
+        "longform",
+        "visual",
+        "meme",
+        "video",
+        "sound",
+        "community",
+        "inspector",
+        "reviewer",
     }
     for agent_id in ops_ids:
         adef = registry.get(agent_id)
@@ -59,7 +68,6 @@ def test_registry_has_ops_team():
         assert adef.persona, f"{agent_id} 必须有人格提示词"
     # 不做自动发布，团队里不设发布角色
     assert registry.get("publisher") is None
-
 
 
 def test_build_session_returns_reactor_session(monkeypatch):
@@ -115,6 +123,7 @@ def test_build_session_has_guardian(monkeypatch):
     session = registry.build_session("search")
     assert hasattr(session, "_guardian")
     from app.engine.governance.guardian import Guardian
+
     assert isinstance(session._guardian, Guardian)
 
 

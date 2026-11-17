@@ -32,23 +32,33 @@ class _QueuedLLM:
         self._responses = list(responses)
 
     async def stream_chat(self, messages):
-        chunks = self._responses.pop(0) if self._responses else [
-            {"content": "", "is_final": True, "token_usage": 0}
-        ]
+        chunks = (
+            self._responses.pop(0)
+            if self._responses
+            else [{"content": "", "is_final": True, "token_usage": 0}]
+        )
         for c in chunks:
             yield c
 
 
 def _skill_call_chunks() -> list[dict]:
     return [
-        {"content": json.dumps({
-            "thought": "规划叠加方案",
-            "tool_calls": [{
-                "name": "skill_call",
-                "arguments": {"skill": "talking_head_overlay",
-                              "arguments": {"video_path": "x.mp4"}},
-            }],
-        })},
+        {
+            "content": json.dumps(
+                {
+                    "thought": "规划叠加方案",
+                    "tool_calls": [
+                        {
+                            "name": "skill_call",
+                            "arguments": {
+                                "skill": "talking_head_overlay",
+                                "arguments": {"video_path": "x.mp4"},
+                            },
+                        }
+                    ],
+                }
+            )
+        },
         {"content": "", "is_final": True, "token_usage": 1},
     ]
 
@@ -111,12 +121,14 @@ async def test_plain_needs_confirmation_still_hits_guardian_branch():
     _allow_guardian(session)
     session._transport = MagicMock()
     session._transport.get_tool = MagicMock(return_value=MagicMock(required_permissions=()))
-    session._transport.call = AsyncMock(return_value={
-        "ok": False,
-        "error": "requires user confirmation",
-        "needs_confirmation": True,
-        "confirmation_prompt": "是否执行？",
-    })
+    session._transport.call = AsyncMock(
+        return_value={
+            "ok": False,
+            "error": "requires user confirmation",
+            "needs_confirmation": True,
+            "confirmation_prompt": "是否执行？",
+        }
+    )
 
     result = await session.run("帮我做一期口播剪辑规划")
 

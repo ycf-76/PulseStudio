@@ -23,13 +23,16 @@ def test_zhihu_v2_null_mixed_and_hot_value_desc():
                 "hot_value_desc": "2992 万热度",
                 "link": "https://www.zhihu.com/question/123",
             },
-            None, None, None,  # 真实响应中的 null 占位
+            None,
+            None,
+            None,  # 真实响应中的 null 占位
             {
                 "title": "怎么看 OpenAI CEO 说最好的内存应该留给数据中心？",
                 "hot_value_desc": "122 万热度",
                 "link": "https://www.zhihu.com/question/456",
             },
-            None, None,
+            None,
+            None,
         ],
     }
     items = _parse_hot_response(data)
@@ -41,7 +44,10 @@ def test_zhihu_v2_null_mixed_and_hot_value_desc():
 
 
 def test_yi_unit_parsed():
-    assert _parse_hot_response({"data": [{"title": "x", "hot_value_desc": "1.2亿热度"}]})[0]["hot"] == 120_000_000
+    assert (
+        _parse_hot_response({"data": [{"title": "x", "hot_value_desc": "1.2亿热度"}]})[0]["hot"]
+        == 120_000_000
+    )
 
 
 def test_toutiao_v2_string_array():
@@ -60,7 +66,10 @@ def test_xxapi_error_code_yields_empty():
 
 def test_weibo_shape_unchanged():
     """原有微博形状（数值 hot）不受解析改动影响。"""
-    data = {"code": 200, "data": [{"title": "话题", "hot": 3456789, "url": "https://s.weibo.com/x"}]}
+    data = {
+        "code": 200,
+        "data": [{"title": "话题", "hot": 3456789, "url": "https://s.weibo.com/x"}],
+    }
     items = _parse_hot_response(data)
     assert items[0]["hot"] == 3456789
     assert items[0]["url"] == "https://s.weibo.com/x"
@@ -71,29 +80,31 @@ def _make_hotboard(titles: list[str]):
     from capabilities.content_search.sources.hotboard_source import HotboardSource, _normalize
 
     src = HotboardSource("hb-test", "测试热榜", "https://example.com/hot")
-    src._get_all_cached = lambda: _async_value([
-        TrendingContent(
-            platform="hb-test",
-            content_id=f"hotboard_hb-test_{i}",
-            title=t,
-            summary=t,
-            content=t,
-            author="测试热榜",
-            url="",
-            likes=0,
-            comments=0,
-            shares=0,
-            views=0,
-            cover_img="",
-            published_at="",
-            tags=[],
-            title_original=t,
-            summary_original=t,
-            content_original=t,
-            raw={},
-        )
-        for i, t in enumerate(titles)
-    ])
+    src._get_all_cached = lambda: _async_value(
+        [
+            TrendingContent(
+                platform="hb-test",
+                content_id=f"hotboard_hb-test_{i}",
+                title=t,
+                summary=t,
+                content=t,
+                author="测试热榜",
+                url="",
+                likes=0,
+                comments=0,
+                shares=0,
+                views=0,
+                cover_img="",
+                published_at="",
+                tags=[],
+                title_original=t,
+                summary_original=t,
+                content_original=t,
+                raw={},
+            )
+            for i, t in enumerate(titles)
+        ]
+    )
     assert _normalize("AI 大模型") == "ai大模型"
     return src
 

@@ -41,15 +41,23 @@ def compare(baseline: dict, treatment: dict) -> dict:
 
     overall_hsc = compute_hsc(b_sum["hallucination_rate"], t_sum["hallucination_rate"])
 
-    type1_hsc = compute_hsc(
-        b_sum["type1_fake_final_count"] / b_sum["total_runs"],
-        t_sum["type1_fake_final_count"] / t_sum["total_runs"],
-    ) if b_sum["total_runs"] > 0 else 0.0
+    type1_hsc = (
+        compute_hsc(
+            b_sum["type1_fake_final_count"] / b_sum["total_runs"],
+            t_sum["type1_fake_final_count"] / t_sum["total_runs"],
+        )
+        if b_sum["total_runs"] > 0
+        else 0.0
+    )
 
-    type2_hsc = compute_hsc(
-        b_sum["type2_fabricated_artifact_count"] / b_sum["total_runs"],
-        t_sum["type2_fabricated_artifact_count"] / t_sum["total_runs"],
-    ) if b_sum["total_runs"] > 0 else 0.0
+    type2_hsc = (
+        compute_hsc(
+            b_sum["type2_fabricated_artifact_count"] / b_sum["total_runs"],
+            t_sum["type2_fabricated_artifact_count"] / t_sum["total_runs"],
+        )
+        if b_sum["total_runs"] > 0
+        else 0.0
+    )
 
     category_hsc = {}
     for cat in baseline["by_category"]:
@@ -101,13 +109,29 @@ def compare(baseline: dict, treatment: dict) -> dict:
         },
         "by_type": {
             "type1_fake_final": {
-                "baseline_rate": round(b_sum["type1_fake_final_count"] / b_sum["total_runs"], 4) if b_sum["total_runs"] else 0,
-                "treatment_rate": round(t_sum["type1_fake_final_count"] / t_sum["total_runs"], 4) if t_sum["total_runs"] else 0,
+                "baseline_rate": (
+                    round(b_sum["type1_fake_final_count"] / b_sum["total_runs"], 4)
+                    if b_sum["total_runs"]
+                    else 0
+                ),
+                "treatment_rate": (
+                    round(t_sum["type1_fake_final_count"] / t_sum["total_runs"], 4)
+                    if t_sum["total_runs"]
+                    else 0
+                ),
                 "hsc": round(type1_hsc, 4),
             },
             "type2_fabricated_artifact": {
-                "baseline_rate": round(b_sum["type2_fabricated_artifact_count"] / b_sum["total_runs"], 4) if b_sum["total_runs"] else 0,
-                "treatment_rate": round(t_sum["type2_fabricated_artifact_count"] / t_sum["total_runs"], 4) if t_sum["total_runs"] else 0,
+                "baseline_rate": (
+                    round(b_sum["type2_fabricated_artifact_count"] / b_sum["total_runs"], 4)
+                    if b_sum["total_runs"]
+                    else 0
+                ),
+                "treatment_rate": (
+                    round(t_sum["type2_fabricated_artifact_count"] / t_sum["total_runs"], 4)
+                    if t_sum["total_runs"]
+                    else 0
+                ),
                 "hsc": round(type2_hsc, 4),
             },
         },
@@ -157,7 +181,9 @@ def render_comparison_md(comp: dict) -> str:
         f"|------|--------|--------|-----|",
     ]
     for t, data in comp["by_type"].items():
-        lines.append(f"| {t} | {data['baseline_rate']:.1%} | {data['treatment_rate']:.1%} | {data['hsc']:.2f} |")
+        lines.append(
+            f"| {t} | {data['baseline_rate']:.1%} | {data['treatment_rate']:.1%} | {data['hsc']:.2f} |"
+        )
 
     lines += [
         "",
@@ -167,7 +193,9 @@ def render_comparison_md(comp: dict) -> str:
         f"|------|--------|--------|-----|",
     ]
     for cat, data in comp["by_category"].items():
-        lines.append(f"| {cat} | {data['baseline_rate']:.1%} | {data['treatment_rate']:.1%} | {data['hsc']:.2f} |")
+        lines.append(
+            f"| {cat} | {data['baseline_rate']:.1%} | {data['treatment_rate']:.1%} | {data['hsc']:.2f} |"
+        )
 
     lines += [
         "",
@@ -177,7 +205,9 @@ def render_comparison_md(comp: dict) -> str:
         f"|----------|--------|--------|-----|",
     ]
     for trigger, data in sorted(comp["by_trigger"].items()):
-        lines.append(f"| {trigger} | {data['baseline_rate']:.1%} | {data['treatment_rate']:.1%} | {data['hsc']:.2f} |")
+        lines.append(
+            f"| {trigger} | {data['baseline_rate']:.1%} | {data['treatment_rate']:.1%} | {data['hsc']:.2f} |"
+        )
 
     lines += [
         "",

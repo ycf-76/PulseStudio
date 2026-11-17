@@ -160,7 +160,7 @@ def detect_grid(image_path: str | Path, *, min_side: int = 200) -> GridDetection
     if rows < 2 or cols < 2:
         return GridDetection(
             reason=f"未在两个方向同时找到等距接缝（行峰={[round(p,2) for p in row_peaks]}，"
-                   f"列峰={[round(p,2) for p in col_peaks]}）",
+            f"列峰={[round(p,2) for p in col_peaks]}）",
         )
 
     return GridDetection(

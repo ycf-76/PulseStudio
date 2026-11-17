@@ -37,15 +37,9 @@ _SEGMENTS_INLINE_CAP = 80
 
 class VideoTranscribeInput(BaseModel):
     video_path: str = Field(description="本地视频/音频文件路径（建议绝对路径）")
-    language: str = Field(
-        default="zh", description="语言代码：zh=中文，auto=自动检测"
-    )
-    model_size: str = Field(
-        default="small", description="模型大小：tiny/base/small/medium"
-    )
-    with_words: bool = Field(
-        default=False, description="是否返回逐词时间戳（payload 会大很多）"
-    )
+    language: str = Field(default="zh", description="语言代码：zh=中文，auto=自动检测")
+    model_size: str = Field(default="small", description="模型大小：tiny/base/small/medium")
+    with_words: bool = Field(default=False, description="是否返回逐词时间戳（payload 会大很多）")
 
 
 def _run_transcribe_subprocess(
@@ -74,9 +68,18 @@ def _run_transcribe_subprocess(
     creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
     try:
         proc = subprocess.run(
-            [sys.executable, "-c", code, video_path, str(backend_root),
-             model_size, language or "-"],
-            capture_output=True, timeout=timeout, env=env,
+            [
+                sys.executable,
+                "-c",
+                code,
+                video_path,
+                str(backend_root),
+                model_size,
+                language or "-",
+            ],
+            capture_output=True,
+            timeout=timeout,
+            env=env,
             creationflags=creationflags,
         )
     except subprocess.TimeoutExpired:
@@ -136,9 +139,9 @@ class VideoTranscribeSkill(Skill):
     )
 
     async def execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        params = VideoTranscribeInput.model_validate({
-            k: v for k, v in inputs.items() if k in VideoTranscribeInput.model_fields
-        })
+        params = VideoTranscribeInput.model_validate(
+            {k: v for k, v in inputs.items() if k in VideoTranscribeInput.model_fields}
+        )
 
         video = Path(params.video_path).expanduser()
         if not video.is_file():
@@ -150,7 +153,8 @@ class VideoTranscribeSkill(Skill):
 
         rows = await asyncio.to_thread(
             _run_transcribe_subprocess,
-            str(video), params.model_size,
+            str(video),
+            params.model_size,
             None if params.language.strip().lower() == "auto" else params.language,
         )
         if not rows:

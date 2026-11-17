@@ -52,6 +52,7 @@ router = APIRouter(prefix="/api/models", tags=["models"])
 
 # ===== Schemas =====
 
+
 class ProviderInfo(BaseModel):
     provider: str
     provider_name: str
@@ -127,6 +128,7 @@ class SaveAssignmentRequest(BaseModel):
 
 # ===== Helpers =====
 
+
 def _get_crypto() -> TokenCrypto:
     return TokenCrypto()
 
@@ -142,9 +144,7 @@ async def _get_user_credential(
     return result.scalar_one_or_none()
 
 
-async def _get_all_user_credentials(
-    db: AsyncSession, user_id: str
-) -> list[UserProviderCredential]:
+async def _get_all_user_credentials(db: AsyncSession, user_id: str) -> list[UserProviderCredential]:
     stmt = select(UserProviderCredential).where(
         UserProviderCredential.user_id == user_id,
     )
@@ -203,6 +203,7 @@ def _validate_base_url(base_url: str) -> None:
 
 # ===== Routes =====
 
+
 @router.get("/providers")
 async def list_providers(
     user_id: str = Depends(get_current_user),
@@ -248,18 +249,20 @@ async def list_available_models(
 
         for m in prov.default_models:
             source = "user" if has_user_key else ("global" if has_global_key else "")
-            models.append(AvailableModel(
-                model_id=m.model_id,
-                api_model=m.api_model,
-                display_name=m.display_name,
-                description=m.description,
-                capabilities=list(m.capabilities),
-                max_tokens=m.max_tokens,
-                provider=prov.provider,
-                has_api_key=has_api_key,
-                is_active=cred.is_active if cred else True,
-                source=source,
-            ))
+            models.append(
+                AvailableModel(
+                    model_id=m.model_id,
+                    api_model=m.api_model,
+                    display_name=m.display_name,
+                    description=m.description,
+                    capabilities=list(m.capabilities),
+                    max_tokens=m.max_tokens,
+                    provider=prov.provider,
+                    has_api_key=has_api_key,
+                    is_active=cred.is_active if cred else True,
+                    source=source,
+                )
+            )
 
         if cred and cred.custom_models:
             try:
@@ -267,18 +270,20 @@ async def list_available_models(
                 for cm_name in custom_model_names:
                     existing_ids = {m.model_id for m in prov.default_models}
                     if cm_name not in existing_ids:
-                        models.append(AvailableModel(
-                            model_id=cm_name,
-                            api_model=cm_name,
-                            display_name=cm_name,
-                            description="自定义模型",
-                            capabilities=["text", "chat"],
-                            max_tokens=4096,
-                            provider=prov.provider,
-                            has_api_key=True,
-                            is_active=cred.is_active,
-                            source="user",
-                        ))
+                        models.append(
+                            AvailableModel(
+                                model_id=cm_name,
+                                api_model=cm_name,
+                                display_name=cm_name,
+                                description="自定义模型",
+                                capabilities=["text", "chat"],
+                                max_tokens=4096,
+                                provider=prov.provider,
+                                has_api_key=True,
+                                is_active=cred.is_active,
+                                source="user",
+                            )
+                        )
             except (json.JSONDecodeError, TypeError):
                 pass
 
@@ -301,15 +306,17 @@ async def list_credentials(
             custom_models = json.loads(c.custom_models)
         except (json.JSONDecodeError, TypeError):
             pass
-        data.append(CredentialStatus(
-            provider=c.provider,
-            provider_name=prov.provider_name if prov else c.provider,
-            icon=prov.icon if prov else "",
-            has_api_key=True,
-            custom_base_url=c.custom_base_url,
-            custom_models=custom_models,
-            is_active=c.is_active,
-        ))
+        data.append(
+            CredentialStatus(
+                provider=c.provider,
+                provider_name=prov.provider_name if prov else c.provider,
+                icon=prov.icon if prov else "",
+                has_api_key=True,
+                custom_base_url=c.custom_base_url,
+                custom_models=custom_models,
+                is_active=c.is_active,
+            )
+        )
     return StandardResponse(data=data)
 
 
@@ -333,8 +340,14 @@ async def save_credential(
         _enforce_rate_limit("save", user_id, provider, settings.byok_save_rate_limit)
     except HTTPException:
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_SAVE,
-            result=RESULT_DENIED, ip=ip, user_agent=ua, detail="触发保存限流",
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_SAVE,
+            result=RESULT_DENIED,
+            ip=ip,
+            user_agent=ua,
+            detail="触发保存限流",
         )
         await db.commit()
         raise
@@ -345,8 +358,14 @@ async def save_credential(
         _validate_base_url(custom_base_url)
     except HTTPException as exc:
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_SAVE,
-            result=RESULT_DENIED, ip=ip, user_agent=ua, detail=str(exc.detail),
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_SAVE,
+            result=RESULT_DENIED,
+            ip=ip,
+            user_agent=ua,
+            detail=str(exc.detail),
         )
         await db.commit()
         raise
@@ -363,6 +382,7 @@ async def save_credential(
         existing.is_active = payload.is_active
     else:
         from app.db.models import generate_ulid
+
         cred = UserProviderCredential(
             id=generate_ulid(),
             user_id=user_id,
@@ -376,8 +396,13 @@ async def save_credential(
 
     # 4) 审计：只记录动作与结果，不写 Key
     await record_audit(
-        db, user_id=user_id, provider=provider, action=ACTION_SAVE,
-        result=RESULT_OK, ip=ip, user_agent=ua,
+        db,
+        user_id=user_id,
+        provider=provider,
+        action=ACTION_SAVE,
+        result=RESULT_OK,
+        ip=ip,
+        user_agent=ua,
         detail="custom_base_url" if custom_base_url else "",
     )
 
@@ -399,8 +424,13 @@ async def delete_credential(
     await db.delete(existing)
     ip, ua = _audit_context(http_request)
     await record_audit(
-        db, user_id=user_id, provider=provider, action=ACTION_DELETE,
-        result=RESULT_OK, ip=ip, user_agent=ua,
+        db,
+        user_id=user_id,
+        provider=provider,
+        action=ACTION_DELETE,
+        result=RESULT_OK,
+        ip=ip,
+        user_agent=ua,
     )
     await db.commit()
     logger.info("[BYOK] Deleted credential for user=%s provider=%s", user_id, provider)
@@ -430,8 +460,14 @@ async def verify_credential(
         _enforce_rate_limit("verify", user_id, provider, settings.byok_verify_rate_limit)
     except HTTPException:
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_VERIFY,
-            result=RESULT_DENIED, ip=ip, user_agent=ua, detail="触发验证限流",
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_VERIFY,
+            result=RESULT_DENIED,
+            ip=ip,
+            user_agent=ua,
+            detail="触发验证限流",
         )
         await db.commit()
         raise
@@ -446,8 +482,14 @@ async def verify_credential(
     except Exception as exc:
         safe_error = _safe_error(exc)
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_VERIFY,
-            result=RESULT_FAIL, ip=ip, user_agent=ua, detail=safe_error,
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_VERIFY,
+            result=RESULT_FAIL,
+            ip=ip,
+            user_agent=ua,
+            detail=safe_error,
         )
         await db.commit()
         return StandardResponse(data=VerifyResult(valid=False, error=f"Key 解密失败: {safe_error}"))
@@ -457,8 +499,14 @@ async def verify_credential(
         _validate_base_url(existing.custom_base_url)
     except HTTPException as exc:
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_VERIFY,
-            result=RESULT_DENIED, ip=ip, user_agent=ua, detail=str(exc.detail),
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_VERIFY,
+            result=RESULT_DENIED,
+            ip=ip,
+            user_agent=ua,
+            detail=str(exc.detail),
         )
         await db.commit()
         return StandardResponse(data=VerifyResult(valid=False, error=str(exc.detail)))
@@ -467,8 +515,14 @@ async def verify_credential(
 
     if prov_def.provider_type == ProviderType.ANTHROPIC:
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_VERIFY,
-            result=RESULT_OK, ip=ip, user_agent=ua, detail="anthropic skip",
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_VERIFY,
+            result=RESULT_OK,
+            ip=ip,
+            user_agent=ua,
+            detail="anthropic skip",
         )
         await db.commit()
         return StandardResponse(
@@ -478,27 +532,43 @@ async def verify_credential(
 
     try:
         from openai import AsyncOpenAI
+
         client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         models_resp = await client.models.list()
         models_count = len(models_resp.data) if models_resp.data else 0
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_VERIFY,
-            result=RESULT_OK, ip=ip, user_agent=ua, detail=f"models={models_count}",
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_VERIFY,
+            result=RESULT_OK,
+            ip=ip,
+            user_agent=ua,
+            detail=f"models={models_count}",
         )
         await db.commit()
         return StandardResponse(data=VerifyResult(valid=True, models_count=models_count))
     except Exception as e:
         safe_error = _safe_error(e)
-        logger.warning("[BYOK] Verify failed for user=%s provider=%s: %s", user_id, provider, safe_error)
+        logger.warning(
+            "[BYOK] Verify failed for user=%s provider=%s: %s", user_id, provider, safe_error
+        )
         await record_audit(
-            db, user_id=user_id, provider=provider, action=ACTION_VERIFY,
-            result=RESULT_FAIL, ip=ip, user_agent=ua, detail=safe_error,
+            db,
+            user_id=user_id,
+            provider=provider,
+            action=ACTION_VERIFY,
+            result=RESULT_FAIL,
+            ip=ip,
+            user_agent=ua,
+            detail=safe_error,
         )
         await db.commit()
         return StandardResponse(data=VerifyResult(valid=False, error=safe_error))
 
 
 # ===== 模型分配（智能体 / 技能统一在这里配置） =====
+
 
 @router.get("/assignments")
 async def list_model_assignments(
@@ -521,14 +591,16 @@ async def list_model_assignments(
         from app.agents.registry import get_agent_registry
 
         for agent in get_agent_registry().list_agents():
-            targets.append(AssignmentTarget(
-                target_type=AGENT_TARGET,
-                target_key=agent.agent_id,
-                label=agent.role or agent.agent_id,
-                subtitle=agent.agent_id,
-                default_model=agent.llm_model or "",
-                assigned_model=assignments.get((AGENT_TARGET, agent.agent_id), ""),
-            ))
+            targets.append(
+                AssignmentTarget(
+                    target_type=AGENT_TARGET,
+                    target_key=agent.agent_id,
+                    label=agent.role or agent.agent_id,
+                    subtitle=agent.agent_id,
+                    default_model=agent.llm_model or "",
+                    assigned_model=assignments.get((AGENT_TARGET, agent.agent_id), ""),
+                )
+            )
     except Exception as e:
         logger.warning("[assignments] list agents failed: %s", e)
 
@@ -542,14 +614,16 @@ async def list_model_assignments(
                 if not meta.get("is_prompt_skill"):
                     continue
                 key = f"{node_type}/{meta.get('name', '')}"
-                targets.append(AssignmentTarget(
-                    target_type=SKILL_TARGET,
-                    target_key=key,
-                    label=meta.get("display_name") or meta.get("name", ""),
-                    subtitle=node_type,
-                    default_model="",
-                    assigned_model=assignments.get((SKILL_TARGET, key), ""),
-                ))
+                targets.append(
+                    AssignmentTarget(
+                        target_type=SKILL_TARGET,
+                        target_key=key,
+                        label=meta.get("display_name") or meta.get("name", ""),
+                        subtitle=node_type,
+                        default_model="",
+                        assigned_model=assignments.get((SKILL_TARGET, key), ""),
+                    )
+                )
     except Exception as e:
         logger.warning("[assignments] list skills failed: %s", e)
 
@@ -588,4 +662,7 @@ async def save_model_assignment(
         "" if request.target_type == DEFAULT_TARGET else request.target_key,
         request.model.strip(),
     )
-    return StandardResponse(data={"target_type": request.target_type, "target_key": request.target_key}, message="模型分配已保存")
+    return StandardResponse(
+        data={"target_type": request.target_type, "target_key": request.target_key},
+        message="模型分配已保存",
+    )

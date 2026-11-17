@@ -21,9 +21,7 @@ def test_observer_bridge_publishes_decision(monkeypatch):
     observer = _make_observer("wf_1")
     asyncio.run(observer.emit_decision("node1", "决定调工具"))
 
-    assert calls == [
-        ("wf_1", "decision_made", {"node_id": "node1", "decision": "决定调工具"})
-    ]
+    assert calls == [("wf_1", "decision_made", {"node_id": "node1", "decision": "决定调工具"})]
 
 
 def test_observer_bridge_publishes_tool_call_recovery_circuit(monkeypatch):
@@ -39,6 +37,18 @@ def test_observer_bridge_publishes_tool_call_recovery_circuit(monkeypatch):
 
     asyncio.run(run())
 
-    assert ("wf_1", "tool_call_start", {"node_id": "node1", "tool_name": "xhs_search", "inputs": {"keyword": "AI"}}) in calls
-    assert ("wf_1", "tool_call_end", {"node_id": "node1", "tool_name": "xhs_search", "success": True, "summary": "搜索到 3 条"}) in calls
-    assert ("wf_1", "progress_update", {"node_id": "node1", "current": 1, "total": 3, "label": "第 1 步"}) in calls
+    assert (
+        "wf_1",
+        "tool_call_start",
+        {"node_id": "node1", "tool_name": "xhs_search", "inputs": {"keyword": "AI"}},
+    ) in calls
+    assert (
+        "wf_1",
+        "tool_call_end",
+        {"node_id": "node1", "tool_name": "xhs_search", "success": True, "summary": "搜索到 3 条"},
+    ) in calls
+    assert (
+        "wf_1",
+        "progress_update",
+        {"node_id": "node1", "current": 1, "total": 3, "label": "第 1 步"},
+    ) in calls

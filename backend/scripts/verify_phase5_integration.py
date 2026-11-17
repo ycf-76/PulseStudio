@@ -1,4 +1,5 @@
 """五期-F 集成验收：全量跑通五期 A~E 所有验证项。"""
+
 from __future__ import annotations
 
 import subprocess
@@ -73,7 +74,14 @@ for cap in ("grid", "browser", "media", "spider"):
 print("\n7. capability-service 工具全景（6 个）")
 from capability_service.main import CAPABILITY_TOOLS
 
-expected_tools = {"grid_detect", "grid_split", "render_htmls", "tts_piper", "video_compose", "spider_sync"}
+expected_tools = {
+    "grid_detect",
+    "grid_split",
+    "render_htmls",
+    "tts_piper",
+    "video_compose",
+    "spider_sync",
+}
 actual_tools = set(CAPABILITY_TOOLS.keys())
 ok = actual_tools == expected_tools
 if ok:
@@ -156,7 +164,12 @@ else:
 print("\n12. CapabilityEventBridge 完整性")
 from app.services import capability_event_bridge
 
-for fn in ("install_progress_bridge", "emit_progress_via_bridge", "_main_process_events_url", "_httpx_progress_callback"):
+for fn in (
+    "install_progress_bridge",
+    "emit_progress_via_bridge",
+    "_main_process_events_url",
+    "_httpx_progress_callback",
+):
     ok = hasattr(capability_event_bridge, fn)
     if ok:
         passed += 1

@@ -17,22 +17,22 @@ Model Router - 智能模型路由与动态切换系统
 
 使用方式：
     from app.adapters.model_router import ModelRouter, ModelConfig
-    
+
     router = ModelRouter()
-    
+
     # 方式1: 直接调用（自动路由到最优模型）
     result = await router.chat(
         messages=[{"role": "user", "content": "写一篇小红书文案"}],
         task_type="copywrite",  # 任务类型
         budget=0.01,           # 成本预算（元/次）
     )
-    
+
     # 方式2: 指定模型
     result = await router.chat(
         messages=[...],
         model_id="deepseek-chat",
     )
-    
+
     # 方式3: 对话式模式中的动态切换
     async for event in router.chat_interactive(
         messages=[...],
@@ -50,7 +50,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -88,9 +88,9 @@ class ModelConfig:
     provider: ModelProvider
     display_name: str
 
-    capabilities: List[str] = field(default_factory=lambda: [
-        "text_generation", "chat", "function_calling"
-    ])
+    capabilities: List[str] = field(
+        default_factory=lambda: ["text_generation", "chat", "function_calling"]
+    )
 
     tier: ModelTier = ModelTier.STANDARD
     quality_score: float = 8.0
@@ -114,12 +114,15 @@ class ModelConfig:
         try:
             if self.provider == ModelProvider.DEEPSEEK:
                 from app.config import get_settings
+
                 return bool(get_settings().deepseek_api_key)
             elif self.provider == ModelProvider.OPENAI:
                 from app.config import get_settings
+
                 return bool(get_settings().openai_api_key)
             elif self.provider == ModelProvider.ALIBABA:
                 from app.config import get_settings
+
                 return bool(get_settings().dashscope_api_key)
             else:
                 return True
@@ -202,152 +205,175 @@ class ModelRouter:
         logger.info("[ModelRouter] Initialized with %d models", len(self._models))
 
     def _register_builtin_models(self):
-        self.register(ModelConfig(
-            model_id="deepseek-v4-flash",
-            provider=ModelProvider.DEEPSEEK,
-            display_name="DeepSeek V4 Flash (通用)",
-            capabilities=["text_generation", "chat", "code", "function_calling"],
-            tier=ModelTier.STANDARD,
-            quality_score=9.0,
-            speed_score=9.5,
-            cost_per_1k_tokens=0.00028,
-            max_tokens=16384,
-            best_for=[TaskType.COPYWRITE, TaskType.ANALYZE, TaskType.GENERAL, TaskType.CODE],
-            config={"temperature_range": [0, 2], "context_length": 1000000},
-        ))
+        self.register(
+            ModelConfig(
+                model_id="deepseek-v4-flash",
+                provider=ModelProvider.DEEPSEEK,
+                display_name="DeepSeek V4 Flash (通用)",
+                capabilities=["text_generation", "chat", "code", "function_calling"],
+                tier=ModelTier.STANDARD,
+                quality_score=9.0,
+                speed_score=9.5,
+                cost_per_1k_tokens=0.00028,
+                max_tokens=16384,
+                best_for=[TaskType.COPYWRITE, TaskType.ANALYZE, TaskType.GENERAL, TaskType.CODE],
+                config={"temperature_range": [0, 2], "context_length": 1000000},
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="deepseek-coder",
-            provider=ModelProvider.DEEPSEEK,
-            display_name="DeepSeek Coder (代码)",
-            capabilities=["text_generation", "code", "reasoning"],
-            tier=ModelTier.STANDARD,
-            quality_score=8.8,
-            speed_score=8.5,
-            cost_per_1k_tokens=0.001,
-            max_tokens=16384,
-            best_for=[TaskType.CODE],
-        ))
+        self.register(
+            ModelConfig(
+                model_id="deepseek-coder",
+                provider=ModelProvider.DEEPSEEK,
+                display_name="DeepSeek Coder (代码)",
+                capabilities=["text_generation", "code", "reasoning"],
+                tier=ModelTier.STANDARD,
+                quality_score=8.8,
+                speed_score=8.5,
+                cost_per_1k_tokens=0.001,
+                max_tokens=16384,
+                best_for=[TaskType.CODE],
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="gpt-4o",
-            provider=ModelProvider.OPENAI,
-            display_name="GPT-4o (最新旗舰)",
-            capabilities=["text_generation", "vision", "function_calling"],
-            tier=ModelTier.PREMIUM,
-            quality_score=9.5,
-            speed_score=7.5,
-            cost_per_1k_tokens=0.09,
-            max_tokens=4096,
-            best_for=[TaskType.ANALYZE, TaskType.IMAGE_REVIEW],
-            config={"supports_vision": True},
-        ))
+        self.register(
+            ModelConfig(
+                model_id="gpt-4o",
+                provider=ModelProvider.OPENAI,
+                display_name="GPT-4o (最新旗舰)",
+                capabilities=["text_generation", "vision", "function_calling"],
+                tier=ModelTier.PREMIUM,
+                quality_score=9.5,
+                speed_score=7.5,
+                cost_per_1k_tokens=0.09,
+                max_tokens=4096,
+                best_for=[TaskType.ANALYZE, TaskType.IMAGE_REVIEW],
+                config={"supports_vision": True},
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="gpt-4o-mini",
-            provider=ModelProvider.OPENAI,
-            display_name="GPT-4o Mini (性价比)",
-            capabilities=["text_generation", "vision"],
-            tier=ModelTier.STANDARD,
-            quality_score=8.0,
-            speed_score=9.0,
-            cost_per_1k_tokens=0.01,
-            max_tokens=4096,
-            best_for=[TaskType.TRANSLATE, TaskType.SUMMARIZE],
-        ))
+        self.register(
+            ModelConfig(
+                model_id="gpt-4o-mini",
+                provider=ModelProvider.OPENAI,
+                display_name="GPT-4o Mini (性价比)",
+                capabilities=["text_generation", "vision"],
+                tier=ModelTier.STANDARD,
+                quality_score=8.0,
+                speed_score=9.0,
+                cost_per_1k_tokens=0.01,
+                max_tokens=4096,
+                best_for=[TaskType.TRANSLATE, TaskType.SUMMARIZE],
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="claude-3-5-sonnet-20241022",
-            provider=ModelProvider.ANTHROPIC,
-            display_name="Claude 3.5 Sonnet",
-            capabilities=["text_generation", "long_context", "analysis"],
-            tier=ModelTier.PREMIUM,
-            quality_score=9.3,
-            speed_score=8.0,
-            cost_per_1k_tokens=0.05,
-            max_tokens=8192,
-            best_for=[TaskType.COPYWRITE, TaskType.ANALYZE],
-            config={"max_context": 200000},
-        ))
+        self.register(
+            ModelConfig(
+                model_id="claude-3-5-sonnet-20241022",
+                provider=ModelProvider.ANTHROPIC,
+                display_name="Claude 3.5 Sonnet",
+                capabilities=["text_generation", "long_context", "analysis"],
+                tier=ModelTier.PREMIUM,
+                quality_score=9.3,
+                speed_score=8.0,
+                cost_per_1k_tokens=0.05,
+                max_tokens=8192,
+                best_for=[TaskType.COPYWRITE, TaskType.ANALYZE],
+                config={"max_context": 200000},
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="qwen-turbo",
-            provider=ModelProvider.ALIBABA,
-            display_name="Qwen Turbo (通义千问)",
-            capabilities=["text_generation", "chat", "chinese"],
-            tier=ModelTier.BUDGET,
-            quality_score=7.5,
-            speed_score=9.5,
-            cost_per_1k_tokens=0.0004,
-            max_tokens=6000,
-            best_for=[TaskType.SUMMARIZE, TaskType.TRANSLATE, TaskType.GENERAL],
-        ))
+        self.register(
+            ModelConfig(
+                model_id="qwen-turbo",
+                provider=ModelProvider.ALIBABA,
+                display_name="Qwen Turbo (通义千问)",
+                capabilities=["text_generation", "chat", "chinese"],
+                tier=ModelTier.BUDGET,
+                quality_score=7.5,
+                speed_score=9.5,
+                cost_per_1k_tokens=0.0004,
+                max_tokens=6000,
+                best_for=[TaskType.SUMMARIZE, TaskType.TRANSLATE, TaskType.GENERAL],
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="qwen-max",
-            provider=ModelProvider.ALIBABA,
-            display_name="Qwen Max (通义千问旗舰)",
-            capabilities=["text_generation", "reasoning", "chinese"],
-            tier=ModelTier.STANDARD,
-            quality_score=8.5,
-            speed_score=7.5,
-            cost_per_1k_tokens=0.002,
-            max_tokens=8000,
-            best_for=[TaskType.COPYWRITE, TaskType.ANALYZE],
-        ))
+        self.register(
+            ModelConfig(
+                model_id="qwen-max",
+                provider=ModelProvider.ALIBABA,
+                display_name="Qwen Max (通义千问旗舰)",
+                capabilities=["text_generation", "reasoning", "chinese"],
+                tier=ModelTier.STANDARD,
+                quality_score=8.5,
+                speed_score=7.5,
+                cost_per_1k_tokens=0.002,
+                max_tokens=8000,
+                best_for=[TaskType.COPYWRITE, TaskType.ANALYZE],
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="qwen-vl-max",
-            provider=ModelProvider.ALIBABA,
-            display_name="Qwen-VL Max (图片理解)",
-            capabilities=["vision", "image_understanding"],
-            tier=ModelTier.STANDARD,
-            quality_score=8.5,
-            speed_score=7.0,
-            cost_per_1k_tokens=0.003,
-            max_tokens=2000,
-            best_for=[TaskType.IMAGE_REVIEW],
-        ))
+        self.register(
+            ModelConfig(
+                model_id="qwen-vl-max",
+                provider=ModelProvider.ALIBABA,
+                display_name="Qwen-VL Max (图片理解)",
+                capabilities=["vision", "image_understanding"],
+                tier=ModelTier.STANDARD,
+                quality_score=8.5,
+                speed_score=7.0,
+                cost_per_1k_tokens=0.003,
+                max_tokens=2000,
+                best_for=[TaskType.IMAGE_REVIEW],
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="wanx-v1",
-            provider=ModelProvider.ALIBABA,
-            display_name="通义万相 V1",
-            capabilities=["image_generation"],
-            tier=ModelTier.STANDARD,
-            quality_score=8.0,
-            speed_score=7.0,
-            cost_per_image=0.02,
-            best_for=[TaskType.IMAGE_GEN],
-            config={"size_options": ["1024x1024", "768x1344", "1344x768"]},
-        ))
+        self.register(
+            ModelConfig(
+                model_id="wanx-v1",
+                provider=ModelProvider.ALIBABA,
+                display_name="通义万相 V1",
+                capabilities=["image_generation"],
+                tier=ModelTier.STANDARD,
+                quality_score=8.0,
+                speed_score=7.0,
+                cost_per_image=0.02,
+                best_for=[TaskType.IMAGE_GEN],
+                config={"size_options": ["1024x1024", "768x1344", "1344x768"]},
+            )
+        )
 
-        self.register(ModelConfig(
-            model_id="pollinations-free",
-            provider=ModelProvider.POLLINATIONS,
-            display_name="Pollinations (免费)",
-            capabilities=["image_generation"],
-            tier=ModelTier.FALLBACK,
-            quality_score=6.0,
-            speed_score=6.0,
-            cost_per_image=0.0,
-            best_for=[TaskType.IMAGE_GEN],
-            avoid_for=[TaskType.IMAGE_GEN],
-            config={"requires_proxy": True},
-        ))
+        self.register(
+            ModelConfig(
+                model_id="pollinations-free",
+                provider=ModelProvider.POLLINATIONS,
+                display_name="Pollinations (免费)",
+                capabilities=["image_generation"],
+                tier=ModelTier.FALLBACK,
+                quality_score=6.0,
+                speed_score=6.0,
+                cost_per_image=0.0,
+                best_for=[TaskType.IMAGE_GEN],
+                avoid_for=[TaskType.IMAGE_GEN],
+                config={"requires_proxy": True},
+            )
+        )
 
     def register(self, model_config: ModelConfig):
         self._models[model_config.model_id] = model_config
-        logger.info("[ModelRouter] Registered model: %s (%s)",
-                   model_config.model_id, model_config.display_name)
+        logger.info(
+            "[ModelRouter] Registered model: %s (%s)",
+            model_config.model_id,
+            model_config.display_name,
+        )
 
     def resolve_llm(
         self,
         model: str | None = None,
         temperature: float | None = None,
     ) -> Any | None:
-        from app.config import get_settings
         from app.adapters.deepseek import DeepSeekAdapter
+        from app.config import get_settings
 
         s = get_settings()
         if not s.deepseek_api_key:
@@ -389,7 +415,7 @@ class ModelRouter:
                 "[ModelRouter] Selected model: %s (tier=%s, reason=%s)",
                 selected_model.model_id,
                 selected_model.tier.value,
-                getattr(request, '_routing_reason', 'user_specified')
+                getattr(request, "_routing_reason", "user_specified"),
             )
 
             adapter = self._get_adapter(selected_model.provider)
@@ -404,8 +430,9 @@ class ModelRouter:
             )
 
             latency_ms = int((time.time() - start_time) * 1000)
-            cost = selected_model.estimated_cost(input_tokens=len(str(request.messages)),
-                                                output_tokens=tokens_used)
+            cost = selected_model.estimated_cost(
+                input_tokens=len(str(request.messages)), output_tokens=tokens_used
+            )
 
             self._update_stats(selected_model.model_id, tokens_used, cost)
 
@@ -417,7 +444,7 @@ class ModelRouter:
                 cost=cost,
                 latency_ms=latency_ms,
                 finish_reason=finish_reason,
-                routing_decision=getattr(request, '_routing_reason', ''),
+                routing_decision=getattr(request, "_routing_reason", ""),
             )
 
         except Exception as e:
@@ -455,10 +482,11 @@ class ModelRouter:
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         from app.config import get_settings
+
         s = get_settings()
         model_name = s.deepseek_model_v3
         adapter = self.resolve_llm(model=model_name)
-        if adapter and hasattr(adapter, 'stream_chat'):
+        if adapter and hasattr(adapter, "stream_chat"):
             async for chunk in adapter.stream_chat(messages, response_format, tools):
                 yield chunk
             return
@@ -519,11 +547,13 @@ class ModelRouter:
                                 current_model=current_model.model_id,
                             )
 
-                response = await self.route(ChatRequest(
-                    **request.__dict__,
-                    preferred_model=current_model.model_id,
-                    allow_fallback=False,
-                ))
+                response = await self.route(
+                    ChatRequest(
+                        **request.__dict__,
+                        preferred_model=current_model.model_id,
+                        allow_fallback=False,
+                    )
+                )
 
                 yield response
                 break
@@ -543,8 +573,9 @@ class ModelRouter:
                 request._routing_reason = "user_specified"
                 return model
             else:
-                logger.warning("[ModelRouter] User requested model %s is unavailable",
-                              request.preferred_model)
+                logger.warning(
+                    "[ModelRouter] User requested model %s is unavailable", request.preferred_model
+                )
 
         available_models = [m for m in self._models.values() if m.is_available]
 
@@ -554,13 +585,14 @@ class ModelRouter:
 
         if request.budget:
             affordable_models = [
-                m for m in available_models
-                if m.estimated_cost() <= request.budget
+                m for m in available_models if m.estimated_cost() <= request.budget
             ]
             if affordable_models:
                 available_models = affordable_models
             else:
-                logger.warning("[ModelRouter] No models within budget %.4f, using cheapest", request.budget)
+                logger.warning(
+                    "[ModelRouter] No models within budget %.4f, using cheapest", request.budget
+                )
                 available_models = [min(available_models, key=lambda m: m.estimated_cost())]
 
         scored_models = []
@@ -597,9 +629,7 @@ class ModelRouter:
         return best_model
 
     def _should_suggest_switch(
-        self,
-        current_model: ModelConfig,
-        request: ChatRequest
+        self, current_model: ModelConfig, request: ChatRequest
     ) -> Optional[List[Dict[str, Any]]]:
         suggestions = []
 
@@ -610,45 +640,48 @@ class ModelRouter:
             should_suggest = False
             reasons = []
 
-            if (model.quality_score > current_model.quality_score + 1.5 and
-                model.estimated_cost() < current_model.estimated_cost() * 1.5):
+            if (
+                model.quality_score > current_model.quality_score + 1.5
+                and model.estimated_cost() < current_model.estimated_cost() * 1.5
+            ):
                 should_suggest = True
                 reasons.append(f"质量更高 ({model.quality_score} vs {current_model.quality_score})")
 
-            if (request.task_type in model.best_for and
-                request.task_type not in current_model.best_for):
+            if (
+                request.task_type in model.best_for
+                and request.task_type not in current_model.best_for
+            ):
                 should_suggest = True
                 reasons.append(f"更适合{request.task_type.value}任务")
 
-            if (model.speed_score > current_model.speed_score + 1.0 and
-                abs(model.quality_score - current_model.quality_score) <= 0.5):
+            if (
+                model.speed_score > current_model.speed_score + 1.0
+                and abs(model.quality_score - current_model.quality_score) <= 0.5
+            ):
                 should_suggest = True
                 reasons.append(f"响应更快 ({model.speed_score} vs {current_model.speed_score})")
 
             if should_suggest:
-                suggestions.append({
-                    "model_id": model.model_id,
-                    "display_name": model.display_name,
-                    "provider": model.provider.value,
-                    "tier": model.tier.value,
-                    "quality_score": model.quality_score,
-                    "speed_score": model.speed_score,
-                    "estimated_cost": f"¥{model.estimated_cost():.4f}",
-                    "reasons": reasons,
-                })
+                suggestions.append(
+                    {
+                        "model_id": model.model_id,
+                        "display_name": model.display_name,
+                        "provider": model.provider.value,
+                        "tier": model.tier.value,
+                        "quality_score": model.quality_score,
+                        "speed_score": model.speed_score,
+                        "estimated_cost": f"¥{model.estimated_cost():.4f}",
+                        "reasons": reasons,
+                    }
+                )
 
         return suggestions[:3] if suggestions else None
 
-    async def _try_fallback(
-        self,
-        request: ChatRequest,
-        original_error: str
-    ) -> ChatResponse:
+    async def _try_fallback(self, request: ChatRequest, original_error: str) -> ChatResponse:
         self._stats["fallback_count"] += 1
 
         logger.warning(
-            "[ModelRouter] Primary model failed, trying fallback. Error: %s",
-            original_error
+            "[ModelRouter] Primary model failed, trying fallback. Error: %s", original_error
         )
 
         fallback_order = [
@@ -665,20 +698,22 @@ class ModelRouter:
             )
 
             fallback_candidates = [
-                m for m in self._models.values()
+                m
+                for m in self._models.values()
                 if m.tier == tier and m.is_available and m.model_id != request.preferred_model
             ]
 
             if fallback_candidates:
-                best_fallback = max(fallback_candidates,
-                                   key=lambda m: m.quality_score)
+                best_fallback = max(fallback_candidates, key=lambda m: m.quality_score)
 
                 try:
-                    response = await self.route(ChatRequest(
-                        **request.__dict__,
-                        preferred_model=best_fallback.model_id,
-                        allow_fallback=False,
-                    ))
+                    response = await self.route(
+                        ChatRequest(
+                            **request.__dict__,
+                            preferred_model=best_fallback.model_id,
+                            allow_fallback=False,
+                        )
+                    )
 
                     response.fallback_used = True
                     response.routing_decision = (
@@ -691,7 +726,7 @@ class ModelRouter:
                     logger.warning(
                         "[ModelRouter] Fallback to %s also failed: %s",
                         best_fallback.model_id,
-                        fallback_error
+                        fallback_error,
                     )
                     continue
 
@@ -708,22 +743,27 @@ class ModelRouter:
 
         elif provider == ModelProvider.OPENAI:
             from langchain_openai import ChatOpenAI
+
             adapter = ChatOpenAI
 
         elif provider == ModelProvider.ANTHROPIC:
             from langchain_anthropic import ChatAnthropic
+
             adapter = ChatAnthropic
 
         elif provider == ModelProvider.ALIBABA:
             if "vl" in str(self._models):
                 from capabilities.image_gen.adapters.qwen_vl import QwenVLAdapter
+
                 adapter = QwenVLAdapter
             else:
                 from langchain_community.chat_models import ChatTongyi
+
                 adapter = ChatTongyi
 
         elif provider == ModelProvider.POLLINATIONS:
             from capabilities.image_gen.adapters.image_gen import PollinationsAdapter
+
             adapter = PollinationsAdapter
 
         if adapter:
@@ -771,23 +811,26 @@ class ModelRouter:
             if capability and capability not in model.capabilities:
                 continue
 
-            models.append({
-                "model_id": model.model_id,
-                "display_name": model.display_name,
-                "provider": model.provider.value,
-                "tier": model.tier.value,
-                "is_available": model.is_available,
-                "quality_score": model.quality_score,
-                "speed_score": model.speed_score,
-                "estimated_cost_per_call": f"¥{model.estimated_cost():.4f}",
-                "capabilities": model.capabilities,
-                "best_for": [t.value for t in model.best_for],
-            })
+            models.append(
+                {
+                    "model_id": model.model_id,
+                    "display_name": model.display_name,
+                    "provider": model.provider.value,
+                    "tier": model.tier.value,
+                    "is_available": model.is_available,
+                    "quality_score": model.quality_score,
+                    "speed_score": model.speed_score,
+                    "estimated_cost_per_call": f"¥{model.estimated_cost():.4f}",
+                    "capabilities": model.capabilities,
+                    "best_for": [t.value for t in model.best_for],
+                }
+            )
 
         return models
 
 
 _router_instance: Optional[ModelRouter] = None
+
 
 def get_model_router() -> ModelRouter:
     global _router_instance

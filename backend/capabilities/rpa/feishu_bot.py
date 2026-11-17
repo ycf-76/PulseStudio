@@ -19,13 +19,14 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Awaitable, Callable, Optional
 
-from capabilities.messaging.adapters.feishu import FeishuClient, FeishuAPIError
+from capabilities.messaging.adapters.feishu import FeishuAPIError, FeishuClient
 
 logger = logging.getLogger(__name__)
 
 
 class FeishuBotStatus(Enum):
     """飞书机器人状态枚举"""
+
     STOPPED = "stopped"
     STARTING = "starting"
     RUNNING = "running"
@@ -113,7 +114,9 @@ class FeishuBotEngine:
             self.state.start_time = datetime.now()
             self.state.status = FeishuBotStatus.RUNNING
             self.state.error_message = ""
-            logger.info(f"[FeishuBot] Engine started for user={self._user_id}, app_id={self._client.app_id}")
+            logger.info(
+                f"[FeishuBot] Engine started for user={self._user_id}, app_id={self._client.app_id}"
+            )
         except Exception as e:
             self.state.status = FeishuBotStatus.ERROR
             self.state.error_message = str(e)
@@ -135,7 +138,9 @@ class FeishuBotEngine:
             处理结果
         """
         if not self.is_running:
-            logger.warning(f"[FeishuBot] Event received but engine not running, user={self._user_id}")
+            logger.warning(
+                f"[FeishuBot] Event received but engine not running, user={self._user_id}"
+            )
             return {"handled": False, "reason": "engine_not_running"}
 
         self.state.last_event_time = datetime.now()
@@ -163,6 +168,7 @@ class FeishuBotEngine:
         content_str = message.get("content", "{}")
         try:
             import json
+
             content = json.loads(content_str) if isinstance(content_str, str) else content_str
             text = content.get("text", "").strip()
         except (json.JSONDecodeError, AttributeError):
@@ -179,7 +185,9 @@ class FeishuBotEngine:
                 result = await handler(chat_id, sender_id, args.strip())
                 return {"handled": True, "action": "command", "command": command, "result": result}
             else:
-                await self._client.send_text(chat_id, f"未知指令: {command}\n输入 /help 查看可用指令")
+                await self._client.send_text(
+                    chat_id, f"未知指令: {command}\n输入 /help 查看可用指令"
+                )
                 return {"handled": True, "action": "unknown_command", "command": command}
 
         msg_dict = {
@@ -222,8 +230,7 @@ class FeishuBotEngine:
 
             await self._client.send_text(
                 chat_id,
-                f"文档导入成功！内容长度: {len(content)} 字符\n"
-                f"（后续将对接平台创作素材库）",
+                f"文档导入成功！内容长度: {len(content)} 字符\n" f"（后续将对接平台创作素材库）",
             )
             return {"success": True, "document_id": document_id, "content_length": len(content)}
 
@@ -248,7 +255,9 @@ class FeishuBotEngine:
             return {"success": False, "error": "no_bitable_config"}
 
         if not args:
-            await self._client.send_text(chat_id, "用法: /export <选题/文案ID>\n（后续将对接平台数据）")
+            await self._client.send_text(
+                chat_id, "用法: /export <选题/文案ID>\n（后续将对接平台数据）"
+            )
             return {"success": False, "error": "missing_args"}
 
         try:
@@ -258,7 +267,9 @@ class FeishuBotEngine:
                 table_id=table_id,
                 fields={"来源ID": args, "状态": "已导出", "导出时间": datetime.now().isoformat()},
             )
-            await self._client.send_text(chat_id, f"导出成功！记录ID: {result.get('record_id', 'N/A')}")
+            await self._client.send_text(
+                chat_id, f"导出成功！记录ID: {result.get('record_id', 'N/A')}"
+            )
             return {"success": True, "record_id": result.get("record_id")}
 
         except FeishuAPIError as e:
@@ -357,7 +368,9 @@ class FeishuBotEngine:
         """注册消息回调，收到非指令消息时触发。"""
         self._message_callbacks.append(callback)
 
-    def remove_message_callback(self, callback: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
+    def remove_message_callback(
+        self, callback: Callable[[dict[str, Any]], Awaitable[None]]
+    ) -> None:
         """移除消息回调。"""
         if callback in self._message_callbacks:
             self._message_callbacks.remove(callback)
@@ -372,6 +385,7 @@ def get_feishu_engine(user_id: str) -> FeishuBotEngine:
     """获取或创建飞书机器人引擎实例（按用户隔离）。"""
     if user_id not in _engine_registry:
         from app.config import get_settings
+
         settings = get_settings()
 
         client = FeishuClient(

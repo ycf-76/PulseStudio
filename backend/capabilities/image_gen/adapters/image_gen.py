@@ -74,9 +74,7 @@ class ImageGenAdapter(ABC):
     """Abstract base for all image generation adapters."""
 
     @abstractmethod
-    async def generate(
-        self, prompt: str, size: str = "1024x1024", count: int = 1
-    ) -> list[bytes]:
+    async def generate(self, prompt: str, size: str = "1024x1024", count: int = 1) -> list[bytes]:
         """Generate images and return image bytes.
 
         Args:
@@ -195,8 +193,7 @@ class WanxAdapter(ImageGenAdapter):
                 if err_code == "Arrearage" or "arrearage" in err_msg.lower() or "余额" in err_msg:
                     # 欠费：不重试，标记错误类型供前端通知
                     logger.error(
-                        f"[wanx] 400 Arrearage (账号欠费): code={err_code}, "
-                        f"message={err_msg}"
+                        f"[wanx] 400 Arrearage (账号欠费): code={err_code}, " f"message={err_msg}"
                     )
                     self.__class__.last_error_type = "arrearage"
                     self.__class__.last_error_message = f"通义万相账号欠费: {err_msg}"
@@ -221,9 +218,7 @@ class WanxAdapter(ImageGenAdapter):
                 return {}
 
             if resp.status_code >= 400:
-                logger.error(
-                    f"[wanx] HTTP {resp.status_code}, body={resp.text[:500]}"
-                )
+                logger.error(f"[wanx] HTTP {resp.status_code}, body={resp.text[:500]}")
                 self.__class__.last_error_type = "api_error"
                 self.__class__.last_error_message = f"HTTP {resp.status_code}"
                 return {}
@@ -232,9 +227,7 @@ class WanxAdapter(ImageGenAdapter):
             if data.get("code"):
                 err_code = str(data.get("code", ""))
                 err_msg = str(data.get("message", ""))
-                logger.error(
-                    f"[wanx] API error: code={err_code}, message={err_msg}"
-                )
+                logger.error(f"[wanx] API error: code={err_code}, message={err_msg}")
                 self.__class__.last_error_type = "api_error"
                 self.__class__.last_error_message = f"{err_code}: {err_msg}"
                 return {}
@@ -246,9 +239,7 @@ class WanxAdapter(ImageGenAdapter):
 
         return {}
 
-    async def generate(
-        self, prompt: str, size: str = "1080x1440", count: int = 1
-    ) -> list[bytes]:
+    async def generate(self, prompt: str, size: str = "1080x1440", count: int = 1) -> list[bytes]:
         """生成图片：提交任务 → 轮询 → 下载。
 
         通义万相单次任务支持 n=1~4，直接一次提交。
@@ -302,27 +293,20 @@ class WanxAdapter(ImageGenAdapter):
                     )
                     task_resp.raise_for_status()
                 except httpx.HTTPStatusError as e:
-                    logger.warning(
-                        f"[wanx] poll failed: {e.response.status_code}, "
-                        f"retrying..."
-                    )
+                    logger.warning(f"[wanx] poll failed: {e.response.status_code}, " f"retrying...")
                     continue
 
                 task_data = task_resp.json()
                 status = task_data.get("output", {}).get("task_status", "")
 
                 logger.info(
-                    f"[wanx] polling task {task_id}: status={status}, "
-                    f"elapsed={elapsed:.1f}s"
+                    f"[wanx] polling task {task_id}: status={status}, " f"elapsed={elapsed:.1f}s"
                 )
 
                 if status == "SUCCEEDED":
                     results = task_data.get("output", {}).get("results", [])
                     image_urls = [r.get("url") for r in results if r.get("url")]
-                    logger.info(
-                        f"[wanx] task {task_id} succeeded: "
-                        f"{len(image_urls)} images"
-                    )
+                    logger.info(f"[wanx] task {task_id} succeeded: " f"{len(image_urls)} images")
                     # ③ 下载图片
                     images = await self._download_images(client, image_urls)
                     return images
@@ -334,25 +318,20 @@ class WanxAdapter(ImageGenAdapter):
                     self.__class__.last_error_message = f"任务{status}: {error}"
                     return []
 
-            logger.warning(
-                f"[wanx] task {task_id} timeout after {self.poll_max_wait}s"
-            )
+            logger.warning(f"[wanx] task {task_id} timeout after {self.poll_max_wait}s")
             self.__class__.last_error_type = "timeout"
             self.__class__.last_error_message = f"任务轮询超时 ({self.poll_max_wait}s)"
             return []
 
-    async def _download_images(
-        self, client: httpx.AsyncClient, urls: list[str]
-    ) -> list[bytes]:
+    async def _download_images(self, client: httpx.AsyncClient, urls: list[str]) -> list[bytes]:
         """并发下载图片 URL → bytes。"""
+
         async def _download_one(url: str) -> bytes | None:
             try:
                 resp = await client.get(url, timeout=httpx.Timeout(60.0))
                 resp.raise_for_status()
                 img_bytes = resp.content
-                logger.info(
-                    f"[wanx] downloaded: {len(img_bytes)} bytes from {url[:60]}..."
-                )
+                logger.info(f"[wanx] downloaded: {len(img_bytes)} bytes from {url[:60]}...")
                 return img_bytes
             except Exception as e:
                 logger.error(f"[wanx] download failed for {url[:60]}: {e}")
@@ -389,9 +368,7 @@ class PollinationsAdapter(ImageGenAdapter):
         self.nologo = nologo
         self.proxy = proxy
 
-    async def generate(
-        self, prompt: str, size: str = "1080x1440", count: int = 1
-    ) -> list[bytes]:
+    async def generate(self, prompt: str, size: str = "1080x1440", count: int = 1) -> list[bytes]:
         """生成图片，返回 JPEG bytes 列表。"""
         width, height = _parse_pollinations_size(size)
         client_kwargs = {
@@ -426,9 +403,7 @@ class PollinationsAdapter(ImageGenAdapter):
                     )
                     return None
                 img_bytes = resp.content
-                logger.info(
-                    f"[pollinations] idx={idx} generated: {len(img_bytes)} bytes"
-                )
+                logger.info(f"[pollinations] idx={idx} generated: {len(img_bytes)} bytes")
                 return img_bytes
             except Exception as e:
                 logger.error(f"[pollinations] idx={idx} failed: {e}")
@@ -466,6 +441,7 @@ def get_default_adapter() -> ImageGenAdapter | None:
     dashscope_key = ""
     try:
         from app.config import get_settings
+
         dashscope_key = get_settings().dashscope_api_key or ""
     except Exception:
         pass
@@ -479,6 +455,7 @@ def get_default_adapter() -> ImageGenAdapter | None:
         wanx_model = "wanx2.1-t2i-turbo"
         try:
             from app.config import get_settings
+
             wanx_model = get_settings().wanx_model or "wanx2.1-t2i-turbo"
         except Exception:
             pass

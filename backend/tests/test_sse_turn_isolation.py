@@ -67,12 +67,16 @@ async def test_off_turn_events_never_leak():
 
     # 上一回合：完整跑完并终态（旧内容打标，后面断言它零出现）
     await sse_bus.publish(sid, "chat_turn_started", {"session_id": sid}, turn_id=old_turn)
-    await sse_bus.publish(sid, "agent_message_delta", {"delta": "OLD_TURN_OUTPUT"}, turn_id=old_turn)
+    await sse_bus.publish(
+        sid, "agent_message_delta", {"delta": "OLD_TURN_OUTPUT"}, turn_id=old_turn
+    )
     await sse_bus.publish(sid, "workflow_completed", {"workflow_id": sid}, turn_id=old_turn)
 
     # 新回合开始
     await sse_bus.publish(sid, "chat_turn_started", {"session_id": sid}, turn_id=new_turn)
-    await sse_bus.publish(sid, "agent_message_delta", {"delta": "NEW_TURN_OUTPUT"}, turn_id=new_turn)
+    await sse_bus.publish(
+        sid, "agent_message_delta", {"delta": "NEW_TURN_OUTPUT"}, turn_id=new_turn
+    )
     await sse_bus.publish(sid, "workflow_completed", {"workflow_id": sid}, turn_id=new_turn)
 
     chunks = await _drain(sse_bus.subscribe(sid, None, new_turn))

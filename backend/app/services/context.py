@@ -9,6 +9,4 @@ from __future__ import annotations
 from contextvars import ContextVar
 
 # 当前 workflow_id（请求级上下文）
-current_workflow_id: ContextVar[str | None] = ContextVar(
-    "current_workflow_id", default=None
-)
+current_workflow_id: ContextVar[str | None] = ContextVar("current_workflow_id", default=None)

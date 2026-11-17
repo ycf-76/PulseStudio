@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-
 DRAFT_FIELD_SCHEMA: dict[str, dict[str, Any]] = {
     "title": {
         "type": "string",
@@ -57,13 +56,28 @@ CARD_EDITOR_SCHEMA: dict[str, Any] = {
         {"id": "dark_ink", "name": "深色墨韵", "style": "高级/科技/观点"},
     ],
     "page_types": [
-        "cover", "content", "quote", "list",
-        "dark_panel", "end_page", "compare", "icon_text",
-        "steps", "code_panel", "numbered_cards", "newspaper", "big_quote",
+        "cover",
+        "content",
+        "quote",
+        "list",
+        "dark_panel",
+        "end_page",
+        "compare",
+        "icon_text",
+        "steps",
+        "code_panel",
+        "numbered_cards",
+        "newspaper",
+        "big_quote",
     ],
     "decoration_types": [
-        "none", "gradient_orbs", "grid_lines", "dots",
-        "wave", "noise", "geometric",
+        "none",
+        "gradient_orbs",
+        "grid_lines",
+        "dots",
+        "wave",
+        "noise",
+        "geometric",
     ],
     "refinable_fields": {
         "customFontSize": {"type": "number", "description": "自定义字号覆盖模板默认"},

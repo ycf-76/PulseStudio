@@ -20,16 +20,17 @@ class TestKenburnsClipsCarryNoSubtitle:
     @pytest.mark.asyncio
     async def test_intermediate_clip_has_empty_caption(self, tmp_path, monkeypatch):
         """中间片段必须不带 caption —— 否则 compose_video 会自动烧一层字幕"""
-        monkeypatch.setattr(
-            "capabilities.video.skills.multi_image_video._OUTPUT_DIR", tmp_path
-        )
+        monkeypatch.setattr("capabilities.video.skills.multi_image_video._OUTPUT_DIR", tmp_path)
         shots = [{"caption": "开场引入", "frame_url": "/uploads/a.png", "duration": 5.0}]
 
-        with patch(
-            "app.services.asset_library.url_to_local_path", return_value=str(tmp_path / "a.png")
-        ), patch(
-            "capabilities.video.adapters.video_compose.compose_video", new=AsyncMock()
-        ) as compose:
+        with (
+            patch(
+                "app.services.asset_library.url_to_local_path", return_value=str(tmp_path / "a.png")
+            ),
+            patch(
+                "capabilities.video.adapters.video_compose.compose_video", new=AsyncMock()
+            ) as compose,
+        ):
             await _render_kenburns_clips(shots, "9:16", "u1", {"9:16": "1080x1920"})
 
         assert compose.called
@@ -39,9 +40,7 @@ class TestKenburnsClipsCarryNoSubtitle:
     @pytest.mark.asyncio
     async def test_real_video_shots_are_skipped(self, tmp_path, monkeypatch):
         """已有真视频片段的镜头不参与 ken-burns 渲染，避免重复占时间轴"""
-        monkeypatch.setattr(
-            "capabilities.video.skills.multi_image_video._OUTPUT_DIR", tmp_path
-        )
+        monkeypatch.setattr("capabilities.video.skills.multi_image_video._OUTPUT_DIR", tmp_path)
         shots = [{"clip_mode": "video", "clip_url": "/uploads/v.mp4", "caption": "c"}]
 
         with patch(
@@ -94,11 +93,21 @@ class TestBurnSubtitles:
         from capabilities.video.adapters.video_compose import burn_subtitles
 
         src = tmp_path / "in.mp4"
-        await vc._run([
-            "ffmpeg", "-y", "-f", "lavfi", "-i",
-            "color=c=black:s=360x640:d=6",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", str(src),
-        ])
+        await vc._run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=360x640:d=6",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                str(src),
+            ]
+        )
         assert src.is_file()
 
         out = tmp_path / "out.mp4"

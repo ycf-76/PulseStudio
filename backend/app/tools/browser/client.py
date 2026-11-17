@@ -28,10 +28,13 @@ logger = logging.getLogger(__name__)
 _PROFILE_BASE_DIR = Path(__file__).resolve().parents[2] / "data" / "browser_profiles"
 
 _NEEDS_LOGIN_DOMAINS = {
-    "feishu.cn", "open.feishu.cn",
+    "feishu.cn",
+    "open.feishu.cn",
     "accounts.feishu.cn",
-    "docs.qq.com", "mail.qq.com",
-    "slack.com", "notion.so",
+    "docs.qq.com",
+    "mail.qq.com",
+    "slack.com",
+    "notion.so",
 }
 
 # 审计回调签名：(action, domain, url, ok, detail) -> None
@@ -123,9 +126,7 @@ class BrowserClient:
             try:
                 from playwright.async_api import async_playwright
 
-                self._playwright = await asyncio.wait_for(
-                    async_playwright().start(), timeout=20.0
-                )
+                self._playwright = await asyncio.wait_for(async_playwright().start(), timeout=20.0)
 
                 if profile_id:
                     user_data_dir = str(self._profile_dir(profile_id))
@@ -154,7 +155,11 @@ class BrowserClient:
                         timeout=20.0,
                     )
                     self._browser = self._context
-                    self._page = self._context.pages[0] if self._context.pages else await self._context.new_page()
+                    self._page = (
+                        self._context.pages[0]
+                        if self._context.pages
+                        else await self._context.new_page()
+                    )
                     self._current_profile_id = profile_id
                     logger.debug(
                         f"[BrowserClient] Playwright persistent context initialized "
@@ -210,8 +215,7 @@ class BrowserClient:
     ) -> None:
         """切换到不同的 profile（关闭当前浏览器，重新初始化）。"""
         logger.info(
-            f"[BrowserClient] Switching profile: "
-            f"{self._current_profile_id!r} -> {profile_id!r}"
+            f"[BrowserClient] Switching profile: " f"{self._current_profile_id!r} -> {profile_id!r}"
         )
         await self._cleanup()
         self._initialized = False
@@ -299,6 +303,7 @@ class BrowserClient:
     def _static_domains(self) -> list[str]:
         try:
             from app.config import get_settings
+
             return get_settings().browser_allowed_domain_list
         except Exception:
             return ["xiaohongshu.com"]
@@ -519,12 +524,14 @@ class BrowserClient:
             pages = self._context.pages
             tabs_info = []
             for i, p in enumerate(pages):
-                tabs_info.append({
-                    "index": i,
-                    "url": p.url,
-                    "title": await p.title(),
-                    "active": p == self._page,
-                })
+                tabs_info.append(
+                    {
+                        "index": i,
+                        "url": p.url,
+                        "title": await p.title(),
+                        "active": p == self._page,
+                    }
+                )
             return {"ok": True, "tabs": tabs_info}
         except Exception as e:
             return {"ok": False, "error": f"TABS_FAILED: {e}"}
@@ -533,11 +540,17 @@ class BrowserClient:
         """列出会话（兼容接口，始终返回单个会话）。"""
         return {
             "ok": True,
-            "sessions": [{
-                "session_id": "default",
-                "url": self._current_url if self._page else "",
-                "created_at": time.time(),
-            }] if self._initialized else []
+            "sessions": (
+                [
+                    {
+                        "session_id": "default",
+                        "url": self._current_url if self._page else "",
+                        "created_at": time.time(),
+                    }
+                ]
+                if self._initialized
+                else []
+            ),
         }
 
     async def close(self) -> dict:

@@ -18,9 +18,9 @@ so this migration is idempotent and safe for databases that
 already have these columns (from the old main.py lifespan path).
 """
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision = '003'
 down_revision = '002'

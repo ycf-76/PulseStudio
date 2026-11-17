@@ -45,12 +45,10 @@ class WorldStateSection(ABC):
     def ID(self) -> str: ...
 
     @abstractmethod
-    def snapshot(self) -> dict[str, Any]:
-        ...
+    def snapshot(self) -> dict[str, Any]: ...
 
     @abstractmethod
-    def render_diff(self, previous: dict[str, Any] | None) -> str | None:
-        ...
+    def render_diff(self, previous: dict[str, Any] | None) -> str | None: ...
 
 
 class CopywriteSection(WorldStateSection):
@@ -212,7 +210,9 @@ class TaskProgressSection(WorldStateSection):
     def ID(self) -> str:
         return "task_progress"
 
-    def update(self, phase: str, completed: list[str] | None = None, pending: list[str] | None = None) -> None:
+    def update(
+        self, phase: str, completed: list[str] | None = None, pending: list[str] | None = None
+    ) -> None:
         self._phase = phase
         if completed is not None:
             self._completed_steps = completed
@@ -338,10 +338,10 @@ class WorldState:
         cls._section_map_loaded = True
         try:
             from app.agents.state_sections import SKILL_SECTIONS
+
             cls.register_skill_sections(SKILL_SECTIONS)
         except Exception:
             pass  # 能力侧不可用时 world_state 仍可工作（只丢 section 增强）
-
 
     """对标 Codex WorldState: 分 Section 的结构化状态对象。
 
@@ -397,10 +397,7 @@ class WorldState:
 
         对标 Codex WorldState::snapshot()。
         """
-        return {
-            section_id: section.snapshot()
-            for section_id, section in self._sections.items()
-        }
+        return {section_id: section.snapshot() for section_id, section in self._sections.items()}
 
     def update_world_state(
         self,
@@ -450,7 +447,9 @@ class WorldState:
                     self.task_progress.update(
                         "copywrite_done",
                         completed=["文案生成"],
-                        pending=["卡片制作"] if not self.card_draft.snapshot()["page_count"] else [],
+                        pending=(
+                            ["卡片制作"] if not self.card_draft.snapshot()["page_count"] else []
+                        ),
                     )
 
             elif section == "card":
@@ -466,28 +465,34 @@ class WorldState:
             if isinstance(result, dict):
                 file_path = result.get("file_path") or result.get("html_path")
                 if file_path:
-                    self.assets.add({
-                        "id": result.get("asset_id", ""),
-                        "type": "card_html",
-                        "path": file_path,
-                    })
+                    self.assets.add(
+                        {
+                            "id": result.get("asset_id", ""),
+                            "type": "card_html",
+                            "path": file_path,
+                        }
+                    )
                 for img in result.get("images", []):
                     if isinstance(img, dict):
-                        self.assets.add({
-                            "id": img.get("id", ""),
-                            "type": "image",
-                            "path": img.get("path", img.get("url", "")),
-                        })
+                        self.assets.add(
+                            {
+                                "id": img.get("id", ""),
+                                "type": "image",
+                                "path": img.get("path", img.get("url", "")),
+                            }
+                        )
 
         elif tool_name == "image_gen":
             # 裸 image_gen 工具（非 skill_call 包装）的产出也进 assets
             for img in output.get("images", []):
                 if isinstance(img, dict):
-                    self.assets.add({
-                        "id": img.get("id", ""),
-                        "type": "image",
-                        "path": img.get("path", img.get("url", "")),
-                    })
+                    self.assets.add(
+                        {
+                            "id": img.get("id", ""),
+                            "type": "image",
+                            "path": img.get("path", img.get("url", "")),
+                        }
+                    )
 
     @classmethod
     def from_snapshot(cls, snapshot: dict[str, Any]) -> "WorldState":

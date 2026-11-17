@@ -7,6 +7,7 @@ xiaohongshu / douyin 明确拒绝（无 extractor 或风控不稳，保持现有
 设计文档: docs/FEATURE_yt-dlp媒体下载接入.md
 参考: yt-dlp README「Embedding yt-dlp」；yt_dlp/cookies.py Netscape 格式
 """
+
 from __future__ import annotations
 
 import logging
@@ -140,7 +141,11 @@ def download_media(
     base_dir = Path(out_dir) if out_dir else get_media_base_dir() / platform
     base_dir.mkdir(parents=True, exist_ok=True)
 
-    fmt = "bv*+ba/b" if max_height is None else f"bv*[height<={max_height}]+ba/b[height<={max_height}]/b"
+    fmt = (
+        "bv*+ba/b"
+        if max_height is None
+        else f"bv*[height<={max_height}]+ba/b[height<={max_height}]/b"
+    )
     opts: dict[str, Any] = {
         "format": fmt,
         "outtmpl": str(base_dir / "%(id)s.%(ext)s"),

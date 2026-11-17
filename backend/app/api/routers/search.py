@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api/search", tags=["search"])
 
 class SearchResultItem(BaseModel):
     """单条搜索结果。"""
+
     platform: str
     content_id: str
     title: str
@@ -41,6 +42,7 @@ class SearchResultItem(BaseModel):
 
 class SearchResponse(BaseModel):
     """搜索响应。"""
+
     keyword: str
     platform: str  # 实际搜索的平台（"hackernews,builtin" 或单个平台名）
     count: int
@@ -56,7 +58,9 @@ async def search(
         ...,
         description="搜索关键词；若填入 http/https 链接，则直接采集该网页正文（忽略 platform）",
     ),
-    platform: str = Query("", description="平台名（空=全网搜）：tavily / builtin / hackernews / reddit / xiaohongshu"),
+    platform: str = Query(
+        "", description="平台名（空=全网搜）：tavily / builtin / hackernews / reddit / xiaohongshu"
+    ),
     limit: int = Query(20, ge=1, le=50, description="返回条数上限"),
     user_id: str = Depends(get_current_user),
 ) -> StandardResponse[SearchResponse]:
@@ -66,19 +70,22 @@ async def search(
     - 所有登录用户可搜索所有平台
     """
     import logging
+
     _logger = logging.getLogger(__name__)
 
     try:
         from capabilities.content_search.skills.trending_search import TrendingSearchSkill
 
         skill = TrendingSearchSkill()
-        output = await skill.execute({
-            "keyword": keyword,
-            "limit": limit,
-            "min_interactions": 0,
-            "time_range": "week",
-            "platform": platform,
-        })
+        output = await skill.execute(
+            {
+                "keyword": keyword,
+                "limit": limit,
+                "min_interactions": 0,
+                "time_range": "week",
+                "platform": platform,
+            }
+        )
     except RuntimeError as e:
         err_msg = str(e)
         _logger.error(f"[search] RuntimeError: {err_msg}")
@@ -92,15 +99,17 @@ async def search(
         _logger.exception(f"[search] unexpected error: {e}")
         raise HTTPException(status_code=500, detail=f"搜索失败: {e}")
 
-    return StandardResponse(data=SearchResponse(
-        keyword=keyword,
-        platform=output.get("platform", ""),
-        count=output.get("count", 0),
-        fallback_used=output.get("filter_stats", {}).get("fallback_used", False),
-        searched_platforms=output.get("filter_stats", {}).get("searched_platforms", []),
-        summary=output.get("summary", ""),
-        results=output.get("results", []),
-    ))
+    return StandardResponse(
+        data=SearchResponse(
+            keyword=keyword,
+            platform=output.get("platform", ""),
+            count=output.get("count", 0),
+            fallback_used=output.get("filter_stats", {}).get("fallback_used", False),
+            searched_platforms=output.get("filter_stats", {}).get("searched_platforms", []),
+            summary=output.get("summary", ""),
+            results=output.get("results", []),
+        )
+    )
 
 
 @router.get("/platforms")
@@ -235,6 +244,7 @@ async def list_platforms(
 
     try:
         from capabilities.content_search.sources.hotboard_source import load_hotboard_config
+
         for _key, _cfg in load_hotboard_config().items():
             if _key not in platform_meta:
                 platform_meta[_key] = {

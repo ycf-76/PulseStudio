@@ -28,7 +28,7 @@ class TestClarificationTagDetectorBasic:
     def test_complete_tag_in_one_chunk(self):
         det = ClarificationTagDetector()
         content, tag = det.feed(
-            'Some text <needs_clarification>question: 布局方式？\noptions: 左右|上下</needs_clarification> more text'
+            "Some text <needs_clarification>question: 布局方式？\noptions: 左右|上下</needs_clarification> more text"
         )
         assert "Some text" in content
         assert "more text" in content
@@ -38,7 +38,7 @@ class TestClarificationTagDetectorBasic:
     def test_tag_at_start(self):
         det = ClarificationTagDetector()
         content, tag = det.feed(
-            '<needs_clarification>question: 风格？</needs_clarification>After tag'
+            "<needs_clarification>question: 风格？</needs_clarification>After tag"
         )
         assert content == "After tag"
         assert "风格" in tag
@@ -46,16 +46,14 @@ class TestClarificationTagDetectorBasic:
     def test_tag_at_end(self):
         det = ClarificationTagDetector()
         content, tag = det.feed(
-            'Before tag<needs_clarification>question: 受众？</needs_clarification>'
+            "Before tag<needs_clarification>question: 受众？</needs_clarification>"
         )
         assert content == "Before tag"
         assert "受众" in tag
 
     def test_empty_tag(self):
         det = ClarificationTagDetector()
-        content, tag = det.feed(
-            'Text<needs_clarification></needs_clarification>More'
-        )
+        content, tag = det.feed("Text<needs_clarification></needs_clarification>More")
         assert content == "TextMore"
         assert tag == ""
 
@@ -110,7 +108,7 @@ class TestClarificationTagDetectorThinkingCoexistence:
     def test_inside_thinking_suppresses_detection(self):
         det = ClarificationTagDetector()
         content, tag = det.feed(
-            '<needs_clarification>question: 不应触发</needs_clarification>',
+            "<needs_clarification>question: 不应触发</needs_clarification>",
             is_inside_thinking=True,
         )
         assert tag == ""
@@ -119,7 +117,7 @@ class TestClarificationTagDetectorThinkingCoexistence:
     def test_outside_thinking_detects_normally(self):
         det = ClarificationTagDetector()
         content, tag = det.feed(
-            '<needs_clarification>question: 应触发</needs_clarification>',
+            "<needs_clarification>question: 应触发</needs_clarification>",
             is_inside_thinking=False,
         )
         assert "应触发" in tag
@@ -198,7 +196,5 @@ class TestParseClarificationTag:
         assert "question" in result
 
     def test_options_with_pipe_separator(self):
-        result = LoopExecutor._parse_clarification_tag(
-            "question: 选哪个？\noptions: A | B | C"
-        )
+        result = LoopExecutor._parse_clarification_tag("question: 选哪个？\noptions: A | B | C")
         assert result["options"] == ["A", "B", "C"]

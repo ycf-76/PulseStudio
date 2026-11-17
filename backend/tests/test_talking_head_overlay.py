@@ -15,6 +15,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from capabilities.video.services.overlay_orchestrator import (
+    TEMPLATE_LAYER,
+    TEMPLATE_PRIORITY,
     OverlayPlan,
     OverlaySegment,
     OverlayTemplate,
@@ -22,12 +24,10 @@ from capabilities.video.services.overlay_orchestrator import (
     detect_overlay_conflicts,
     remap_overlay_anchors,
     sort_overlays_by_priority,
-    TEMPLATE_PRIORITY,
-    TEMPLATE_LAYER,
 )
 
-
 # ── 1. OverlayTemplate 枚举 ──────────────────────────────
+
 
 class TestOverlayTemplate:
     def test_all_templates_defined(self):
@@ -40,6 +40,7 @@ class TestOverlayTemplate:
 
 
 # ── 2. OverlaySegment / OverlayPlan 模型 ─────────────────
+
 
 class TestOverlayModels:
     def test_overlay_segment_creation(self):
@@ -59,7 +60,9 @@ class TestOverlayModels:
             video_id="test",
             segments=[
                 OverlaySegment(
-                    segment_id="o1", time_start=0.0, time_end=3.0,
+                    segment_id="o1",
+                    time_start=0.0,
+                    time_end=3.0,
                     template=OverlayTemplate.TITLE_CARD,
                     params={"title": "标题"},
                 ),
@@ -70,6 +73,7 @@ class TestOverlayModels:
 
 
 # ── 3. TimeMapper（锚点重映射）───────────────────────────
+
 
 class TestTimeMapper:
     def test_identity_mapping(self):
@@ -108,17 +112,22 @@ class TestTimeMapper:
 
 # ── 4. remap_overlay_anchors ─────────────────────────────
 
+
 class TestRemapOverlayAnchors:
     def test_remap_basic(self):
         plan = OverlayPlan(
             video_id="test",
             segments=[
                 OverlaySegment(
-                    segment_id="o1", time_start=0.0, time_end=2.0,
+                    segment_id="o1",
+                    time_start=0.0,
+                    time_end=2.0,
                     template=OverlayTemplate.CAPTION_POP,
                 ),
                 OverlaySegment(
-                    segment_id="o2", time_start=4.0, time_end=6.0,
+                    segment_id="o2",
+                    time_start=4.0,
+                    time_end=6.0,
                     template=OverlayTemplate.TITLE_CARD,
                 ),
             ],
@@ -137,7 +146,9 @@ class TestRemapOverlayAnchors:
             video_id="test",
             segments=[
                 OverlaySegment(
-                    segment_id="o1", time_start=2.5, time_end=3.5,
+                    segment_id="o1",
+                    time_start=2.5,
+                    time_end=3.5,
                     template=OverlayTemplate.CAPTION_POP,
                 ),
             ],
@@ -150,12 +161,19 @@ class TestRemapOverlayAnchors:
 
 # ── 5. sort_overlays_by_priority ─────────────────────────
 
+
 class TestSortOverlays:
     def test_priority_sorting(self):
         segments = [
-            OverlaySegment(segment_id="o1", time_start=0, time_end=3, template=OverlayTemplate.CAPTION_POP),
-            OverlaySegment(segment_id="o2", time_start=0, time_end=3, template=OverlayTemplate.TITLE_CARD),
-            OverlaySegment(segment_id="o3", time_start=0, time_end=3, template=OverlayTemplate.STAT_CARD),
+            OverlaySegment(
+                segment_id="o1", time_start=0, time_end=3, template=OverlayTemplate.CAPTION_POP
+            ),
+            OverlaySegment(
+                segment_id="o2", time_start=0, time_end=3, template=OverlayTemplate.TITLE_CARD
+            ),
+            OverlaySegment(
+                segment_id="o3", time_start=0, time_end=3, template=OverlayTemplate.STAT_CARD
+            ),
         ]
         sorted_segs = sort_overlays_by_priority(segments)
         assert sorted_segs[0].template == OverlayTemplate.TITLE_CARD
@@ -165,27 +183,40 @@ class TestSortOverlays:
 
 # ── 6. detect_overlay_conflicts ──────────────────────────
 
+
 class TestDetectConflicts:
     def test_no_conflict_different_layers(self):
         segments = [
-            OverlaySegment(segment_id="o1", time_start=0, time_end=5, template=OverlayTemplate.CAPTION_POP),
-            OverlaySegment(segment_id="o2", time_start=0, time_end=5, template=OverlayTemplate.STAT_CARD),
+            OverlaySegment(
+                segment_id="o1", time_start=0, time_end=5, template=OverlayTemplate.CAPTION_POP
+            ),
+            OverlaySegment(
+                segment_id="o2", time_start=0, time_end=5, template=OverlayTemplate.STAT_CARD
+            ),
         ]
         conflicts = detect_overlay_conflicts(segments)
         assert len(conflicts) == 0
 
     def test_conflict_same_layer(self):
         segments = [
-            OverlaySegment(segment_id="o1", time_start=0, time_end=5, template=OverlayTemplate.CAPTION_POP),
-            OverlaySegment(segment_id="o2", time_start=3, time_end=8, template=OverlayTemplate.CAPTION_KARAOKE),
+            OverlaySegment(
+                segment_id="o1", time_start=0, time_end=5, template=OverlayTemplate.CAPTION_POP
+            ),
+            OverlaySegment(
+                segment_id="o2", time_start=3, time_end=8, template=OverlayTemplate.CAPTION_KARAOKE
+            ),
         ]
         conflicts = detect_overlay_conflicts(segments)
         assert len(conflicts) == 1
 
     def test_no_conflict_non_overlapping(self):
         segments = [
-            OverlaySegment(segment_id="o1", time_start=0, time_end=3, template=OverlayTemplate.CAPTION_POP),
-            OverlaySegment(segment_id="o2", time_start=3, time_end=6, template=OverlayTemplate.CAPTION_KARAOKE),
+            OverlaySegment(
+                segment_id="o1", time_start=0, time_end=3, template=OverlayTemplate.CAPTION_POP
+            ),
+            OverlaySegment(
+                segment_id="o2", time_start=3, time_end=6, template=OverlayTemplate.CAPTION_KARAOKE
+            ),
         ]
         conflicts = detect_overlay_conflicts(segments)
         assert len(conflicts) == 0
@@ -193,9 +224,11 @@ class TestDetectConflicts:
 
 # ── 7. HTML 模板渲染 ─────────────────────────────────────
 
+
 class TestOverlayTemplates:
     def test_caption_pop_html(self):
         from capabilities.video.adapters.overlay_templates import caption_pop
+
         html = caption_pop(text="增长 200%", width=1080, height=1920, duration=3.0)
         assert "增长" in html
         assert "200%" in html
@@ -204,6 +237,7 @@ class TestOverlayTemplates:
 
     def test_caption_karaoke_html(self):
         from capabilities.video.adapters.overlay_templates import caption_karaoke
+
         html = caption_karaoke(text="核心观点", width=1080, height=1920, duration=2.0)
         # v2: jieba 分词后词分别渲染（v1 整句一词是中文分词 bug）
         assert "核心" in html and "观点" in html
@@ -211,6 +245,7 @@ class TestOverlayTemplates:
 
     def test_keyword_icon_html(self):
         from capabilities.video.adapters.overlay_templates import keyword_icon
+
         html = keyword_icon(keyword="增长", icon="📈", animation="fly_in_right")
         assert "增长" in html
         assert "📈" in html
@@ -218,6 +253,7 @@ class TestOverlayTemplates:
 
     def test_stat_card_html(self):
         from capabilities.video.adapters.overlay_templates import stat_card
+
         html = stat_card(label="增长率", value="200%", icon="📊")
         assert "增长率" in html
         assert "200%" in html
@@ -225,6 +261,7 @@ class TestOverlayTemplates:
 
     def test_title_card_html(self):
         from capabilities.video.adapters.overlay_templates import title_card
+
         html = title_card(title="3个增长秘诀", subtitle="深度解析")
         assert "3个增长秘诀" in html
         assert "深度解析" in html
@@ -232,6 +269,7 @@ class TestOverlayTemplates:
 
     def test_templates_dict(self):
         from capabilities.video.adapters.overlay_templates import TEMPLATES
+
         assert "caption_pop" in TEMPLATES
         assert "caption_karaoke" in TEMPLATES
         assert "keyword_icon" in TEMPLATES
@@ -241,11 +279,13 @@ class TestOverlayTemplates:
 
 # ── 8. html_to_video 零件可缺 ────────────────────────────
 
+
 class TestHtmlToVideo:
     @pytest.mark.asyncio
     async def test_render_without_playwright(self):
         """没装 playwright 时返回 None（零件可缺）"""
         from capabilities.video.adapters.html_to_video import render_html_to_video
+
         with patch.dict("sys.modules", {"playwright": None, "playwright.async_api": None}):
             result = await render_html_to_video(
                 html_content="<html></html>",
@@ -256,8 +296,10 @@ class TestHtmlToVideo:
     @pytest.mark.asyncio
     async def test_compose_no_overlays(self):
         """无叠加层时直接复制视频"""
-        from capabilities.video.adapters.html_to_video import compose_with_overlays
         import tempfile
+
+        from capabilities.video.adapters.html_to_video import compose_with_overlays
+
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
             f.write(b"fake video")
             tmp_path = f.name
@@ -276,10 +318,12 @@ class TestHtmlToVideo:
 
 # ── 9. LLM overlay plan generation ──────────────────────
 
+
 class TestGenerateOverlayPlan:
     @pytest.mark.asyncio
     async def test_no_llm_returns_empty(self):
         from capabilities.video.services.overlay_orchestrator import generate_overlay_plan
+
         plan, raw = await generate_overlay_plan([], duration=10.0, llm=None)
         assert len(plan.segments) == 0
 
@@ -325,21 +369,25 @@ class TestGenerateOverlayPlan:
 
 # ── 10. talking_head_overlay 闸门契约 ────────────────────
 
+
 class TestTalkingHeadOverlayGate:
     def test_skill_metadata(self):
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
+
         assert TalkingHeadOverlaySkill.node_type == "edit"
         assert TalkingHeadOverlaySkill.name == "talking_head_overlay"
         assert TalkingHeadOverlaySkill.needs_confirmation is True
 
     def test_overlay_input_model(self):
-        from capabilities.video.skills.talking_head_overlay import OverlayInput, GateMode
+        from capabilities.video.skills.talking_head_overlay import GateMode, OverlayInput
+
         inp = OverlayInput(video_path="/tmp/test.mp4")
         assert inp.gate_mode == GateMode.STANDALONE
         assert inp.kept_segments is None
 
     def test_overlay_input_chained_mode(self):
-        from capabilities.video.skills.talking_head_overlay import OverlayInput, GateMode
+        from capabilities.video.skills.talking_head_overlay import GateMode, OverlayInput
+
         inp = OverlayInput(
             video_path="/tmp/test.mp4",
             gate_mode=GateMode.CHAINED,
@@ -351,6 +399,7 @@ class TestTalkingHeadOverlayGate:
 
 # ── 10.5 已知文本时间轴（跳过 whisper）──────────────────
 
+
 class TestKnownTranscript:
     @pytest.mark.asyncio
     async def test_transcript_skips_whisper(self):
@@ -361,7 +410,8 @@ class TestKnownTranscript:
         """
         from capabilities.video.services.overlay_orchestrator import OverlayPlan
         from capabilities.video.skills.talking_head_overlay import (
-            OverlayInput, TalkingHeadOverlaySkill,
+            OverlayInput,
+            TalkingHeadOverlaySkill,
         )
 
         skill = TalkingHeadOverlaySkill()
@@ -374,24 +424,34 @@ class TestKnownTranscript:
         def _boom(*a, **kw):
             raise AssertionError("提供 transcript 时不应调用 whisper")
 
-        with patch(
-            "capabilities.video.adapters.whisper_transcribe.transcribe", new=_boom,
-        ), patch(
-            # 10.19 起 skill 模块级 import generate_overlay_plan →
-            # patch 必须落在 skill 命名空间（patch 源模块不影响既有绑定）
-            "capabilities.video.skills.talking_head_overlay.generate_overlay_plan",
-            new=_plan,
-        ), patch.object(skill, "_resolve_llm", return_value=None):
+        with (
+            patch(
+                "capabilities.video.adapters.whisper_transcribe.transcribe",
+                new=_boom,
+            ),
+            patch(
+                # 10.19 起 skill 模块级 import generate_overlay_plan →
+                # patch 必须落在 skill 命名空间（patch 源模块不影响既有绑定）
+                "capabilities.video.skills.talking_head_overlay.generate_overlay_plan",
+                new=_plan,
+            ),
+            patch.object(skill, "_resolve_llm", return_value=None),
+        ):
             plan, timed_words, seg_dicts = await skill._generate_plan(
                 OverlayInput(
                     video_path="/tmp/x.mp4",
                     transcript=[
-                        {"start": 0.0, "end": 2.0, "text": "第一句",
-                         "words": [{"text": "第一", "start": 0.0, "end": 1.0}]},
+                        {
+                            "start": 0.0,
+                            "end": 2.0,
+                            "text": "第一句",
+                            "words": [{"text": "第一", "start": 0.0, "end": 1.0}],
+                        },
                         {"start": 2.0, "end": 4.0, "text": "第二句", "words": []},
                     ],
                 ),
-                duration=4.0, tmp_dir=Path("/tmp"),
+                duration=4.0,
+                tmp_dir=Path("/tmp"),
             )
 
         assert len(calls) == 1
@@ -405,7 +465,8 @@ class TestKnownTranscript:
         """坏元素（end<=start）丢弃；全丢 → 空规划（不崩）。"""
         from capabilities.video.services.overlay_orchestrator import OverlayPlan
         from capabilities.video.skills.talking_head_overlay import (
-            OverlayInput, TalkingHeadOverlaySkill,
+            OverlayInput,
+            TalkingHeadOverlaySkill,
         )
 
         skill = TalkingHeadOverlaySkill()
@@ -415,7 +476,8 @@ class TestKnownTranscript:
                     video_path="/tmp/x.mp4",
                     transcript=[{"start": 3.0, "end": 1.0, "text": "坏段"}],
                 ),
-                duration=4.0, tmp_dir=Path("/tmp"),
+                duration=4.0,
+                tmp_dir=Path("/tmp"),
             )
 
         assert isinstance(plan, OverlayPlan)
@@ -423,6 +485,7 @@ class TestKnownTranscript:
 
 
 # ── 10.5.5 video_pipeline_progress 进度发射（口播 chat 融合 Stage A）──
+
 
 class TestVideoPipelineProgress:
     """进度发射器单测 — docs/口播前端交互设计方案.md#3.4。
@@ -435,11 +498,13 @@ class TestVideoPipelineProgress:
         from capabilities.video.skills.talking_head_overlay import (
             TalkingHeadOverlaySkill,
         )
+
         return TalkingHeadOverlaySkill()
 
     @staticmethod
     def _mock_bus():
         from unittest.mock import MagicMock
+
         bus = MagicMock()
         bus.publish = AsyncMock(return_value="evt")
         return bus
@@ -489,7 +554,7 @@ class TestVideoPipelineProgress:
 
         assert bus.publish.await_count == 2
         first, second = bus.publish.await_args_list
-        assert first.args[2]["percent"] == 16   # int(1/6*100)
+        assert first.args[2]["percent"] == 16  # int(1/6*100)
         assert first.args[2]["phase"] == "transcribe"
         assert second.args[2]["percent"] == 100
         assert second.args[2]["phase"] == "review"
@@ -502,10 +567,12 @@ class TestVideoPipelineProgress:
         bus = self._mock_bus()
         with patch("app.services.sse_bus.sse_bus", new=bus):
             events = []
-            async for chunk in skill.execute({
-                "video_path": "Z:/nonexistent/nope.mp4",
-                "_workflow_id": "wf-3",
-            }):
+            async for chunk in skill.execute(
+                {
+                    "video_path": "Z:/nonexistent/nope.mp4",
+                    "_workflow_id": "wf-3",
+                }
+            ):
                 events.append(chunk)
 
         assert any(e.get("success") is False for e in events)
@@ -513,6 +580,7 @@ class TestVideoPipelineProgress:
 
 
 # ── 10.6 分辨率自适应（样本多样性审计 2026-10-28）────────
+
 
 class TestResolutionAdaptive:
     """16 个模板的字号/边距/位移全是按 1080×1920 设计的绝对 px。
@@ -525,6 +593,7 @@ class TestResolutionAdaptive:
 
     def test_base_css_design_baseline_identity(self):
         from capabilities.video.adapters.overlay_templates import _base_css
+
         css = _base_css(1080, 1920)
         assert "width: 1080px; height: 1920px" in css
         assert "scale(1.000000)" in css
@@ -533,6 +602,7 @@ class TestResolutionAdaptive:
     def test_base_css_720p_vertical(self):
         """720×1280 短边归一后本该走 1080×1920 —— 直调也应等比缩小。"""
         from capabilities.video.adapters.overlay_templates import _base_css
+
         css = _base_css(720, 1280)
         assert "scale(0.666667)" in css
         assert "translate(0.000px, 0.000px)" in css
@@ -540,12 +610,14 @@ class TestResolutionAdaptive:
     def test_base_css_landscape_centers_and_shrinks(self):
         """1920×1080 横屏：按高度适配 0.5625，左右居中留边不溢出。"""
         from capabilities.video.adapters.overlay_templates import _base_css
+
         css = _base_css(1920, 1080)
         assert "scale(0.562500)" in css
         assert "translate(656.250px, 0.000px)" in css
 
     def test_base_css_square_centers(self):
         from capabilities.video.adapters.overlay_templates import _base_css
+
         css = _base_css(1080, 1080)
         # k = min(1, 0.5625) = 0.5625；水平居中 (1080-607.5)/2 = 236.25
         assert "scale(0.562500)" in css
@@ -553,34 +625,41 @@ class TestResolutionAdaptive:
 
     def test_template_renders_with_scale(self):
         from capabilities.video.adapters.overlay_templates import caption_pop
+
         html = caption_pop(text="分辨率", width=720, height=1280, duration=2.0)
         assert "scale(0.666667)" in html
 
     def test_design_canvas_upscale_small(self):
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
+
         assert TalkingHeadOverlaySkill._design_canvas(684, 1174) == (1080, 1854)
 
     def test_design_canvas_downscale_4k(self):
         """4K 竖屏 2160×3840 原样渲染会让字号只剩设计比例一半 → 缩回 1080×1920。"""
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
+
         assert TalkingHeadOverlaySkill._design_canvas(2160, 3840) == (1080, 1920)
 
     def test_design_canvas_baseline_untouched(self):
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
+
         assert TalkingHeadOverlaySkill._design_canvas(1080, 1920) == (1080, 1920)
 
     def test_design_canvas_landscape_passthrough(self):
         """横屏短边已 1080 → 原样交给 _base_css 缩放兜底。"""
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
+
         assert TalkingHeadOverlaySkill._design_canvas(1920, 1080) == (1920, 1080)
 
 
 # ── 11. 临时文件清理 ─────────────────────────────────────
 
+
 class TestOverlayTempDir:
     @pytest.mark.asyncio
     async def test_temp_dir_created_and_cleaned(self):
         from capabilities.video.skills.talking_head_overlay import managed_temp_dir
+
         captured_dir = None
         async with managed_temp_dir() as tmp_dir:
             captured_dir = tmp_dir
@@ -591,15 +670,18 @@ class TestOverlayTempDir:
 
 # ── 12. Phase 4: 更多模板 ────────────────────────────────
 
+
 class TestMoreTemplates:
     def test_caption_typewriter_html(self):
         from capabilities.video.adapters.overlay_templates import caption_typewriter
+
         html = caption_typewriter(text="增长秘诀", width=1080, height=1920, duration=3.0)
         assert "增" in html and "长" in html and "秘" in html and "诀" in html
         assert "window.seekTo" in html
 
     def test_keyword_highlight_html(self):
         from capabilities.video.adapters.overlay_templates import keyword_highlight
+
         html = keyword_highlight(keyword="增长", highlight_color="#FF0000")
         assert "增长" in html
         assert "marker" in html  # v3: 亮色标记笔扫出
@@ -607,18 +689,21 @@ class TestMoreTemplates:
 
     def test_number_roll_html(self):
         from capabilities.video.adapters.overlay_templates import number_roll
+
         html = number_roll(label="增长率", value="0", target="200")
         assert "增长率" in html
         assert "counter" in html
 
     def test_bar_chart_grow_html(self):
         from capabilities.video.adapters.overlay_templates import bar_chart_grow
+
         html = bar_chart_grow(labels="A,B,C", values="30,60,90")
         assert "bar-fill" in html
         assert "window.seekTo" in html
 
     def test_lower_third_html(self):
         from capabilities.video.adapters.overlay_templates import lower_third
+
         html = lower_third(title="标题", subtitle="副标题")
         assert "标题" in html
         assert "副标题" in html
@@ -626,26 +711,41 @@ class TestMoreTemplates:
 
     def test_all_10_templates_in_dict(self):
         from capabilities.video.adapters.overlay_templates import TEMPLATES
+
         expected = {
-            "caption_pop", "caption_karaoke", "keyword_icon",
-            "stat_card", "title_card", "caption_typewriter",
-            "keyword_highlight", "number_roll", "bar_chart_grow",
-            "lower_third", "section_card", "emoji_sticker",  # v3 新增
-            "arrow_point", "circle_mark", "full_card", "split_compare",  # v4 新增
+            "caption_pop",
+            "caption_karaoke",
+            "keyword_icon",
+            "stat_card",
+            "title_card",
+            "caption_typewriter",
+            "keyword_highlight",
+            "number_roll",
+            "bar_chart_grow",
+            "lower_third",
+            "section_card",
+            "emoji_sticker",  # v3 新增
+            "arrow_point",
+            "circle_mark",
+            "full_card",
+            "split_compare",  # v4 新增
         }
         assert set(TEMPLATES.keys()) == expected
 
 
 # ── 13. 串联模式 + 闸门合并 ─────────────────────────────
 
+
 class TestChainedMode:
     def test_smart_cut_input_chain_field(self):
         from capabilities.video.skills.smart_cut import SmartCutInput
+
         inp = SmartCutInput(video_path="/tmp/test.mp4", chain_with_overlay=True)
         assert inp.chain_with_overlay is True
 
     def test_overlay_input_kept_segments(self):
-        from capabilities.video.skills.talking_head_overlay import OverlayInput, GateMode
+        from capabilities.video.skills.talking_head_overlay import GateMode, OverlayInput
+
         inp = OverlayInput(
             video_path="/tmp/test.mp4",
             gate_mode=GateMode.CHAINED,
@@ -655,6 +755,7 @@ class TestChainedMode:
 
     def test_overlay_input_template_whitelist(self):
         from capabilities.video.skills.talking_head_overlay import OverlayInput
+
         inp = OverlayInput(
             video_path="/tmp/test.mp4",
             templates=["caption_pop", "title_card"],
@@ -663,12 +764,14 @@ class TestChainedMode:
 
     def test_gate_mode_enum(self):
         from capabilities.video.skills.talking_head_overlay import GateMode
+
         assert GateMode.STANDALONE.value == "standalone"
         assert GateMode.CHAINED.value == "chained"
         assert GateMode.AUTO_CONFIRM.value == "auto_confirm"
 
 
 # ── 14. 锚点重映射 + 串联集成 ───────────────────────────
+
 
 class TestChainedIntegration:
     def test_remap_preserves_non_overlapping(self):
@@ -677,7 +780,9 @@ class TestChainedIntegration:
             video_id="test",
             segments=[
                 OverlaySegment(
-                    segment_id="o1", time_start=5.0, time_end=8.0,
+                    segment_id="o1",
+                    time_start=5.0,
+                    time_end=8.0,
                     template=OverlayTemplate.CAPTION_POP,
                 ),
             ],
@@ -696,7 +801,9 @@ class TestChainedIntegration:
             video_id="test",
             segments=[
                 OverlaySegment(
-                    segment_id="o1", time_start=3.1, time_end=3.9,
+                    segment_id="o1",
+                    time_start=3.1,
+                    time_end=3.9,
                     template=OverlayTemplate.KEYWORD_ICON,
                 ),
             ],
@@ -708,8 +815,16 @@ class TestChainedIntegration:
     def test_conflict_detection_with_skipped(self):
         """skipped 片段不参与冲突检测"""
         segments = [
-            OverlaySegment(segment_id="o1", time_start=0, time_end=5, template=OverlayTemplate.CAPTION_POP),
-            OverlaySegment(segment_id="o2", time_start=3, time_end=8, template=OverlayTemplate.CAPTION_KARAOKE, skipped=True),
+            OverlaySegment(
+                segment_id="o1", time_start=0, time_end=5, template=OverlayTemplate.CAPTION_POP
+            ),
+            OverlaySegment(
+                segment_id="o2",
+                time_start=3,
+                time_end=8,
+                template=OverlayTemplate.CAPTION_KARAOKE,
+                skipped=True,
+            ),
         ]
         conflicts = detect_overlay_conflicts(segments)
         assert len(conflicts) == 0
@@ -717,10 +832,12 @@ class TestChainedIntegration:
 
 # ── 15. v4 主题色透传 ────────────────────────────────────
 
+
 class TestV4PalettePassthrough:
     def test_full_card与split_compare不是字幕模板(self):
         """整屏卡有自己的文案，不走 caption 词级重建。"""
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
+
         assert "full_card" not in TalkingHeadOverlaySkill._CAPTION_TEMPLATES
         assert "split_compare" not in TalkingHeadOverlaySkill._CAPTION_TEMPLATES
 
@@ -729,15 +846,18 @@ class TestV4PalettePassthrough:
         import tempfile
 
         import capabilities.video.adapters.overlay_templates as ot
-
         from capabilities.video.skills.talking_head_overlay import TalkingHeadOverlaySkill
 
         plan = OverlayPlan(
-            video_id="", palette=["#FF4D4D", "#FFE066", "#4ECDC4"],
+            video_id="",
+            palette=["#FF4D4D", "#FFE066", "#4ECDC4"],
             segments=[
                 OverlaySegment(
-                    segment_id="o1", time_start=0.0, time_end=1.5,
-                    template=OverlayTemplate.FULL_CARD, params={"text": "收束"},
+                    segment_id="o1",
+                    time_start=0.0,
+                    time_end=1.5,
+                    template=OverlayTemplate.FULL_CARD,
+                    params={"text": "收束"},
                 ),
             ],
         )
@@ -759,7 +879,12 @@ class TestV4PalettePassthrough:
             ):
                 with tempfile.TemporaryDirectory() as td:
                     pairs = await TalkingHeadOverlaySkill._render_previews(
-                        TalkingHeadOverlaySkill, plan, [], Path(td), 1080, 1920,
+                        TalkingHeadOverlaySkill,
+                        plan,
+                        [],
+                        Path(td),
+                        1080,
+                        1920,
                     )
         finally:
             ot.TEMPLATES["full_card"] = orig
@@ -769,6 +894,7 @@ class TestV4PalettePassthrough:
 
 
 # ── 16. 空间冲突消解集成（2026-10-27 o6 叠影事故）────────
+
 
 class TestApplyConstraintsResolvesConflicts:
     """_apply_constraints 必须强制消解同带/全屏冲突 —
@@ -780,12 +906,16 @@ class TestApplyConstraintsResolvesConflicts:
             video_id="",
             segments=[
                 OverlaySegment(
-                    segment_id="o1", time_start=12.46, time_end=15.22,
+                    segment_id="o1",
+                    time_start=12.46,
+                    time_end=15.22,
                     template=OverlayTemplate.SECTION_CARD,
                     params={"number": "01", "title": "不要对着空调直吹"},
                 ),
                 OverlaySegment(
-                    segment_id="o2", time_start=13.80, time_end=17.0,
+                    segment_id="o2",
+                    time_start=13.80,
+                    time_end=17.0,
                     template=OverlayTemplate.KEYWORD_HIGHLIGHT,
                     params={"text": "长时间对着空调直吹"},
                 ),
@@ -814,7 +944,8 @@ class TestApplyConstraintsResolvesConflicts:
         )
 
         parsed = OverlayInput(
-            video_path="/tmp/x.mp4", gate_mode=GateMode.AUTO_CONFIRM,
+            video_path="/tmp/x.mp4",
+            gate_mode=GateMode.AUTO_CONFIRM,
             templates=["section_card", "keyword_highlight"],
         )
         out = TalkingHeadOverlaySkill._apply_constraints(parsed, self._plan())

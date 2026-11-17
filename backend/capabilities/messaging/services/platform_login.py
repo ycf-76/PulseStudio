@@ -9,6 +9,7 @@ Spider 通过加载 storageState 恢复登录态。
 子进程通信方式：subprocess.Popen + stdout JSON 行协议，
 彻底绕开 Windows multiprocessing spawn 模式的 import 问题。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -78,7 +79,9 @@ async def start_qr_login(platform: str, user_id: str) -> tuple[str, dict]:
         _bind_tasks[task_id]["error"] = f"启动子进程失败: {e}"
         return task_id, {"error": f"启动子进程失败: {e}"}
 
-    logger.info(f"[platform_login] qr_worker subprocess started, pid={proc.pid}, platform={platform}")
+    logger.info(
+        f"[platform_login] qr_worker subprocess started, pid={proc.pid}, platform={platform}"
+    )
 
     qr_data: dict = {}
     try:
@@ -88,9 +91,7 @@ async def start_qr_login(platform: str, user_id: str) -> tuple[str, dict]:
         )
         if qr_line:
             raw = (
-                qr_line.decode("utf-8", errors="replace")
-                if isinstance(qr_line, bytes)
-                else qr_line
+                qr_line.decode("utf-8", errors="replace") if isinstance(qr_line, bytes) else qr_line
             ).strip()
             if raw:
                 qr_data = json.loads(raw)
@@ -182,9 +183,13 @@ async def _poll_login_result(
 
         storage_path = STORAGE_DIR / f"{platform}.json"
         if not storage_path.exists():
-            logger.warning(f"[platform_login] storageState file not found at {storage_path}, login state may not persist for Spider")
+            logger.warning(
+                f"[platform_login] storageState file not found at {storage_path}, login state may not persist for Spider"
+            )
         else:
-            logger.info(f"[platform_login] storageState verified at {storage_path} (size={storage_path.stat().st_size})")
+            logger.info(
+                f"[platform_login] storageState verified at {storage_path} (size={storage_path.stat().st_size})"
+            )
 
         account = await _save_account(user_id, platform, user_info, cookies)
 
@@ -256,7 +261,9 @@ async def _save_account(
             uid = user_info.get("uid") or existing.platform_uid
             if uid:
                 existing.platform_uid = uid
-            existing.platform_avatar_url = user_info.get("avatar_url") or existing.platform_avatar_url
+            existing.platform_avatar_url = (
+                user_info.get("avatar_url") or existing.platform_avatar_url
+            )
             existing.sync_status = "idle"
             existing.sync_error = None
             existing.updated_at = datetime.now(UTC)
@@ -282,10 +289,7 @@ async def _save_account(
 
 def _cleanup_expired_tasks() -> None:
     now = time.time()
-    expired = [
-        tid for tid, info in _bind_tasks.items()
-        if now - info.get("created_at", 0) > 600
-    ]
+    expired = [tid for tid, info in _bind_tasks.items() if now - info.get("created_at", 0) > 600]
     for tid in expired:
         if _bind_tasks[tid]["status"] in ("pending", "scanned"):
             _bind_tasks[tid]["status"] = "expired"

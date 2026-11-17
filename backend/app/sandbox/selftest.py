@@ -57,7 +57,10 @@ def run_child(script: str, ws: Path, timeout_s: float = 30.0, env_extra: dict | 
     env = build_env_block(extra=env_extra, temp_dir=ws / "_tmp")
     (ws / "_tmp").mkdir(exist_ok=True)
     r = spawn_sandboxed(
-        [PY, str(script_file)], cwd=ws, env=env, timeout_s=timeout_s,
+        [PY, str(script_file)],
+        cwd=ws,
+        env=env,
+        timeout_s=timeout_s,
     )
     return r, r.stdout.decode("utf-8", errors="replace")
 
@@ -93,8 +96,7 @@ def test_2_write_outside(ws: Path, outside: Path) -> None:
 def test_3_write_inside(ws: Path) -> None:
     print("[3] workspace 内写入成功")
     _, out = run_child(
-        f"open(r'{ws / 'inside.txt'}', 'w').write('ok')\n"
-        f"print('W=DONE')\n",
+        f"open(r'{ws / 'inside.txt'}', 'w').write('ok')\n" f"print('W=DONE')\n",
         ws,
     )
     ok_file = (ws / "inside.txt").read_text(encoding="utf-8") == "ok"
@@ -132,7 +134,11 @@ def test_5_secret_no_read_up(ws: Path, secret: Path) -> None:
         f"    print('R=DENIED')\n",
         ws,
     )
-    check("secret read denied", "R=DENIED" in out and "R=API_KEY" not in out, f"got: {out.strip()[:80]}")
+    check(
+        "secret read denied",
+        "R=DENIED" in out and "R=API_KEY" not in out,
+        f"got: {out.strip()[:80]}",
+    )
 
 
 def test_6_relabel_after_replace(ws: Path, secret: Path) -> None:
@@ -163,8 +169,7 @@ def test_7_env_isolation(ws: Path) -> None:
     os.environ["SANDBOX_SELFTEST_SECRET"] = "sk-parent-secret"
     try:
         _, out = run_child(
-            "import os\n"
-            "print('S=' + os.environ.get('SANDBOX_SELFTEST_SECRET', 'ABSENT'))\n",
+            "import os\n" "print('S=' + os.environ.get('SANDBOX_SELFTEST_SECRET', 'ABSENT'))\n",
             ws,
         )
         check(
@@ -223,6 +228,7 @@ def test_9_timeout_tree_kill(ws: Path) -> None:
     # 等句柄真正释放
     time.sleep(1.0)
     import win32api
+
     alive = True
     try:
         h = win32api.OpenProcess(0x1000, 0, gpid)  # PROCESS_QUERY_LIMITED_INFORMATION
@@ -235,8 +241,7 @@ def test_9_timeout_tree_kill(ws: Path) -> None:
 def test_10_positive(ws: Path) -> None:
     print("[10] 正向用例：常规执行")
     r, out = run_child(
-        "print('HELLO=' + str(21 * 2))\n"
-        "import sys; sys.stderr.write('warn-line\\n')\n",
+        "print('HELLO=' + str(21 * 2))\n" "import sys; sys.stderr.write('warn-line\\n')\n",
         ws,
     )
     check(

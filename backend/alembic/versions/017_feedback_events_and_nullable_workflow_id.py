@@ -8,8 +8,9 @@ Create Date: 2026-10-17 00:00:00.000000
 2. published_content_performance.workflow_id 改为 nullable（不再有 workflow 实例）
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "017_feedback_events"
 down_revision = "016_video_studio"

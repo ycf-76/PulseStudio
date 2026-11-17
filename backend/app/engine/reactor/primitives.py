@@ -55,12 +55,14 @@ def _schema_param_spec(schema_cls: Any) -> list[dict[str, Any]]:
     fields = dict(getattr(schema_cls, "model_fields", None) or {})
     spec: list[dict[str, Any]] = []
     for fname, finfo in fields.items():
-        spec.append({
-            "name": fname,
-            "type": _field_type_name(finfo),
-            "required": getattr(finfo, "default", PydanticUndefined) is PydanticUndefined,
-            "description": (getattr(finfo, "description", "") or "").strip(),
-        })
+        spec.append(
+            {
+                "name": fname,
+                "type": _field_type_name(finfo),
+                "required": getattr(finfo, "default", PydanticUndefined) is PydanticUndefined,
+                "description": (getattr(finfo, "description", "") or "").strip(),
+            }
+        )
     return spec
 
 
@@ -80,18 +82,18 @@ def _skill_input_error(
     issues: list[dict[str, Any]] = []
     for item in err.errors():
         loc = item.get("loc") or ()
-        issues.append({
-            "field": ".".join(str(p) for p in loc) or "(root)",
-            "reason": str(item.get("msg") or ""),
-            "type": str(item.get("type") or ""),
-        })
+        issues.append(
+            {
+                "field": ".".join(str(p) for p in loc) or "(root)",
+                "reason": str(item.get("msg") or ""),
+                "type": str(item.get("type") or ""),
+            }
+        )
 
     spec = _schema_param_spec(schema_cls)
     required = [p["name"] for p in spec if p["required"]]
     missing = [i["field"] for i in issues if i["type"] == "missing"]
-    received_keys = sorted(
-        k for k in received if not k.startswith("_") and k != "llm"
-    )
+    received_keys = sorted(k for k in received if not k.startswith("_") and k != "llm")
 
     if missing:
         head = f"missing required field(s): {', '.join(missing)}"
@@ -162,6 +164,7 @@ class FileReadPrimitive(Primitive):
         import asyncio as _aio
 
         from app.engine.reactor.file_ops_core import read_file
+
         return await _aio.to_thread(
             read_file, kwargs.get("path", ""), kwargs.get("offset", 0), kwargs.get("limit", 200)
         )
@@ -169,16 +172,14 @@ class FileReadPrimitive(Primitive):
 
 class FileWritePrimitive(Primitive):
     name = "file_write"
-    description = (
-        "写入文件（原子写入，不会写到一半崩溃）。"
-        "输入 path 和 content。返回写入结果。"
-    )
+    description = "写入文件（原子写入，不会写到一半崩溃）。" "输入 path 和 content。返回写入结果。"
     required_permissions = [Permission.FILE_WRITE]
 
     async def execute(self, **kwargs: Any) -> dict[str, Any]:
         import asyncio as _aio
 
         from app.engine.reactor.file_ops_core import write_file
+
         return await _aio.to_thread(write_file, kwargs.get("path", ""), kwargs.get("content", ""))
 
 
@@ -195,8 +196,12 @@ class FileEditPrimitive(Primitive):
         import asyncio as _aio
 
         from app.engine.reactor.file_ops_core import edit_file
+
         return await _aio.to_thread(
-            edit_file, kwargs.get("path", ""), kwargs.get("old_string", ""), kwargs.get("new_string", "")
+            edit_file,
+            kwargs.get("path", ""),
+            kwargs.get("old_string", ""),
+            kwargs.get("new_string", ""),
         )
 
 
@@ -212,6 +217,7 @@ class BashPrimitive(Primitive):
 
     async def execute(self, **kwargs: Any) -> dict[str, Any]:
         from app.tools.dev_tools import BashSkill
+
         return await BashSkill().execute(kwargs)
 
 
@@ -225,6 +231,7 @@ class GlobPrimitive(Primitive):
 
     async def execute(self, **kwargs: Any) -> dict[str, Any]:
         from app.tools.dev_tools import GlobSkill
+
         return await GlobSkill().execute(kwargs)
 
 
@@ -238,6 +245,7 @@ class GrepPrimitive(Primitive):
 
     async def execute(self, **kwargs: Any) -> dict[str, Any]:
         from app.tools.dev_tools import GrepSkill
+
         return await GrepSkill().execute(kwargs)
 
 
@@ -347,11 +355,13 @@ class ContentCheckPrimitive(Primitive):
         issues: list[dict[str, str]] = []
         for pattern in self._SENSITIVE_PATTERNS:
             if pattern in text:
-                issues.append({
-                    "type": "sensitive_word",
-                    "pattern": pattern,
-                    "severity": "high",
-                })
+                issues.append(
+                    {
+                        "type": "sensitive_word",
+                        "pattern": pattern,
+                        "severity": "high",
+                    }
+                )
 
         return {
             "ok": True,
@@ -405,7 +415,10 @@ class SkillCallPrimitive(Primitive):
                 logger.info(f"[skill_call] promoted kwargs.name='{_fallback_name}' → skill_name")
 
         if not skill_name:
-            return {"ok": False, "error": "skill_call requires 'skill' (skill name). Correct format: {\"name\": \"skill_call\", \"arguments\": {\"skill\": \"技能名\", \"arguments\": {该技能参数}}}. The skill name must come from the available skills list in your context, not invented."}
+            return {
+                "ok": False,
+                "error": 'skill_call requires \'skill\' (skill name). Correct format: {"name": "skill_call", "arguments": {"skill": "技能名", "arguments": {该技能参数}}}. The skill name must come from the available skills list in your context, not invented.',
+            }
         if not user_id:
             return {"ok": False, "error": "skill_call missing user context (_user_id)"}
 
@@ -461,6 +474,7 @@ class SkillCallPrimitive(Primitive):
 
         if "llm" not in inputs or inputs["llm"] is None:
             from app.engine.factory import get_deepseek_llm
+
             _llm = get_deepseek_llm(model="deepseek-chat")
             if _llm is not None:
                 inputs["llm"] = _llm
@@ -482,7 +496,9 @@ class SkillCallPrimitive(Primitive):
             else:
                 result = await raw
         except ValidationError as e:
-            logger.warning("[skill_call] skill %s input validation failed: %s", skill_name, e.errors())
+            logger.warning(
+                "[skill_call] skill %s input validation failed: %s", skill_name, e.errors()
+            )
             return _skill_input_error(
                 skill_name, getattr(skill_cls, "input_schema", None), arguments, e
             )
@@ -513,6 +529,7 @@ class AskUserQuestionPrimitive(Primitive):
     返回值复用现有 _awaiting_clarification 信号格式，
     _dispatch 中已有的暂停/保存/SSE 发射逻辑完全复用。
     """
+
     name = "ask_user_question"
     description = (
         "当你不确定用户的创作偏好时，主动向用户提问。"
@@ -552,12 +569,14 @@ class AskUserQuestionPrimitive(Primitive):
                     value = str(opt.get("value", "") or label)
                     if not value:
                         value = f"option_{len(options)}"
-                    options.append(ClarifyOption(
-                        label=label,
-                        value=value,
-                        description=str(opt.get("description", "")),
-                        preview_url=str(opt.get("preview_url", "")),
-                    ))
+                    options.append(
+                        ClarifyOption(
+                            label=label,
+                            value=value,
+                            description=str(opt.get("description", "")),
+                            preview_url=str(opt.get("preview_url", "")),
+                        )
+                    )
                 elif isinstance(opt, str):
                     options.append(ClarifyOption(label=opt, value=opt))
             qt_raw = q.get("type", "single_choice")
@@ -565,15 +584,17 @@ class AskUserQuestionPrimitive(Primitive):
                 qt = QuestionType(qt_raw)
             except ValueError:
                 qt = QuestionType.single_choice
-            clarification_questions.append(ClarificationQuestion(
-                id=q.get("id", f"q_{i}"),
-                source_skill=skill,
-                question=str(q.get("question", "")),
-                type=qt,
-                options=options,
-                required=q.get("required", True),
-                default=q.get("default", ""),
-            ))
+            clarification_questions.append(
+                ClarificationQuestion(
+                    id=q.get("id", f"q_{i}"),
+                    source_skill=skill,
+                    question=str(q.get("question", "")),
+                    type=qt,
+                    options=options,
+                    required=q.get("required", True),
+                    default=q.get("default", ""),
+                )
+            )
 
         if not clarification_questions:
             return {"ok": False, "error": "no valid questions provided"}

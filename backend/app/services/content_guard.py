@@ -33,12 +33,11 @@ class ContentGuardError(Exception):
 
     发布节点捕获此异常后应阻止发布、记录日志、通知用户。
     """
+
     def __init__(self, findings: list["Finding"]):
         self.findings = findings
         block = [f for f in findings if f.category in BLOCK_CATEGORIES]
-        super().__init__(
-            f"出站内容安全闸门拦截：检测到 {len(block)} 处敏感信息泄露，已阻止发布"
-        )
+        super().__init__(f"出站内容安全闸门拦截：检测到 {len(block)} 处敏感信息泄露，已阻止发布")
 
 
 EXIT_LEAK = 7
@@ -50,18 +49,32 @@ def _p(pat: str, flags: int = 0) -> "re.Pattern[str]":
 
 SECRET_PATTERNS: list[tuple[str, str, "re.Pattern[str]", str]] = [
     ("api-key", "high", _p(r"\bsk-[A-Za-z0-9_\-]{16,}\b"), "疑似 API key（sk- 开头）"),
-    ("api-key", "high", _p(r"(?i)\b(?:api[_-]?key|auth[_-]?token|access[_-]?key|"
-                           r"secret[_-]?key|app[_-]?secret|secret)\b\s*[:=]\s*['\"]?[A-Za-z0-9/_\-\.]{8,}"),
-     "键值形式的密钥/令牌"),
+    (
+        "api-key",
+        "high",
+        _p(
+            r"(?i)\b(?:api[_-]?key|auth[_-]?token|access[_-]?key|"
+            r"secret[_-]?key|app[_-]?secret|secret)\b\s*[:=]\s*['\"]?[A-Za-z0-9/_\-\.]{8,}"
+        ),
+        "键值形式的密钥/令牌",
+    ),
     ("api-key", "high", _p(r"(?i)\bBearer\s+[A-Za-z0-9/_\-\.]{12,}"), "Bearer 令牌"),
     ("api-key", "high", _p(r"(?i)\b(?:AK|SK)\s*[:=]\s*['\"]?[A-Za-z0-9]{16,}"), "云厂商 AK/SK"),
-    ("internal-host", "med", _p(r"(?i)\b(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?\b"),
-     "本地服务地址"),
+    (
+        "internal-host",
+        "med",
+        _p(r"(?i)\b(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?\b"),
+        "本地服务地址",
+    ),
     ("internal-host", "med", _p(r"(?i)\b[a-z0-9\-]+\.internal\.[a-z]+\b"), "内部域名"),
     ("internal-host", "med", _p(r"(?i)\b[a-z0-9\-]+\.corp\.[a-z]+\b"), "企业内网域名"),
     ("internal-host", "med", _p(r"\bapi-version=[0-9]"), "API 版本查询串"),
-    ("proxy-ip", "med", _p(r"\b(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
-                           r"(?:\.\d{1,3}){2,3}(?::\d+)?\b"), "私网/代理 IP"),
+    (
+        "proxy-ip",
+        "med",
+        _p(r"\b(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))" r"(?:\.\d{1,3}){2,3}(?::\d+)?\b"),
+        "私网/代理 IP",
+    ),
     ("proxy-ip", "med", _p(r":3128\b"), "代理端口 3128"),
     ("proxy-ip", "med", _p(r":1080\b"), "代理端口 1080"),
     ("internal-path", "med", _p(r"(?:~|/root)?/\.ssh\S*"), "SSH 配置路径"),
@@ -70,20 +83,36 @@ SECRET_PATTERNS: list[tuple[str, str, "re.Pattern[str]", str]] = [
     ("env-name", "med", _p(r"\bANTHROPIC_[A-Z_]+\b"), "Anthropic env 变量名"),
     ("env-name", "med", _p(r"\bOPENAI_[A-Z_]+\b"), "OpenAI env 变量名"),
     ("env-name", "med", _p(r"\bDEEPSEEK_[A-Z_]+\b"), "DeepSeek env 变量名"),
-    ("env-name", "med", _p(r"(?i)\b(?:DATABASE_URL|REDIS_URL|MONGO_URI|SECRET_KEY|JWT_SECRET)\b"),
-     "数据库/密钥 env 变量名"),
+    (
+        "env-name",
+        "med",
+        _p(r"(?i)\b(?:DATABASE_URL|REDIS_URL|MONGO_URI|SECRET_KEY|JWT_SECRET)\b"),
+        "数据库/密钥 env 变量名",
+    ),
     ("model-name", "low", _p(r"\bclaude-[a-z0-9][a-z0-9.\-\[\]]*\b", re.I), "Claude 模型 ID"),
     ("model-name", "low", _p(r"\bdeepseek-[a-z0-9][a-z0-9.\-\[\]]*\b", re.I), "DeepSeek 模型 ID"),
     ("model-name", "low", _p(r"\bgpt-[a-z0-9][a-z0-9.\-]*\b", re.I), "GPT 模型 ID"),
     ("model-name", "low", _p(r"\b(?:Claude|GPT|DeepSeek|Anthropic)\b"), "模型厂商/系列名"),
     ("ai-disclosure", "low", _p(r"由\s*AI\s*(?:生成|创作|撰写|制作|完成)"), "「由 AI 生成」类措辞"),
     ("ai-disclosure", "low", _p(r"(?i)(?:append-)?system[\s\-]?prompt"), "系统提示词字样"),
-    ("ai-disclosure", "low", _p(r"(?:我(?:们)?是|作为|身为|本|自称)(?:一[个只])?(?:大语言模型|大模型)"
-                                r"|(?:大语言模型|大模型)(?:生成|创作|撰写|制作)"), "自曝为大模型"),
+    (
+        "ai-disclosure",
+        "low",
+        _p(
+            r"(?:我(?:们)?是|作为|身为|本|自称)(?:一[个只])?(?:大语言模型|大模型)"
+            r"|(?:大语言模型|大模型)(?:生成|创作|撰写|制作)"
+        ),
+        "自曝为大模型",
+    ),
 ]
 
 BLOCK_CATEGORIES = {
-    "api-key", "env-value", "internal-host", "proxy-ip", "internal-path", "env-name",
+    "api-key",
+    "env-value",
+    "internal-host",
+    "proxy-ip",
+    "internal-path",
+    "env-name",
 }
 
 _SENSITIVE_ENV_NAME = re.compile(
@@ -160,9 +189,15 @@ def scan(text: str, extra_literals: set[str] | None = None) -> list[Finding]:
     for lit in literals:
         idx = text.find(lit)
         while idx != -1:
-            findings.append(Finding("env-value", "high", ".env 里的真实敏感值",
-                                    _snippet(text, idx, idx + len(lit)),
-                                    (idx, idx + len(lit))))
+            findings.append(
+                Finding(
+                    "env-value",
+                    "high",
+                    ".env 里的真实敏感值",
+                    _snippet(text, idx, idx + len(lit)),
+                    (idx, idx + len(lit)),
+                )
+            )
             idx = text.find(lit, idx + len(lit))
 
     for category, severity, pat, hint in SECRET_PATTERNS:
@@ -290,7 +325,9 @@ def selftest() -> bool:
     if failed:
         print(f"selftest 失败：{failed} 项", flush=True)
         return False
-    print(f"selftest 通过（BLOCK {len(block_positives)} 必拦 / "
-          f"WARN {len(warn_positives)} 只提醒 / 反例 {len(negatives)} 放行 + redact）",
-          flush=True)
+    print(
+        f"selftest 通过（BLOCK {len(block_positives)} 必拦 / "
+        f"WARN {len(warn_positives)} 只提醒 / 反例 {len(negatives)} 放行 + redact）",
+        flush=True,
+    )
     return True

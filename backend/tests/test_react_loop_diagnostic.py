@@ -67,10 +67,17 @@ class _ScriptedLLM:
 
 
 def _chunk(content: str = "", is_final: bool = True, token_usage: int = 1) -> dict:
-    return {"content": content, "reasoning_content": "", "is_final": is_final, "token_usage": token_usage}
+    return {
+        "content": content,
+        "reasoning_content": "",
+        "is_final": is_final,
+        "token_usage": token_usage,
+    }
 
 
-def _react_step(thought: str, tool_calls: list | None = None, final: bool = False, output: dict | None = None) -> str:
+def _react_step(
+    thought: str, tool_calls: list | None = None, final: bool = False, output: dict | None = None
+) -> str:
     step = {"thought": thought, "tool_calls": tool_calls or [], "final": final}
     if output is not None:
         step["output"] = output
@@ -131,10 +138,27 @@ class TestStep1ParseStepNonJSON:
         场景：LLM 第 1 轮正常调工具，第 2 轮输出一段解释性文字（非 JSON）。
         如果循环提前终止，_iterations 会是 2 而非继续推理。
         """
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("先搜索热点", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]))]},
-            {"chunks": [_chunk("根据搜索结果，我建议从以下几个角度来创作内容：\n1. 热点解读\n2. 实用技巧\n3. 个人经验分享")]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step(
+                                "先搜索热点",
+                                [{"name": "xhs_search", "arguments": {"keyword": "AI"}}],
+                            )
+                        )
+                    ]
+                },
+                {
+                    "chunks": [
+                        _chunk(
+                            "根据搜索结果，我建议从以下几个角度来创作内容：\n1. 热点解读\n2. 实用技巧\n3. 个人经验分享"
+                        )
+                    ]
+                },
+            ]
+        )
         session = _make_session(llm, max_iterations=5)
         result = await session.run("帮我写一篇AI教育的小红书笔记")
 
@@ -163,11 +187,25 @@ class TestStep1ParseStepNonJSON:
         如果 Step 1 的 bug 存在，这个测试也会失败（因为第 2 轮非 JSON 就终止了，
         根本到不了第 3 轮）。
         """
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("搜索热点", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]))]},
-            {"chunks": [_chunk("让我分析一下搜索结果...")]},
-            {"chunks": [_chunk(_react_step("分析完成", final=True, output={"_message": "分析结果"}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step(
+                                "搜索热点", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]
+                            )
+                        )
+                    ]
+                },
+                {"chunks": [_chunk("让我分析一下搜索结果...")]},
+                {
+                    "chunks": [
+                        _chunk(_react_step("分析完成", final=True, output={"_message": "分析结果"}))
+                    ]
+                },
+            ]
+        )
         session = _make_session(llm, max_iterations=5)
         result = await session.run("帮我分析AI教育热点")
 
@@ -196,10 +234,27 @@ class TestStep2TokenBudget:
     @pytest.mark.asyncio
     async def test_token_count_is_tracked(self):
         """token_count 确实在累加。"""
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("思考1", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]), token_usage=5000)]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}), token_usage=3000)]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step(
+                                "思考1", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]
+                            ),
+                            token_usage=5000,
+                        )
+                    ]
+                },
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step("完成", final=True, output={"ok": True}), token_usage=3000
+                        )
+                    ]
+                },
+            ]
+        )
         session = _make_session(llm, max_iterations=5)
         result = await session.run("测试token追踪")
 
@@ -214,11 +269,38 @@ class TestStep2TokenBudget:
         如果循环继续跑到 max_iterations，说明 budget 未生效。
         """
         high_token_per_call = 30000
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("思考1", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]), token_usage=high_token_per_call)]},
-            {"chunks": [_chunk(_react_step("思考2", [{"name": "xhs_search", "arguments": {"keyword": "教育"}}]), token_usage=high_token_per_call)]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}), token_usage=high_token_per_call)]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step(
+                                "思考1", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]
+                            ),
+                            token_usage=high_token_per_call,
+                        )
+                    ]
+                },
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step(
+                                "思考2", [{"name": "xhs_search", "arguments": {"keyword": "教育"}}]
+                            ),
+                            token_usage=high_token_per_call,
+                        )
+                    ]
+                },
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step("完成", final=True, output={"ok": True}),
+                            token_usage=high_token_per_call,
+                        )
+                    ]
+                },
+            ]
+        )
         session = _make_session(llm, max_iterations=5)
         session._max_tokens = 50000  # 设一个很低的阈值
 
@@ -333,18 +415,22 @@ class TestStep4ToolCallDedup:
         预期：第 1、2 次执行，第 3 次触发 DUPLICATE_CALLS 刹车。
         """
         same_call = [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("搜索AI", same_call))]},
-            {"chunks": [_chunk(_react_step("再搜一次", same_call))]},
-            {"chunks": [_chunk(_react_step("又搜一次", same_call))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {"chunks": [_chunk(_react_step("搜索AI", same_call))]},
+                {"chunks": [_chunk(_react_step("再搜一次", same_call))]},
+                {"chunks": [_chunk(_react_step("又搜一次", same_call))]},
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=6)
         result = await session.run("搜索AI热点")
         steps = result.get("_steps", [])
 
         xhs_calls = [
-            tc for step in steps for tc in step.get("tool_calls", [])
+            tc
+            for step in steps
+            for tc in step.get("tool_calls", [])
             if tc.get("name") == "xhs_search"
         ]
         assert len(xhs_calls) == 2, f"第 3 次重复调用应被拦截，实际执行了 {len(xhs_calls)} 次"
@@ -356,18 +442,34 @@ class TestStep4ToolCallDedup:
     async def test_interleaved_duplicate_still_caught(self):
         """批里每次夹带一个新调用 → 旧实现会归零放行，新实现必须照样刹车。"""
         repeated = {"name": "xhs_search", "arguments": {"keyword": "AI"}}
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("搜A", [repeated, {"name": "probe_1", "arguments": {}}]))]},
-            {"chunks": [_chunk(_react_step("搜A", [repeated, {"name": "probe_2", "arguments": {}}]))]},
-            {"chunks": [_chunk(_react_step("搜A", [repeated, {"name": "probe_3", "arguments": {}}]))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        _chunk(_react_step("搜A", [repeated, {"name": "probe_1", "arguments": {}}]))
+                    ]
+                },
+                {
+                    "chunks": [
+                        _chunk(_react_step("搜A", [repeated, {"name": "probe_2", "arguments": {}}]))
+                    ]
+                },
+                {
+                    "chunks": [
+                        _chunk(_react_step("搜A", [repeated, {"name": "probe_3", "arguments": {}}]))
+                    ]
+                },
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=6)
         result = await session.run("搜索AI热点")
         steps = result.get("_steps", [])
 
         xhs_calls = [
-            tc for step in steps for tc in step.get("tool_calls", [])
+            tc
+            for step in steps
+            for tc in step.get("tool_calls", [])
             if tc.get("name") == "xhs_search"
         ]
         assert len(xhs_calls) == 2, f"夹带新调用不应重置计数，实际执行了 {len(xhs_calls)} 次"
@@ -378,19 +480,23 @@ class TestStep4ToolCallDedup:
         """重复调用中间插了一步完全不含它 → 连续计数清零，不误杀。"""
         call_a = {"name": "xhs_search", "arguments": {"keyword": "AI"}}
         call_b = {"name": "xhs_search", "arguments": {"keyword": "美食"}}
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("搜A", [call_a]))]},
-            {"chunks": [_chunk(_react_step("搜A", [call_a]))]},
-            {"chunks": [_chunk(_react_step("换关键词", [call_b]))]},
-            {"chunks": [_chunk(_react_step("再搜A", [call_a]))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {"chunks": [_chunk(_react_step("搜A", [call_a]))]},
+                {"chunks": [_chunk(_react_step("搜A", [call_a]))]},
+                {"chunks": [_chunk(_react_step("换关键词", [call_b]))]},
+                {"chunks": [_chunk(_react_step("再搜A", [call_a]))]},
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=8)
         result = await session.run("搜索AI热点")
         steps = result.get("_steps", [])
 
         xhs_calls = [
-            tc for step in steps for tc in step.get("tool_calls", [])
+            tc
+            for step in steps
+            for tc in step.get("tool_calls", [])
             if tc.get("name") == "xhs_search"
         ]
         assert len(xhs_calls) == 4, "中间穿插其他调用后连续计数应清零，不应误杀"
@@ -404,13 +510,15 @@ class TestStep4ToolCallDedup:
         第 3 次就会被刹车误杀。刹车只应针对「连续失败」。
         """
         poll_call = [{"name": "poll_status", "arguments": {"task_id": "t1"}}]
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("查状态1", poll_call))]},
-            {"chunks": [_chunk(_react_step("查状态2", poll_call))]},
-            {"chunks": [_chunk(_react_step("查状态3", poll_call))]},
-            {"chunks": [_chunk(_react_step("查状态4", poll_call))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {"chunks": [_chunk(_react_step("查状态1", poll_call))]},
+                {"chunks": [_chunk(_react_step("查状态2", poll_call))]},
+                {"chunks": [_chunk(_react_step("查状态3", poll_call))]},
+                {"chunks": [_chunk(_react_step("查状态4", poll_call))]},
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=8)
 
         async def _ok_dispatch(tool_call):
@@ -421,7 +529,9 @@ class TestStep4ToolCallDedup:
         steps = result.get("_steps", [])
 
         poll_calls = [
-            tc for step in steps for tc in step.get("tool_calls", [])
+            tc
+            for step in steps
+            for tc in step.get("tool_calls", [])
             if tc.get("name") == "poll_status"
         ]
         assert len(poll_calls) == 4, "成功的轮询不应被重复调用刹车误杀"
@@ -431,17 +541,25 @@ class TestStep4ToolCallDedup:
     async def test_fail_then_succeed_resets_count(self):
         """失败、成功、失败、成功 → 成功一次即打断连败，不应累计到刹车阈值。"""
         call = [{"name": "flaky_tool", "arguments": {"x": 1}}]
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("试1", call))]},
-            {"chunks": [_chunk(_react_step("试2", call))]},
-            {"chunks": [_chunk(_react_step("试3", call))]},
-            {"chunks": [_chunk(_react_step("试4", call))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {"chunks": [_chunk(_react_step("试1", call))]},
+                {"chunks": [_chunk(_react_step("试2", call))]},
+                {"chunks": [_chunk(_react_step("试3", call))]},
+                {"chunks": [_chunk(_react_step("试4", call))]},
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=8)
 
-        outcomes = iter([{"ok": False, "error": "boom"}, {"ok": True},
-                         {"ok": False, "error": "boom"}, {"ok": True}])
+        outcomes = iter(
+            [
+                {"ok": False, "error": "boom"},
+                {"ok": True},
+                {"ok": False, "error": "boom"},
+                {"ok": True},
+            ]
+        )
 
         async def _flaky_dispatch(tool_call):
             return next(outcomes, {"ok": True})
@@ -451,7 +569,9 @@ class TestStep4ToolCallDedup:
         steps = result.get("_steps", [])
 
         calls = [
-            tc for step in steps for tc in step.get("tool_calls", [])
+            tc
+            for step in steps
+            for tc in step.get("tool_calls", [])
             if tc.get("name") == "flaky_tool"
         ]
         assert len(calls) == 4, "成功后应重置连败计数，不应被刹车截断"
@@ -464,12 +584,14 @@ class TestStep4ToolCallDedup:
         若只看 ok 就放行，LLM 反复探同一个技能会永远刹不住。
         """
         probe_call = [{"name": "probe_tool", "arguments": {"skill": "x"}}]
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("探1", probe_call))]},
-            {"chunks": [_chunk(_react_step("探2", probe_call))]},
-            {"chunks": [_chunk(_react_step("探3", probe_call))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {"chunks": [_chunk(_react_step("探1", probe_call))]},
+                {"chunks": [_chunk(_react_step("探2", probe_call))]},
+                {"chunks": [_chunk(_react_step("探3", probe_call))]},
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=8)
 
         async def _probe_dispatch(tool_call):
@@ -480,7 +602,9 @@ class TestStep4ToolCallDedup:
         steps = result.get("_steps", [])
 
         probe_calls = [
-            tc for step in steps for tc in step.get("tool_calls", [])
+            tc
+            for step in steps
+            for tc in step.get("tool_calls", [])
             if tc.get("name") == "probe_tool"
         ]
         assert len(probe_calls) == 2, "空探针无进展，第 3 步应被刹车"
@@ -505,10 +629,20 @@ class TestStep5DispatchArgsMutation:
         original_args = {"keyword": "AI"}
         original_args_copy = dict(original_args)
 
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("搜索", [{"name": "xhs_search", "arguments": original_args}]))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step(
+                                "搜索", [{"name": "xhs_search", "arguments": original_args}]
+                            )
+                        )
+                    ]
+                },
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=3)
         result = await session.run("搜索AI")
 
@@ -585,12 +719,18 @@ class TestStep6LoopStateConcurrency:
         第二次非 JSON 应从 nudge_count=0 开始（因为中间恢复了），而不是从 1。
         """
         same_call = [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk("我来帮你分析一下这个话题")]},  # 非 JSON, nudge 1
-            {"chunks": [_chunk(_react_step("搜索", same_call))]},  # 恢复 JSON
-            {"chunks": [_chunk("根据搜索结果，建议从以下角度创作")]},  # 又非 JSON, nudge 1（重置后）
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},  # 恢复并完成
-        ])
+        llm = _ScriptedLLM(
+            [
+                {"chunks": [_chunk("我来帮你分析一下这个话题")]},  # 非 JSON, nudge 1
+                {"chunks": [_chunk(_react_step("搜索", same_call))]},  # 恢复 JSON
+                {
+                    "chunks": [_chunk("根据搜索结果，建议从以下角度创作")]
+                },  # 又非 JSON, nudge 1（重置后）
+                {
+                    "chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]
+                },  # 恢复并完成
+            ]
+        )
         session = _make_session(llm, max_iterations=8)
         result = await session.run("写一篇AI教育笔记")
 
@@ -626,17 +766,31 @@ class TestStep7ObservationTruncation:
     async def test_large_observation_is_truncated_in_messages(self):
         """大 observation 被截断后喂回 LLM，LLM 看到的是残缺数据。"""
         # 构造一个返回大量数据的 primitive mock
-        big_data = {"ok": True, "results": [{"title": f"结果_{i}", "content": "x" * 500} for i in range(20)]}
+        big_data = {
+            "ok": True,
+            "results": [{"title": f"结果_{i}", "content": "x" * 500} for i in range(20)],
+        }
         big_obs_str = json.dumps(big_data, ensure_ascii=False)
 
-        llm = _ScriptedLLM([
-            {"chunks": [_chunk(_react_step("搜索", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]))]},
-            {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
-        ])
+        llm = _ScriptedLLM(
+            [
+                {
+                    "chunks": [
+                        _chunk(
+                            _react_step(
+                                "搜索", [{"name": "xhs_search", "arguments": {"keyword": "AI"}}]
+                            )
+                        )
+                    ]
+                },
+                {"chunks": [_chunk(_react_step("完成", final=True, output={"ok": True}))]},
+            ]
+        )
         session = _make_session(llm, max_iterations=3)
 
         # 直接检查截断逻辑
         from app.engine.reactor import session as session_mod
+
         max_len = session_mod._OBSERVATION_MAX_LEN
 
         obs_str = json.dumps(big_data, ensure_ascii=False, default=str)

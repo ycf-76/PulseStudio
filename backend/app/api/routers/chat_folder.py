@@ -45,9 +45,7 @@ async def update_folder(
     payload: UpdateFolderRequest,
     user_id: str = Depends(get_current_user),
 ) -> StandardResponse[dict]:
-    data = await chat_folder.update_folder(
-        folder_id, user_id, name=payload.name, path=payload.path
-    )
+    data = await chat_folder.update_folder(folder_id, user_id, name=payload.name, path=payload.path)
     if data is None:
         raise HTTPException(status_code=404, detail="Folder not found")
     return StandardResponse(data=data)

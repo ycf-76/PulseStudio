@@ -1,11 +1,14 @@
 """Analyze hallucination benchmark results in depth."""
+
 from __future__ import annotations
+
 import json
 import sys
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 BENCH_ROOT = Path(__file__).resolve().parent
+
 
 def main():
     path = sys.argv[1] if len(sys.argv) > 1 else "results/hallucination_20261023_192939.json"
@@ -43,18 +46,26 @@ def main():
     print(f"  guardian_paused: {len(guardian)} -> 守护者介入暂停")
 
     print(f"\n=== 幻觉检测盲区分析 ===")
-    no_artifact_completed = [d for d in details if not d["actual_artifacts"] and d["ended_reason"] == "completed"]
+    no_artifact_completed = [
+        d for d in details if not d["actual_artifacts"] and d["ended_reason"] == "completed"
+    ]
     print(f"  completed但无产物: {len(no_artifact_completed)} 个")
     for d in no_artifact_completed:
-        print(f"    - {d['seed_id']}: {d['user_message'][:40]}... steps={d['total_steps']} tools={d['steps_with_tools']}")
+        print(
+            f"    - {d['seed_id']}: {d['user_message'][:40]}... steps={d['total_steps']} tools={d['steps_with_tools']}"
+        )
 
     print(f"\n=== clarification_paused 详情 ===")
     for d in clarified:
-        print(f"  {d['seed_id']}: {d['user_message'][:40]}... steps={d['total_steps']} tools={d['steps_with_tools']}")
+        print(
+            f"  {d['seed_id']}: {d['user_message'][:40]}... steps={d['total_steps']} tools={d['steps_with_tools']}"
+        )
 
     print(f"\n=== guardian_paused 详情 ===")
     for d in guardian:
-        print(f"  {d['seed_id']}: {d['user_message'][:40]}... steps={d['total_steps']} tools={d['steps_with_tools']}")
+        print(
+            f"  {d['seed_id']}: {d['user_message'][:40]}... steps={d['total_steps']} tools={d['steps_with_tools']}"
+        )
 
     print(f"\n=== 结论 ===")
     if data["summary"]["hallucination_count"] == 0:
@@ -73,6 +84,7 @@ def main():
         print("  因为 clarification_paused 后session就结束了，")
         print("  没有模拟'用户回答后LLM续跑'这个最危险的阶段。")
         print("  真实幻觉（如用户最初报告的'封面做好了'）发生在续跑中。")
+
 
 if __name__ == "__main__":
     main()

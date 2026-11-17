@@ -5,6 +5,7 @@
 工厂（agents/registry.build_session）与 reactor 路由在构造
 ReactorSession 时显式注入 DEFAULT_DISPATCH_HOOKS。
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,7 +40,9 @@ class CreativeImageContextHook:
     async def pre_clarify(self, name, args, ctx: DispatchContext):
         return name, args
 
-    async def pre_execute(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_execute(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         ctx_ids = (ctx.run_context or {}).get("image_asset_ids")
         if not ctx_ids:
             return name, args
@@ -86,7 +89,9 @@ class VLAnalyzeContextHook:
     async def pre_clarify(self, name, args, ctx: DispatchContext):
         return name, args
 
-    async def pre_execute(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_execute(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         ctx_ids = (ctx.run_context or {}).get("image_asset_ids")
         if not ctx_ids:
             return name, args
@@ -115,7 +120,9 @@ class VLAnalyzeContextHook:
             logger.debug(f"[hook] auto-injected asset_id={real_id} into {inner_name}")
         elif llm_id not in [str(i) for i in ctx_ids]:
             inner_args["asset_id"] = real_id
-            logger.debug(f"[hook] replaced hallucinated asset_id {llm_id} with {real_id} for {inner_name}")
+            logger.debug(
+                f"[hook] replaced hallucinated asset_id {llm_id} with {real_id} for {inner_name}"
+            )
 
         if is_nested:
             args["arguments"] = inner_args
@@ -132,6 +139,7 @@ async def _resolve_video_paths(video_asset_ids: list[str], user_id: str | None) 
         return []
     try:
         from capabilities.video.services.video_orchestrator import resolve_video_assets
+
         _urls, local_paths = await resolve_video_assets(video_asset_ids, user_id)
         valid = [p for p in local_paths if p]
         if valid:
@@ -157,7 +165,9 @@ class CreativeVideoContextHook:
     async def pre_clarify(self, name, args, ctx: DispatchContext):
         return name, args
 
-    async def pre_execute(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_execute(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         ctx_ids = (ctx.run_context or {}).get("video_asset_ids")
         # 视频作品（详情页路由进 chat）：用户没另外上传素材，但作品本身有本地缓存视频，
         # 由 chat_agent 预先解析成绝对路径放进 run context。
@@ -227,7 +237,9 @@ class CreativeVideoContextHook:
             and (inner_args.get("pip") or inner_args.get("overlay_decor"))
         ):
             inner_args["gate_mode"] = "auto_confirm"
-            logger.debug(f"[hook] auto-injected gate_mode=auto_confirm into {inner_name} (pip/decor path)")
+            logger.debug(
+                f"[hook] auto-injected gate_mode=auto_confirm into {inner_name} (pip/decor path)"
+            )
 
         # 口播叠加默认走 AI 叠加增强模式（Whisper→LLM规划→渲染→合成）
         # pip=True 仅在用户显式要求画中画时才启用
@@ -254,7 +266,9 @@ class WorkEditContextHook:
     async def pre_clarify(self, name, args, ctx: DispatchContext):
         return name, args
 
-    async def pre_execute(self, name: str, args: dict[str, Any], ctx: DispatchContext) -> tuple[str, dict[str, Any]]:
+    async def pre_execute(
+        self, name: str, args: dict[str, Any], ctx: DispatchContext
+    ) -> tuple[str, dict[str, Any]]:
         if name != "work_edit":
             return name, args
 

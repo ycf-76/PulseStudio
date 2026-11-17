@@ -16,7 +16,7 @@ from app.engine.reactor.prompt import (
     build_skill_catalog,
     build_skill_catalog_section,
 )
-from app.engine.reactor.session import ReactorSession, _SKILL_CATALOG_MAX_TOOLS
+from app.engine.reactor.session import _SKILL_CATALOG_MAX_TOOLS, ReactorSession
 from app.tools.skill_router import SkillRouter
 
 
@@ -134,9 +134,9 @@ def test_session_routes_catalog_on_first_run():
     预期: 目录完整条目 = max_tools 上限；命中技能在目录中；
          _skills 全集不变；列名兜底段存在
     """
-    session, skills = _make_session(extra=[
-        _FakeSkill("coffee_skill", category="analyze", priority="warm", triggers=["咖啡"])
-    ])
+    session, skills = _make_session(
+        extra=[_FakeSkill("coffee_skill", category="analyze", priority="warm", triggers=["咖啡"])]
+    )
     before = len(session._skills)
     msgs = session._build_initial_messages("帮我做一杯咖啡", None)
     sp = msgs[0]["content"]
@@ -144,7 +144,7 @@ def test_session_routes_catalog_on_first_run():
     assert "- coffee_skill —" in sp
     assert "其他可用技能（未展开，可按名直接调用 skill_call）：" in sp
     # 目录完整条目数受上限约束（数条目行而非全文 bullet，模板里也有列表）
-    catalog = sp[sp.index("## 可用技能"):sp.index("skill_call 用法")]
+    catalog = sp[sp.index("## 可用技能") : sp.index("skill_call 用法")]
     entries = [l for l in catalog.splitlines() if l.startswith("- ")]
     assert len(entries) <= _SKILL_CATALOG_MAX_TOOLS
     # 执行侧全集不受路由影响
@@ -220,14 +220,10 @@ def test_extra_names_deduped_against_selected():
     session, _ = _make_session(n_hot=45)
     session._build_initial_messages("做图文", None)
     sp = session.system_prompt
-    catalog = sp[sp.index("## 可用技能"):sp.index("skill_call 用法")]
-    entry_names = {
-        l[2:].split(" — ")[0]
-        for l in catalog.splitlines()
-        if l.startswith("- ")
-    }
+    catalog = sp[sp.index("## 可用技能") : sp.index("skill_call 用法")]
+    entry_names = {l[2:].split(" — ")[0] for l in catalog.splitlines() if l.startswith("- ")}
     assert len(entry_names) == 40, "45 hot 池应截断到 40 条目"
-    extra_block = catalog[catalog.index("其他可用技能（未展开"):]
+    extra_block = catalog[catalog.index("其他可用技能（未展开") :]
     listed = {
         n.strip()
         for l in extra_block.splitlines()
@@ -251,21 +247,19 @@ def test_real_registry_routed_catalog_size():
     original = factory_mod.get_deepseek_llm
     factory_mod.get_deepseek_llm = lambda model=None: None
     try:
-        session = get_agent_registry().build_session(
-            "chat_agent", creation_type="short_video"
-        )
+        session = get_agent_registry().build_session("chat_agent", creation_type="short_video")
     finally:
         factory_mod.get_deepseek_llm = original
     msgs = session._build_initial_messages("帮我做一期手冲咖啡的短视频", None)
     sp = msgs[0]["content"]
-    catalog = sp[sp.index("## 可用技能"):sp.index("skill_call 用法")]
+    catalog = sp[sp.index("## 可用技能") : sp.index("skill_call 用法")]
     entries = [l for l in catalog.splitlines() if l.startswith("- ")]
     assert len(entries) <= _SKILL_CATALOG_MAX_TOOLS
     assert len(catalog) < 10000
     # 目录条目 + 列名应覆盖全部技能池（不丢可发现性）
     pool = session._skills
     entry_names = {e[2:].split(" — ")[0] for e in entries}
-    extra_block = catalog[catalog.index("其他可用技能"):] if "其他可用技能" in catalog else ""
+    extra_block = catalog[catalog.index("其他可用技能") :] if "其他可用技能" in catalog else ""
     listed = {
         n.strip()
         for l in extra_block.splitlines()
@@ -369,7 +363,9 @@ async def test_skill_doc_unknown_skill_no_attachment():
 
     session = ReactorSession(skills=[_DocFakeSkill()])
     _wire_session_for_dispatch(session)
-    r = await session._dispatch({"name": "skill_call", "arguments": {"skill": "ghost", "arguments": {}}})
+    r = await session._dispatch(
+        {"name": "skill_call", "arguments": {"skill": "ghost", "arguments": {}}}
+    )
     assert "skill_doc" not in r
     assert "ghost" not in session._skill_doc_sent
 

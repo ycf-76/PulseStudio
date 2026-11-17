@@ -172,10 +172,16 @@ class Settings(BaseSettings):
     dashscope_i2v_model: str = Field(
         default="wanx2.1-i2v-turbo", description="DashScope 图生视频模型（i2v）"
     )
-    kling_access_key: str = Field(default="", description="可灵 Access Key（video_provider=kling 时用，JWT 鉴权）")
-    kling_secret_key: str = Field(default="", description="可灵 Secret Key（video_provider=kling 时用，JWT 鉴权）")
+    kling_access_key: str = Field(
+        default="", description="可灵 Access Key（video_provider=kling 时用，JWT 鉴权）"
+    )
+    kling_secret_key: str = Field(
+        default="", description="可灵 Secret Key（video_provider=kling 时用，JWT 鉴权）"
+    )
     kling_model: str = Field(default="kling-v1", description="可灵模型名（kling-v1 / kling-v1-5）")
-    ark_api_key: str = Field(default="", description="火山引擎 ARK API Key（video_provider=ark 时用）")
+    ark_api_key: str = Field(
+        default="", description="火山引擎 ARK API Key（video_provider=ark 时用）"
+    )
     ark_model: str = Field(
         default="", description="火山方舟视频生成模型 / endpoint id（video_provider=ark 时必填）"
     )
@@ -218,18 +224,23 @@ class Settings(BaseSettings):
         ),
     )
     video_mock_failure_rate: float = Field(
-        default=0.0, ge=0.0, le=1.0,
+        default=0.0,
+        ge=0.0,
+        le=1.0,
         description="Mock Provider 失败率（联调重试/降级路径时调高，如 0.3）",
     )
     video_mock_latency_sec: float = Field(
-        default=2.0, ge=0.0,
+        default=2.0,
+        ge=0.0,
         description="Mock Provider 单任务模拟耗时（秒），分镜图/视频同参",
     )
     video_worker_poll_idle: float = Field(
-        default=1.5, description="视频 Worker 空闲轮询间隔（秒）",
+        default=1.5,
+        description="视频 Worker 空闲轮询间隔（秒）",
     )
     video_worker_poll_busy: float = Field(
-        default=0.3, description="视频 Worker 有任务时的轮询间隔（秒）",
+        default=0.3,
+        description="视频 Worker 有任务时的轮询间隔（秒）",
     )
     video_job_exec_timeout: float = Field(
         default=900.0,
@@ -243,20 +254,32 @@ class Settings(BaseSettings):
     # qwen2.5-vl-* 全部 403/404，唯一可用 VL = qwen3-vl-plus
     # （原生 multimodal-generation 与 compatible-mode 双端点验证通过）
     # economy 级：规划阶段（VL理解 + LLM编排），省钱优先
-    tier_economy_vl: str = Field(default="qwen3-vl-plus", description="economy 级 VL 模型（便宜，用于规划）")
-    tier_economy_llm: str = Field(default="deepseek-chat", description="economy 级 LLM 模型（便宜，用于编排）")
+    tier_economy_vl: str = Field(
+        default="qwen3-vl-plus", description="economy 级 VL 模型（便宜，用于规划）"
+    )
+    tier_economy_llm: str = Field(
+        default="deepseek-chat", description="economy 级 LLM 模型（便宜，用于编排）"
+    )
     tier_economy_t2i: str = Field(default="wanx2.1-t2i-turbo", description="economy 级文生图模型")
     tier_economy_i2v: str = Field(default="wanx2.1-i2v-turbo", description="economy 级图生视频模型")
     # standard 级：后处理阶段，性价比平衡
     tier_standard_vl: str = Field(default="qwen3-vl-plus", description="standard 级 VL 模型")
     tier_standard_llm: str = Field(default="deepseek-chat", description="standard 级 LLM 模型")
     tier_standard_t2i: str = Field(default="wanx2.1-t2i-turbo", description="standard 级文生图模型")
-    tier_standard_i2v: str = Field(default="wanx2.1-i2v-turbo", description="standard 级图生视频模型")
+    tier_standard_i2v: str = Field(
+        default="wanx2.1-i2v-turbo", description="standard 级图生视频模型"
+    )
     # quality 级：核心生成阶段（生图 + 生视频），质量优先
-    tier_quality_vl: str = Field(default="qwen3-vl-plus", description="quality 级 VL 模型（最强，用于关键生成）")
+    tier_quality_vl: str = Field(
+        default="qwen3-vl-plus", description="quality 级 VL 模型（最强，用于关键生成）"
+    )
     tier_quality_llm: str = Field(default="deepseek-chat", description="quality 级 LLM 模型")
-    tier_quality_t2i: str = Field(default="wanx2.1-t2i-plus", description="quality 级文生图模型（高质量版）")
-    tier_quality_i2v: str = Field(default="wanx2.1-i2v-plus", description="quality 级图生视频模型（高质量版）")
+    tier_quality_t2i: str = Field(
+        default="wanx2.1-t2i-plus", description="quality 级文生图模型（高质量版）"
+    )
+    tier_quality_i2v: str = Field(
+        default="wanx2.1-i2v-plus", description="quality 级图生视频模型（高质量版）"
+    )
 
     # ===== LLM: OpenAI（GPT 系列，官方 API）=====
     openai_api_key: str = Field(default="", description="OpenAI API Key")
@@ -352,7 +375,9 @@ class Settings(BaseSettings):
     langchain_tracing_v2: bool = Field(default=False, description="是否启用 LangChain v2 tracing")
     langchain_api_key: str = Field(default="", description="LangSmith API Key（tracing 用）")
     langchain_project: str = Field(default="xhs-agent", description="LangSmith 项目名")
-    langchain_endpoint: str = Field(default="https://api.smith.langchain.com", description="LangSmith API endpoint")
+    langchain_endpoint: str = Field(
+        default="https://api.smith.langchain.com", description="LangSmith API endpoint"
+    )
 
     # ===== 加密 =====
     aes_secret_key: str = Field(
@@ -396,12 +421,16 @@ class Settings(BaseSettings):
     sse_event_buffer_limit: int = 1000
 
     # ===== SMTP（邮箱验证码发送）=====
-    smtp_host: str = Field(default="", description="SMTP 服务器地址（如 smtp.qq.com / smtp.gmail.com）")
+    smtp_host: str = Field(
+        default="", description="SMTP 服务器地址（如 smtp.qq.com / smtp.gmail.com）"
+    )
     smtp_port: int = Field(default=465, description="SMTP 端口（SSL 默认 465，TLS 默认 587）")
     smtp_user: str = Field(default="", description="SMTP 登录用户名（通常就是邮箱地址）")
     smtp_pass: str = Field(default="", description="SMTP 登录密码或授权码")
     smtp_from: str = Field(default="", description="发件人地址（留空则用 smtp_user）")
-    smtp_use_tls: bool = Field(default=False, description="是否使用 STARTTLS（端口 587 时通常为 True）")
+    smtp_use_tls: bool = Field(
+        default=False, description="是否使用 STARTTLS（端口 587 时通常为 True）"
+    )
 
     # ===== Redis =====
     redis_url: str = Field(

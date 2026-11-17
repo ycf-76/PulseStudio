@@ -29,7 +29,7 @@ _PROOFREAD_SYSTEM_PROMPT = (
     "近音字或明显识别错误的字词。只修正这类错字：不改变句意、尽量不增删字数、"
     '保留原有标点。输出一个 JSON 对象：{"replacements": '
     '[{"wrong": "入虾", "right": "入夏"}]}，wrong 必须是原文中连续出现的'
-    '字词片段，right 是修正后的文本；同一错字在文中多处出现时，每一处都'
+    "字词片段，right 是修正后的文本；同一错字在文中多处出现时，每一处都"
     '单独列一条（逐处列出，不要合并）；没有错字时输出 {"replacements": []}。'
     "只输出 JSON。"
 )
@@ -72,7 +72,7 @@ def _alloc_counts(lens: list[int], m: int) -> list[int]:
     counts = [int(x) for x in raw]
     rem = m - sum(counts)
     order = sorted(range(len(lens)), key=lambda i: (-(raw[i] - int(raw[i])), i))
-    for i in order[:max(0, rem)]:
+    for i in order[: max(0, rem)]:
         counts[i] += 1
     return counts
 
@@ -99,8 +99,7 @@ def apply_replacements(segments, replacements):
             continue
         wrong = rep.get("wrong")
         right = rep.get("right")
-        if not (isinstance(wrong, str) and wrong) or \
-                not (isinstance(right, str) and right):
+        if not (isinstance(wrong, str) and wrong) or not (isinstance(right, str) and right):
             warnings.append(f"替换条目 wrong/right 非空字符串（跳过）：{rep!r}")
             continue
 
@@ -135,13 +134,12 @@ def apply_replacements(segments, replacements):
         si = seg_ids.pop()
 
         # right 字符按各 token 在区间内的字符数占比分摊
-        lens = [max(0, min(tok_spans[t][1], hi) - max(tok_spans[t][0], idx))
-                for t in span_tok_ids]
+        lens = [max(0, min(tok_spans[t][1], hi) - max(tok_spans[t][0], idx)) for t in span_tok_ids]
         counts = _alloc_counts(lens, m)
         assigned: dict[int, str] = {}
         p = 0
         for t, c in zip(span_tok_ids, counts):
-            assigned[t] = right[p:p + c]
+            assigned[t] = right[p : p + c]
             p += c
 
         # 重建该 segment：区间外字符保留 + 分摊切片（时间戳不动）
@@ -154,12 +152,11 @@ def apply_replacements(segments, replacements):
                 new_words.append(w)
                 continue
             cs, ce = tok_spans[t]
-            new_text = full[cs:max(cs, idx)] + assigned[t] + full[min(ce, hi):ce]
+            new_text = full[cs : max(cs, idx)] + assigned[t] + full[min(ce, hi) : ce]
             new_words.append(dataclasses.replace(w, text=new_text))
         new_seg = dataclasses.replace(seg, words=new_words)
         if wrong in new_seg.text:  # segment.text 同步（文本与 words 通常一致）
-            new_seg = dataclasses.replace(
-                new_seg, text=new_seg.text.replace(wrong, right, 1))
+            new_seg = dataclasses.replace(new_seg, text=new_seg.text.replace(wrong, right, 1))
         out[si] = new_seg
         corrections.append(f"{wrong}→{right}")
     return out, corrections, warnings
@@ -168,11 +165,15 @@ def apply_replacements(segments, replacements):
 async def _llm_replacements(llm, full_text: str) -> list:
     """调 LLM 校对 → replacements 列表；任何异常/畸形输出都抛出。"""
     resp = await llm.chat(
-        [{"role": "system", "content": _PROOFREAD_SYSTEM_PROMPT},
-         {"role": "user", "content": f"转写全文：\n{full_text}"}],
-        response_format={"type": "json_object"})
-    content = resp if isinstance(resp, str) else \
-        (resp.get("content") if isinstance(resp, dict) else None)
+        [
+            {"role": "system", "content": _PROOFREAD_SYSTEM_PROMPT},
+            {"role": "user", "content": f"转写全文：\n{full_text}"},
+        ],
+        response_format={"type": "json_object"},
+    )
+    content = (
+        resp if isinstance(resp, str) else (resp.get("content") if isinstance(resp, dict) else None)
+    )
     if not isinstance(content, str):
         raise ValueError(f"LLM 返回非文本: {type(resp).__name__}")
     obj = json.loads(content)
@@ -204,9 +205,10 @@ async def fix_homophones(segments, llm, emit=None):
         logger.info("transcript fix: %s (warnings=%d)", corrections, len(warnings))
         if emit is not None:
             try:
-                emit("transcript_fix", {"tool": "transcribe",
-                                        "corrections": corrections,
-                                        "warnings": warnings})
+                emit(
+                    "transcript_fix",
+                    {"tool": "transcribe", "corrections": corrections, "warnings": warnings},
+                )
             except Exception:
                 logger.debug("transcript_fix emit failed", exc_info=True)
     return new_segs, corrections, warnings

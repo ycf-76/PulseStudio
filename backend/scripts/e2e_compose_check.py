@@ -19,7 +19,9 @@ from capabilities.video.adapters.html_to_video import (
 )
 from capabilities.video.adapters.overlay_templates import caption_pop, stat_card
 
-BASE = Path(r"D:\My_Project\多智能体小红书发布平台\backend\uploads\assets\OwdN5Jwjo_9XA_iAvuht-Q\01M4R4Z8GMKKBY6AFA809QYW97.mp4")
+BASE = Path(
+    r"D:\My_Project\多智能体小红书发布平台\backend\uploads\assets\OwdN5Jwjo_9XA_iAvuht-Q\01M4R4Z8GMKKBY6AFA809QYW97.mp4"
+)
 OUT_DIR = Path(__file__).parent.parent / "outputs" / "render_e2e"
 
 
@@ -28,6 +30,7 @@ async def main() -> int:
 
     ffmpeg = None
     from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+
     ffmpeg = resolve_ffmpeg()
 
     # 1. 渲染两个叠加（1.8s 字幕 + 2.2s 数据卡）
@@ -64,9 +67,21 @@ async def main() -> int:
     def grab(src: Path, ts: float, name: str) -> Path:
         p = OUT_DIR / name
         subprocess.run(
-            [ffmpeg, "-y", "-loglevel", "error", "-ss", str(ts), "-i", str(src),
-             "-vframes", "1", str(p)],
-            capture_output=True, check=True,
+            [
+                ffmpeg,
+                "-y",
+                "-loglevel",
+                "error",
+                "-ss",
+                str(ts),
+                "-i",
+                str(src),
+                "-vframes",
+                "1",
+                str(p),
+            ],
+            capture_output=True,
+            check=True,
         )
         return p
 
@@ -79,9 +94,7 @@ async def main() -> int:
         if ia.size != ib.size:
             ib = ib.resize(ia.size)
         diff = ImageChops.difference(ia, ib)
-        return sum(
-            1 for r, g, b in diff.getdata() if max(r, g, b) > 30
-        )
+        return sum(1 for r, g, b in diff.getdata() if max(r, g, b) > 30)
 
     THRESHOLD = 3000  # 显著差异像素下限（1080x1920 帧）
     before = diff_pixels(grab(final, 0.1, "chk_before.png"), grab(BASE, 0.1, "chk_base01.png"))

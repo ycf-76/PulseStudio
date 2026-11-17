@@ -27,14 +27,18 @@ router = APIRouter(prefix="/api/topic-pool", tags=["topic-pool"])
 
 @router.get("")
 async def list_items(
-    platform: str | None = Query(None, description="平台筛选：hackernews/reddit/tavily/xiaohongshu/小红书/抖音/微博"),
+    platform: str | None = Query(
+        None, description="平台筛选：hackernews/reddit/tavily/xiaohongshu/小红书/抖音/微博"
+    ),
     keyword: str | None = Query(None, description="标题/摘要模糊搜索"),
     favorited_only: bool = Query(False, description="仅看收藏"),
     auto_source: str | None = Query(None, description="来源筛选：manual/monitor"),
     emotion: str | None = Query(None, description="情绪维度筛选"),
     scene: str | None = Query(None, description="场景维度筛选"),
     visual: str | None = Query(None, description="视觉形式筛选"),
-    sort: str = Query("created_desc", description="排序：created_desc/heat_desc/personalized（画像加权）"),
+    sort: str = Query(
+        "created_desc", description="排序：created_desc/heat_desc/personalized（画像加权）"
+    ),
     page: int = Query(1, ge=1, description="页码（1-based）"),
     size: int = Query(20, ge=1, le=100, description="每页条数"),
     db: AsyncSession = Depends(get_db),
@@ -72,7 +76,6 @@ async def get_stats(
     return StandardResponse(data=data)
 
 
-
 @router.get("/recommended")
 async def get_recommended(
     limit: int = Query(10, ge=1, le=30, description="返回条数"),
@@ -103,7 +106,10 @@ async def get_recommended(
         for kw in keywords:
             try:
                 data = await service.list_items(
-                    keyword=kw, sort="heat_desc", page=1, size=per_kw,
+                    keyword=kw,
+                    sort="heat_desc",
+                    page=1,
+                    size=per_kw,
                     user_id=user_id,
                 )
                 for item in data.get("items", []):
@@ -118,7 +124,9 @@ async def get_recommended(
     if len(combined) < limit:
         try:
             data = await service.list_items(
-                sort="heat_desc", page=1, size=limit,
+                sort="heat_desc",
+                page=1,
+                size=limit,
                 user_id=user_id,
             )
             for item in data.get("items", []):
@@ -132,15 +140,18 @@ async def get_recommended(
             logger.warning(f"[topic-pool] recommended fallback failed: {e}")
 
     combined = combined[:limit]
-    return StandardResponse(data={
-        "items": combined,
-        "total": len(combined),
-        "keywords": keywords,
-    })
+    return StandardResponse(
+        data={
+            "items": combined,
+            "total": len(combined),
+            "keywords": keywords,
+        }
+    )
 
 
 class FetchRequest(BaseModel):
     """主动抓取请求（手动模式）。"""
+
     keyword: str = Field(
         ...,
         description="搜索关键词；若填入 http/https 链接，则直接采集该网页正文（忽略 platform）",
@@ -236,10 +247,12 @@ async def get_detail(
     if related_limit > 0:
         related = await service.get_related(item_id, limit=related_limit)
 
-    return StandardResponse(data={
-        "detail": detail,
-        "related": related,
-    })
+    return StandardResponse(
+        data={
+            "detail": detail,
+            "related": related,
+        }
+    )
 
 
 @router.post("/{item_id}/ai-summary")

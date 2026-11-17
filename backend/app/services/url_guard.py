@@ -19,27 +19,31 @@ logger = logging.getLogger(__name__)
 _ALLOWED_SCHEMES = frozenset({"http", "https"})
 
 # 保留主机名：即便解析不到 IP，名字本身就代表内网/元数据语义
-_BLOCKED_HOSTNAMES = frozenset({
-    "localhost",
-    "localhost.localdomain",
-    "metadata",
-    "metadata.google.internal",
-    "metadata.azure.com",
-    "instance-data",
-    "kubernetes",
-    "kubernetes.default",
-    "kubernetes.default.svc",
-})
+_BLOCKED_HOSTNAMES = frozenset(
+    {
+        "localhost",
+        "localhost.localdomain",
+        "metadata",
+        "metadata.google.internal",
+        "metadata.azure.com",
+        "instance-data",
+        "kubernetes",
+        "kubernetes.default",
+        "kubernetes.default.svc",
+    }
+)
 
 # 保留域名后缀
 _BLOCKED_SUFFIXES = (".internal", ".local", ".localdomain", ".corp", ".lan", ".intranet")
 
 # 常见云厂商元数据 IP（其实都在 link-local / private 段内，列出来便于错误提示）
-_METADATA_IPS = frozenset({
-    "169.254.169.254",
-    "169.254.170.2",
-    "100.100.100.200",
-})
+_METADATA_IPS = frozenset(
+    {
+        "169.254.169.254",
+        "169.254.170.2",
+        "100.100.100.200",
+    }
+)
 
 
 class UnsafeUrlError(ValueError):

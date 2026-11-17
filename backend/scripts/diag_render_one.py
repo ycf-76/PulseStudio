@@ -14,7 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-VIDEO = Path(r"D:\My_Project\多智能体小红书发布平台\backend\uploads\videos\OwdN5Jwjo_9XA_iAvuht-Q\01M5VDAHJR83J07D32SN14FW0P.mp4")
+VIDEO = Path(
+    r"D:\My_Project\多智能体小红书发布平台\backend\uploads\videos\OwdN5Jwjo_9XA_iAvuht-Q\01M5VDAHJR83J07D32SN14FW0P.mp4"
+)
 OUT = Path(__file__).parent.parent / "outputs" / "render_e2e"
 
 WIN_START, WIN_END = 1.0, 4.0
@@ -40,7 +42,7 @@ def frame_diff_region(video_a: Path, video_b: Path, t: float) -> float:
     if a.shape != b.shape:
         return 999.0
     h = a.shape[0]
-    d = np.abs(a[int(h * 2 / 3):, :].astype(int) - b[int(h * 2 / 3):, :].astype(int))
+    d = np.abs(a[int(h * 2 / 3) :, :].astype(int) - b[int(h * 2 / 3) :, :].astype(int))
     return float(d.mean())
 
 
@@ -62,13 +64,17 @@ async def main() -> int:
     # 1. 渲染 caption（词级均分由模板缺省处理）
     html = caption_pop(
         text="第一 不要长时间对着空调直吹",
-        width=cw, height=ch,
+        width=cw,
+        height=ch,
         duration=WIN_END - WIN_START,
     )
     overlay = OUT / "diag_caption.mp4"
     result = await render_html_to_video(
-        html_content=html, output_path=overlay,
-        width=cw, height=ch, duration=WIN_END - WIN_START,
+        html_content=html,
+        output_path=overlay,
+        width=cw,
+        height=ch,
+        duration=WIN_END - WIN_START,
     )
     if not result:
         print("FAIL: render_html_to_video returned None")

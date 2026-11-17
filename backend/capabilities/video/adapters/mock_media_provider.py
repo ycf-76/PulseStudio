@@ -39,7 +39,15 @@ _RATIO_SIZE = {
 }
 
 _MOCK_MOTIONS = ["缓慢推进", "横向跟移", "微俯缓推", "低机位跟拍", "匀速横移", "拉远", "环绕"]
-_MOCK_CAPTIONS = ["开场引入", "场景展开", "细节特写", "人物互动", "氛围营造", "情绪推进", "收束回味"]
+_MOCK_CAPTIONS = [
+    "开场引入",
+    "场景展开",
+    "细节特写",
+    "人物互动",
+    "氛围营造",
+    "情绪推进",
+    "收束回味",
+]
 
 
 def _shot_color(shot_id: str) -> tuple[int, int, int]:
@@ -84,20 +92,22 @@ class MockMediaProvider:
 
         shots = []
         for i in range(max(1, shot_count)):
-            shots.append({
-                "shot_id": generate_ulid(),
-                "shot_index": i + 1,
-                "caption": f"第{i + 1}镜：{_MOCK_CAPTIONS[i % len(_MOCK_CAPTIONS)]}",
-                "image_prompt": (
-                    f"{prompt}, shot {i + 1} of {shot_count}, "
-                    f"{_MOCK_CAPTIONS[i % len(_MOCK_CAPTIONS)]}, "
-                    f"cinematic, high quality, detailed, varied composition"
-                ),
-                "motion_prompt": _MOCK_MOTIONS[i % len(_MOCK_MOTIONS)],
-                "reference_images": [1],
-                "duration": shot_duration,
-                "transition": "cut",
-            })
+            shots.append(
+                {
+                    "shot_id": generate_ulid(),
+                    "shot_index": i + 1,
+                    "caption": f"第{i + 1}镜：{_MOCK_CAPTIONS[i % len(_MOCK_CAPTIONS)]}",
+                    "image_prompt": (
+                        f"{prompt}, shot {i + 1} of {shot_count}, "
+                        f"{_MOCK_CAPTIONS[i % len(_MOCK_CAPTIONS)]}, "
+                        f"cinematic, high quality, detailed, varied composition"
+                    ),
+                    "motion_prompt": _MOCK_MOTIONS[i % len(_MOCK_MOTIONS)],
+                    "reference_images": [1],
+                    "duration": shot_duration,
+                    "transition": "cut",
+                }
+            )
         return {
             "title": prompt[:30] or "未命名视频",
             "total_shots": len(shots),
@@ -122,7 +132,9 @@ class MockMediaProvider:
         draw = ImageDraw.Draw(img)
         # 角标：镜头序号 + 比例 + MOCK 水印
         draw.rectangle([0, 0, w, 96], fill=(0, 0, 0))
-        draw.text((24, 28), f"MOCK shot {shot.get('shot_index', '?')}  {ratio}", fill=(255, 255, 255))
+        draw.text(
+            (24, 28), f"MOCK shot {shot.get('shot_index', '?')}  {ratio}", fill=(255, 255, 255)
+        )
         draw.rectangle([0, h - 64, w, h], fill=(0, 0, 0))
         # 提示词截断显示（避免溢出画幅）
         draw.text((24, h - 48), image_prompt[:60], fill=(220, 220, 220))
@@ -151,12 +163,20 @@ class MockMediaProvider:
         with tempfile.TemporaryDirectory(prefix="mock_vclip_") as td:
             out = Path(td) / "clip.mp4"
             cmd = [
-                "ffmpeg", "-y",
-                "-f", "lavfi", "-i",
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
                 f"color=c=0x{hex_color}:s={w}x{h}:d={duration:.2f}:r=30",
-                "-vf", f"drawtext=text='MOCK shot {shot.get('shot_index', '?')}':"
-                       f"fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an",
+                "-vf",
+                f"drawtext=text='MOCK shot {shot.get('shot_index', '?')}':"
+                f"fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-an",
                 str(out),
             ]
             try:
@@ -167,7 +187,9 @@ class MockMediaProvider:
                 returncode = proc.returncode
             except NotImplementedError:
                 result = await asyncio.to_thread(
-                    subprocess.run, cmd, capture_output=True,
+                    subprocess.run,
+                    cmd,
+                    capture_output=True,
                 )
                 stderr, returncode = result.stderr, result.returncode
             if returncode != 0 or not out.is_file():

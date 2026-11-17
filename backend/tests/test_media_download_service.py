@@ -4,6 +4,7 @@
 场景: 可下载校验 / Web 路径转换 / start_download 三态
 预期: docs/FEATURE_yt-dlp媒体下载接入.md 前端接入章节
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,8 +16,13 @@ from app.services import media_download_service as svc
 
 
 def _record(**kw) -> SimpleNamespace:
-    base = dict(id="rec1", user_id="u1", platform="bilibili",
-                video_url="https://www.bilibili.com/video/BV1xx", local_video_path=None)
+    base = dict(
+        id="rec1",
+        user_id="u1",
+        platform="bilibili",
+        video_url="https://www.bilibili.com/video/BV1xx",
+        local_video_path=None,
+    )
     base.update(kw)
     return SimpleNamespace(**base)
 
@@ -44,6 +50,7 @@ def _patch_db(monkeypatch, record):
 
 # ===== check_downloadable =====
 
+
 def test_check_downloadable_bilibili_ok():
     """测试: 白名单校验；场景: bilibili 有视频链接；预期: 可下载。"""
     assert svc.check_downloadable("bilibili", "https://www.bilibili.com/video/BV1xx") is None
@@ -69,6 +76,7 @@ def test_check_downloadable_douyin_rejected():
 
 # ===== to_web_url =====
 
+
 def test_to_web_url_outputs_relative():
     """测试: Web 路径转换；场景: 文件在 outputs 目录内；预期: /outputs/ 前缀路径。"""
     p = svc.OUTPUTS_DIR / "media" / "bilibili" / "BV1xx.mp4"
@@ -82,6 +90,7 @@ def test_to_web_url_outside_outputs_none():
 
 
 # ===== start_download =====
+
 
 async def test_start_download_record_not_found(monkeypatch):
     """测试: 三态返回；场景: 记录不存在；预期: blocked。"""
@@ -133,9 +142,17 @@ async def test_download_and_save_writes_back(monkeypatch, tmp_path):
     _patch_db(monkeypatch, record)
 
     def fake_download_media(url, platform):
-        return {"filepath": str(video), "title": "t", "duration": 1, "extractor": "BiliBili", "url": url, "platform": platform}
+        return {
+            "filepath": str(video),
+            "title": "t",
+            "duration": 1,
+            "extractor": "BiliBili",
+            "url": url,
+            "platform": platform,
+        }
 
     import capabilities.scrapling.spiders.media_downloader as md
+
     monkeypatch.setattr(md, "download_media", fake_download_media)
     # _download_and_save 内部延迟导入 download_media，monkeypatch 模块属性即可生效
 

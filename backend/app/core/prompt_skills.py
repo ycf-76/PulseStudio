@@ -20,9 +20,9 @@ from typing import Any
 
 import yaml
 
+from app.agents.clarification_schema import ClarifyFieldMeta
 from app.core.skill_base import PromptDrivenSkill
 from app.core.skill_registry import SkillRegistry
-from app.agents.clarification_schema import ClarifyFieldMeta
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,9 @@ def scan_and_register_user_prompt_skills() -> list[type[PromptDrivenSkill]]:
                 if skill_cls:
                     registered.append(skill_cls)
             except Exception as e:
-                logger.exception(f"[prompt_skills] failed to load user skill {user_id}/{md_file.name}: {e}")
+                logger.exception(
+                    f"[prompt_skills] failed to load user skill {user_id}/{md_file.name}: {e}"
+                )
 
     return registered
 
@@ -104,7 +106,7 @@ def _register_single_md(
         logger.warning(f"[prompt_skills] missing node_type/name in {md_file.name}, skipping")
         return None
 
-    skill_body = raw[match.end():]
+    skill_body = raw[match.end() :]
 
     clarify_schema_raw = frontmatter.get("clarify_schema", None)
 
@@ -124,8 +126,10 @@ def _register_single_md(
     )
 
     registry.register(skill_cls)
-    logger.debug(f"[prompt_skills] registered: {node_type}.{name} from {md_file.name}" +
-                 (f" (owner={owner_user_id})" if owner_user_id else ""))
+    logger.debug(
+        f"[prompt_skills] registered: {node_type}.{name} from {md_file.name}"
+        + (f" (owner={owner_user_id})" if owner_user_id else "")
+    )
     return skill_cls
 
 
@@ -180,14 +184,22 @@ def _create_skill_class(
     _DynamicSkill.skill_md_path = md_file.name
     _DynamicSkill.owner_user_id = owner_user_id
     # 四期：技能级权限声明（Permission 枚举值，如 "net:http_post"）与正文长度上限
-    _DynamicSkill.skill_permissions = tuple(frontmatter.get("permissions", []) or []) if frontmatter else ()
-    _DynamicSkill.max_body_chars = int(frontmatter.get("max_body_chars", 0) or 0) if frontmatter else 0
+    _DynamicSkill.skill_permissions = (
+        tuple(frontmatter.get("permissions", []) or []) if frontmatter else ()
+    )
+    _DynamicSkill.max_body_chars = (
+        int(frontmatter.get("max_body_chars", 0) or 0) if frontmatter else 0
+    )
     _DynamicSkill.skill_category = frontmatter.get("category", "") if frontmatter else ""
     _DynamicSkill.skill_priority = frontmatter.get("priority", "") if frontmatter else ""
     _DynamicSkill.model_tier = frontmatter.get("model_tier", "") if frontmatter else ""
     _DynamicSkill.task_type = frontmatter.get("task_type", "") if frontmatter else ""
-    _DynamicSkill.temperature_override = frontmatter.get("temperature_override", None) if frontmatter else None
-    _DynamicSkill.capability_tier = frontmatter.get("capability_tier", "text_only") if frontmatter else "text_only"
+    _DynamicSkill.temperature_override = (
+        frontmatter.get("temperature_override", None) if frontmatter else None
+    )
+    _DynamicSkill.capability_tier = (
+        frontmatter.get("capability_tier", "text_only") if frontmatter else "text_only"
+    )
     _DynamicSkill.card_width = frontmatter.get("card_width", 1080) if frontmatter else 1080
     _DynamicSkill.card_height = frontmatter.get("card_height", 1440) if frontmatter else 1440
     _DynamicSkill.__name__ = f"PromptSkill_{node_type}_{name}"

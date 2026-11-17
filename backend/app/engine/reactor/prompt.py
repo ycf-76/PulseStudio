@@ -45,9 +45,6 @@ def build_tool_descriptions() -> str:
     return "\n".join(sections)
 
 
-
-
-
 def _field_type_name(finfo) -> str:
     """把字段注解映射为 prompt 友好的类型名（bool 判定须先于 int：bool 是 int 子类）。"""
     ann = finfo.annotation
@@ -168,9 +165,7 @@ def build_skill_catalog(skills: list | None) -> str:
         # P3：必填字段前置。目录剥掉了独立参数行，若不补这一行，
         # 模型只能凭描述猜字段名（某搜索技能的 keyword 在目录里
         # 一次都不出现 → 首调必缺参）。
-        required_line = (
-            _render_required_params(schema_cls) if schema_cls is not None else ""
-        )
+        required_line = _render_required_params(schema_cls) if schema_cls is not None else ""
         if required_line:
             entry_lines.append(f"  必填: {required_line}")
 
@@ -241,11 +236,15 @@ def build_design_context_block(
         return ""
     try:
         from app.agents.prompts.references.design_system_injector import build_design_system_block
-        return build_design_system_block(
-            user_message=user_message,
-            creation_type=creation_type,
-            mode="summary",
-        ) or ""
+
+        return (
+            build_design_system_block(
+                user_message=user_message,
+                creation_type=creation_type,
+                mode="summary",
+            )
+            or ""
+        )
     except Exception:
         return ""
 

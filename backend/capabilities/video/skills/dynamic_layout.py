@@ -85,8 +85,13 @@ async def _probe_resolution(video_path: str) -> tuple[int, int]:
     import json as _json
 
     proc = await asyncio.create_subprocess_exec(
-        "ffprobe", "-v", "quiet", "-print_format", "json",
-        "-show_streams", video_path,
+        "ffprobe",
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_streams",
+        video_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -103,6 +108,7 @@ def _resolve_llm() -> Any:
     try:
         from app.adapters.deepseek import DeepSeekAdapter
         from app.config import Settings
+
         return DeepSeekAdapter(api_key=Settings().deepseek_api_key)
     except Exception:
         return None
@@ -113,9 +119,9 @@ def _resolve_vlm() -> Any:
     真机教训：不走 router 的默认模型名 404 Model not exist）。
     配置缺失/导入失败返回 None（跳过审查，不阻断）。"""
     try:
-        from capabilities.image_gen.adapters.qwen_vl import QwenVLAdapter
         from app.config import Settings
         from app.services.model_tier import PipelineStage, get_tier_router
+        from capabilities.image_gen.adapters.qwen_vl import QwenVLAdapter
 
         vl_model = get_tier_router().resolve(PipelineStage.VL_UNDERSTAND, "vl")
         return QwenVLAdapter(api_key=Settings().dashscope_api_key, model=vl_model)
@@ -125,6 +131,7 @@ def _resolve_vlm() -> Any:
 
 class LayoutInput(BaseModel):
     """动态布局编排输入。"""
+
     video_path: str = Field(description="视频文件路径")
     gate_mode: GateMode = Field(default=GateMode.STANDALONE, description="闸门模式")
     brolls: list[str] | None = Field(
@@ -193,7 +200,12 @@ class DynamicLayoutSkill(Skill):
             # ── 确认回调路径：用户已确认的计划 → 校验后直接编译 ──
             if parsed.layout_plan is not None:
                 async for chunk in self._execute_confirmed(
-                    parsed, video_path, duration, video_wh, brolls, scope_dir,
+                    parsed,
+                    video_path,
+                    duration,
+                    video_wh,
+                    brolls,
+                    scope_dir,
                 ):
                     yield chunk
                 return
@@ -201,8 +213,10 @@ class DynamicLayoutSkill(Skill):
             # ── 规划路径 ──
             llm = _resolve_llm()
             timeline, raw = await generate_layout_plan(
-                llm, duration,
-                transcript_segments=parsed.transcript, brolls=brolls,
+                llm,
+                duration,
+                transcript_segments=parsed.transcript,
+                brolls=brolls,
             )
             degraded = False
             if timeline is None:
@@ -215,9 +229,8 @@ class DynamicLayoutSkill(Skill):
                     timeline = fallback_timeline(duration, broll_count=len(brolls))
                     degraded = True
 
-            plan_message = (
-                f"布局规划完成：{len(timeline.segments)} 段"
-                + ("（规划失败，已降级为静态画中画布局）" if degraded else "，请确认")
+            plan_message = f"布局规划完成：{len(timeline.segments)} 段" + (
+                "（规划失败，已降级为静态画中画布局）" if degraded else "，请确认"
             )
             plan_event = {
                 "event": "layout_plan_ready",
@@ -237,7 +250,11 @@ class DynamicLayoutSkill(Skill):
             yield plan_event
 
             async for chunk in self._compose_and_report(
-                video_path, timeline, brolls, video_wh, scope_dir,
+                video_path,
+                timeline,
+                brolls,
+                video_wh,
+                scope_dir,
             ):
                 yield chunk
 
@@ -273,7 +290,11 @@ class DynamicLayoutSkill(Skill):
             return
 
         async for chunk in self._compose_and_report(
-            video_path, timeline, brolls, video_wh, scope_dir,
+            video_path,
+            timeline,
+            brolls,
+            video_wh,
+            scope_dir,
         ):
             yield chunk
 
@@ -288,15 +309,17 @@ class DynamicLayoutSkill(Skill):
         """编译 + 落盘 + VLM 审查 + 完成事件。"""
         async with managed_temp_dir() as tmp_dir:
             final_path = await compile_layout(
-                str(video_path), timeline, brolls, tmp_dir, video_wh,
+                str(video_path),
+                timeline,
+                brolls,
+                tmp_dir,
+                video_wh,
             )
 
             perm_dir = scope_dir
             perm_dir.mkdir(parents=True, exist_ok=True)
             # 产物隔离：同源视频 + 不同布局时间轴 = 不同作品（对齐 talking_head_overlay）
-            perm_path = perm_dir / (
-                f"{Path(video_path).stem}_layout_{plan_key(timeline)}.mp4"
-            )
+            perm_path = perm_dir / (f"{Path(video_path).stem}_layout_{plan_key(timeline)}.mp4")
             shutil.copy2(str(final_path), str(perm_path))
 
         message = f"布局合成完成：{len(timeline.segments)} 段，{timeline.segments[0].primitive.value} 开场"

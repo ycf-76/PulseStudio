@@ -6,23 +6,47 @@ from html import escape
 
 from app.cards.audit import audit_page
 from app.cards.schema import (
-    THEMES, VARIANT_OPTIONS, BentoGrid, CardDeck, CardPage, Code, Compare, Cta, Footer, Heading,
-    IconGrid, ImageBlock, Kicker, ListBlock, Qa, Quote, Stat, Steps, Text, Timeline,
-    _accessible_accents, available_directions, compatible_layouts, theme_accent_class, theme_css,
+    THEMES,
+    VARIANT_OPTIONS,
+    BentoGrid,
+    CardDeck,
+    CardPage,
+    Code,
+    Compare,
+    Cta,
+    Footer,
+    Heading,
+    IconGrid,
+    ImageBlock,
+    Kicker,
+    ListBlock,
+    Qa,
+    Quote,
+    Stat,
+    Steps,
+    Text,
+    Timeline,
+    _accessible_accents,
+    available_directions,
+    compatible_layouts,
+    theme_accent_class,
+    theme_css,
 )
-
 
 # 布局基线（Pulse layout-laws 的本地化）：
 # footer 绝对定位钉在底部，内容区用 space-between 均匀铺开。
 # 绝不用 margin-top:auto —— 它把所有空隙挤到中段，制造 50-75% 那一带的死空白。
-CSS = """
+CSS = (
+    """
 *{box-sizing:border-box}html,body{margin:0;width:1080px;height:1440px;overflow:hidden}
 body{font-family:var(--font,'Noto Sans SC','Microsoft YaHei',sans-serif)}
 .card{position:relative;width:1080px;height:1440px;overflow:hidden;
 padding:88px 82px 190px;display:flex;flex-direction:column;
 font-family:var(--font,'Noto Sans SC','Microsoft YaHei',sans-serif)}
 .content{flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:0}
-""" + theme_css() + """
+"""
+    + theme_css()
+    + """
 .kicker{font-family:var(--kicker-font,monospace);font-size:25px;letter-spacing:.2em;
 text-transform:uppercase;color:var(--accent);margin-bottom:46px}
 h1{font-size:91px;font-weight:var(--display-weight,400);line-height:1.17;letter-spacing:-.02em;margin:0;overflow-wrap:anywhere}
@@ -233,6 +257,7 @@ border-radius:50%;background:var(--accent);border:3px solid var(--bg);z-index:1}
 .timeline.variant-slim li{border-bottom:none;min-height:auto;padding:16px 8px}
 .timeline.variant-slim .date{color:var(--muted)}
 """
+)
 
 
 def _text(text: str) -> str:
@@ -251,9 +276,14 @@ def _list(items, numbered: bool = True, variant: str = "") -> str:
         note = f'<div class="note">{_text(item.note)}</div>' if item.note else ""
         tag = f'<div class="tag">{_text(item.tag)}</div>' if item.tag else ""
         cells.append(
-            '<li><span class="number">' + (f"{position:02}" if numbered else "—") + '</span>'
-            '<div class="line"><div class="main">' + _text(item.text) + "</div>" + note + "</div>"
-            + tag + "</li>"
+            '<li><span class="number">' + (f"{position:02}" if numbered else "—") + "</span>"
+            '<div class="line"><div class="main">'
+            + _text(item.text)
+            + "</div>"
+            + note
+            + "</div>"
+            + tag
+            + "</li>"
         )
     cls = "rows" + (f" variant-{variant}" if variant else "")
     return f'<ol class="{cls}">' + "".join(cells) + "</ol>"
@@ -299,20 +329,20 @@ _ICON_PATHS = {
     "check": '<polyline points="20 6 9 17 4 12"/>',
     "zap": '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
     "target": '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/>'
-              '<circle cx="12" cy="12" r="2"/>',
+    '<circle cx="12" cy="12" r="2"/>',
     "star": '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 '
-            '5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    '5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
     "clock": '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
     "shield": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
     "trending-up": '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>'
-                   '<polyline points="17 6 23 6 23 12"/>',
+    '<polyline points="17 6 23 6 23 12"/>',
     "users": '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>'
-             '<circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+    '<circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
     "lightbulb": '<path d="M9 18h6"/><path d="M10 22h4"/>'
-                 '<path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 '
-                 '6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>',
+    '<path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 '
+    '6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>',
     "heart": '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78'
-             'l7.78 7.78 7.78-7.78a5.5 5.5 0 0 0 0-7.78z"/>',
+    'l7.78 7.78 7.78-7.78a5.5 5.5 0 0 0 0-7.78z"/>',
 }
 _ICON_FALLBACK = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/>'
 
@@ -360,7 +390,9 @@ def render_page(deck: CardDeck, page: CardPage, index: int) -> str:
     heading = by_type.get("heading")
     title = f"<h1>{_text(heading.text)}</h1>" if isinstance(heading, Heading) else ""
     description = by_type.get("text")
-    desc_html = f'<p class="text">{_text(description.text)}</p>' if isinstance(description, Text) else ""
+    desc_html = (
+        f'<p class="text">{_text(description.text)}</p>' if isinstance(description, Text) else ""
+    )
     image = by_type.get("image")
     content = ""
     if page.layout_id == "cover_display":
@@ -369,9 +401,9 @@ def render_page(deck: CardDeck, page: CardPage, index: int) -> str:
         if isinstance(preview, ListBlock):
             preview_html = (
                 '<div class="preview-label">本期导读</div>'
-                + '<ul class="preview">' + "".join(
-                    f"<li>{_text(item.text)}</li>" for item in preview.items
-                ) + "</ul>"
+                + '<ul class="preview">'
+                + "".join(f"<li>{_text(item.text)}</li>" for item in preview.items)
+                + "</ul>"
             )
         content = title + desc_html + preview_html
     elif page.layout_id == "cover_top_image" and isinstance(image, ImageBlock):
@@ -393,29 +425,52 @@ def render_page(deck: CardDeck, page: CardPage, index: int) -> str:
         labeled = any(row.label for row in compare.rows)
         heads = "".join(
             f'<div class="head">{_text(name)}</div>'
-            for name in (("", compare.left_title, compare.right_title) if labeled
-                         else (compare.left_title, compare.right_title)))
+            for name in (
+                ("", compare.left_title, compare.right_title)
+                if labeled
+                else (compare.left_title, compare.right_title)
+            )
+        )
         body = "".join(
             (f'<div class="rowlabel">{_text(row.label)}</div>' if labeled else "")
             + f'<div class="cell">{_text(row.left)}</div><div class="cell">{_text(row.right)}</div>'
-            for row in compare.rows)
+            for row in compare.rows
+        )
         variant_cls = f" variant-{compare.variant}" if compare.variant else ""
-        content = title + f'<div class="compare{" labeled" if labeled else ""}{variant_cls}">' + heads + body + '</div>'
+        content = (
+            title
+            + f'<div class="compare{" labeled" if labeled else ""}{variant_cls}">'
+            + heads
+            + body
+            + "</div>"
+        )
     elif page.layout_id == "image_bg_overlay" and isinstance(image, ImageBlock):
         # 蒙层的 kicker 用 deck 自己的分类/来源，之前写死 "VISUAL STORY" 是硬编码文案。
         overlay_kicker = f'<div class="kicker">{_text(deck.kicker)}</div>' if deck.kicker else ""
-        content = _img(image) + '<div class="shade"></div><div class="overlay">' + overlay_kicker + title + desc_html + '</div>'
+        content = (
+            _img(image)
+            + '<div class="shade"></div><div class="overlay">'
+            + overlay_kicker
+            + title
+            + desc_html
+            + "</div>"
+        )
     elif page.layout_id == "bento_grid":
         bento = by_type["bento_grid"]
         assert isinstance(bento, BentoGrid)
         # 2-6 格自适应网格；grid-auto-rows:1fr 由 CSS 保证格子铺满剩余高度。
         variant_cls = f" variant-{bento.variant}" if bento.variant else ""
-        content = title + f'<div class="bento{variant_cls}">' + "".join(_cell(c, "bento") for c in bento.cells) + '</div>'
+        content = (
+            title
+            + f'<div class="bento{variant_cls}">'
+            + "".join(_cell(c, "bento") for c in bento.cells)
+            + "</div>"
+        )
     elif page.layout_id == "stat_card":
         stat = by_type["stat"]
         assert isinstance(stat, Stat)
         variant_cls = f" variant-{stat.variant}" if stat.variant else ""
-        content = title + f'<div class="stat{variant_cls}">' + _cell(stat.cell, "stat") + '</div>'
+        content = title + f'<div class="stat{variant_cls}">' + _cell(stat.cell, "stat") + "</div>"
     elif page.layout_id == "timeline_flow":
         timeline = by_type["timeline"]
         assert isinstance(timeline, Timeline)
@@ -423,8 +478,14 @@ def render_page(deck: CardDeck, page: CardPage, index: int) -> str:
         for item in timeline.items:
             note = f'<div class="note">{_text(item.note)}</div>' if item.note else ""
             rows += (
-                '<li><div class="date">' + _text(item.date) + '</div>'
-                + '<div class="line"><div class="main">' + _text(item.text) + "</div>" + note + "</div></li>"
+                '<li><div class="date">'
+                + _text(item.date)
+                + "</div>"
+                + '<div class="line"><div class="main">'
+                + _text(item.text)
+                + "</div>"
+                + note
+                + "</div></li>"
             )
         variant_cls = f" variant-{timeline.variant}" if timeline.variant else ""
         content = title + f'<ul class="timeline{variant_cls}">' + rows + "</ul>"
@@ -434,15 +495,22 @@ def render_page(deck: CardDeck, page: CardPage, index: int) -> str:
         kicker_html = f'<div class="kicker">{_text(quote.kicker)}</div>' if quote.kicker else ""
         author_html = f'<div class="author">{_text(quote.author)}</div>' if quote.author else ""
         content = (
-            '<div class="quote">' + kicker_html
-            + f'<div class="text">{_text(quote.text)}</div>' + author_html + "</div>"
+            '<div class="quote">'
+            + kicker_html
+            + f'<div class="text">{_text(quote.text)}</div>'
+            + author_html
+            + "</div>"
         )
     elif page.layout_id == "end_cta":
         cta = by_type["cta"]
         assert isinstance(cta, Cta)
         # 只放一句行动号召必然撑不满画幅，所以收尾页挂一组要点回顾。
         review = by_type.get("list")
-        review_html = _list(review.items, variant=getattr(review, "variant", "")) if isinstance(review, ListBlock) else ""
+        review_html = (
+            _list(review.items, variant=getattr(review, "variant", ""))
+            if isinstance(review, ListBlock)
+            else ""
+        )
         content = title + desc_html + review_html + f'<div class="cta">{_text(cta.text)}</div>'
     else:
         raise ValueError(f"未实现的版式: {page.layout_id}")
@@ -482,22 +550,27 @@ def render_page(deck: CardDeck, page: CardPage, index: int) -> str:
     return (
         '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=1080,initial-scale=1">'
-        '<style>' + CSS + '</style></head><body>'
+        "<style>" + CSS + "</style></head><body>"
         f'<article class="card {deck.theme_id} {theme_accent_class(deck.theme_id, deck.accent_index)} {page.layout_id} {page.role}">'
-        + inner + footer + f'<span class="page-no">{index + 1:02} / {len(deck.pages):02}</span>'
-        '</article></body></html>'
+        + inner
+        + footer
+        + f'<span class="page-no">{index + 1:02} / {len(deck.pages):02}</span>'
+        "</article></body></html>"
     )
 
 
 def to_card_draft(deck: CardDeck) -> dict:
-    pages = [{
-        "id": page.id,
-        "type": page.role,
-        "layoutId": page.layout_id,
-        "availableLayouts": compatible_layouts(page),
-        "title": next((block.text for block in page.blocks if isinstance(block, Heading)), ""),
-        "htmlContent": render_page(deck, page, i),
-    } for i, page in enumerate(deck.pages)]
+    pages = [
+        {
+            "id": page.id,
+            "type": page.role,
+            "layoutId": page.layout_id,
+            "availableLayouts": compatible_layouts(page),
+            "title": next((block.text for block in page.blocks if isinstance(block, Heading)), ""),
+            "htmlContent": render_page(deck, page, i),
+        }
+        for i, page in enumerate(deck.pages)
+    ]
     # 渲染前的密度诊断随卡片一起下发，前端可以直接提示「这一页太空」。
     for page, report in zip(pages, deck.pages):
         page["density"] = audit_page(deck, report)

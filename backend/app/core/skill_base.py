@@ -14,20 +14,22 @@ Red line: skills layer must NOT import LangGraph or make flow decisions.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import re
+from abc import ABC, abstractmethod
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from app.engine.schemas import Permission
 from app.agents.clarification_schema import ClarifyFieldMeta
+from app.engine.schemas import Permission
+
 
 def fix_card_html_markers(text: str) -> str:
     """Fix LLM-wrapped card HTML: remove markdown code fences around <!--card-html--> blocks."""
     import re as _re
-    text = _re.sub(r'```html\s*\n(.*?<!--card-html-->.*?)```', r'\1', text, flags=_re.DOTALL)
-    text = _re.sub(r'```\s*\n(.*?<!--card-html-->.*?)```', r'\1', text, flags=_re.DOTALL)
+
+    text = _re.sub(r"```html\s*\n(.*?<!--card-html-->.*?)```", r"\1", text, flags=_re.DOTALL)
+    text = _re.sub(r"```\s*\n(.*?<!--card-html-->.*?)```", r"\1", text, flags=_re.DOTALL)
     return text
 
 
@@ -193,6 +195,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
         prefix = text[:first_tag].strip()
         if prefix:
             import logging
+
             logging.getLogger(__name__).warning(
                 f"[_wrap_card_html] Stripped non-HTML prefix ({len(prefix)} chars): "
                 f"{prefix[:80]}{'...' if len(prefix) > 80 else ''}"
@@ -206,14 +209,15 @@ p{margin:0 0 8px}a{color:var(--accent)}
         last_close = text.rfind(">")
         if last_close < 0 or last_close >= len(text) - 1:
             return text
-        suffix = text[last_close + 1:].strip()
+        suffix = text[last_close + 1 :].strip()
         if suffix and not suffix.startswith("<"):
             import logging
+
             logging.getLogger(__name__).warning(
                 f"[_wrap_card_html] Stripped non-HTML suffix ({len(suffix)} chars): "
                 f"{suffix[:80]}{'...' if len(suffix) > 80 else ''}"
             )
-        return text[:last_close + 1]
+        return text[: last_close + 1]
 
     @staticmethod
     def _wrap_card_html(html_block: str, viewport_width: int = 1080) -> str:
@@ -235,10 +239,20 @@ p{margin:0 0 8px}a{color:var(--accent)}
             if "<meta " not in stripped[:500]:
                 if "<head>" in stripped:
                     head_open = stripped.index("<head>") + len("<head>")
-                    stripped = stripped[:head_open] + f'<meta charset="utf-8"><meta name="viewport" content="{viewport_meta}">' + stripped[head_open:]
+                    stripped = (
+                        stripped[:head_open]
+                        + f'<meta charset="utf-8"><meta name="viewport" content="{viewport_meta}">'
+                        + stripped[head_open:]
+                    )
             else:
                 import re
-                stripped = re.sub(r'<meta\s+name=["\']viewport["\'][^>]*>', f'<meta name="viewport" content="{viewport_meta}">', stripped, flags=re.IGNORECASE)
+
+                stripped = re.sub(
+                    r'<meta\s+name=["\']viewport["\'][^>]*>',
+                    f'<meta name="viewport" content="{viewport_meta}">',
+                    stripped,
+                    flags=re.IGNORECASE,
+                )
             return PromptDrivenSkill._strip_non_html_suffix(stripped)
 
         wrapped = f"""<!DOCTYPE html>
@@ -259,7 +273,11 @@ p{margin:0 0 8px}a{color:var(--accent)}
         if not raw or PromptDrivenSkill.CARD_HTML_OPEN not in raw:
             return [], []
 
-        pattern = re.escape(PromptDrivenSkill.CARD_HTML_OPEN) + r"([\s\S]*?)" + re.escape(PromptDrivenSkill.CARD_HTML_CLOSE)
+        pattern = (
+            re.escape(PromptDrivenSkill.CARD_HTML_OPEN)
+            + r"([\s\S]*?)"
+            + re.escape(PromptDrivenSkill.CARD_HTML_CLOSE)
+        )
         blocks = re.findall(pattern, raw)
         if not blocks:
             return [], []
@@ -273,15 +291,17 @@ p{margin:0 0 8px}a{color:var(--accent)}
             wrapped = PromptDrivenSkill._wrap_card_html(html_block, PromptDrivenSkill.card_width)
             page_id = f"page_{uuid.uuid4().hex[:8]}"
             page_type = "cover" if i == 0 else ("ending" if i == len(blocks) - 1 else "content")
-            pages.append({
-                "id": page_id,
-                "type": page_type,
-                "mediaType": "html",
-                "title": f"卡片 {i + 1}",
-                "htmlContent": wrapped,
-                "width": PromptDrivenSkill.card_width,
-                "height": PromptDrivenSkill.card_height,
-            })
+            pages.append(
+                {
+                    "id": page_id,
+                    "type": page_type,
+                    "mediaType": "html",
+                    "title": f"卡片 {i + 1}",
+                    "htmlContent": wrapped,
+                    "width": PromptDrivenSkill.card_width,
+                    "height": PromptDrivenSkill.card_height,
+                }
+            )
             html_urls.append(f"card-html://inline/{page_id}")
 
         return pages, html_urls
@@ -298,6 +318,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
         5. 大标题用了粗黑体(font-weight:700-900 + font-size>80px)
         """
         import re as _re
+
         warnings: list[str] = []
 
         for i, page in enumerate(pages):
@@ -308,9 +329,11 @@ p{margin:0 0 8px}a{color:var(--accent)}
             margin_auto_hits = list(_re.finditer(r"margin-top\s*:\s*auto", html))
             for hit in margin_auto_hits:
                 start = max(0, hit.start() - 200)
-                context = html[start:hit.end() + 50]
+                context = html[start : hit.end() + 50]
                 is_layout_body = bool(_re.search(r"\.(body|main|content)\s*\{", context))
-                is_inline_spacer = bool(_re.search(r'<div\s+style="[^"]*margin-top\s*:\s*auto', context))
+                is_inline_spacer = bool(
+                    _re.search(r'<div\s+style="[^"]*margin-top\s*:\s*auto', context)
+                )
                 if not is_layout_body:
                     if is_inline_spacer:
                         warnings.append(f"{label}: inline margin-top:auto 空div推底(死空白)")
@@ -320,17 +343,17 @@ p{margin:0 0 8px}a{color:var(--accent)}
             flex1_hits = list(_re.finditer(r"flex\s*:\s*1\b", html))
             for hit in flex1_hits:
                 start = max(0, hit.start() - 200)
-                context = html[start:hit.end() + 50]
-                is_layout_container = bool(_re.search(
-                    r"\.(body|xhs-card|main|content-area|sbody|rbody|rt|sc|sum)\s*\{", context
-                ))
+                context = html[start : hit.end() + 50]
+                is_layout_container = bool(
+                    _re.search(
+                        r"\.(body|xhs-card|main|content-area|sbody|rbody|rt|sc|sum)\s*\{", context
+                    )
+                )
                 is_inline_equal = bool(_re.search(r'style="[^"]*flex\s*:\s*1', context))
                 if not is_layout_container and not is_inline_equal:
                     warnings.append(f"{label}: flex:1 在非布局容器上(可能死空白)")
 
-            root_center = _re.search(
-                r"\.xhs-card\s*\{[^}]*justify-content\s*:\s*center", html
-            )
+            root_center = _re.search(r"\.xhs-card\s*\{[^}]*justify-content\s*:\s*center", html)
             if root_center:
                 warnings.append(f"{label}: 根容器 justify-content:center")
 
@@ -341,12 +364,17 @@ p{margin:0 0 8px}a{color:var(--accent)}
                     warnings.append(f"{label}: 终端风格缺提示符($/>)")
 
             is_y2k = (
-                "#FFD500" in html or "#C5E803" in html or "#FF5CA8" in html
-                or "dopamine" in html.lower() or "y2k" in html.lower()
+                "#FFD500" in html
+                or "#C5E803" in html
+                or "#FF5CA8" in html
+                or "dopamine" in html.lower()
+                or "y2k" in html.lower()
             )
             is_journal = (
-                "journal" in html.lower() or "scrapbook" in html.lower()
-                or "手账" in html or "胶带" in html
+                "journal" in html.lower()
+                or "scrapbook" in html.lower()
+                or "手账" in html
+                or "胶带" in html
             )
             if is_journal and not is_y2k:
                 if "tape" not in html and "clip-path" not in html:
@@ -379,10 +407,17 @@ p{margin:0 0 8px}a{color:var(--accent)}
         if cache is not None:
             return cache
         from pathlib import Path
-        p = Path(__file__).resolve().parent.parent / "agents" / "prompts" / "skills" / cls.skill_md_path
+
+        p = (
+            Path(__file__).resolve().parent.parent
+            / "agents"
+            / "prompts"
+            / "skills"
+            / cls.skill_md_path
+        )
         raw = p.read_text(encoding="utf-8") if p.exists() else ""
         match = cls._FRONTMATTER_RE.match(raw)
-        content = raw[match.end():] if match else raw
+        content = raw[match.end() :] if match else raw
         cls._md_cache = content
         return content
 
@@ -392,6 +427,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
         if cache is not None:
             return cache
         from pathlib import Path
+
         parts: list[str] = []
         base = Path(__file__).resolve().parent.parent / "agents" / "prompts"
         for ref in cls.reference_paths:
@@ -416,6 +452,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
         5. 对 body padding-bottom 过大的，缩小到合理值
         """
         import re as _re
+
         fixed_pages = []
         for page in card_pages:
             html = page.get("htmlContent", "")
@@ -423,38 +460,24 @@ p{margin:0 0 8px}a{color:var(--accent)}
                 fixed_pages.append(page)
                 continue
 
-            html = _re.sub(
-                r'margin-top\s*:\s*auto',
-                'padding-top:40px',
-                html
-            )
+            html = _re.sub(r"margin-top\s*:\s*auto", "padding-top:40px", html)
+
+            html = _re.sub(r'<div\s+style="[^"]*flex\s*:\s*1[^"]*"\s*>\s*</div>', "", html)
+
+            html = _re.sub(r'(<div\s+style="[^"]*)flex\s*:\s*1;?\s*([^"]*")', r"\1\2", html)
 
             html = _re.sub(
-                r'<div\s+style="[^"]*flex\s*:\s*1[^"]*"\s*>\s*</div>',
-                '',
-                html
-            )
-
-            html = _re.sub(
-                r'(<div\s+style="[^"]*)flex\s*:\s*1;?\s*([^"]*")',
-                r'\1\2',
-                html
-            )
-
-            html = _re.sub(
-                r'((?:padding-top:[^;]+;\s*){2,})',
+                r"((?:padding-top:[^;]+;\s*){2,})",
                 lambda m: _re.sub(
-                    r'padding-top:\s*\d+px',
-                    'padding-top:40px',
-                    m.group(1).split(';')[0] + ';'
+                    r"padding-top:\s*\d+px", "padding-top:40px", m.group(1).split(";")[0] + ";"
                 ),
-                html
+                html,
             )
 
             html = _re.sub(
-                r'padding-bottom\s*:\s*(\d+)px',
-                lambda m: f'padding-bottom:{min(int(m.group(1)), 40)}px',
-                html
+                r"padding-bottom\s*:\s*(\d+)px",
+                lambda m: f"padding-bottom:{min(int(m.group(1)), 40)}px",
+                html,
             )
 
             page = {**page, "htmlContent": html}
@@ -487,6 +510,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
                 llm = await get_llm_for_model(_assigned, user_id=_uid, temperature=_temp_override)
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).warning(
                 f"[{getattr(self, 'name', '?')}] model assignment resolve failed: {e}"
             )
@@ -495,7 +519,8 @@ p{margin:0 0 8px}a{color:var(--accent)}
         # 2) 技能自身声明的 model_tier / task_type 路由
         if llm is None and (_model_tier or _task_type):
             try:
-                from app.adapters.model_router import get_model_router, ChatRequest, TaskType
+                from app.adapters.model_router import ChatRequest, TaskType, get_model_router
+
                 router = get_model_router()
                 _task_enum = TaskType.GENERAL
                 if _task_type:
@@ -514,6 +539,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
                     llm = router.resolve_llm(model=selected.model_id, temperature=_temp_override)
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).warning(
                     f"[{getattr(self, 'name', '?')}] ModelRouter resolve failed: {e}, falling back to main LLM"
                 )
@@ -541,6 +567,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
         profile_block = ""
         if user_profile:
             from app.api.schemas.profile import UserProfile
+
             try:
                 profile_obj = UserProfile(**user_profile)
                 profile_block = profile_obj.to_prompt_context()
@@ -581,9 +608,12 @@ p{margin:0 0 8px}a{color:var(--accent)}
 
         try:
             from app.engine.governance.skill_hooks import skill_governance
+
             await skill_governance.pre_llm_call(estimated_tokens=3000)
 
-            is_card_skill = "card" in self.name or "poster" in self.name or "infographic" in self.name
+            is_card_skill = (
+                "card" in self.name or "poster" in self.name or "infographic" in self.name
+            )
             card_max_tokens = 16384 if is_card_skill else None
 
             # 2026-10-17 修复：max_tokens 只在显式需要时才传。原先无条件
@@ -610,6 +640,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
             # ReAct 观察失败并降级换路。
             if "｜｜DSML｜｜" in raw:
                 import logging
+
                 logging.getLogger(__name__).warning(
                     f"[{self.name}] DSML tool-call residue in LLM output "
                     f"(prompt skill has no inner tool executor), refusing "
@@ -630,6 +661,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
             safety_warnings = skill_governance.content_safety_check(raw)
             if safety_warnings:
                 from app.engine.governance.skill_hooks import logger as gov_logger
+
                 gov_logger.warning(f"[{self.name}] content safety: {safety_warnings}")
 
             raw = fix_card_html_markers(raw)
@@ -640,6 +672,7 @@ p{margin:0 0 8px}a{color:var(--accent)}
                 audit_warnings = self._audit_card_pages(card_pages)
                 if audit_warnings:
                     import logging
+
                     logging.getLogger(__name__).warning(
                         f"[{self.name}] card audit: {audit_warnings}"
                     )
@@ -665,5 +698,6 @@ p{margin:0 0 8px}a{color:var(--accent)}
             return result
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).exception(f"[{self.name}] LLM call failed: {e}")
             return {"error": str(e), "verdict": "❌ 评估失败", "_source": "fallback"}

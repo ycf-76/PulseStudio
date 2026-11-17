@@ -20,13 +20,13 @@ PREVIEW_BASE = "/static/recipe-preview"
 @dataclass(frozen=True)
 class Recipe:
     id: str
-    label: str                          # 中文名（澄清卡选项标题）
-    hint: str                           # 一句话（澄清卡选项副标题）
-    best_for: str                       # 适用场景
-    preferred_kinds: tuple[str, ...]    # 主力 section kind（注入 _plan prompt）
-    aux_kinds: tuple[str, ...]          # 可补充的 kind
-    sequence: tuple[str, ...]           # 页版式序列（预览图渲染用）
-    guidance: str                       # 注入 _plan prompt 的骨架指引
+    label: str  # 中文名（澄清卡选项标题）
+    hint: str  # 一句话（澄清卡选项副标题）
+    best_for: str  # 适用场景
+    preferred_kinds: tuple[str, ...]  # 主力 section kind（注入 _plan prompt）
+    aux_kinds: tuple[str, ...]  # 可补充的 kind
+    sequence: tuple[str, ...]  # 页版式序列（预览图渲染用）
+    guidance: str  # 注入 _plan prompt 的骨架指引
     preview_url: str = field(default="")
 
     def __post_init__(self) -> None:
@@ -125,8 +125,12 @@ DEFAULT_RECIPE = "knowledge_list"
 # 与 RECIPES 一一对应的字面量类型，供工具入参使用。
 # 新增 recipe 时必须同步这里 —— 故意重复一次，让 type checker 在漏改时报错。
 RecipeId = Literal[
-    "knowledge_list", "tutorial_steps", "data_insight",
-    "opinion_quote", "compare_pick", "timeline_story",
+    "knowledge_list",
+    "tutorial_steps",
+    "data_insight",
+    "opinion_quote",
+    "compare_pick",
+    "timeline_story",
 ]
 
 
@@ -143,9 +147,7 @@ def get_recipe(recipe_id: str | None) -> Recipe:
     for recipe in RECIPES.values():
         if recipe_id in (recipe.label, recipe.label.rstrip("型")):
             return recipe
-    raise ValueError(
-        f"未知的卡片骨架 recipe_id={recipe_id!r}，可用值：{', '.join(RECIPES)}"
-    )
+    raise ValueError(f"未知的卡片骨架 recipe_id={recipe_id!r}，可用值：{', '.join(RECIPES)}")
 
 
 def recipe_guidance(recipe_id: str | None) -> str:

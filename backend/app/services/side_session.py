@@ -46,14 +46,18 @@ def build_snapshot_content(
         if m.get("role") in ("user", "assistant")
     ]
     if granularity == "digest":
-        goal = next(
-            (m["content"] for m in chat_messages if m["role"] == "user"), ""
-        )[:_DIGEST_GOAL_MAX_CHARS]
+        goal = next((m["content"] for m in chat_messages if m["role"] == "user"), "")[
+            :_DIGEST_GOAL_MAX_CHARS
+        ]
         return {"goal": goal, "summary": summary or "", "messages": []}
     if granularity == "recent_n":
         chat_messages = chat_messages[-recent_n:]
     goal = next((m["content"] for m in chat_messages if m["role"] == "user"), "")
-    return {"goal": goal[:_DIGEST_GOAL_MAX_CHARS], "summary": summary or "", "messages": chat_messages}
+    return {
+        "goal": goal[:_DIGEST_GOAL_MAX_CHARS],
+        "summary": summary or "",
+        "messages": chat_messages,
+    }
 
 
 def token_level_of(content: dict[str, Any]) -> str:
@@ -208,10 +212,7 @@ async def _list_messages_in(db, session_id: str, limit: int = 200) -> list[dict[
     )
     rows = list((await db.scalars(stmt)).all())
     rows.reverse()
-    return [
-        {"id": m.id, "role": m.role, "content": m.content}
-        for m in rows
-    ]
+    return [{"id": m.id, "role": m.role, "content": m.content} for m in rows]
 
 
 async def list_side_sessions(main_session_id: str) -> list[dict[str, Any]]:
@@ -229,9 +230,7 @@ async def list_side_sessions(main_session_id: str) -> list[dict[str, Any]]:
         snaps = {
             s.session_id: s
             for s in (
-                await db.scalars(
-                    select(SideSnapshot).where(SideSnapshot.session_id.in_(side_ids))
-                )
+                await db.scalars(select(SideSnapshot).where(SideSnapshot.session_id.in_(side_ids)))
             ).all()
         }
         out = []
@@ -239,17 +238,19 @@ async def list_side_sessions(main_session_id: str) -> list[dict[str, Any]]:
             meta = side.side_meta or {}
             snap = snaps.get(side.id)
             baseline = snap.baseline_message_id if snap else ""
-            out.append({
-                "id": side.id,
-                "title": side.title,
-                "status": meta.get("status", "active"),
-                "has_side_effects": bool(meta.get("has_side_effects")),
-                "granularity": snap.granularity if snap else "",
-                "baseline_message_id": baseline,
-                "baseline_turn": (snap.content or {}).get("baseline_turn", 0),
-                "expired_turns": await compute_expired_turns(main_session_id, baseline),
-                "token_level": snap.token_level if snap else "low",
-            })
+            out.append(
+                {
+                    "id": side.id,
+                    "title": side.title,
+                    "status": meta.get("status", "active"),
+                    "has_side_effects": bool(meta.get("has_side_effects")),
+                    "granularity": snap.granularity if snap else "",
+                    "baseline_message_id": baseline,
+                    "baseline_turn": (snap.content or {}).get("baseline_turn", 0),
+                    "expired_turns": await compute_expired_turns(main_session_id, baseline),
+                    "token_level": snap.token_level if snap else "low",
+                }
+            )
         return out
 
 
@@ -372,10 +373,15 @@ async def generate_digest_draft(side_session_id: str) -> str:
         f"{'用户' if m['role'] == 'user' else '助手'}: {m['content']}" for m in messages
     )
     llm = _get_llm(temperature=0.3)
-    result = await llm.chat([
-        {"role": "system", "content": "你是摘要助手。把给定的侧会话问答提炼为一段带回主任务的结论摘要：只保留结论、决策与关键参数，不要复现问答过程。直接输出摘要正文，不要寒暄。"},
-        {"role": "user", "content": f"侧会话问答记录：\n{transcript}"},
-    ])
+    result = await llm.chat(
+        [
+            {
+                "role": "system",
+                "content": "你是摘要助手。把给定的侧会话问答提炼为一段带回主任务的结论摘要：只保留结论、决策与关键参数，不要复现问答过程。直接输出摘要正文，不要寒暄。",
+            },
+            {"role": "user", "content": f"侧会话问答记录：\n{transcript}"},
+        ]
+    )
     digest = (result.get("content") or "").strip()
     if not digest:
         raise ValueError("摘要生成失败，请手动填写摘要后带回")
@@ -383,7 +389,9 @@ async def generate_digest_draft(side_session_id: str) -> str:
 
 
 async def bring_back_to_main(
-    side_session_id: str, digest: str, side_title: str = "",
+    side_session_id: str,
+    digest: str,
+    side_title: str = "",
 ) -> dict[str, Any]:
     """把用户确认的摘要作为特殊消息注入主会话（多条注入互不覆盖）。
 
@@ -402,9 +410,7 @@ async def bring_back_to_main(
 
         messages = await _list_messages_in(db, side_session_id)
         if not check_digest_cap(digest, messages):
-            raise ValueError(
-                "摘要超出长度上限（不超过侧会话问答总字符数的 30%），请精简后再带回"
-            )
+            raise ValueError("摘要超出长度上限（不超过侧会话问答总字符数的 30%），请精简后再带回")
 
     result = await chat_session.add_message(
         main_session_id,

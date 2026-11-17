@@ -32,13 +32,13 @@ from pydantic import BaseModel, Field
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
 from capabilities.video.adapters.html_to_video import resolve_ffmpeg
-from capabilities.video.skills import resolve_owner, scoped_dir
 from capabilities.video.services.overlay_orchestrator import (
     OverlayPlan,
     apply_revision,
     generate_overlay_plan,
     parse_revision_intent,
 )
+from capabilities.video.skills import resolve_owner, scoped_dir
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,7 @@ def _simplify_cn(text: str) -> str:
     except ImportError:
         return text
     return convert(text, "zh-cn")
+
 
 def _deck_top_clear_px(parsed: Any) -> int:
     """N2：deck 主画面顶部右侧让位宽 — 顶部小窗防压标题。
@@ -81,7 +82,8 @@ _MAX_REVISION_ROUNDS = 5
 
 
 def _transcribe_cpu_subprocess(
-    video_path: str, timeout: float = 600.0,
+    video_path: str,
+    timeout: float = 600.0,
 ) -> list[dict[str, Any]]:
     """whisper 转录跑在独立子进程（auto_deck 无 transcript 时的兜底通道）。
 
@@ -109,7 +111,9 @@ def _transcribe_cpu_subprocess(
     try:
         proc = subprocess.run(
             [sys.executable, "-c", code, video_path, str(backend_root)],
-            capture_output=True, timeout=timeout, env=env,
+            capture_output=True,
+            timeout=timeout,
+            env=env,
             creationflags=creationflags,
         )
     except subprocess.TimeoutExpired:
@@ -131,11 +135,14 @@ def _transcribe_cpu_subprocess(
     return rows if isinstance(rows, list) else []
 
 
-
 # 10.25-F xfade 转场样式表（确定性轮换）与转场时长
 _XFADE_STYLES = [
-    "fade", "slideleft", "slideup",
-    "wipeleft", "circleopen", "smoothleft",
+    "fade",
+    "slideleft",
+    "slideup",
+    "wipeleft",
+    "circleopen",
+    "smoothleft",
 ]
 _XFADE_TD = 0.5
 
@@ -146,10 +153,10 @@ _MOTION = {"fast": 0.2, "normal": 0.4, "stagger": 0.13}
 _DECOR_FADE = _MOTION["normal"]
 
 # M3-P1-5 zoom 量化参数（方案：1.08-1.10x / 0.35-0.45s / ≤5 次）
-_ZOOM_AMP = 0.08      # 峰值增量 → 峰值 scale 1.08
-_ZOOM_PEAK_AT = 0.3   # 峰值时刻（窗内进度比）
-_ZOOM_MAX = 0.45      # 单窗时长上限
-_ZOOM_NGRAM = 4       # relaxed 滑窗长度（n<4 短语歧义高不降窗）
+_ZOOM_AMP = 0.08  # 峰值增量 → 峰值 scale 1.08
+_ZOOM_PEAK_AT = 0.3  # 峰值时刻（窗内进度比）
+_ZOOM_MAX = 0.45  # 单窗时长上限
+_ZOOM_NGRAM = 4  # relaxed 滑窗长度（n<4 短语歧义高不降窗）
 
 # M3-P2-6 安全区：80px @1080 宽折算，下限 24
 _SAFE_MARGIN_REF = 80
@@ -157,6 +164,7 @@ _SAFE_MARGIN_REF = 80
 
 def _safe_margin(width: int) -> int:
     return max(24, round(_SAFE_MARGIN_REF * width / 1080))
+
 
 # M2-P1-4 SFX 音效库（免版权 — 本仓库 ffmpeg 合成，零外部素材）；
 # 音量 0.18 落在方案量化区间 0.15-0.2（不抢人声）
@@ -235,7 +243,7 @@ def _karaoke_frame_plan(
         if not words:
             continue
         nxt_first = None
-        for r2 in rows[si + 1:]:
+        for r2 in rows[si + 1 :]:
             if r2.get("words"):
                 nxt_first = float(r2["words"][0]["start"])
                 break
@@ -256,7 +264,8 @@ def _karaoke_frame_plan(
 
 
 def _karaoke_display_data(
-    rows: list[dict[str, Any]], width: int = 720,
+    rows: list[dict[str, Any]],
+    width: int = 720,
 ) -> list[dict[str, Any]]:
     """karaoke 展示数据 — 词文本繁→简。
 
@@ -267,8 +276,7 @@ def _karaoke_display_data(
         {
             "px": _fit_font_px(str(r.get("text") or ""), width),
             "words": [
-                {"text": _simplify_cn(str(w.get("text", "")))}
-                for w in (r.get("words") or [])
+                {"text": _simplify_cn(str(w.get("text", "")))} for w in (r.get("words") or [])
             ],
         }
         for r in rows
@@ -294,7 +302,8 @@ def _render_karaoke_frames(
     out_dir.mkdir(parents=True, exist_ok=True)
     data = _karaoke_display_data(rows, width)
     html = _KARAOKE_PAGE_HTML % {
-        "w": width, "h": _KARAOKE_BAND_H,
+        "w": width,
+        "h": _KARAOKE_BAND_H,
         "accent": _KARAOKE_ACCENT,
         "data": json.dumps(data, ensure_ascii=False).replace("</", "<\\/"),
     }
@@ -308,7 +317,8 @@ def _render_karaoke_frames(
             page.set_content(html, wait_until="networkidle")
             for i, f in enumerate(frames):
                 page.evaluate(
-                    "([s, w]) => setFrame(s, w)", [f["si"], f["wi"]],
+                    "([s, w]) => setFrame(s, w)",
+                    [f["si"], f["wi"]],
                 )
                 shot = out_dir / f"kao_{i:04d}.png"
                 page.screenshot(path=str(shot), omit_background=True)
@@ -340,7 +350,8 @@ def _write_ffconcat(
 
 
 def _find_trigger_span(
-    rows: list[dict[str, Any]], trigger: str,
+    rows: list[dict[str, Any]],
+    trigger: str,
 ) -> tuple[float, float] | None:
     """M3-P1-5：词流搜文本首次出现 → (首词 start, 末词 end)。
 
@@ -355,10 +366,7 @@ def _find_trigger_span(
     chars: list[str] = []
     idx_of: list[int] = []
     for wi, w in enumerate(words):
-        clean = "".join(
-            c for c in _simplify_cn(str(w.get("text", "")))
-            if c not in _TRIGGER_PUNCT
-        )
+        clean = "".join(c for c in _simplify_cn(str(w.get("text", ""))) if c not in _TRIGGER_PUNCT)
         for c in clean:
             chars.append(c)
             idx_of.append(wi)
@@ -375,7 +383,8 @@ def _find_trigger_span(
 
 
 def _find_trigger_start(
-    rows: list[dict[str, Any]], trigger: str,
+    rows: list[dict[str, Any]],
+    trigger: str,
 ) -> float | None:
     """M2-P0-2：词流搜触发词首次出现（span 薄壳，契约不变）。"""
     span = _find_trigger_span(rows, trigger)
@@ -392,9 +401,7 @@ def _zoom_curve(p: float) -> float:
         return 0.0
     if p <= _ZOOM_PEAK_AT:
         return _ZOOM_AMP * (p / _ZOOM_PEAK_AT) ** 0.5
-    return _ZOOM_AMP * (
-        1.0 - (p - _ZOOM_PEAK_AT) / (1.0 - _ZOOM_PEAK_AT)
-    ) ** 2
+    return _ZOOM_AMP * (1.0 - (p - _ZOOM_PEAK_AT) / (1.0 - _ZOOM_PEAK_AT)) ** 2
 
 
 def _zoompan_expr(
@@ -439,7 +446,8 @@ def _zoompan_expr(
 
 
 def _relaxed_span(
-    rows: list[dict[str, Any]], text: str,
+    rows: list[dict[str, Any]],
+    text: str,
 ) -> tuple[float, float] | None:
     """M3-P1-5（live15 实证）：提炼语措辞漂移的两级容错定位。
 
@@ -453,11 +461,9 @@ def _relaxed_span(
     hit = _find_trigger_span(rows, text)
     if hit is not None:
         return hit
-    flat = "".join(
-        c for c in _simplify_cn(str(text)) if c not in _TRIGGER_PUNCT
-    )
+    flat = "".join(c for c in _simplify_cn(str(text)) if c not in _TRIGGER_PUNCT)
     for i in range(0, len(flat) - _ZOOM_NGRAM + 1):
-        hit = _find_trigger_span(rows, flat[i:i + _ZOOM_NGRAM])
+        hit = _find_trigger_span(rows, flat[i : i + _ZOOM_NGRAM])
         if hit is not None:
             return hit
     return None
@@ -485,13 +491,14 @@ def _zoom_windows(
         for sl in slides:
             if len(picked) >= max_zooms:
                 break
-            for b in (sl.get("bullets") or []):
+            for b in sl.get("bullets") or []:
                 if len(picked) >= max_zooms:
                     break
                 if not isinstance(b, dict) or b.get("emphasis") != em:
                     continue
                 span = _relaxed_span(
-                    transcript_rows, str(b.get("text") or ""),
+                    transcript_rows,
+                    str(b.get("text") or ""),
                 )
                 if span is None or span[0] in starts_seen:
                     continue
@@ -577,8 +584,7 @@ def _trigger_bounds(
         # 封顶于所有其它更晚的触发时刻（live14 实证：卡4/卡5 触发
         # 顺序与页序颠倒，只封顶"列表靠后"会留 0.12s 叠窗）
         nxt = min(
-            (h for j, h in enumerate(hits)
-             if j != i and h is not None and h > ts),
+            (h for j, h in enumerate(hits) if j != i and h is not None and h > ts),
             default=None,
         )
         if nxt is not None:
@@ -594,7 +600,8 @@ def _trigger_bounds(
 
 
 def _plan_sfx(
-    bounds: list[tuple[float, float]], duration: float,
+    bounds: list[tuple[float, float]],
+    duration: float,
 ) -> list[dict[str, Any]]:
     """M2-P1-4：卡入场时刻 → SFX 事件（纯函数）。
 
@@ -648,18 +655,23 @@ def _build_sfx_mix(
         labels.append(lbl)
     if not paths:
         return [], [], None, {"planned": len(events), "mixed": 0}
+    parts.append(f"[{main_label}]aformat=sample_rates=48000:" f"channel_layouts=stereo[mainx]")
     parts.append(
-        f"[{main_label}]aformat=sample_rates=48000:"
-        f"channel_layouts=stereo[mainx]"
-    )
-    parts.append(
-        "[mainx]" + "".join(f"[{l}]" for l in labels)
+        "[mainx]"
+        + "".join(f"[{l}]" for l in labels)
         + f"amix=inputs={len(labels) + 1}:duration=first:"
         f"normalize=0[aout]"
     )
-    return paths, parts, "[aout]", {
-        "planned": len(events), "mixed": len(paths), "names": names,
-    }
+    return (
+        paths,
+        parts,
+        "[aout]",
+        {
+            "planned": len(events),
+            "mixed": len(paths),
+            "names": names,
+        },
+    )
 
 
 def _build_decor_cmd(
@@ -735,38 +747,25 @@ def _build_decor_cmd(
                 f"[oa{i}][gb{i}]overlay=(W-w)/2:{card_y}:"
                 f"enable='between(t,{t1:.2f},{t2:.2f})'[ob{i}]"
             )
-            label = (
-                f"v{i}" if i < len(bounds)
-                else ("vdeck" if subtitle_ffconcat else "vout")
-            )
+            label = f"v{i}" if i < len(bounds) else ("vdeck" if subtitle_ffconcat else "vout")
             parts.append(
-                f"[ob{i}][gc{i}]overlay=(W-w)/2:{card_y}:"
-                f"enable='gte(t,{t2:.2f})'[{label}]"
+                f"[ob{i}][gc{i}]overlay=(W-w)/2:{card_y}:" f"enable='gte(t,{t2:.2f})'[{label}]"
             )
             prev = label
             continue
         out_st = f"fade=t=in:st={b0:.1f}:d={fade}:alpha=1"
         out_end = f"fade=t=out:st={max(0.0, b1 - fade):.1f}:d={fade}:alpha=1"
-        chain = (
-            f"[{i}:v]scale={target_w}:-1,format=rgba,"
-            f"{out_st},{out_end}[s{i}]"
-        )
+        chain = f"[{i}:v]scale={target_w}:-1,format=rgba," f"{out_st},{out_end}[s{i}]"
         parts.append(chain)
-        label = f"v{i}" if i < len(bounds) else (
-            "vdeck" if subtitle_ffconcat else "vout"
-        )
-        parts.append(
-            f"[{prev}][s{i}]overlay=(W-w)/2:{card_y}[{label}]"
-        )
+        label = f"v{i}" if i < len(bounds) else ("vdeck" if subtitle_ffconcat else "vout")
+        parts.append(f"[{prev}][s{i}]overlay=(W-w)/2:{card_y}[{label}]")
         prev = label
     if subtitle_ffconcat:
         if prev == "0:v":
             parts.append("[0:v]null[vbase]")
             prev = "vbase"
         parts.append(f"[{sub_idx}:v]fps={fps},format=rgba[sub]")
-        parts.append(
-            f"[{prev}][sub]overlay=(W-w)/2:{int(height * 0.70)}[vout]"
-        )
+        parts.append(f"[{prev}][sub]overlay=(W-w)/2:{int(height * 0.70)}[vout]")
     elif not parts:
         parts.append("[0:v]null[vout]")
     audio_map = "0:a?"
@@ -785,16 +784,31 @@ def _build_decor_cmd(
     fc = ";".join(parts)
     audio_codec = ["-c:a", "aac"] if sfx_meta else ["-c:a", "copy"]
     cmd += [
-        "-filter_complex", fc,
-        "-map", "[vout]", "-map", audio_map,
-        "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-        *audio_codec, "-r", str(fps),
-        "-t", f"{duration:.2f}",
+        "-filter_complex",
+        fc,
+        "-map",
+        "[vout]",
+        "-map",
+        audio_map,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "20",
+        *audio_codec,
+        "-r",
+        str(fps),
+        "-t",
+        f"{duration:.2f}",
         str(out_path or video_path.parent / "decor_out.mp4"),
     ]
     return cmd, {
-        "windows": bounds, "effect": effect, "fade": fade,
-        "subtitle": bool(subtitle_ffconcat), "sfx": sfx_meta,
+        "windows": bounds,
+        "effect": effect,
+        "fade": fade,
+        "subtitle": bool(subtitle_ffconcat),
+        "sfx": sfx_meta,
         "zoom": list(zoom_windows or []),
     }
 
@@ -808,16 +822,19 @@ async def _execute_decor(
     bounds: list[tuple[float, float]],
 ):
     """10.30：decor 合成 — 渲染卡已在传入，构造命令 + 跑 ffmpeg。"""
-    yield {"event": "decor_start",
-           "message": f"原片叠加合成：{len(cards)} 张素材卡"}
+    yield {"event": "decor_start", "message": f"原片叠加合成：{len(cards)} 张素材卡"}
     cmd, meta = _build_decor_cmd(
-        body_video, cards, bounds, duration,
+        body_video,
+        cards,
+        bounds,
+        duration,
         int((opts or {}).get("main_width", 720)),
         int((opts or {}).get("main_height", 1280)),
         scale=float((opts or {}).get("decor_scale", 0.6)),
         effect=str((opts or {}).get("decor_effect", "fade")),
     )
     from capabilities.video.skills.smart_cut import _run_ffmpeg
+
     await _run_ffmpeg(cmd)
     out = body_video.parent / "decor_out.mp4"
     if not out.is_file():
@@ -826,12 +843,14 @@ async def _execute_decor(
     yield {"event": "decor_done", "data": {"output_path": str(out)}}
 
 
-
 _KB_AMP = 0.06
 
 
 def _kenburns_filter(
-    duration: float, fps: int, width: int, height: int,
+    duration: float,
+    fps: int,
+    width: int,
+    height: int,
     zoom_in: bool = True,
 ) -> str:
     """N4：Ken Burns 缓推 filter（纯函数）— 消幻灯片静止僵硬感。
@@ -856,9 +875,13 @@ def _kenburns_filter(
 
 
 def _build_layers_cmd(
-    pages: list[list[dict[str, Any]]], output_path: Path,
-    durations: list[float], fps: int = 30,
-    width: int = 1080, height: int = 1920, td: float = _XFADE_TD,
+    pages: list[list[dict[str, Any]]],
+    output_path: Path,
+    durations: list[float],
+    fps: int = 30,
+    width: int = 1080,
+    height: int = 1920,
+    td: float = _XFADE_TD,
 ) -> tuple[list[str], dict[str, Any]]:
     """N5：元素分层动画合成命令（纯函数）。
 
@@ -870,9 +893,7 @@ def _build_layers_cmd(
     """
     n = len(pages)
     if len(durations) != n:
-        raise ValueError(
-            f"layers durations mismatch: {len(durations)} for {n} pages"
-        )
+        raise ValueError(f"layers durations mismatch: {len(durations)} for {n} pages")
     e = [d + td for d in durations]
     offsets: list[float] = []
     acc = 0.0
@@ -910,8 +931,7 @@ def _build_layers_cmd(
             else:
                 out = f"pg{i}" if j == len(layers) - 1 else f"ov{i}_{j}"
                 parts.append(
-                    f"[{base}][ly{g}]overlay=0:"
-                    f"'{y0}*max(0,1-(t-{tg:.2f})/{dur:.2f})'[{out}]"
+                    f"[{base}][ly{g}]overlay=0:" f"'{y0}*max(0,1-(t-{tg:.2f})/{dur:.2f})'[{out}]"
                 )
                 base = out
             g += 1
@@ -938,20 +958,34 @@ def _build_layers_cmd(
         for ly in layers:
             cmd += ["-loop", "1", "-t", f"{ei:.2f}", "-i", str(ly["png"])]
     cmd += [
-        "-filter_complex", fc, "-map", final,
-        "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+        "-filter_complex",
+        fc,
+        "-map",
+        final,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-pix_fmt",
+        "yuv420p",
         str(output_path),
     ]
     return cmd, {
-        "e": e, "offsets": offsets, "styles": styles,
+        "e": e,
+        "offsets": offsets,
+        "styles": styles,
         "layers_per_page": [len(p) for p in pages],
     }
 
 
 def _build_typewriter_cmd(
-    frame_dirs: list[Path], output_path: Path,
-    durations: list[float], fps: int = 30,
-    width: int = 1080, height: int = 1920, td: float = _XFADE_TD,
+    frame_dirs: list[Path],
+    output_path: Path,
+    durations: list[float],
+    fps: int = 30,
+    width: int = 1080,
+    height: int = 1920,
+    td: float = _XFADE_TD,
 ) -> tuple[list[str], dict[str, Any]]:
     """N6：打字机帧序列合成命令（纯函数）。
 
@@ -963,9 +997,7 @@ def _build_typewriter_cmd(
     """
     n = len(frame_dirs)
     if len(durations) != n:
-        raise ValueError(
-            f"typewriter durations mismatch: {len(durations)} for {n} pages"
-        )
+        raise ValueError(f"typewriter durations mismatch: {len(durations)} for {n} pages")
     e = [d + td for d in durations]
     offsets: list[float] = []
     acc = 0.0
@@ -996,21 +1028,38 @@ def _build_typewriter_cmd(
     cmd = ["ffmpeg", "-y"]
     for d_path, ei in zip(frame_dirs, e):
         cmd += [
-            "-framerate", str(fps), "-t", f"{ei:.2f}",
-            "-i", str(d_path / "%06d.png"),
+            "-framerate",
+            str(fps),
+            "-t",
+            f"{ei:.2f}",
+            "-i",
+            str(d_path / "%06d.png"),
         ]
     cmd += [
-        "-filter_complex", fc, "-map", final,
-        "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+        "-filter_complex",
+        fc,
+        "-map",
+        final,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-pix_fmt",
+        "yuv420p",
         str(output_path),
     ]
     return cmd, {"e": e, "offsets": offsets, "styles": styles}
 
 
 def _build_xfade_cmd(
-    screenshots: list[Path], output_path: Path, durations: list[float],
-    fps: int = 30, width: int = 1920, height: int = 1080,
-    td: float = _XFADE_TD, kenburns: bool = False,
+    screenshots: list[Path],
+    output_path: Path,
+    durations: list[float],
+    fps: int = 30,
+    width: int = 1920,
+    height: int = 1080,
+    td: float = _XFADE_TD,
+    kenburns: bool = False,
 ) -> tuple[list[str], dict[str, Any]]:
     """10.25-F：句边界模式 xfade 转场链命令构造（纯函数，便于测试）。
 
@@ -1051,8 +1100,16 @@ def _build_xfade_cmd(
         if kenburns:
             zi = i % 2 == 0
             kb_dirs.append(zi)
-            f_pre = pre + "," + _kenburns_filter(
-                durations[i], fps, width, height, zoom_in=zi,
+            f_pre = (
+                pre
+                + ","
+                + _kenburns_filter(
+                    durations[i],
+                    fps,
+                    width,
+                    height,
+                    zoom_in=zi,
+                )
             )
         parts.append(f"[{i}:v]{f_pre}[v{i}]")
     cur = "v0"
@@ -1069,8 +1126,16 @@ def _build_xfade_cmd(
     for ss, ei in zip(screenshots, e):
         cmd += ["-loop", "1", "-t", f"{ei:.2f}", "-i", str(ss)]
     cmd += [
-        "-filter_complex", fc, "-map", "[vout]",
-        "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+        "-filter_complex",
+        fc,
+        "-map",
+        "[vout]",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-pix_fmt",
+        "yuv420p",
         str(output_path),
     ]
     return cmd, {"e": e, "offsets": offsets, "styles": styles, "kb": kb_dirs}
@@ -1105,9 +1170,7 @@ def _remap_transcript_rows(
         # 10.29 live11 实证：句任一端落删除区 → 丢弃（中点判定会放过
         # start 在 gap 内的跨切口碎词，映射后边界错位 → 5 页只出 4 durs
         # → xfade 命令畸形 ffmpeg 挂）
-        if any(
-            (g0 <= s <= g1) or (g0 <= e <= g1) for g0, g1 in gaps
-        ):
+        if any((g0 <= s <= g1) or (g0 <= e <= g1) for g0, g1 in gaps):
             continue
         # 10.31 M1-P0-1：词戳随句平移（删除区词丢弃）— 否则串联裁剪后
         # karaoke 用原轴词戳 → 字幕错位
@@ -1116,10 +1179,7 @@ def _remap_transcript_rows(
             kept_w = []
             for w in rw:
                 ws, we = float(w.get("start", 0)), float(w.get("end", 0))
-                if any(
-                    (g0 < ws < g1) or (g0 < we < g1)
-                    for g0, g1 in gaps
-                ):
+                if any((g0 < ws < g1) or (g0 < we < g1) for g0, g1 in gaps):
                     continue
                 kept_w.append({**w, "start": shift(ws), "end": shift(we)})
             r = {**r, "words": kept_w}
@@ -1228,10 +1288,7 @@ def _trigger_slide_starts(
     chars: list[str] = []
     idx_of: list[int] = []
     for wi, w in enumerate(words):
-        clean = "".join(
-            c for c in _simplify_cn(str(w.get("text", "")))
-            if c not in _TRIGGER_PUNCT
-        )
+        clean = "".join(c for c in _simplify_cn(str(w.get("text", ""))) if c not in _TRIGGER_PUNCT)
         for c in clean:
             chars.append(c)
             idx_of.append(wi)
@@ -1241,7 +1298,8 @@ def _trigger_slide_starts(
     for s in slides or []:
         tv = s.get("trigger")
         text = (
-            str(tv.get("text") or "") if isinstance(tv, dict)
+            str(tv.get("text") or "")
+            if isinstance(tv, dict)
             else (tv if isinstance(tv, str) else "")
         )
         t = _simplify_cn(text).strip()
@@ -1259,10 +1317,7 @@ def _trigger_slide_starts(
     if n == 0 or all(x is None for x in raw):
         return None
     sb = _sentence_block_starts(rows, n) or [0.0] * n
-    out = [
-        float(x) if x is not None else float(sb[k])
-        for k, x in enumerate(raw)
-    ]
+    out = [float(x) if x is not None else float(sb[k]) for k, x in enumerate(raw)]
     # 单调化：间隙 <0.5s 的页回退句边界兜底（仍冲突 → 前点+gap）
     for k in range(1, n):
         if out[k] < out[k - 1] + _TRIGGER_MIN_GAP:
@@ -1289,7 +1344,9 @@ def _load_deck_slides(path: Path) -> list[dict[str, Any]] | None:
 
 
 def _handoff_plan(
-    t0: float, duration: float, td: float = _HANDOFF_TD,
+    t0: float,
+    duration: float,
+    td: float = _HANDOFF_TD,
 ) -> dict[str, Any] | None:
     """N1：开场全屏 → t0 缩小让位的分段计划（纯函数）。
 
@@ -1301,14 +1358,19 @@ def _handoff_plan(
     if t0 <= 0 or t0 > duration - 2.0:
         return None
     return {
-        "t0": t0, "td": td,
+        "t0": t0,
+        "td": td,
         "segA": (0.0, t0 + td + 0.5),
         "segB": (t0, float(duration)),
     }
 
 
 def _handoff_cmd(
-    seg_a: Path, seg_b: Path, t0: float, td: float, out_path: Path,
+    seg_a: Path,
+    seg_b: Path,
+    t0: float,
+    td: float,
+    out_path: Path,
 ) -> list[str]:
     """N1：段A（全屏人）+ 段B（PIP 让位）→ xfade 溶解合并（纯函数）。
 
@@ -1316,28 +1378,49 @@ def _handoff_cmd(
     （segA=[0,t0+td]、segB=[t0,dur]）→ acrossfade 交叉淡化。
     """
     return [
-        "ffmpeg", "-y",
-        "-i", str(seg_a), "-i", str(seg_b),
-        "-filter_complex", (
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(seg_a),
+        "-i",
+        str(seg_b),
+        "-filter_complex",
+        (
             f"[0:v][1:v]xfade=transition=fade:duration={td:.3f}"
             f":offset={t0:.3f}[v];"
             f"[0:a][1:a]acrossfade=d={td:.3f}[a]"
         ),
-        "-map", "[v]", "-map", "[a]",
-        "-c:v", "libx264", "-preset", "fast",
-        "-c:a", "aac", "-b:a", "128k",
-        "-pix_fmt", "yuv420p",
+        "-map",
+        "[v]",
+        "-map",
+        "[a]",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-pix_fmt",
+        "yuv420p",
         str(out_path),
     ]
 
 
 def _pip_full_cmd(
     main_video_path: Path | None,
-    matte_fps: float, matte_frame_dir: Path, video_path: Path,
-    main_width: int, main_height: int,
-    pip_w: int, pip_h: int,
-    overlay_x: int, overlay_y: int,
-    duration: float, bg_hex: str,
+    matte_fps: float,
+    matte_frame_dir: Path,
+    video_path: Path,
+    main_width: int,
+    main_height: int,
+    pip_w: int,
+    pip_h: int,
+    overlay_x: int,
+    overlay_y: int,
+    duration: float,
+    bg_hex: str,
     handoff_t0: float | None,
     output_path: Path,
 ) -> list[str]:
@@ -1351,10 +1434,12 @@ def _pip_full_cmd(
     """
     if main_video_path and handoff_t0 is not None:
         inputs = [
-            "-f", "lavfi", "-i",
-            f"color=c=0x{bg_hex}:s={main_width}x{main_height}"
-            f":d={handoff_t0:.3f}:r=30",
-            "-i", str(main_video_path),
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c=0x{bg_hex}:s={main_width}x{main_height}" f":d={handoff_t0:.3f}:r=30",
+            "-i",
+            str(main_video_path),
         ]
         compose = (
             "[0:v][1:v]concat=n=2:v=1:a=0[main_v];"
@@ -1367,9 +1452,10 @@ def _pip_full_cmd(
             inputs = ["-i", str(main_video_path)]
         else:
             inputs = [
-                "-f", "lavfi", "-i",
-                f"color=c=0x{bg_hex}:s={main_width}x{main_height}"
-                f":d={duration:.3f}:r=30",
+                "-f",
+                "lavfi",
+                "-i",
+                f"color=c=0x{bg_hex}:s={main_width}x{main_height}" f":d={duration:.3f}:r=30",
             ]
         compose = (
             f"[1:v]scale={pip_w}:{pip_h}:flags=lanczos[pip];"
@@ -1377,17 +1463,35 @@ def _pip_full_cmd(
         )
         audio_idx = 2
     return [
-        "ffmpeg", "-y", *inputs,
-        "-framerate", f"{matte_fps}", "-i", str(matte_frame_dir / "%06d.png"),
-        "-i", str(video_path),
-        "-filter_complex", compose,
-        "-map", "[out_v]", "-map", f"{audio_idx}:a?",
-        "-c:v", "libx264", "-preset", "fast",
-        "-c:a", "aac", "-b:a", "128k",
-        "-pix_fmt", "yuv420p",
+        "ffmpeg",
+        "-y",
+        *inputs,
+        "-framerate",
+        f"{matte_fps}",
+        "-i",
+        str(matte_frame_dir / "%06d.png"),
+        "-i",
+        str(video_path),
+        "-filter_complex",
+        compose,
+        "-map",
+        "[out_v]",
+        "-map",
+        f"{audio_idx}:a?",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-pix_fmt",
+        "yuv420p",
         # -t 硬限输出时长：-shortest 在 muxer 层软掐，x264
         # lookahead 会多带 1-2s（真机实证 56.07 vs 源 54.1）
-        "-t", f"{duration:.3f}",
+        "-t",
+        f"{duration:.3f}",
         "-shortest",
         str(output_path),
     ]
@@ -1408,6 +1512,7 @@ class PipPosition(str, Enum):
 
 class RevisionInput(BaseModel):
     """10.19 对话式修改输入 — 用户对已确认规划的修改意见。"""
+
     raw_text: str = Field(description="用户修改意见原话（如'第2个卡片删掉'）")
     current_plan: dict[str, Any] = Field(
         description="当前规划（overlay_plan_ready 事件里的 plan 原样回传）",
@@ -1417,6 +1522,7 @@ class RevisionInput(BaseModel):
 
 class OverlayInput(BaseModel):
     """叠加增强输入。"""
+
     video_path: str = Field(description="视频文件路径")
     gate_mode: GateMode = Field(default=GateMode.STANDALONE, description="闸门模式")
     auto_confirm_low_risk: bool = Field(default=False, description="自动确认低风险闸门")
@@ -1428,9 +1534,11 @@ class OverlayInput(BaseModel):
     cut_video_path: str | None = Field(
         default=None,
         description="串联模式：smart_cut 裁后视频路径（10.27）— 提供后"
-                    "视频本体/时长切裁后轴，转录仍跑原视频",
+        "视频本体/时长切裁后轴，转录仍跑原视频",
     )
-    pip: bool = Field(default=False, description="画中画模式：将视频人物缩小放在角落，主画面留给演示内容")
+    pip: bool = Field(
+        default=False, description="画中画模式：将视频人物缩小放在角落，主画面留给演示内容"
+    )
     pip_position: PipPosition = Field(default=PipPosition.BOTTOM_RIGHT, description="画中画位置")
     pip_scale: float = Field(default=0.3, description="画中画缩放比例（0.1~0.5）")
     overlay_decor: bool = Field(
@@ -1438,18 +1546,20 @@ class OverlayInput(BaseModel):
         description="10.30 装饰叠加：原片全屏不抠人，素材卡按句边界叠加（与 pip 互斥，优先级更高）",
     )
     decor_scale: float = Field(
-        0.6, ge=0.3, le=1.0,
+        0.6,
+        ge=0.3,
+        le=1.0,
         description="10.31 M1-P0-3：素材卡宽占原片宽比例（旧横幅 85% 降为轻装饰）",
     )
     decor_effect: str = Field(
-        "pop", description="10.30 素材卡入场特效（fade 渐显 / "
-        "10.31 M2 pop 三档快切弹入，默认 pop）",
+        "pop",
+        description="10.30 素材卡入场特效（fade 渐显 / " "10.31 M2 pop 三档快切弹入，默认 pop）",
     )
     pip_margin: int = Field(default=20, description="画中画距边缘像素")
     handoff: bool = Field(
         default=False,
         description="N1 开场全屏 → t0 缩小让位（matting 路径；"
-                    "t0=开始讲解时刻，主画面让位给演示内容）",
+        "t0=开始讲解时刻，主画面让位给演示内容）",
     )
     handoff_t0: float | None = Field(
         default=None,
@@ -1458,69 +1568,68 @@ class OverlayInput(BaseModel):
     deck_triggers: list[str] | None = Field(
         default=None,
         description="手动 deck 翻页触发词（与页序对齐，说到才翻；"
-                    "auto_deck 用 slides.json 自带 trigger）",
+        "auto_deck 用 slides.json 自带 trigger）",
     )
     bg_color: str = Field(default="#1a1a2e", description="主画面背景色（画中画模式）")
-    deck_html: str | None = Field(default=None, description="PPT/演示文稿 HTML 文件路径（画中画主画面）")
+    deck_html: str | None = Field(
+        default=None, description="PPT/演示文稿 HTML 文件路径（画中画主画面）"
+    )
     deck_images: list[str] | None = Field(
         default=None,
-        description="10.20：幻灯片配图路径列表（全屏主画面）— 直接喂图，"
-                    "跳过 deck_html 截图",
+        description="10.20：幻灯片配图路径列表（全屏主画面）— 直接喂图，" "跳过 deck_html 截图",
     )
     auto_deck: bool = Field(
         default=False,
         description="10.21 一键：无 deck_images 时自动转录→LLM 生成要点"
-                    "幻灯片作主画面；LLM 失败/为空降级纯色底（deck_fallback），"
-                    "绝不阻断出片",
+        "幻灯片作主画面；LLM 失败/为空降级纯色底（deck_fallback），"
+        "绝不阻断出片",
     )
     deck_theme: str = Field(
         default="midnight",
         description="auto_deck 幻灯片主题（midnight/cream/sunset），"
-                    "'auto'=LLM 按内容气质自选（10.25-E），"
-                    "非法值回退 midnight",
+        "'auto'=LLM 按内容气质自选（10.25-E），"
+        "非法值回退 midnight",
     )
     deck_max_slides: int = Field(
-        default=6, description="auto_deck 幻灯片张数上限",
+        default=6,
+        description="auto_deck 幻灯片张数上限",
     )
     deck_confirm: str | None = Field(
         default=None,
         description="10.22 deck 确认闸门回调轮：None=首轮生成；"
-                    "'approve'=满意直合成（零 LLM）；'retheme'=换主题重渲染"
-                    "（零 LLM，配 deck_theme）；'regenerate'=按反馈重新生成"
-                    "（配 deck_revision）",
+        "'approve'=满意直合成（零 LLM）；'retheme'=换主题重渲染"
+        "（零 LLM，配 deck_theme）；'regenerate'=按反馈重新生成"
+        "（配 deck_revision）",
     )
     deck_slides_json: str | None = Field(
         default=None,
         description="10.22 回调轮回传：首轮 deck_preview_ready 事件给的 "
-                    "slides.json 路径（deck 产物持久化目录）",
+        "slides.json 路径（deck 产物持久化目录）",
     )
     deck_revision: str | None = Field(
         default=None,
-        description="10.22 regenerate 的自然语言修改意见（原话拼进 LLM "
-                    "prompt 反馈段重新提炼）",
+        description="10.22 regenerate 的自然语言修改意见（原话拼进 LLM " "prompt 反馈段重新提炼）",
     )
     deck_revision_round: int = Field(
         default=0,
-        description="10.22 regenerate 已进行轮数（>5 拒绝，护栏对齐 "
-                    "_MAX_REVISION_ROUNDS）",
+        description="10.22 regenerate 已进行轮数（>5 拒绝，护栏对齐 " "_MAX_REVISION_ROUNDS）",
     )
     matting: bool = Field(
         default=False,
-        description="10.20 人物抠像：RVM 真抠像（alpha 融合，无边框）；"
-                    "失败自动回退矩形 PIP",
+        description="10.20 人物抠像：RVM 真抠像（alpha 融合，无边框）；" "失败自动回退矩形 PIP",
     )
     slide_duration: float = Field(default=5.0, description="每页幻灯片停留秒数")
     transcript: list[dict[str, Any]] | None = Field(
         default=None,
         description="已知文本时间轴（跳过 whisper）。内嵌路径由上游提供原文"
-                    "（如 auto_short_video 的 script captions）— whisper 对 TTS "
-                    "合成音频误听率高（90%→九十辈子），已知文本时直接喂原文更准更快。"
-                    "元素格式：{index, start, end, text, words:[{text,start,end}]}",
+        "（如 auto_short_video 的 script captions）— whisper 对 TTS "
+        "合成音频误听率高（90%→九十辈子），已知文本时直接喂原文更准更快。"
+        "元素格式：{index, start, end, text, words:[{text,start,end}]}",
     )
     revision: RevisionInput | None = Field(
         default=None,
         description="10.19 对话式修改：提供时走修改路径（local patch / global "
-                    "feedback 重规划），不提供走常规规划",
+        "feedback 重规划），不提供走常规规划",
     )
 
 
@@ -1548,10 +1657,15 @@ class TalkingHeadOverlaySkill(Skill):
     _PROGRESS_TOTAL = 6
 
     def _make_progress_emitter(
-        self, workflow_id: str, turn_id: str,
+        self,
+        workflow_id: str,
+        turn_id: str,
     ) -> Any:
         async def _emit(
-            step: int, phase: str, label: str, detail: str = "",
+            step: int,
+            phase: str,
+            label: str,
+            detail: str = "",
         ) -> None:
             if not workflow_id:
                 return
@@ -1586,8 +1700,7 @@ class TalkingHeadOverlaySkill(Skill):
         if parsed.cut_video_path:
             _cv = Path(parsed.cut_video_path)
             if not _cv.is_file():
-                yield {"success": False,
-                       "error": f"cut video not found: {parsed.cut_video_path}"}
+                yield {"success": False, "error": f"cut video not found: {parsed.cut_video_path}"}
                 return
             body_video = _cv
 
@@ -1603,7 +1716,8 @@ class TalkingHeadOverlaySkill(Skill):
         # 进度发射器：供本方法与 _execute_pip 共用（实例每次 skill_call 新建，
         # 实例属性无跨工作流串扰；getattr 兜底保证直调 _execute_pip 的旧测试兼容）
         _emit_progress = self._make_progress_emitter(
-            workflow_id, str(params.get("_turn_id") or ""),
+            workflow_id,
+            str(params.get("_turn_id") or ""),
         )
         self._progress_emit = _emit_progress
 
@@ -1613,6 +1727,7 @@ class TalkingHeadOverlaySkill(Skill):
 
         try:
             from capabilities.video.adapters.silence_detect import probe_duration
+
             total_duration = await probe_duration(str(body_video))
         except Exception:
             total_duration = 0.0
@@ -1633,7 +1748,9 @@ class TalkingHeadOverlaySkill(Skill):
         async with managed_temp_dir() as tmp_dir:
             try:
                 await _emit_progress(
-                    1, "transcribe", "转写与词级对齐",
+                    1,
+                    "transcribe",
+                    "转写与词级对齐",
                     f"时长 {total_duration:.1f}s" if total_duration else "",
                 )
                 # ── 10.19 对话式修改路由：有 revision 走修改路径 ──
@@ -1644,13 +1761,13 @@ class TalkingHeadOverlaySkill(Skill):
                             "event": "revision_rejected",
                             "data": {
                                 "error": f"修改轮数超限（≤{_MAX_REVISION_ROUNDS}），"
-                                         "请换用整体重规划或新建会话",
+                                "请换用整体重规划或新建会话",
                             },
                             "needs_confirmation": False,
                         }
                         return
-                    revision_meta, plan, timed_words, seg_dicts = (
-                        await self._revision_plan(parsed, total_duration)
+                    revision_meta, plan, timed_words, seg_dicts = await self._revision_plan(
+                        parsed, total_duration
                     )
                     if plan is None:
                         # 解析失败/定位失败/patch 自检不过 → 反问不猜
@@ -1663,7 +1780,9 @@ class TalkingHeadOverlaySkill(Skill):
                         return
                 else:
                     plan, timed_words, seg_dicts = await self._generate_plan(
-                        parsed, total_duration, tmp_dir,
+                        parsed,
+                        total_duration,
+                        tmp_dir,
                     )
                 if not plan.segments:
                     yield {
@@ -1674,7 +1793,9 @@ class TalkingHeadOverlaySkill(Skill):
                     return
 
                 await _emit_progress(
-                    2, "plan", "叠加规划完成",
+                    2,
+                    "plan",
+                    "叠加规划完成",
                     f"{len(plan.segments)} 个叠加片段",
                 )
 
@@ -1705,7 +1826,11 @@ class TalkingHeadOverlaySkill(Skill):
 
                 await _emit_progress(3, "render", "渲染叠加动画预览")
                 preview_pairs = await self._render_previews(
-                    plan, timed_words, tmp_dir, base_w, base_h,
+                    plan,
+                    timed_words,
+                    tmp_dir,
+                    base_w,
+                    base_h,
                     llm=self._resolve_llm(),
                 )
                 if parsed.gate_mode != GateMode.AUTO_CONFIRM:
@@ -1726,8 +1851,14 @@ class TalkingHeadOverlaySkill(Skill):
                 }
                 await _emit_progress(4, "review", "VLM 视觉自审")
                 async for review_event in self._review_loop(
-                    state, seg_dicts, timed_words, parsed,
-                    total_duration, tmp_dir, base_w, base_h,
+                    state,
+                    seg_dicts,
+                    timed_words,
+                    parsed,
+                    total_duration,
+                    tmp_dir,
+                    base_w,
+                    base_h,
                 ):
                     yield review_event
                 plan, preview_pairs = state["plan"], state["preview_pairs"]
@@ -1735,14 +1866,18 @@ class TalkingHeadOverlaySkill(Skill):
                 await _emit_progress(5, "render", "ffmpeg 合成成片")
                 output_path = tmp_dir / f"{video_path.stem}_overlay{video_path.suffix}"
                 final_path = await self._compose_final(
-                    str(video_path), preview_pairs, output_path,
+                    str(video_path),
+                    preview_pairs,
+                    output_path,
                 )
 
                 perm_dir = scope_dir
                 perm_dir.mkdir(parents=True, exist_ok=True)
                 # 产物隔离：同名源视频 + 不同叠加规划属于不同作品，落盘不能同名覆盖
                 _plan_key = hashlib.md5(
-                    json.dumps(plan.model_dump(), ensure_ascii=False, sort_keys=True).encode("utf-8")
+                    json.dumps(plan.model_dump(), ensure_ascii=False, sort_keys=True).encode(
+                        "utf-8"
+                    )
                 ).hexdigest()[:8]
                 perm_path = perm_dir / f"{final_path.stem}_{_plan_key}{final_path.suffix}"
                 shutil.copy2(str(final_path), str(perm_path))
@@ -1801,7 +1936,9 @@ class TalkingHeadOverlaySkill(Skill):
         _emit = getattr(self, "_progress_emit", None)
         if _emit:
             await _emit(
-                1, "transcribe", "转写与演示素材准备",
+                1,
+                "transcribe",
+                "转写与演示素材准备",
                 f"时长 {duration:.1f}s" if duration else "",
             )
 
@@ -1821,21 +1958,16 @@ class TalkingHeadOverlaySkill(Skill):
             t0_eff: float | None = None  # N1 让位时刻（方案降级链解析）
             # 10.23-D：句边界对齐的句时间戳来源（transcript 已知优先，
             # whisper 子进程 rows 兜底）
-            _deck_transcript_rows: list[dict[str, Any]] = list(
-                parsed.transcript or []
-            )
+            _deck_transcript_rows: list[dict[str, Any]] = list(parsed.transcript or [])
             # 10.27：串联裁剪 — 首轮 rows 是原轴，映射到裁后轴
             # （回调轮回读 transcript_rows.json 的已映射，不会走到这里）
             if _deck_transcript_rows and parsed.cut_video_path:
                 _deck_transcript_rows = _remap_transcript_rows(
-                    _deck_transcript_rows, parsed.kept_segments,
+                    _deck_transcript_rows,
+                    parsed.kept_segments,
                 )
             deck_ready_theme = parsed.deck_theme
-            if (
-                parsed.deck_confirm
-                and parsed.deck_slides_json
-                and not parsed.deck_images
-            ):
+            if parsed.deck_confirm and parsed.deck_slides_json and not parsed.deck_images:
                 from capabilities.video.services.deck_orchestrator import (
                     generate_deck_slides,
                     render_deck_from_slides,
@@ -1844,12 +1976,8 @@ class TalkingHeadOverlaySkill(Skill):
                 # 10.23-D：回调轮回读首轮持久化的句时间戳（保持句边界对齐）
                 if not _deck_transcript_rows:
                     try:
-                        _rp = Path(parsed.deck_slides_json).parent / (
-                            "transcript_rows.json"
-                        )
-                        _deck_transcript_rows = json.loads(
-                            _rp.read_text(encoding="utf-8")
-                        )
+                        _rp = Path(parsed.deck_slides_json).parent / ("transcript_rows.json")
+                        _deck_transcript_rows = json.loads(_rp.read_text(encoding="utf-8"))
                     except (OSError, json.JSONDecodeError, ValueError):
                         pass
 
@@ -1862,7 +1990,7 @@ class TalkingHeadOverlaySkill(Skill):
                         "event": "deck_rejected",
                         "data": {
                             "error": f"幻灯片修改轮数超限（≤{_MAX_REVISION_ROUNDS}），"
-                                     "请 approve 当前版或换主题重试",
+                            "请 approve 当前版或换主题重试",
                         },
                         "needs_confirmation": False,
                         "message": "deck 修改轮数超限",
@@ -1877,28 +2005,31 @@ class TalkingHeadOverlaySkill(Skill):
                     # 权威页数不符时弃 glob，确定性重渲染（零 LLM）
                     want = 0
                     try:
-                        want = len(json.loads(
-                            json_path.read_text(encoding="utf-8")
-                        ).get("slides") or [])
+                        want = len(
+                            json.loads(json_path.read_text(encoding="utf-8")).get("slides") or []
+                        )
                     except (OSError, json.JSONDecodeError):
                         pass
                     if existing and want and len(existing) == want:
                         deck_pngs = existing
                     if not deck_pngs:
                         deck_pngs = await asyncio.to_thread(
-                            render_deck_from_slides, json_path,
+                            render_deck_from_slides,
+                            json_path,
                             json_path.parent,
                             top_right_clear_px=_deck_top_clear_px(parsed),
                         )
                     try:
-                        deck_ready_theme = json.loads(
-                            json_path.read_text(encoding="utf-8")
-                        ).get("theme") or "midnight"
+                        deck_ready_theme = (
+                            json.loads(json_path.read_text(encoding="utf-8")).get("theme")
+                            or "midnight"
+                        )
                     except (OSError, json.JSONDecodeError):
                         deck_ready_theme = "midnight"
                 elif parsed.deck_confirm == "retheme":
                     deck_pngs = await asyncio.to_thread(
-                        render_deck_from_slides, json_path,
+                        render_deck_from_slides,
+                        json_path,
                         json_path.parent / f"render_{parsed.deck_theme}",
                         parsed.deck_theme,
                         top_right_clear_px=_deck_top_clear_px(parsed),
@@ -1906,9 +2037,7 @@ class TalkingHeadOverlaySkill(Skill):
                     deck_ready_theme = parsed.deck_theme
                 elif parsed.deck_confirm == "regenerate":
                     try:
-                        first = json.loads(
-                            json_path.read_text(encoding="utf-8")
-                        )
+                        first = json.loads(json_path.read_text(encoding="utf-8"))
                         prev_transcript = str(first.get("transcript") or "")
                     except (OSError, json.JSONDecodeError):
                         prev_transcript = ""
@@ -1917,7 +2046,8 @@ class TalkingHeadOverlaySkill(Skill):
                         self._resolve_llm(),
                         json_path.parent,
                         max_slides=parsed.deck_max_slides,
-                        width=1080, height=1920,
+                        width=1080,
+                        height=1920,
                         person_clearance_px=640 if parsed.matting else 0,
                         theme=parsed.deck_theme,
                         feedback=parsed.deck_revision,
@@ -1945,7 +2075,7 @@ class TalkingHeadOverlaySkill(Skill):
                         "event": "deck_fallback",
                         "data": {
                             "reason": f"deck_confirm={parsed.deck_confirm} "
-                                      "未产出幻灯片，主画面回退纯色底",
+                            "未产出幻灯片，主画面回退纯色底",
                         },
                         "needs_confirmation": False,
                         "message": "deck 回调未产出幻灯片，主画面回退纯色底",
@@ -1966,12 +2096,11 @@ class TalkingHeadOverlaySkill(Skill):
                     ).strip()
                 else:
                     rows = await asyncio.to_thread(
-                        _transcribe_cpu_subprocess, parsed.video_path,
+                        _transcribe_cpu_subprocess,
+                        parsed.video_path,
                     )
                     _deck_transcript_rows = list(rows)
-                    transcript_text = "\n".join(
-                        str(r.get("text") or "") for r in rows
-                    ).strip()
+                    transcript_text = "\n".join(str(r.get("text") or "") for r in rows).strip()
 
                 deck_pngs: list[Path] = []
                 if transcript_text:
@@ -1984,7 +2113,8 @@ class TalkingHeadOverlaySkill(Skill):
                         self._resolve_llm(),
                         perm_dir / "deck_auto",
                         max_slides=parsed.deck_max_slides,
-                        width=1080, height=1920,
+                        width=1080,
+                        height=1920,
                         # matting 时人物窗在右下角，deck 底部让位（10.20 同款）
                         person_clearance_px=640 if parsed.matting else 0,
                         theme=parsed.deck_theme,
@@ -1995,10 +2125,12 @@ class TalkingHeadOverlaySkill(Skill):
                     auto_deck_images = [str(p) for p in deck_pngs]
                     # 10.25-E：theme=auto 时回读 LLM 实际选中主题（事件报真值）
                     try:
-                        deck_ready_theme = json.loads(
-                            (perm_dir / "deck_auto" / "slides.json")
-                            .read_text(encoding="utf-8")
-                        ).get("theme") or deck_ready_theme
+                        deck_ready_theme = (
+                            json.loads(
+                                (perm_dir / "deck_auto" / "slides.json").read_text(encoding="utf-8")
+                            ).get("theme")
+                            or deck_ready_theme
+                        )
                     except (OSError, json.JSONDecodeError):
                         pass
                     # 10.23-D：句时间戳持久化 — 闸门回调轮（approve/
@@ -2022,7 +2154,7 @@ class TalkingHeadOverlaySkill(Skill):
                         "event": "deck_fallback",
                         "data": {
                             "reason": "auto_deck 未产出幻灯片（转录/LLM 不可用），"
-                                      "主画面回退纯色底",
+                            "主画面回退纯色底",
                         },
                         "needs_confirmation": False,
                         "message": "自动幻灯片生成失败，主画面回退纯色底",
@@ -2039,37 +2171,36 @@ class TalkingHeadOverlaySkill(Skill):
                     },
                     "needs_confirmation": False,
                     "message": (
-                        f"auto_deck 生成 {len(auto_deck_images)} 张幻灯片"
-                        f"（{deck_ready_theme}）"
+                        f"auto_deck 生成 {len(auto_deck_images)} 张幻灯片" f"（{deck_ready_theme}）"
                     ),
                 }
                 # 闸门：deck_preview_ready 事件总是广播（对齐 overlay
                 # 主线惯例 — auto_confirm 下事件照发不停）；仅首轮 +
                 # 非 AUTO_CONFIRM 才真停等确认。回调轮不再进闸门。
                 if not parsed.deck_confirm:
-                    needs_gate = (
-                        parsed.gate_mode != GateMode.AUTO_CONFIRM
-                    )
+                    needs_gate = parsed.gate_mode != GateMode.AUTO_CONFIRM
                     yield {
                         "event": "deck_preview_ready",
                         "data": {
                             "needs_confirmation": needs_gate,
                             "slides_paths": auto_deck_images,
-                            "slides_json_path": str(
-                                perm_dir / "deck_auto" / "slides.json"
-                            ),
+                            "slides_json_path": str(perm_dir / "deck_auto" / "slides.json"),
                             "theme": deck_ready_theme,
                             "count": len(auto_deck_images),
                         },
                         "needs_confirmation": needs_gate,
                         "message": (
-                            f"幻灯片初稿就绪（{len(auto_deck_images)} 张，"
-                            f"{deck_ready_theme}）— 满意回复 approve 继续，"
-                            "换主题回 retheme+deck_theme，改内容回 "
-                            "regenerate+deck_revision"
-                        ) if needs_gate else (
-                            f"幻灯片就绪（{len(auto_deck_images)} 张，"
-                            f"{deck_ready_theme}），无人值守直通合成"
+                            (
+                                f"幻灯片初稿就绪（{len(auto_deck_images)} 张，"
+                                f"{deck_ready_theme}）— 满意回复 approve 继续，"
+                                "换主题回 retheme+deck_theme，改内容回 "
+                                "regenerate+deck_revision"
+                            )
+                            if needs_gate
+                            else (
+                                f"幻灯片就绪（{len(auto_deck_images)} 张，"
+                                f"{deck_ready_theme}），无人值守直通合成"
+                            )
                         ),
                     }
                     if needs_gate:
@@ -2099,8 +2230,13 @@ class TalkingHeadOverlaySkill(Skill):
                         else perm_dir / "deck_auto" / "slides.json"
                     )
                     async for _c in self._finalize_decor(
-                        parsed, video_path, duration, scope_dir, tmp_dir,
-                        images=images, slides_json=_sj,
+                        parsed,
+                        video_path,
+                        duration,
+                        scope_dir,
+                        tmp_dir,
+                        images=images,
+                        slides_json=_sj,
                         transcript_rows=_deck_transcript_rows,
                     ):
                         yield _c
@@ -2116,8 +2252,10 @@ class TalkingHeadOverlaySkill(Skill):
                     from capabilities.video.adapters.person_matting import (
                         _probe_image_size,
                     )
+
                     main_width, main_height = await asyncio.to_thread(
-                        _probe_image_size, images[0],
+                        _probe_image_size,
+                        images[0],
                     )
                 except Exception:
                     pass  # 探测失败回退默认画布
@@ -2133,28 +2271,32 @@ class TalkingHeadOverlaySkill(Skill):
                             perm_dir / "deck_auto" / "slides.json",
                         )
                     elif parsed.deck_triggers:
-                        _slide_defs = [
-                            {"trigger": {"text": t}}
-                            for t in parsed.deck_triggers
-                        ]
+                        _slide_defs = [{"trigger": {"text": t}} for t in parsed.deck_triggers]
                     if _slide_defs and _deck_transcript_rows:
                         _hit = _trigger_slide_starts(
-                            _deck_transcript_rows, _slide_defs, duration,
+                            _deck_transcript_rows,
+                            _slide_defs,
+                            duration,
                         )
                         if _hit is not None:
                             t0_eff, boundary_durs = _hit
                     if boundary_durs is None:
                         boundary_durs = (
-                            _slide_durations_from_transcript(
-                                _deck_transcript_rows, len(images), duration,
-                            ) or None
-                        ) if auto_deck_images and not parsed.deck_images else None
+                            (
+                                _slide_durations_from_transcript(
+                                    _deck_transcript_rows,
+                                    len(images),
+                                    duration,
+                                )
+                                or None
+                            )
+                            if auto_deck_images and not parsed.deck_images
+                            else None
+                        )
                         if t0_eff is None and _deck_transcript_rows:
                             # 让位时刻降级：首句起点（找不到 → 3.0s 缺省）
                             try:
-                                _s0 = float(
-                                    _deck_transcript_rows[0].get("start") or 0
-                                )
+                                _s0 = float(_deck_transcript_rows[0].get("start") or 0)
                                 if 0 < _s0 < duration:
                                     t0_eff = _s0
                             except (TypeError, ValueError, IndexError):
@@ -2169,15 +2311,11 @@ class TalkingHeadOverlaySkill(Skill):
                         _sl_data: dict[str, Any] | None = None
                         try:
                             _sl_data = json.loads(
-                                Path(parsed.deck_slides_json).read_text(
-                                    encoding="utf-8"
-                                )
+                                Path(parsed.deck_slides_json).read_text(encoding="utf-8")
                             )
                         except Exception:
                             _sl_data = None
-                        _slides_list = (
-                            (_sl_data or {}).get("slides") or []
-                        )
+                        _slides_list = (_sl_data or {}).get("slides") or []
                         if _slides_list and len(_slides_list) == len(images):
                             try:
                                 from capabilities.video.services.deck_orchestrator import (
@@ -2186,24 +2324,19 @@ class TalkingHeadOverlaySkill(Skill):
 
                                 tw_dirs = await asyncio.to_thread(
                                     render_deck_typewriter,
-                                    _slides_list, tmp_dir / "deck_tw",
+                                    _slides_list,
+                                    tmp_dir / "deck_tw",
                                     boundary_durs,
-                                    width=main_width, height=main_height,
-                                    person_clearance_px=(
-                                        640 if parsed.matting else 0
-                                    ),
-                                    theme=(
-                                        (_sl_data or {}).get("theme")
-                                        or "midnight"
-                                    ),
-                                    top_right_clear_px=_deck_top_clear_px(
-                                        parsed
-                                    ),
+                                    width=main_width,
+                                    height=main_height,
+                                    person_clearance_px=(640 if parsed.matting else 0),
+                                    theme=((_sl_data or {}).get("theme") or "midnight"),
+                                    top_right_clear_px=_deck_top_clear_px(parsed),
                                 )
                             except Exception as _te:
                                 logger.warning(
-                                    "deck typewriter render failed, "
-                                    "fallback layers: %s", _te,
+                                    "deck typewriter render failed, " "fallback layers: %s",
+                                    _te,
                                 )
                                 tw_dirs = None
                         if tw_dirs is None:
@@ -2216,28 +2349,24 @@ class TalkingHeadOverlaySkill(Skill):
                                     render_deck_layers,
                                     _slides_list,
                                     tmp_dir / "deck_layers",
-                                    width=main_width, height=main_height,
-                                    person_clearance_px=(
-                                        640 if parsed.matting else 0
-                                    ),
-                                    theme=(
-                                        (_sl_data or {}).get("theme")
-                                        or "midnight"
-                                    ),
-                                    top_right_clear_px=_deck_top_clear_px(
-                                        parsed
-                                    ),
+                                    width=main_width,
+                                    height=main_height,
+                                    person_clearance_px=(640 if parsed.matting else 0),
+                                    theme=((_sl_data or {}).get("theme") or "midnight"),
+                                    top_right_clear_px=_deck_top_clear_px(parsed),
                                 )
                             except Exception as _le:
                                 logger.warning(
-                                    "deck layers render failed, "
-                                    "fallback whole-page: %s", _le,
+                                    "deck layers render failed, " "fallback whole-page: %s",
+                                    _le,
                                 )
                                 layers_pages = None
                     await self._slides_to_video(
-                        [Path(p) for p in images], tmp_dir / "slides.mp4",
+                        [Path(p) for p in images],
+                        tmp_dir / "slides.mp4",
                         slide_duration=parsed.slide_duration,
-                        width=main_width, height=main_height,
+                        width=main_width,
+                        height=main_height,
                         durations=boundary_durs,
                         frames=tw_dirs,
                         layers=layers_pages,
@@ -2262,7 +2391,10 @@ class TalkingHeadOverlaySkill(Skill):
 
                 try:
                     screenshots = await self._capture_slides(
-                        deck_path, tmp_dir, main_width, main_height,
+                        deck_path,
+                        tmp_dir,
+                        main_width,
+                        main_height,
                     )
                 except Exception as e:
                     yield {"success": False, "error": f"slide capture failed: {e}"}
@@ -2281,9 +2413,11 @@ class TalkingHeadOverlaySkill(Skill):
                 slides_video = tmp_dir / "slides.mp4"
                 try:
                     await self._slides_to_video(
-                        screenshots, slides_video,
+                        screenshots,
+                        slides_video,
                         slide_duration=parsed.slide_duration,
-                        width=main_width, height=main_height,
+                        width=main_width,
+                        height=main_height,
                     )
                 except Exception as e:
                     yield {"success": False, "error": f"slides video failed: {e}"}
@@ -2300,16 +2434,25 @@ class TalkingHeadOverlaySkill(Skill):
             pip_info = await self._probe_resolution(str(video_path))
             pip_orig_w, pip_orig_h = pip_info
             pip_w = int(main_width * parsed.pip_scale)
-            pip_h = int(pip_orig_h * pip_w / pip_orig_w) if pip_orig_w else int(main_height * parsed.pip_scale)
+            pip_h = (
+                int(pip_orig_h * pip_w / pip_orig_w)
+                if pip_orig_w
+                else int(main_height * parsed.pip_scale)
+            )
             margin = parsed.pip_margin
 
             pos_map = {
-                PipPosition.BOTTOM_RIGHT: (main_width - pip_w - margin, main_height - pip_h - margin),
+                PipPosition.BOTTOM_RIGHT: (
+                    main_width - pip_w - margin,
+                    main_height - pip_h - margin,
+                ),
                 PipPosition.BOTTOM_LEFT: (margin, main_height - pip_h - margin),
                 PipPosition.TOP_RIGHT: (main_width - pip_w - margin, margin),
                 PipPosition.TOP_LEFT: (margin, margin),
             }
-            overlay_x, overlay_y = pos_map.get(parsed.pip_position, pos_map[PipPosition.BOTTOM_RIGHT])
+            overlay_x, overlay_y = pos_map.get(
+                parsed.pip_position, pos_map[PipPosition.BOTTOM_RIGHT]
+            )
 
             # 产物隔离：口播演示成片按「PPT + 画中画参数 + 画布形态」取指纹，
             # 避免不同作品的成片同名覆盖。
@@ -2324,14 +2467,19 @@ class TalkingHeadOverlaySkill(Skill):
             else:
                 _deck_shape = "plainpip"
             _pip_key = hashlib.md5(
-                f"{parsed.deck_html or ''}|{parsed.deck_images or ''}|{parsed.pip_position.value}|{parsed.pip_scale}|{parsed.pip_margin}|{parsed.matting}|{parsed.auto_deck}|{parsed.deck_theme}|{_deck_shape}".encode("utf-8")
+                f"{parsed.deck_html or ''}|{parsed.deck_images or ''}|{parsed.pip_position.value}|{parsed.pip_scale}|{parsed.pip_margin}|{parsed.matting}|{parsed.auto_deck}|{parsed.deck_theme}|{_deck_shape}".encode(
+                    "utf-8"
+                )
             ).hexdigest()[:8]
-            output_path = perm_dir / f"{video_path.stem}_pip_presentation_{_pip_key}{video_path.suffix}"
+            output_path = (
+                perm_dir / f"{video_path.stem}_pip_presentation_{_pip_key}{video_path.suffix}"
+            )
 
             # ── 10.20 人物抠像：RVM alpha 融合（失败降级矩形小窗）──
             matte = None
             if parsed.matting:
                 from capabilities.video.adapters.person_matting import matte_person
+
                 matte = await matte_person(str(video_path), tmp_dir / "matte")
                 if matte is None:
                     yield {
@@ -2355,22 +2503,35 @@ class TalkingHeadOverlaySkill(Skill):
                 pip_w = int(main_width * parsed.pip_scale)
                 pip_h = (
                     int(matte.height * pip_w / matte.width)
-                    if matte.width else int(main_height * parsed.pip_scale)
+                    if matte.width
+                    else int(main_height * parsed.pip_scale)
                 )
                 matte_pos = {
-                    PipPosition.BOTTOM_RIGHT: (main_width - pip_w - margin, main_height - pip_h - margin),
+                    PipPosition.BOTTOM_RIGHT: (
+                        main_width - pip_w - margin,
+                        main_height - pip_h - margin,
+                    ),
                     PipPosition.BOTTOM_LEFT: (margin, main_height - pip_h - margin),
                     PipPosition.TOP_RIGHT: (main_width - pip_w - margin, margin),
                     PipPosition.TOP_LEFT: (margin, margin),
                 }
                 overlay_x, overlay_y = matte_pos.get(
-                    parsed.pip_position, matte_pos[PipPosition.BOTTOM_RIGHT],
+                    parsed.pip_position,
+                    matte_pos[PipPosition.BOTTOM_RIGHT],
                 )
                 cmd = _pip_full_cmd(
                     main_video_path,
-                    matte.fps, matte.frame_dir, video_path,
-                    main_width, main_height, pip_w, pip_h,
-                    overlay_x, overlay_y, duration, bg_color_hex,
+                    matte.fps,
+                    matte.frame_dir,
+                    video_path,
+                    main_width,
+                    main_height,
+                    pip_w,
+                    pip_h,
+                    overlay_x,
+                    overlay_y,
+                    duration,
+                    bg_color_hex,
                     handoff_plan["t0"] if handoff_plan else None,
                     output_path,
                 )
@@ -2380,15 +2541,30 @@ class TalkingHeadOverlaySkill(Skill):
                     f"[0:v][pip_scaled]overlay={overlay_x}:{overlay_y}:format=auto[out_v]"
                 )
                 cmd = [
-                    "ffmpeg", "-y",
-                    "-i", str(main_video_path),
-                    "-i", str(video_path),
-                    "-filter_complex", filter_complex,
-                    "-map", "[out_v]",
-                    "-map", "0:a?", "-map", "1:a?",
-                    "-c:v", "libx264", "-preset", "fast",
-                    "-c:a", "aac", "-b:a", "128k",
-                    "-pix_fmt", "yuv420p",
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(main_video_path),
+                    "-i",
+                    str(video_path),
+                    "-filter_complex",
+                    filter_complex,
+                    "-map",
+                    "[out_v]",
+                    "-map",
+                    "0:a?",
+                    "-map",
+                    "1:a?",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "fast",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "128k",
+                    "-pix_fmt",
+                    "yuv420p",
                     "-shortest",
                     str(output_path),
                 ]
@@ -2399,19 +2575,31 @@ class TalkingHeadOverlaySkill(Skill):
                     f"[bg][pip]overlay={overlay_x}:{overlay_y}:format=auto"
                 )
                 cmd = [
-                    "ffmpeg", "-y",
-                    "-i", str(video_path),
-                    "-filter_complex", filter_complex,
-                    "-map", "0:a?",
-                    "-c:v", "libx264", "-preset", "fast",
-                    "-c:a", "aac", "-b:a", "128k",
-                    "-pix_fmt", "yuv420p",
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(video_path),
+                    "-filter_complex",
+                    filter_complex,
+                    "-map",
+                    "0:a?",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "fast",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "128k",
+                    "-pix_fmt",
+                    "yuv420p",
                     "-shortest",
                     str(output_path),
                 ]
 
             try:
                 from capabilities.video.skills.smart_cut import _run_ffmpeg
+
                 if handoff_plan is not None and matte is not None:
                     # N1：segB 全时长 PIP → 段A（原片全屏）/段B（t0 截段）
                     # → xfade 溶解（人让位给内容）+ acrossfade
@@ -2419,30 +2607,64 @@ class TalkingHeadOverlaySkill(Skill):
                     await _run_ffmpeg([*cmd[:-1], str(full_out)])
                     seg_a = tmp_dir / "handoff_a.mp4"
                     seg_b = tmp_dir / "handoff_b.mp4"
-                    await _run_ffmpeg([
-                        "ffmpeg", "-y", "-i", str(video_path),
-                        "-t", f"{handoff_plan['segA'][1]:.3f}",
-                        "-vf", (
-                            f"scale={main_width}:{main_height}:"
-                            "force_original_aspect_ratio=decrease,"
-                            f"pad={main_width}:{main_height}:(ow-iw)/2:"
-                            f"(oh-ih)/2:color=0x{bg_color_hex}"
-                        ),
-                        "-c:v", "libx264", "-preset", "fast",
-                        "-c:a", "aac", "-b:a", "128k",
-                        "-pix_fmt", "yuv420p", str(seg_a),
-                    ])
-                    await _run_ffmpeg([
-                        "ffmpeg", "-y", "-ss", f"{handoff_plan['t0']:.3f}",
-                        "-i", str(full_out),
-                        "-c:v", "libx264", "-preset", "fast",
-                        "-c:a", "aac", "-b:a", "128k",
-                        "-pix_fmt", "yuv420p", str(seg_b),
-                    ])
-                    await _run_ffmpeg(_handoff_cmd(
-                        seg_a, seg_b, handoff_plan["t0"],
-                        handoff_plan["td"], output_path,
-                    ))
+                    await _run_ffmpeg(
+                        [
+                            "ffmpeg",
+                            "-y",
+                            "-i",
+                            str(video_path),
+                            "-t",
+                            f"{handoff_plan['segA'][1]:.3f}",
+                            "-vf",
+                            (
+                                f"scale={main_width}:{main_height}:"
+                                "force_original_aspect_ratio=decrease,"
+                                f"pad={main_width}:{main_height}:(ow-iw)/2:"
+                                f"(oh-ih)/2:color=0x{bg_color_hex}"
+                            ),
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "fast",
+                            "-c:a",
+                            "aac",
+                            "-b:a",
+                            "128k",
+                            "-pix_fmt",
+                            "yuv420p",
+                            str(seg_a),
+                        ]
+                    )
+                    await _run_ffmpeg(
+                        [
+                            "ffmpeg",
+                            "-y",
+                            "-ss",
+                            f"{handoff_plan['t0']:.3f}",
+                            "-i",
+                            str(full_out),
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "fast",
+                            "-c:a",
+                            "aac",
+                            "-b:a",
+                            "128k",
+                            "-pix_fmt",
+                            "yuv420p",
+                            str(seg_b),
+                        ]
+                    )
+                    await _run_ffmpeg(
+                        _handoff_cmd(
+                            seg_a,
+                            seg_b,
+                            handoff_plan["t0"],
+                            handoff_plan["td"],
+                            output_path,
+                        )
+                    )
                 else:
                     await _run_ffmpeg(cmd)
             except Exception as e:
@@ -2461,10 +2683,7 @@ class TalkingHeadOverlaySkill(Skill):
                     "canvas_size": f"{main_width}x{main_height}",
                     "has_deck": bool(parsed.deck_html or parsed.deck_images or auto_deck_images),
                     "matting": matte is not None,
-                    "handoff": (
-                        {"t0": round(handoff_plan["t0"], 3)}
-                        if handoff_plan else None
-                    ),
+                    "handoff": ({"t0": round(handoff_plan["t0"], 3)} if handoff_plan else None),
                 },
                 "needs_confirmation": False,
                 "message": (
@@ -2501,15 +2720,12 @@ class TalkingHeadOverlaySkill(Skill):
         yield {
             "event": "decor_start",
             "data": {"count": len(images), "slides_json": str(slides_json)},
-            "message": (
-                f"装饰叠加模式：原片全屏，{len(images)} 张素材卡按口播节奏进出"
-            ),
+            "message": (f"装饰叠加模式：原片全屏，{len(images)} 张素材卡按口播节奏进出"),
         }
         try:
             deck_data = json.loads(slides_json.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as e:
-            yield {"success": False,
-                   "error": f"decor slides.json 不可读: {e}"}
+            yield {"success": False, "error": f"decor slides.json 不可读: {e}"}
             return
         slides = deck_data.get("slides") or []
         n = min(len(slides), len(images))
@@ -2522,7 +2738,8 @@ class TalkingHeadOverlaySkill(Skill):
         # 时间窗：句边界页区间优先（切卡跟讲解句走），否则均分
         durs = (
             _slide_durations_from_transcript(transcript_rows, n, duration)
-            if transcript_rows else None
+            if transcript_rows
+            else None
         )
         if not durs or len(durs) != n:
             durs = [duration / n] * n
@@ -2538,11 +2755,13 @@ class TalkingHeadOverlaySkill(Skill):
         zoom_windows = _zoom_windows(slides, transcript_rows, duration)
 
         cards = await asyncio.to_thread(
-            render_decor_cards, slides, tmp_dir / "decor", theme,
+            render_decor_cards,
+            slides,
+            tmp_dir / "decor",
+            theme,
         )
         if len(cards) != n:
-            yield {"success": False,
-                   "error": f"decor: 卡渲染数 {len(cards)} != 页数 {n}"}
+            yield {"success": False, "error": f"decor: 卡渲染数 {len(cards)} != 页数 {n}"}
             return
 
         # 10.31 M1-P0-1：词级 karaoke 字幕 — 词级数据缺失 → 跳过字幕层
@@ -2559,11 +2778,17 @@ class TalkingHeadOverlaySkill(Skill):
             kao_dir = tmp_dir / "karaoke"
             kao_pngs = await asyncio.to_thread(
                 _render_karaoke_frames,
-                kao_frames, transcript_rows, kao_dir, main_w,
+                kao_frames,
+                transcript_rows,
+                kao_dir,
+                main_w,
             )
             if kao_pngs:
                 subtitle = await asyncio.to_thread(
-                    _write_ffconcat, kao_frames, kao_pngs, kao_dir,
+                    _write_ffconcat,
+                    kao_frames,
+                    kao_pngs,
+                    kao_dir,
                 )
         # M2-P1-4：SFX — 卡入场时刻混短音效（无音轨/缺文件降级直通）
         sfx_events: list[dict[str, Any]] = []
@@ -2575,7 +2800,9 @@ class TalkingHeadOverlaySkill(Skill):
             sfx_events = _plan_sfx(bounds, duration)
         stamp = hashlib.md5(
             (
-                str(slides_json) + str(bounds) + str(subtitle is not None)
+                str(slides_json)
+                + str(bounds)
+                + str(subtitle is not None)
                 + str(parsed.decor_effect)
                 + str([(e["name"], e["t"]) for e in sfx_events])
                 + str(zoom_windows)
@@ -2588,7 +2815,12 @@ class TalkingHeadOverlaySkill(Skill):
             fps = 0
         fps = fps if 12 <= fps <= 60 else 30
         cmd, _meta = _build_decor_cmd(
-            body_video, cards, bounds, duration, main_w, main_h,
+            body_video,
+            cards,
+            bounds,
+            duration,
+            main_w,
+            main_h,
             scale=float(parsed.decor_scale),
             effect=str(parsed.decor_effect),
             subtitle_ffconcat=subtitle,
@@ -2620,15 +2852,9 @@ class TalkingHeadOverlaySkill(Skill):
             "needs_confirmation": False,
             "message": (
                 f"装饰叠加完成：{n} 张素材卡触发式弹入"
-                + (
-                    f"，词级 karaoke {len(kao_frames)} 帧"
-                    if subtitle else ""
-                )
+                + (f"，词级 karaoke {len(kao_frames)} 帧" if subtitle else "")
                 + (f"，SFX {len(sfx_names)} 处" if sfx_names else "")
-                + (
-                    f"，强调 zoom {len(zoom_windows)} 处"
-                    if zoom_windows else ""
-                )
+                + (f"，强调 zoom {len(zoom_windows)} 处" if zoom_windows else "")
                 + f"，成片 {out.name}"
             ),
         }
@@ -2653,9 +2879,15 @@ class TalkingHeadOverlaySkill(Skill):
             pass
 
         import json as _json
+
         proc = await asyncio.create_subprocess_exec(
-            "ffprobe", "-v", "quiet", "-print_format", "json",
-            "-show_streams", video_path,
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_streams",
+            video_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -2674,27 +2906,28 @@ class TalkingHeadOverlaySkill(Skill):
 
             def _av_check() -> bool:
                 with av.open(video_path) as container:
-                    return any(
-                        s.type == "audio" for s in container.streams
-                    )
+                    return any(s.type == "audio" for s in container.streams)
 
             return await asyncio.to_thread(_av_check)
         except Exception:
             pass
         import json as _json
+
         try:
             proc = await asyncio.create_subprocess_exec(
-                "ffprobe", "-v", "quiet", "-print_format", "json",
-                "-show_streams", video_path,
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_streams",
+                video_path,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await proc.communicate()
             info = _json.loads(stdout)
-            return any(
-                s.get("codec_type") == "audio"
-                for s in info.get("streams", [])
-            )
+            return any(s.get("codec_type") == "audio" for s in info.get("streams", []))
         except Exception:
             return False
 
@@ -2767,22 +3000,30 @@ class TalkingHeadOverlaySkill(Skill):
         # N6：打字机帧序列优先（文字逐字流式，动画已在帧里）
         if frames:
             cmd, _meta = _build_typewriter_cmd(
-                frames, output_path,
+                frames,
+                output_path,
                 durations or [slide_duration] * len(frames),
-                fps=fps, width=width, height=height,
+                fps=fps,
+                width=width,
+                height=height,
             )
             from capabilities.video.skills.smart_cut import _run_ffmpeg
+
             await _run_ffmpeg(cmd)
             return output_path
 
         # N5：分层动画优先（层定义给定 → 元素级入场动画）
         if layers:
             cmd, _meta = _build_layers_cmd(
-                layers, output_path,
+                layers,
+                output_path,
                 durations or [slide_duration] * len(layers),
-                fps=fps, width=width, height=height,
+                fps=fps,
+                width=width,
+                height=height,
             )
             from capabilities.video.skills.smart_cut import _run_ffmpeg
+
             await _run_ffmpeg(cmd)
             return output_path
 
@@ -2790,10 +3031,15 @@ class TalkingHeadOverlaySkill(Skill):
         # 单页 / durations=None（手动 deck_images 均分）保持旧 concat 硬切
         if durations and len(screenshots) > 1:
             cmd, _meta = _build_xfade_cmd(
-                screenshots, output_path, durations,
-                fps=fps, width=width, height=height,
+                screenshots,
+                output_path,
+                durations,
+                fps=fps,
+                width=width,
+                height=height,
             )
             from capabilities.video.skills.smart_cut import _run_ffmpeg
+
             await _run_ffmpeg(cmd)
             return output_path
 
@@ -2810,18 +3056,31 @@ class TalkingHeadOverlaySkill(Skill):
             f.write("duration 0.1\n")
 
         cmd = [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", str(concat_file),
-            "-vf", f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=#1a1a2e,format=yuv420p",
-            "-c:v", "libx264", "-preset", "fast",
-            "-r", str(fps),
-            "-pix_fmt", "yuv420p",
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_file),
+            "-vf",
+            f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=#1a1a2e,format=yuv420p",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-r",
+            str(fps),
+            "-pix_fmt",
+            "yuv420p",
             str(output_path),
         ]
 
         # 走 _run_ffmpeg（内含 ffmpeg 路径解析）— 裸 "ffmpeg" 在本机
         # 不在 PATH（WinError 2，与 _probe_resolution 注释同源）
         from capabilities.video.skills.smart_cut import _run_ffmpeg
+
         await _run_ffmpeg(cmd)
 
         concat_file.unlink(missing_ok=True)
@@ -2861,15 +3120,16 @@ class TalkingHeadOverlaySkill(Skill):
                 for i, s in enumerate(parsed.transcript)
                 if s.get("end", 0) > s.get("start", 0)
             ]
-            logger.info(
-                f"使用上游已知文本时间轴（{len(seg_dicts)} 段），跳过 whisper 转录"
-            )
+            logger.info(f"使用上游已知文本时间轴（{len(seg_dicts)} 段），跳过 whisper 转录")
         else:
             from capabilities.video.adapters.whisper_transcribe import transcribe
 
             # to_thread：whisper 转录是重 CPU/GPU 同步调用，直跑会阻塞事件循环
             segments = await asyncio.to_thread(
-                transcribe, parsed.video_path, model_size="small", language="zh",
+                transcribe,
+                parsed.video_path,
+                model_size="small",
+                language="zh",
             )
 
             if not segments:
@@ -2882,10 +3142,7 @@ class TalkingHeadOverlaySkill(Skill):
                     "start": s.start,
                     "end": s.end,
                     "text": s.text,
-                    "words": [
-                        {"text": w.text, "start": w.start, "end": w.end}
-                        for w in s.words
-                    ],
+                    "words": [{"text": w.text, "start": w.start, "end": w.end} for w in s.words],
                 }
                 for i, s in enumerate(segments)
             ]
@@ -2901,10 +3158,13 @@ class TalkingHeadOverlaySkill(Skill):
             for w in timed_words:
                 m = mapper.map(w["start"])
                 if m is not None:
-                    mapped.append({
-                        "text": w["text"], "start": m,
-                        "end": m + (w["end"] - w["start"]),
-                    })
+                    mapped.append(
+                        {
+                            "text": w["text"],
+                            "start": m,
+                            "end": m + (w["end"] - w["start"]),
+                        }
+                    )
             timed_words = mapped
 
         return seg_dicts, timed_words
@@ -2925,7 +3185,9 @@ class TalkingHeadOverlaySkill(Skill):
             return OverlayPlan(video_id=""), [], []
 
         plan, _ = await generate_overlay_plan(
-            seg_dicts, duration, self._resolve_llm(),
+            seg_dicts,
+            duration,
+            self._resolve_llm(),
             use_two_step=True,  # P2 两步链：先叙事结构分析再落时间轴
         )
         plan = self._apply_constraints(parsed, plan)
@@ -2947,7 +3209,10 @@ class TalkingHeadOverlaySkill(Skill):
         seg_dicts, timed_words = await self._build_timed_words(parsed, duration)
 
         result, problems = await parse_revision_intent(
-            self._resolve_llm(), raw, current_plan, duration,
+            self._resolve_llm(),
+            raw,
+            current_plan,
+            duration,
         )
         if result is None:
             return problems, None, [], []
@@ -2955,17 +3220,24 @@ class TalkingHeadOverlaySkill(Skill):
         if result.route == "global":
             # 全局意见 → 走 P0/P2 同款 feedback 重规划，产出过同样约束
             plan, _ = await generate_overlay_plan(
-                seg_dicts, duration, self._resolve_llm(),
-                feedback=raw, use_two_step=True,
+                seg_dicts,
+                duration,
+                self._resolve_llm(),
+                feedback=raw,
+                use_two_step=True,
             )
             plan = self._apply_constraints(parsed, plan)
             return (
                 {"route": "global", "reason": result.reason},
-                plan, timed_words, seg_dicts,
+                plan,
+                timed_words,
+                seg_dicts,
             )
 
         patched, patch_problems = apply_revision(
-            current_plan, result.instructions, duration,
+            current_plan,
+            result.instructions,
+            duration,
         )
         if patch_problems:
             return patch_problems, None, [], []
@@ -2974,7 +3246,9 @@ class TalkingHeadOverlaySkill(Skill):
                 "route": "local",
                 "instructions": [i.model_dump() for i in result.instructions],
             },
-            patched, timed_words, seg_dicts,
+            patched,
+            timed_words,
+            seg_dicts,
         )
 
     @staticmethod
@@ -2983,6 +3257,7 @@ class TalkingHeadOverlaySkill(Skill):
         try:
             from app.adapters.deepseek import DeepSeekAdapter
             from app.config import Settings
+
             return DeepSeekAdapter(api_key=Settings().deepseek_api_key)
         except Exception:
             return None
@@ -3003,11 +3278,11 @@ class TalkingHeadOverlaySkill(Skill):
         if parsed.templates:
             # 显式白名单：gen_* 生成模板一并放行（P1），其余按名单过滤
             from capabilities.video.services.template_generator import GENERATED
+
             allowed = set(parsed.templates) | set(GENERATED)
             from capabilities.video.services.overlay_orchestrator import template_name
-            plan.segments = [
-                s for s in plan.segments if template_name(s.template) in allowed
-            ]
+
+            plan.segments = [s for s in plan.segments if template_name(s.template) in allowed]
         return resolve_overlay_conflicts(plan)
 
     async def _replan_with_feedback(
@@ -3028,7 +3303,10 @@ class TalkingHeadOverlaySkill(Skill):
             return None
         try:
             plan, _ = await generate_overlay_plan(
-                seg_dicts, duration, llm, feedback=feedback,
+                seg_dicts,
+                duration,
+                llm,
+                feedback=feedback,
                 use_two_step=True,  # P2：反馈也进叙事步做结构层反思
             )
         except Exception as e:
@@ -3072,7 +3350,9 @@ class TalkingHeadOverlaySkill(Skill):
         for round_idx in range(1, self._REVIEW_MAX_ROUNDS + 1):
             try:
                 result = await review_overlays(
-                    state["plan"], state["preview_pairs"], tmp_dir,
+                    state["plan"],
+                    state["preview_pairs"],
+                    tmp_dir,
                     base_video=parsed.video_path,
                 )
             except Exception as e:
@@ -3110,7 +3390,9 @@ class TalkingHeadOverlaySkill(Skill):
             new_plan = None
             try:
                 new_plan = await self._replan_with_feedback(
-                    parsed, seg_dicts, duration,
+                    parsed,
+                    seg_dicts,
+                    duration,
                     build_replan_feedback(result),
                 )
             except Exception as e:
@@ -3132,7 +3414,11 @@ class TalkingHeadOverlaySkill(Skill):
                 return
 
             new_pairs = await self._render_previews(
-                new_plan, timed_words, tmp_dir, base_w, base_h,
+                new_plan,
+                timed_words,
+                tmp_dir,
+                base_w,
+                base_h,
                 llm=self._resolve_llm(),
             )
             if not new_pairs:
@@ -3175,6 +3461,7 @@ class TalkingHeadOverlaySkill(Skill):
         横屏/非 9:16 比例：短边已 1080（如 1920×1080）时原样交给模板，
         由 _base_css 按设计基准等比缩放居中兜底（宁小勿溢出）。
         """
+
         def _even(x: int) -> int:
             return x if x % 2 == 0 else x + 1
 
@@ -3186,7 +3473,8 @@ class TalkingHeadOverlaySkill(Skill):
 
     @staticmethod
     def _words_for_segment(
-        timed_words: list[dict[str, Any]], seg: Any,
+        timed_words: list[dict[str, Any]],
+        seg: Any,
     ) -> list[dict[str, Any]]:
         """取叠加窗口内的词（相对 seg.time_start 的时间），clip 到窗口内。"""
         dur = seg.time_end - seg.time_start
@@ -3221,9 +3509,9 @@ class TalkingHeadOverlaySkill(Skill):
         全败该段降级 skip。
         """
         from capabilities.video.adapters.html_to_video import (
-    render_html_to_video,
-    resolve_ffmpeg,
-)
+            render_html_to_video,
+            resolve_ffmpeg,
+        )
         from capabilities.video.adapters.overlay_templates import TEMPLATES
         from capabilities.video.adapters.word_align import (
             TimedWord,
@@ -3258,7 +3546,9 @@ class TalkingHeadOverlaySkill(Skill):
                 if llm is not None and gen_budget > 0:
                     gen_budget -= 1
                     logger.info(
-                        "[P1 template_generator] 生成模板 %s：%s", tname, requirement[:80],
+                        "[P1 template_generator] 生成模板 %s：%s",
+                        tname,
+                        requirement[:80],
                     )
                     tpl = await generate_template(llm, tname, requirement)
                     template_fn = tpl or GENERATED.get(tname)
@@ -3287,7 +3577,9 @@ class TalkingHeadOverlaySkill(Skill):
                     if text:
                         render_kwargs["text"] = text
                 if not text:
-                    logger.warning("skip overlay %s: caption without text (no window words)", seg.segment_id)
+                    logger.warning(
+                        "skip overlay %s: caption without text (no window words)", seg.segment_id
+                    )
                     continue
                 timed = align_word_timing(
                     text,
@@ -3303,7 +3595,8 @@ class TalkingHeadOverlaySkill(Skill):
 
             try:
                 html_content = template_fn(
-                    width=canvas_w, height=canvas_h,
+                    width=canvas_w,
+                    height=canvas_h,
                     duration=dur,
                     **render_kwargs,
                 )
@@ -3312,7 +3605,9 @@ class TalkingHeadOverlaySkill(Skill):
                 # 不信任 LLM 输出，坏段降级跳过）
                 logger.warning(
                     "skip overlay %s (%s): bad params %s",
-                    seg.segment_id, tname, e,
+                    seg.segment_id,
+                    tname,
+                    e,
                 )
                 continue
 
@@ -3320,7 +3615,8 @@ class TalkingHeadOverlaySkill(Skill):
             result = await render_html_to_video(
                 html_content=html_content,
                 output_path=output,
-                width=canvas_w, height=canvas_h,
+                width=canvas_w,
+                height=canvas_h,
                 duration=dur,
             )
             if result:
@@ -3340,9 +3636,7 @@ class TalkingHeadOverlaySkill(Skill):
         from capabilities.video.adapters.html_to_video import compose_with_overlays
 
         overlay_tuples = [
-            (seg.time_start, seg.time_end, vid)
-            for seg, vid in overlay_pairs
-            if not seg.skipped
+            (seg.time_start, seg.time_end, vid) for seg, vid in overlay_pairs if not seg.skipped
         ]
 
         return await compose_with_overlays(
@@ -3361,6 +3655,7 @@ async def managed_temp_dir():
         yield tmp_path
     finally:
         import shutil
+
         try:
             shutil.rmtree(tmp, ignore_errors=True)
         except Exception:

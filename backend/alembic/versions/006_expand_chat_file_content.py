@@ -4,10 +4,10 @@ Revision ID: 006
 Revises: 005
 Create Date: 2026-09-03
 """
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
+from alembic import op
 
 revision = "006"
 down_revision = "005"

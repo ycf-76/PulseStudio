@@ -12,13 +12,13 @@ messages 里，作为独立 system 消息（不走 JSON 截断）。
 
 全部离线 mock，不碰真机 LLM。
 """
+
 from __future__ import annotations
 
 import pytest
 
 from app.engine.governance.context_manager import ContextManager
 from app.engine.reactor.session import ReactorSession
-
 
 _WORK_PROMPT = (
     "【重要】当前用户正在查看以下作品，你必须基于此作品的实际内容来回答问题：\n"
@@ -48,16 +48,16 @@ class _CaptureLLM:
 
     async def stream_chat(self, messages):
         self.seen.append([dict(m) for m in messages])
-        yield {"content": '{"thought": "直接产出终稿", "final": true, "output": {"_message": "OK"}}'}
+        yield {
+            "content": '{"thought": "直接产出终稿", "final": true, "output": {"_message": "OK"}}'
+        }
         yield {"content": "", "is_final": True, "token_usage": 1}
 
 
 def _assert_work_prompt_reached_llm(llm: _CaptureLLM) -> None:
     assert llm.seen, "LLM 至少应被调用一次"
     first_call = llm.seen[0]
-    system_contents = [
-        m["content"] for m in first_call if m.get("role") == "system"
-    ]
+    system_contents = [m["content"] for m in first_call if m.get("role") == "system"]
     assert any(
         "当前用户正在查看以下作品" in c for c in system_contents
     ), f"work_context_prompt 应作为 system 消息完整到达 LLM，实际 system 消息: {system_contents}"

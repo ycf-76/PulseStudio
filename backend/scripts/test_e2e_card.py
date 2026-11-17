@@ -7,6 +7,7 @@
     cd backend
     python scripts/test_e2e_card.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,6 +26,7 @@ OUTPUT_DIR = ROOT.parent / "outputs" / "test-e2e-card"
 
 async def main() -> int:
     from app.config import get_settings
+
     settings = get_settings()
 
     api_key = settings.deepseek_api_key
@@ -33,9 +35,11 @@ async def main() -> int:
         return 1
 
     from app.core.prompt_skills import scan_and_register_prompt_skills
+
     scan_and_register_prompt_skills()
 
     from app.core.skill_registry import SkillRegistry
+
     registry = SkillRegistry.instance()
     produce_skills = list(registry._skills.get("produce", {}).keys())
     print(f"Available produce skills: {produce_skills}")
@@ -50,7 +54,9 @@ async def main() -> int:
     card_drafts: list[dict] = []
 
     async def emit_callback(node_id: str, event_type: str, payload: dict) -> None:
-        collected_events.append({"type": event_type, "node": node_id, "payload_keys": list(payload.keys())})
+        collected_events.append(
+            {"type": event_type, "node": node_id, "payload_keys": list(payload.keys())}
+        )
 
         if event_type == "tool_result":
             result = payload.get("result", {})
@@ -131,17 +137,18 @@ async def main() -> int:
 
 def _build_preview(pages: list[dict], title: str) -> str:
     import html as html_mod
+
     frames = ""
     for i, page in enumerate(pages):
         html = page.get("htmlContent", "")
         page_type = page.get("type", "content")
-        frames += f'''
+        frames += f"""
         <div class="card-frame">
             <div class="card-label">Card {i+1} ({page_type})</div>
             <iframe srcdoc="{html_mod.escape(html)}"
                     style="width:1080px;height:1440px;transform:scale(0.45);transform-origin:top left;border:0">
             </iframe>
-        </div>'''
+        </div>"""
 
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">

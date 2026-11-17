@@ -20,7 +20,7 @@ import logging
 from datetime import timedelta
 from typing import Any
 
-from sqlalchemy import select, update, and_, func
+from sqlalchemy import and_, func, select, update
 
 from app.db.models import AnalysisWeightHistory, PublishedContentPerformance
 from app.db.session import AsyncSessionLocal
@@ -165,13 +165,15 @@ async def collect_performance_7d() -> int:
                 if stats is None:
                     continue
 
-                perf_score = compute_performance_score({
-                    "likes": stats.get("likes", 0),
-                    "collects": stats.get("collects", 0),
-                    "comments": stats.get("comments", 0),
-                    "shares": stats.get("shares", 0),
-                    "author_fans": stats.get("author_fans", 1),
-                })
+                perf_score = compute_performance_score(
+                    {
+                        "likes": stats.get("likes", 0),
+                        "collects": stats.get("collects", 0),
+                        "comments": stats.get("comments", 0),
+                        "shares": stats.get("shares", 0),
+                        "author_fans": stats.get("author_fans", 1),
+                    }
+                )
                 is_replicated = perf_score > _REPLICATION_THRESHOLD
 
                 prediction_error = None
@@ -197,26 +199,22 @@ async def collect_performance_7d() -> int:
 
             except Exception as e:
                 logger.warning(
-                    f"[performance_collector] T+7 collect failed for "
-                    f"record={record.id}: {e}"
+                    f"[performance_collector] T+7 collect failed for " f"record={record.id}: {e}"
                 )
 
         await db.commit()
-        logger.info(
-            f"[performance_collector] T+7: collected {collected}/{len(records)} records"
-        )
+        logger.info(f"[performance_collector] T+7: collected {collected}/{len(records)} records")
 
         # 回采后检查是否触发归因分析
         if collected > 0:
             try:
                 user_ids = {r.user_id for r in records if r.collected_at}
                 from app.services.self_attribution import maybe_trigger_attribution
+
                 for uid in user_ids:
                     triggered = await maybe_trigger_attribution(uid)
                     if triggered:
-                        logger.info(
-                            f"[performance_collector] attribution triggered for user {uid}"
-                        )
+                        logger.info(f"[performance_collector] attribution triggered for user {uid}")
             except Exception as attr_err:
                 logger.warning(f"[performance_collector] attribution check failed: {attr_err}")
 
@@ -230,13 +228,18 @@ async def _fetch_note_stats(note_id: str) -> dict | None:
     不可用时返回 None（不阻塞回采流程）。
     """
     try:
-        import httpx
         import json
         from pathlib import Path
 
-        storage_path = Path(__file__).resolve().parent.parent / "storage_states" / "xiaohongshu.json"
+        import httpx
+
+        storage_path = (
+            Path(__file__).resolve().parent.parent / "storage_states" / "xiaohongshu.json"
+        )
         if not storage_path.exists():
-            logger.debug("[performance_collector] storageState not found, skipping _fetch_note_stats")
+            logger.debug(
+                "[performance_collector] storageState not found, skipping _fetch_note_stats"
+            )
             return None
 
         state = json.loads(storage_path.read_text(encoding="utf-8"))
@@ -335,17 +338,23 @@ async def calibrate_weights() -> dict[str, float] | None:
         if content_ratio > 0.6:
             new_weights["rate_weight"] = min(old_weights["rate_weight"] + 0.05, 0.7)
             new_weights["likes_weight"] = max(old_weights["likes_weight"] - 0.03, 0.1)
-            new_weights["viral_weight"] = 1.0 - new_weights["rate_weight"] - new_weights["likes_weight"]
+            new_weights["viral_weight"] = (
+                1.0 - new_weights["rate_weight"] - new_weights["likes_weight"]
+            )
         elif content_ratio < 0.3:
             new_weights["rate_weight"] = max(old_weights["rate_weight"] - 0.05, 0.3)
             new_weights["likes_weight"] = min(old_weights["likes_weight"] + 0.03, 0.4)
-            new_weights["viral_weight"] = 1.0 - new_weights["rate_weight"] - new_weights["likes_weight"]
+            new_weights["viral_weight"] = (
+                1.0 - new_weights["rate_weight"] - new_weights["likes_weight"]
+            )
 
         # 双重型占比高 → 提高 viral_coefficient 权重
         if dual_ratio > 0.4:
             new_weights["viral_weight"] = min(old_weights["viral_weight"] + 0.05, 0.5)
             new_weights["likes_weight"] = max(new_weights["likes_weight"] - 0.05, 0.1)
-            new_weights["rate_weight"] = 1.0 - new_weights["viral_weight"] - new_weights["likes_weight"]
+            new_weights["rate_weight"] = (
+                1.0 - new_weights["viral_weight"] - new_weights["likes_weight"]
+            )
 
         # 归一化确保总和为 1
         total_w = sum(new_weights.values())
@@ -372,7 +381,6 @@ async def calibrate_weights() -> dict[str, float] | None:
         # 更新内存中的权重
         _current_weights.update(new_weights)
         logger.info(
-            f"[performance_collector] weights calibrated: "
-            f"{old_weights} → {new_weights}"
+            f"[performance_collector] weights calibrated: " f"{old_weights} → {new_weights}"
         )
         return new_weights

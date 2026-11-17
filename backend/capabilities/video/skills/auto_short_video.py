@@ -57,7 +57,9 @@ class AutoShortVideoInput(BaseModel):
     """
 
     topic: str = Field(min_length=2, max_length=500, description="视频主题或文案")
-    target_duration: float = Field(default=30.0, ge=5.0, le=300.0, description="目标时长（秒），5-300s")
+    target_duration: float = Field(
+        default=30.0, ge=5.0, le=300.0, description="目标时长（秒），5-300s"
+    )
     ratio: Literal["9:16", "16:9"] = Field(
         default="9:16", description="画幅比：9:16 竖屏（小红书/抖音）/ 16:9 横屏（B站）"
     )
@@ -65,23 +67,24 @@ class AutoShortVideoInput(BaseModel):
     need_narration: bool = Field(default=True, description="是否需要配音（缺 TTS 时自动降级跳过）")
     need_bgm: bool = Field(default=False, description="是否需要 BGM")
     image_motion: Literal["ken-burns", "static"] = Field(
-        default="ken-burns", description="图片默认运动：ken-burns（照片缓动）/ static（文字卡/图表）"
+        default="ken-burns",
+        description="图片默认运动：ken-burns（照片缓动）/ static（文字卡/图表）",
     )
     refine_shots: list[dict[str, Any]] | None = Field(
         default=None,
         description="用户确认/修改后的分镜列表（确认闸门的唯一信号）。"
-                    "为 None 表示首次编排，只返回草稿；非空表示已确认，从生成画面开始执行。",
+        "为 None 表示首次编排，只返回草稿；非空表示已确认，从生成画面开始执行。",
     )
     refine_title: str | None = Field(
         default=None,
         description="用户确认时的视频标题。refine 模式会跳过 LLM 重编脚本，"
-                    "靠它保留用户看到的那个标题（不给则用 topic）。",
+        "靠它保留用户看到的那个标题（不给则用 topic）。",
     )
     enhance_overlay: bool = Field(
         default=False,
         description="成片后自动叠加增强（动态字幕/图标/卡片动画，talking_head_overlay，"
-                    "叙事两步链+VLM 视觉自审）。缺 Whisper/LLM/Playwright 零件时"
-                    "自动降级返回原成片，绝不阻断主管线。",
+        "叙事两步链+VLM 视觉自审）。缺 Whisper/LLM/Playwright 零件时"
+        "自动降级返回原成片，绝不阻断主管线。",
     )
 
 
@@ -102,7 +105,8 @@ def _normalize_shot(shot: dict) -> dict:
 
 
 def _build_transcript(
-    shots: list[dict], total_duration: float,
+    shots: list[dict],
+    total_duration: float,
 ) -> list[dict[str, Any]]:
     """由分镜文案构造词级时间轴（内嵌 overlay 跳过 whisper 用）。
 
@@ -115,8 +119,7 @@ def _build_transcript(
     镜内词按字符数比例分配 — 中文口播语速近似线性，规划只要词边界。
     """
     items = [
-        ((s.get("caption") or "").strip(), max(float(s.get("duration") or 0), 0.1))
-        for s in shots
+        ((s.get("caption") or "").strip(), max(float(s.get("duration") or 0), 0.1)) for s in shots
     ]
     items = [(t, d) for t, d in items if t]
     if not items or total_duration <= 0:
@@ -132,7 +135,9 @@ def _build_transcript(
 
         def _tokens(text: str) -> list[str]:
             return [t for t in jieba.cut(text) if t.strip()]
+
     except ImportError:
+
         def _tokens(text: str) -> list[str]:
             return [text]
 
@@ -150,14 +155,17 @@ def _build_transcript(
             acc += len(tok)
             we = start + span * acc / total_chars
             words.append({"text": tok, "start": round(ws, 3), "end": round(we, 3)})
-        out.append({
-            "index": len(out),
-            "start": round(start, 3),
-            "end": round(end, 3),
-            "text": text,
-            "words": words,
-        })
+        out.append(
+            {
+                "index": len(out),
+                "start": round(start, 3),
+                "end": round(end, 3),
+                "text": text,
+                "words": words,
+            }
+        )
     return out
+
 
 _SCRIPT_PROMPT = """你是一个短视频脚本编剧。请根据以下要求写出一条短视频的分镜脚本。
 
@@ -206,8 +214,10 @@ async def _generate_script(topic: str, duration: float, style: str, ratio: str) 
         # DeepSeekAdapter — 与 talking_head_overlay._resolve_llm 同源
         # （app.engine.llm_client 是不存在的旧路径，真机全链验收暴露）
         from app.adapters.deepseek import DeepSeekAdapter
+
         llm = DeepSeekAdapter(api_key=settings.deepseek_api_key)
         from app.adapters.llm_base import llm_prompt_to_text
+
         text = await llm_prompt_to_text(llm, prompt)
         json_start = text.find("{")
         json_end = text.rfind("}") + 1
@@ -301,7 +311,10 @@ async def _generate_shot_images(shots: list[dict], ratio: str, user_id: str) -> 
 
 
 async def _generate_narration(
-    script: dict, user_id: str, output_dir: Path | None = None, run_id: str = "",
+    script: dict,
+    user_id: str,
+    output_dir: Path | None = None,
+    run_id: str = "",
 ) -> tuple[str | None, str]:
     """配音：edge-tts 在线优先，失败降级 piper 离线。
 
@@ -317,8 +330,7 @@ async def _generate_narration(
     # outputs/assets/<user_id>/narration.mp3 —— 同一用户两个作品并发配音
     # 会互相覆盖（后写的盖掉先写的，成片配上别人的音）。
     output_dir = output_dir or (
-        _OUTPUT_DIR / user_id / "auto_short_video"
-        / (run_id or uuid.uuid4().hex[:16]) / "assets"
+        _OUTPUT_DIR / user_id / "auto_short_video" / (run_id or uuid.uuid4().hex[:16]) / "assets"
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -326,7 +338,9 @@ async def _generate_narration(
         from app.agents.prompts.scripts.tts_edge import synthesize
 
         voice_path = output_dir / "narration.mp3"
-        result = await synthesize(text=full_text, output_path=voice_path, voice="zh-CN-XiaoxiaoNeural")
+        result = await synthesize(
+            text=full_text, output_path=voice_path, voice="zh-CN-XiaoxiaoNeural"
+        )
         return (str(result), "edge-tts")
     except Exception as e:
         logger.warning(f"edge-tts 配音失败，尝试 piper 离线降级：{e}")
@@ -391,7 +405,9 @@ class AutoShortVideoSkill(Skill):
 
     @staticmethod
     async def _enhance_with_overlay(
-        video_path: str, parsed: AutoShortVideoInput, user_id: str,
+        video_path: str,
+        parsed: AutoShortVideoInput,
+        user_id: str,
         transcript: list[dict[str, Any]] | None = None,
         workflow_id: str = "",
     ) -> dict[str, Any] | None:
@@ -426,9 +442,7 @@ class AutoShortVideoSkill(Skill):
                 if chunk.get("event") == "overlay_compose_done":
                     output_path = chunk["data"]["output_path"]
                 elif chunk.get("event") == "overlay_error":
-                    logger.warning(
-                        f"overlay enhance failed: {chunk['data'].get('error')}"
-                    )
+                    logger.warning(f"overlay enhance failed: {chunk['data'].get('error')}")
             if not output_path:
                 return None
 
@@ -488,7 +502,9 @@ class AutoShortVideoSkill(Skill):
         # 此前用 _OUTPUT_DIR/<topic>/，同用户两个会话做同主题会互相覆盖中间文件，
         # 并发时甚至会读到对方刚写了一半的 storyboard。workflow_id 已能唯一标识一次
         # 创作任务，缺失时退化为随机 id。
-        _run_dir = _OUTPUT_DIR / user_id / "auto_short_video" / (workflow_id or uuid.uuid4().hex[:16])
+        _run_dir = (
+            _OUTPUT_DIR / user_id / "auto_short_video" / (workflow_id or uuid.uuid4().hex[:16])
+        )
         output_dir = _run_dir / "assets"
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -498,29 +514,41 @@ class AutoShortVideoSkill(Skill):
                 return
             from app.services.sse_bus import sse_bus
 
-            await sse_bus.publish(workflow_id, "card_draft_ready", {
-                "card_draft": {
-                    "title": f"分镜预览 - {title}",
-                    "template": "storyboard_preview",
-                    "pages": [{
-                        "id": f"shot_{i + 1}",
-                        "type": "content",
-                        "mediaType": "image",
-                        "title": s.get("caption", f"第{i + 1}镜"),
-                        "imagePrompt": s.get("image_prompt", ""),
-                        "motionPrompt": s.get("motion", parsed.image_motion),
-                        "duration": s.get("duration", 4.0),
-                        "transition": "cut",
-                    } for i, s in enumerate(preview_shots)],
-                    "pngUrls": [],
-                    "htmlUrls": [],
+            await sse_bus.publish(
+                workflow_id,
+                "card_draft_ready",
+                {
+                    "card_draft": {
+                        "title": f"分镜预览 - {title}",
+                        "template": "storyboard_preview",
+                        "pages": [
+                            {
+                                "id": f"shot_{i + 1}",
+                                "type": "content",
+                                "mediaType": "image",
+                                "title": s.get("caption", f"第{i + 1}镜"),
+                                "imagePrompt": s.get("image_prompt", ""),
+                                "motionPrompt": s.get("motion", parsed.image_motion),
+                                "duration": s.get("duration", 4.0),
+                                "transition": "cut",
+                            }
+                            for i, s in enumerate(preview_shots)
+                        ],
+                        "pngUrls": [],
+                        "htmlUrls": [],
+                    },
+                    "png_urls": [],
+                    "html_urls": [],
                 },
-                "png_urls": [],
-                "html_urls": [],
-            }, turn_id=_turn_id or None)
+                turn_id=_turn_id or None,
+            )
 
-        def _build_preview(title: str, preview_shots: list[dict], script_extra: dict) -> dict[str, Any]:
-            est = sum(float(s.get("duration") or 0) for s in preview_shots) or parsed.target_duration
+        def _build_preview(
+            title: str, preview_shots: list[dict], script_extra: dict
+        ) -> dict[str, Any]:
+            est = (
+                sum(float(s.get("duration") or 0) for s in preview_shots) or parsed.target_duration
+            )
             return {
                 "mode": "preview",
                 "title": title,
@@ -536,7 +564,7 @@ class AutoShortVideoSkill(Skill):
                     "未经用户确认不要自行生成。"
                 ),
                 "hint": "编辑 shots 中任意镜的 caption/image_prompt/duration 后，"
-                        "通过 refine_shots 参数传回即可生成视频。也可增删镜头。",
+                "通过 refine_shots 参数传回即可生成视频。也可增删镜头。",
             }
 
         # ── 分支：用户已确认（refine） vs 首次编排 ──
@@ -585,7 +613,10 @@ class AutoShortVideoSkill(Skill):
             logger.info("[3/4] 生成配音")
             await _emit_step(3, 4, "生成配音", "TTS 合成口播（edge-tts → piper 降级）")
             narration_path, narration_source = await _generate_narration(
-                script, user_id, output_dir, run_id=workflow_id or "",
+                script,
+                user_id,
+                output_dir,
+                run_id=workflow_id or "",
             )
             if not narration_path:
                 degradation_notes.append("配音：edge-tts 与 piper 均不可用，跳过配音")
@@ -624,7 +655,8 @@ class AutoShortVideoSkill(Skill):
             )
             # local 分支 compose_video 返回 Path；remote 分支（HTTP）返回 dict
             result_path = (
-                result if isinstance(result, Path)
+                result
+                if isinstance(result, Path)
                 else Path(result.get("output_path", str(final_path)))
             )
             video_bytes = result_path.read_bytes()
@@ -668,13 +700,18 @@ class AutoShortVideoSkill(Skill):
                 transcript: list[dict[str, Any]] = []
                 try:
                     from capabilities.video.adapters.silence_detect import probe_duration
+
                     transcript = _build_transcript(
-                        shots, await probe_duration(str(result_path)),
+                        shots,
+                        await probe_duration(str(result_path)),
                     )
                 except Exception as e:
                     logger.warning(f"transcript 构造失败，回退 whisper 转录：{e}")
                 enhanced = await self._enhance_with_overlay(
-                    str(result_path), parsed, user_id, transcript=transcript or None,
+                    str(result_path),
+                    parsed,
+                    user_id,
+                    transcript=transcript or None,
                     workflow_id=workflow_id or "",
                 )
                 if enhanced:

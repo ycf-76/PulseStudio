@@ -21,8 +21,8 @@ from capabilities.content_search.skills.trending_topics import (
     TrendingTopicsSkill,
 )
 
-
 # ─── 注册无歧义 ───────────────────────────────────────
+
 
 def test_skill_registered_without_ambiguity():
     """同名 prompt skill 已下线，裸名解析必须唯一命中。"""
@@ -33,9 +33,9 @@ def test_skill_registered_without_ambiguity():
     assert cls is not None
     assert cls.name == "trending_topics"
     assert cls.node_type == "discover"
-    assert not cls.__module__.startswith("app.core.prompt_skills"), (
-        "trending_topics 不应再解析到 prompt skill"
-    )
+    assert not cls.__module__.startswith(
+        "app.core.prompt_skills"
+    ), "trending_topics 不应再解析到 prompt skill"
 
 
 def test_model_tier_contract():
@@ -46,6 +46,7 @@ def test_model_tier_contract():
 
 
 # ─── 平台别名解析 ─────────────────────────────────────
+
 
 def test_resolve_platforms_default_all():
     keys = TrendingTopicsSkill._resolve_platforms("")
@@ -64,13 +65,16 @@ def test_resolve_platforms_aliases():
 
 # ─── mock 抓取执行 ────────────────────────────────────
 
+
 class _FakeSource:
     """替身 HotboardSource：按 key 返回预置数据 / 抛错（返回真实 TrendingContent）。"""
 
     data: dict[str, list[dict[str, Any]]] = {}
     fail: set[str] = set()
 
-    def __init__(self, platform_key: str, label: str = "", primary_url: str = "", backup_url: str = ""):
+    def __init__(
+        self, platform_key: str, label: str = "", primary_url: str = "", backup_url: str = ""
+    ):
         self._key = platform_key
         self._label = label or platform_key
 
@@ -85,17 +89,19 @@ class _FakeSource:
             raise RuntimeError("mock network error")
         results = []
         for i, it in enumerate(self.data.get(self._key, [])[:limit]):
-            results.append(TrendingContent(
-                platform=self._key,
-                content_id=f"mock_{self._key}_{i}",
-                title=it["title"],
-                summary=it["title"],
-                content=it["title"],
-                author=self._label,
-                url=it.get("url", ""),
-                likes=it["hot"],
-                raw={"rank": i + 1},
-            ))
+            results.append(
+                TrendingContent(
+                    platform=self._key,
+                    content_id=f"mock_{self._key}_{i}",
+                    title=it["title"],
+                    summary=it["title"],
+                    content=it["title"],
+                    author=self._label,
+                    url=it.get("url", ""),
+                    likes=it["hot"],
+                    raw={"rank": i + 1},
+                )
+            )
         return results
 
     async def close(self):

@@ -14,11 +14,11 @@ from __future__ import annotations
 import pytest
 
 from app.services.model_tier import (
+    _DEFAULT_STAGE_TIERS,
+    _DEFAULT_TIER_MODELS,
     ModelTier,
     PipelineStage,
     TieredModelRouter,
-    _DEFAULT_STAGE_TIERS,
-    _DEFAULT_TIER_MODELS,
 )
 
 
@@ -109,6 +109,7 @@ class TestTieredModelRouterResolve:
 
     def test_unknown_stage_falls_to_standard(self):
         from app.services.model_tier import PipelineStage as PS
+
         model = self.router.resolve(PS.AUDIO_ENHANCE, "vl")
         assert model == _DEFAULT_TIER_MODELS[ModelTier.STANDARD]["vl"]
 
@@ -184,21 +185,23 @@ class TestTieredModelRouterCustomConfig:
         assert model == "wanx2.1-t2i-plus"
 
     def test_all_quality_for_high_budget(self):
-        custom_tiers = {
-            stage: ModelTier.QUALITY for stage in PipelineStage
-        }
+        custom_tiers = {stage: ModelTier.QUALITY for stage in PipelineStage}
         router = TieredModelRouter(stage_tiers=custom_tiers)
 
-        assert router.resolve(PipelineStage.VL_UNDERSTAND, "vl") == _DEFAULT_TIER_MODELS[ModelTier.QUALITY]["vl"]
+        assert (
+            router.resolve(PipelineStage.VL_UNDERSTAND, "vl")
+            == _DEFAULT_TIER_MODELS[ModelTier.QUALITY]["vl"]
+        )
         assert router.resolve(PipelineStage.TEXT2IMAGE, "t2i") == "wanx2.1-t2i-plus"
 
     def test_all_economy_for_low_budget(self):
-        custom_tiers = {
-            stage: ModelTier.ECONOMY for stage in PipelineStage
-        }
+        custom_tiers = {stage: ModelTier.ECONOMY for stage in PipelineStage}
         router = TieredModelRouter(stage_tiers=custom_tiers)
 
-        assert router.resolve(PipelineStage.VL_UNDERSTAND, "vl") == _DEFAULT_TIER_MODELS[ModelTier.ECONOMY]["vl"]
+        assert (
+            router.resolve(PipelineStage.VL_UNDERSTAND, "vl")
+            == _DEFAULT_TIER_MODELS[ModelTier.ECONOMY]["vl"]
+        )
         assert router.resolve(PipelineStage.TEXT2IMAGE, "t2i") == "wanx2.1-t2i-turbo"
 
 

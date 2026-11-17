@@ -8,25 +8,27 @@ Covers:
   - Message bus: send/receive between agents
   - Agent hierarchy: path correctness, parent-child relationships
 """
+
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 from app.engine.collab import (
-    AgentManager,
     AgentHandle,
+    AgentManager,
+    AgentMessage,
     AgentStatus,
     CollabMode,
-    InterAgentBus,
-    AgentMessage,
-    ConcurrencyPool,
     CollaborationTools,
+    ConcurrencyPool,
+    InterAgentBus,
 )
 from app.engine.collab.message_bus import MessageType
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 async def collab():
@@ -54,6 +56,7 @@ def _inject(collab_tools: CollaborationTools, params: dict, caller: str = "root"
 # 1. HAPPY PATH
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestHappyPath:
     """spawn → wait → list → interrupt 完整链路。"""
 
@@ -61,13 +64,17 @@ class TestHappyPath:
     async def test_spawn_returns_agent_id_and_path(self, collab):
         tools, mgr, bus, pool, root = collab
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("spawn_agent")
         skill = cls()
 
-        params = _inject(tools, {
-            "task_name": "research",
-            "task_description": "Search AI trends",
-        })
+        params = _inject(
+            tools,
+            {
+                "task_name": "research",
+                "task_description": "Search AI trends",
+            },
+        )
         result = await skill.execute(params)
 
         assert result.get("success") is True
@@ -83,10 +90,15 @@ class TestHappyPath:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        spawn_result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "writer",
-            "task_description": "Write copy",
-        }))
+        spawn_result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "writer",
+                    "task_description": "Write copy",
+                },
+            )
+        )
         assert spawn_result.get("success") is True
 
         list_cls = get_skill_class_by_name("list_agents")
@@ -104,16 +116,26 @@ class TestHappyPath:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        spawn_result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "auditor",
-            "task_description": "Audit content",
-        }))
+        spawn_result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "auditor",
+                    "task_description": "Audit content",
+                },
+            )
+        )
         agent_id = spawn_result["agent_id"]
 
         interrupt_cls = get_skill_class_by_name("interrupt_agent")
-        interrupt_result = await interrupt_cls().execute(_inject(tools, {
-            "agent_id": agent_id,
-        }))
+        interrupt_result = await interrupt_cls().execute(
+            _inject(
+                tools,
+                {
+                    "agent_id": agent_id,
+                },
+            )
+        )
 
         assert interrupt_result.get("success") is True
         assert interrupt_result["interrupted"] is True
@@ -124,17 +146,27 @@ class TestHappyPath:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        spawn_result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "worker",
-            "task_description": "Do work",
-        }))
+        spawn_result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "worker",
+                    "task_description": "Do work",
+                },
+            )
+        )
         agent_id = spawn_result["agent_id"]
 
         send_cls = get_skill_class_by_name("send_message")
-        send_result = await send_cls().execute(_inject(tools, {
-            "target_agent_id": agent_id,
-            "content": "Here is your input data",
-        }))
+        send_result = await send_cls().execute(
+            _inject(
+                tools,
+                {
+                    "target_agent_id": agent_id,
+                    "content": "Here is your input data",
+                },
+            )
+        )
 
         assert send_result.get("success") is True
         assert send_result["delivered"] is True
@@ -145,6 +177,7 @@ class TestHappyPath:
 # 2. BOUNDARY / EDGE CASES
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestBoundaryConditions:
     """边界条件：缺参数、不存在 agent、池满、深度超限。"""
 
@@ -152,13 +185,16 @@ class TestBoundaryConditions:
     async def test_spawn_without_infrastructure_returns_error(self):
         """SpawnAgentSkill 无基础设施时应返回 error，不抛异常。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("spawn_agent")
         skill = cls()
 
-        result = await skill.execute({
-            "task_name": "orphan",
-            "task_description": "No infra",
-        })
+        result = await skill.execute(
+            {
+                "task_name": "orphan",
+                "task_description": "No infra",
+            }
+        )
         assert "error" in result
         assert "not available" in result["error"]
 
@@ -166,27 +202,36 @@ class TestBoundaryConditions:
     async def test_spawn_partial_infrastructure_missing(self):
         """只传部分基础设施（缺 bus）也应返回 error。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("spawn_agent")
         skill = cls()
 
-        result = await skill.execute({
-            "_agent_manager": AgentManager(),
-            "_concurrency_pool": ConcurrencyPool(),
-            "_message_bus": None,
-            "_caller_agent_id": "root",
-            "task_name": "partial",
-        })
+        result = await skill.execute(
+            {
+                "_agent_manager": AgentManager(),
+                "_concurrency_pool": ConcurrencyPool(),
+                "_message_bus": None,
+                "_caller_agent_id": "root",
+                "task_name": "partial",
+            }
+        )
         assert "error" in result
 
     @pytest.mark.asyncio
     async def test_wait_nonexistent_agent(self, collab):
         tools, mgr, bus, pool, root = collab
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("wait_agent")
 
-        result = await cls().execute(_inject(tools, {
-            "agent_id": "ghost_agent_999",
-        }))
+        result = await cls().execute(
+            _inject(
+                tools,
+                {
+                    "agent_id": "ghost_agent_999",
+                },
+            )
+        )
         assert "error" in result
         assert "not found" in result["error"]
 
@@ -194,11 +239,17 @@ class TestBoundaryConditions:
     async def test_interrupt_nonexistent_agent(self, collab):
         tools, mgr, bus, pool, root = collab
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("interrupt_agent")
 
-        result = await cls().execute(_inject(tools, {
-            "agent_id": "ghost_agent_999",
-        }))
+        result = await cls().execute(
+            _inject(
+                tools,
+                {
+                    "agent_id": "ghost_agent_999",
+                },
+            )
+        )
         assert result.get("success") is False
         assert result["interrupted"] is False
 
@@ -206,22 +257,34 @@ class TestBoundaryConditions:
     async def test_send_message_missing_target(self, collab):
         tools, mgr, bus, pool, root = collab
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("send_message")
 
-        result = await cls().execute(_inject(tools, {
-            "content": "hello",
-        }))
+        result = await cls().execute(
+            _inject(
+                tools,
+                {
+                    "content": "hello",
+                },
+            )
+        )
         assert "error" in result
 
     @pytest.mark.asyncio
     async def test_send_message_missing_content(self, collab):
         tools, mgr, bus, pool, root = collab
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("send_message")
 
-        result = await cls().execute(_inject(tools, {
-            "target_agent_id": "root",
-        }))
+        result = await cls().execute(
+            _inject(
+                tools,
+                {
+                    "target_agent_id": "root",
+                },
+            )
+        )
         assert "error" in result
 
     @pytest.mark.asyncio
@@ -238,19 +301,32 @@ class TestBoundaryConditions:
         )
 
         from app.core.skill_registry import get_skill_class_by_name
+
         spawn_cls = get_skill_class_by_name("spawn_agent")
 
-        result1 = await spawn_cls().execute(_inject(tools, {
-            "task_name": "worker_0",
-            "task_description": "Task 0",
-        }))
+        result1 = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "worker_0",
+                    "task_description": "Task 0",
+                },
+            )
+        )
         assert result1.get("success") is True, "first spawn should succeed"
 
-        result2 = await spawn_cls().execute(_inject(tools, {
-            "task_name": "overflow",
-            "task_description": "Should fail",
-        }))
-        assert "error" in result2, "2nd spawn should fail (max_concurrent=2, root+worker_0 already active)"
+        result2 = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "overflow",
+                    "task_description": "Should fail",
+                },
+            )
+        )
+        assert (
+            "error" in result2
+        ), "2nd spawn should fail (max_concurrent=2, root+worker_0 already active)"
 
         await manager.shutdown()
 
@@ -268,18 +344,30 @@ class TestBoundaryConditions:
         )
 
         from app.core.skill_registry import get_skill_class_by_name
+
         spawn_cls = get_skill_class_by_name("spawn_agent")
 
-        result_l1 = await spawn_cls().execute(_inject(tools, {
-            "task_name": "level1",
-            "task_description": "First level",
-        }))
+        result_l1 = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "level1",
+                    "task_description": "First level",
+                },
+            )
+        )
         assert result_l1.get("success") is True
 
-        result_l2 = await spawn_cls().execute(_inject(tools, {
-            "task_name": "level2",
-            "task_description": "Should fail - depth exceeded",
-        }, caller=result_l1["agent_id"]))
+        result_l2 = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "level2",
+                    "task_description": "Should fail - depth exceeded",
+                },
+                caller=result_l1["agent_id"],
+            )
+        )
         assert "error" in result_l2, "depth=2 should exceed max_depth=1"
 
         await manager.shutdown()
@@ -291,17 +379,27 @@ class TestBoundaryConditions:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        spawn_result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "stuck",
-            "task_description": "Never completes",
-        }))
+        spawn_result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "stuck",
+                    "task_description": "Never completes",
+                },
+            )
+        )
         agent_id = spawn_result["agent_id"]
 
         wait_cls = get_skill_class_by_name("wait_agent")
-        wait_result = await wait_cls().execute(_inject(tools, {
-            "agent_id": agent_id,
-            "timeout_seconds": 5,
-        }))
+        wait_result = await wait_cls().execute(
+            _inject(
+                tools,
+                {
+                    "agent_id": agent_id,
+                    "timeout_seconds": 5,
+                },
+            )
+        )
 
         assert wait_result.get("success") is True
         assert wait_result["status"] in ("pending", "running", "completed", "timeout")
@@ -311,12 +409,14 @@ class TestBoundaryConditions:
 # 3. CHAIN INTEGRITY: ReactorSession → _ensure_collab → _dispatch
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestChainIntegrity:
     """验证 ReactorSession 内部链路：懒初始化、参数注入、_dispatch 路由。"""
 
     def test_ensure_collab_lazy_init(self):
         """_ensure_collab 只在首次调用时创建，之后复用。"""
         from app.engine.reactor.session import ReactorSession
+
         session = ReactorSession(skills=[], workflow_id="test_lazy")
 
         assert session._collab_tools is None
@@ -330,6 +430,7 @@ class TestChainIntegrity:
     def test_ensure_collab_disabled_mode(self):
         """collab_mode=disabled 时 _ensure_collab 返回 None。"""
         from app.engine.reactor.session import ReactorSession
+
         session = ReactorSession(skills=[], workflow_id="test_disabled", collab_mode="disabled")
 
         result = session._ensure_collab()
@@ -338,6 +439,7 @@ class TestChainIntegrity:
     def test_ensure_collab_registers_root(self):
         """_ensure_collab 应注册 root agent。"""
         from app.engine.reactor.session import ReactorSession
+
         session = ReactorSession(skills=[], workflow_id="test_root")
 
         collab = session._ensure_collab()
@@ -352,6 +454,7 @@ class TestChainIntegrity:
     def test_ensure_collab_sets_executor(self):
         """_ensure_collab 应设置子 Agent 执行器。"""
         from app.engine.reactor.session import ReactorSession
+
         session = ReactorSession(skills=[], workflow_id="test_executor")
 
         collab = session._ensure_collab()
@@ -360,8 +463,8 @@ class TestChainIntegrity:
     @pytest.mark.asyncio
     async def test_dispatch_injects_collab_params(self):
         """_dispatch 对 skill_call + 协作工具应注入基础设施参数。"""
-        from app.engine.reactor.session import ReactorSession
         from app.engine.reactor.primitives import PRIMITIVES_BY_NAME
+        from app.engine.reactor.session import ReactorSession
 
         session = ReactorSession(skills=[], workflow_id="test_dispatch")
 
@@ -377,10 +480,14 @@ class TestChainIntegrity:
             },
         }
 
-        inner_skill = str(
-            (args.get("arguments") or {}).get("skill") or args.get("skill") or ""
-        )
-        _COLLAB_SKILLS = {"spawn_agent", "send_message", "wait_agent", "interrupt_agent", "list_agents"}
+        inner_skill = str((args.get("arguments") or {}).get("skill") or args.get("skill") or "")
+        _COLLAB_SKILLS = {
+            "spawn_agent",
+            "send_message",
+            "wait_agent",
+            "interrupt_agent",
+            "list_agents",
+        }
         assert inner_skill in _COLLAB_SKILLS
 
         inner_args = args.get("arguments")
@@ -394,7 +501,11 @@ class TestChainIntegrity:
     @pytest.mark.asyncio
     async def test_skill_call_primitive_passes_collab_args(self):
         """SkillCallPrimitive.execute() 应把 arguments 中的协作参数传给 Skill。"""
-        from app.core.skill_registry import get_skill_class_by_name, ensure_builtin_skills_registered
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
 
         cls = get_skill_class_by_name("spawn_agent")
@@ -408,6 +519,7 @@ class TestChainIntegrity:
 # ═══════════════════════════════════════════════════════════════════
 # 4. RESOURCE LIFECYCLE
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestResourceLifecycle:
     """资源生命周期：shutdown、double shutdown、资源泄漏。"""
@@ -438,10 +550,15 @@ class TestResourceLifecycle:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        spawn_result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "to_interrupt",
-            "task_description": "Will be interrupted",
-        }))
+        spawn_result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "to_interrupt",
+                    "task_description": "Will be interrupted",
+                },
+            )
+        )
         agent_id = spawn_result["agent_id"]
         assert pool.active_count >= 1
 
@@ -480,6 +597,7 @@ class TestResourceLifecycle:
 # 5. MESSAGE BUS INTEGRITY
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestMessageBusIntegrity:
     """消息总线：发送、接收、pending 计数。"""
 
@@ -489,12 +607,14 @@ class TestMessageBusIntegrity:
         bus.register("agent_a")
         bus.register("agent_b")
 
-        await bus.send(AgentMessage(
-            message_type=MessageType.TASK,
-            sender_id="agent_a",
-            recipient_id="agent_b",
-            content="Do this task",
-        ))
+        await bus.send(
+            AgentMessage(
+                message_type=MessageType.TASK,
+                sender_id="agent_a",
+                recipient_id="agent_b",
+                content="Do this task",
+            )
+        )
 
         assert bus.pending_count("agent_b") == 1
         msg = await bus.receive("agent_b")
@@ -524,6 +644,7 @@ class TestMessageBusIntegrity:
 # 6. AGENT HIERARCHY
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestAgentHierarchy:
     """Agent 层级关系：path、depth、parent-child。"""
 
@@ -531,12 +652,18 @@ class TestAgentHierarchy:
     async def test_spawn_builds_correct_path(self, collab):
         tools, mgr, bus, pool, root = collab
         from app.core.skill_registry import get_skill_class_by_name
+
         spawn_cls = get_skill_class_by_name("spawn_agent")
 
-        r1 = await spawn_cls().execute(_inject(tools, {
-            "task_name": "research",
-            "task_description": "Search",
-        }))
+        r1 = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "research",
+                    "task_description": "Search",
+                },
+            )
+        )
         assert r1["path"] == "root/research"
         assert r1["depth"] == 1
 
@@ -554,14 +681,20 @@ class TestAgentHierarchy:
         )
 
         from app.core.skill_registry import get_skill_class_by_name
+
         spawn_cls = get_skill_class_by_name("spawn_agent")
 
         ids = set()
         for i in range(3):
-            r = await spawn_cls().execute(_inject(tools, {
-                "task_name": f"worker_{i}",
-                "task_description": f"Task {i}",
-            }))
+            r = await spawn_cls().execute(
+                _inject(
+                    tools,
+                    {
+                        "task_name": f"worker_{i}",
+                        "task_description": f"Task {i}",
+                    },
+                )
+            )
             assert r.get("success") is True
             ids.add(r["agent_id"])
 
@@ -586,11 +719,16 @@ class TestAgentHierarchy:
 # 7. SKILL REGISTRY INTEGRATION
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestSkillRegistryIntegration:
     """协作 Skill 在 SkillRegistry 中的注册和收集。"""
 
     def test_all_collab_skills_registered(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
 
         expected = ["spawn_agent", "send_message", "wait_agent", "interrupt_agent", "list_agents"]
@@ -602,6 +740,7 @@ class TestSkillRegistryIntegration:
 
     def test_collect_reactor_skills_includes_collab(self):
         from app.engine.reactor.session import collect_reactor_skills
+
         skills = collect_reactor_skills()
         collab_names = {s.name for s in skills if getattr(s, "node_type", "") == "collab"}
         expected = {"spawn_agent", "send_message", "wait_agent", "interrupt_agent", "list_agents"}
@@ -609,6 +748,7 @@ class TestSkillRegistryIntegration:
 
     def test_spawn_agent_in_system_prompt(self):
         from app.engine.reactor.session import ReactorSession, collect_reactor_skills
+
         skills = collect_reactor_skills()
         session = ReactorSession(skills=skills)
         assert "spawn_agent" in session.system_prompt
@@ -619,6 +759,7 @@ class TestSkillRegistryIntegration:
 # ═══════════════════════════════════════════════════════════════════
 # 8. CONCURRENCY POOL EDGE CASES
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestConcurrencyPoolEdge:
     """ConcurrencyPool 边界条件。"""

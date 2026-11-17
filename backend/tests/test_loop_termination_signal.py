@@ -1,5 +1,9 @@
 import pytest
-pytest.skip("app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现",
+    allow_module_level=True,
+)
 
 """终止信号 / 纯文本直出行为回归（2026-10-09 改造后的行为契约）。
 
@@ -13,11 +17,11 @@ pytest.skip("app.engine.harness 已删除（loop 重构合并入 reactor），�
 import asyncio
 import json
 
+from app.core.skill_base import Skill
+from app.engine.governance.request_queue import LLMRequestQueue
 from app.engine.harness.executor.loop import LoopExecutor
 from app.engine.harness.runtime import AgentHarness
 from app.engine.schemas import WorkflowContext
-from app.engine.governance.request_queue import LLMRequestQueue
-from app.core.skill_base import Skill
 
 
 class _ScriptedLLM:
@@ -106,14 +110,14 @@ def test_a_summary_after_tools_is_accepted_not_rejected():
     旧逻辑会命中 _PLAN_MARKERS（"首先"/"接下来"）把总结判成废话，
     注入 retry 后再调 _detect_required_tools → AttributeError 直接崩。
     """
-    out = _run([
-        {"chunks": [_chunk("先搜索", [_call()])]},
-        {"chunks": [_chunk("任务完成。首先我查了热点，接下来生成了文案。")]},
-    ])
-    assert out.output["_iterations"] == 2, "第 2 轮就该结束，不该被踹回去"
-    assert "首先" in out.output["summary"], (
-        f"总结应原样保留，实际: {out.output.get('summary')!r}"
+    out = _run(
+        [
+            {"chunks": [_chunk("先搜索", [_call()])]},
+            {"chunks": [_chunk("任务完成。首先我查了热点，接下来生成了文案。")]},
+        ]
     )
+    assert out.output["_iterations"] == 2, "第 2 轮就该结束，不该被踹回去"
+    assert "首先" in out.output["summary"], f"总结应原样保留，实际: {out.output.get('summary')!r}"
     assert not out.output.get("_loop_truncated")
 
 
@@ -122,12 +126,15 @@ def test_b_no_tool_ever_nudges_at_most_twice():
 
     防止死催：旧逻辑每轮都重试，直到跑满 max_iterations。
     """
-    out = _run([
-        {"chunks": [_chunk("我来帮你查一下，首先看看数据")]},
-    ], max_iterations=8)
-    assert out.output["_iterations"] == 3, (
-        f"应在第 3 轮接受输出（nudge 上限 2 次），实际: {out.output['_iterations']}"
+    out = _run(
+        [
+            {"chunks": [_chunk("我来帮你查一下，首先看看数据")]},
+        ],
+        max_iterations=8,
     )
+    assert (
+        out.output["_iterations"] == 3
+    ), f"应在第 3 轮接受输出（nudge 上限 2 次），实际: {out.output['_iterations']}"
     assert "我来" in out.output["summary"]
 
 
@@ -136,9 +143,12 @@ def test_c_no_final_signal_yields_readable_summary():
 
     同时验证不再崩溃（旧逻辑撞 _detect_required_tools → AttributeError）。
     """
-    out = _run([
-        {"chunks": [_chunk("继续搜索", [_call()])]},
-    ], max_iterations=3)
+    out = _run(
+        [
+            {"chunks": [_chunk("继续搜索", [_call()])]},
+        ],
+        max_iterations=3,
+    )
     assert out.output.get("_loop_truncated") is True
     summary = out.output.get("summary", "")
     assert "任务未跑完" in summary, f"应给出人话说明，实际: {summary!r}"
@@ -152,12 +162,15 @@ def test_e_chitchat_is_not_nudged():
     却被强制 nudge 两轮；模型试图发起澄清又撞上未定义的 _serialize_msg；
     最后接受空输出，兜底成一句没意义的"处理完成。"。
     """
-    out = _run([
-        {"chunks": [_chunk("你好！我是你的内容创作助手。")]},
-    ], topic="你好")
-    assert out.output["_iterations"] == 1, (
-        f"闲聊应第 1 轮直接结束，实际: {out.output['_iterations']}"
+    out = _run(
+        [
+            {"chunks": [_chunk("你好！我是你的内容创作助手。")]},
+        ],
+        topic="你好",
     )
+    assert (
+        out.output["_iterations"] == 1
+    ), f"闲聊应第 1 轮直接结束，实际: {out.output['_iterations']}"
     summary = out.output["summary"]
     assert "创作助手" in summary, f"回答应原样保留，实际: {summary!r}"
     assert summary != "处理完成。", "不应兜底成无意义的'处理完成。'"
@@ -171,16 +184,13 @@ def test_d_parse_degradation_is_observable(caplog):
     import logging as _logging
 
     with caplog.at_level(_logging.WARNING, logger="app.engine.harness.executor.loop"):
-        _run([
-            {"chunks": [_chunk("先搜索", [_call()])]},
-            {"chunks": [_chunk("任务完成，首先查了热点，接下来生成文案")]},
-        ])
+        _run(
+            [
+                {"chunks": [_chunk("先搜索", [_call()])]},
+                {"chunks": [_chunk("任务完成，首先查了热点，接下来生成文案")]},
+            ]
+        )
 
-    degradation = [
-        r.message for r in caplog.records
-        if "_parse_step L3 degraded" in r.message
-    ]
-    assert degradation, (
-        "应记录 _parse_step 三级降级日志，否则终止信号丢失无从排查"
-    )
+    degradation = [r.message for r in caplog.records if "_parse_step L3 degraded" in r.message]
+    assert degradation, "应记录 _parse_step 三级降级日志，否则终止信号丢失无从排查"
     assert "[loop:signal]" in degradation[0]

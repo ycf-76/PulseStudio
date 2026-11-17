@@ -89,16 +89,16 @@ def parse_search_response(data: dict[str, Any]) -> tuple[list[dict[str, Any]], s
             if not url or url in seen or _is_homepage(url):
                 continue
             seen.add(url)
-            items.append({
-                "url": url,
-                "title": (item.get("title") or "").strip(),
-                "snippet": snippets.get(url, ""),
-                "page_age": item.get("page_age") or "",
-            })
+            items.append(
+                {
+                    "url": url,
+                    "title": (item.get("title") or "").strip(),
+                    "snippet": snippets.get(url, ""),
+                    "page_age": item.get("page_age") or "",
+                }
+            )
 
-    answer = "".join(
-        block.get("text") or "" for block in blocks if block.get("type") == "text"
-    )
+    answer = "".join(block.get("text") or "" for block in blocks if block.get("type") == "text")
     return items, answer
 
 
@@ -160,18 +160,24 @@ class DeepSeekSearchSource(ContentSource):
         return {
             "model": self.model,
             "max_tokens": self.max_tokens,
-            "messages": [{
-                "role": "user",
-                "content": [{
-                    "type": "text",
-                    "text": f"Perform a web search for the query: {query}",
-                }],
-            }],
-            "tools": [{
-                "type": _WEB_SEARCH_TOOL,
-                "name": "web_search",
-                "max_uses": self.max_uses,
-            }],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Perform a web search for the query: {query}",
+                        }
+                    ],
+                }
+            ],
+            "tools": [
+                {
+                    "type": _WEB_SEARCH_TOOL,
+                    "name": "web_search",
+                    "max_uses": self.max_uses,
+                }
+            ],
         }
 
     async def _call_messages(self, query: str) -> dict[str, Any]:
@@ -192,7 +198,7 @@ class DeepSeekSearchSource(ContentSource):
             except httpx.HTTPStatusError as e:
                 status = e.response.status_code
                 if status in (429, 500, 502, 503, 504) and attempt < 2:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[deepseek] HTTP {status} (attempt {attempt + 1}/3), retry in {wait}s"
                     )
@@ -205,35 +211,35 @@ class DeepSeekSearchSource(ContentSource):
                 return {}
         return {}
 
-    def _normalize(
-        self, items: list[dict[str, Any]], answer: str
-    ) -> list[TrendingContent]:
+    def _normalize(self, items: list[dict[str, Any]], answer: str) -> list[TrendingContent]:
         results: list[TrendingContent] = []
         for idx, item in enumerate(items):
             url = item["url"]
             title = item["title"] or url
             snippet = item["snippet"]
             page_age = item["page_age"]
-            results.append(TrendingContent(
-                platform="deepseek",
-                content_id=_content_id(url),
-                title=title,
-                summary=snippet[:200] if snippet else title[:200],
-                content=snippet or title,
-                author="",
-                url=url,
-                likes=max(0, 1000 - idx * 50),
-                comments=0,
-                shares=0,
-                views=0,
-                cover_img="",
-                published_at=page_age if _iso_like(page_age) else "",
-                tags=[],
-                title_original=title,
-                summary_original=snippet,
-                content_original=snippet,
-                raw={"rank": idx + 1, "page_age": page_age, "answer_len": len(answer)},
-            ))
+            results.append(
+                TrendingContent(
+                    platform="deepseek",
+                    content_id=_content_id(url),
+                    title=title,
+                    summary=snippet[:200] if snippet else title[:200],
+                    content=snippet or title,
+                    author="",
+                    url=url,
+                    likes=max(0, 1000 - idx * 50),
+                    comments=0,
+                    shares=0,
+                    views=0,
+                    cover_img="",
+                    published_at=page_age if _iso_like(page_age) else "",
+                    tags=[],
+                    title_original=title,
+                    summary_original=snippet,
+                    content_original=snippet,
+                    raw={"rank": idx + 1, "page_age": page_age, "answer_len": len(answer)},
+                )
+            )
         return results
 
     async def _search_remote(self, query: str) -> list[TrendingContent]:

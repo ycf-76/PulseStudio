@@ -26,7 +26,9 @@ from app.services import chat_session, side_session
 class _ScriptedLLM:
     model_name = "mock-chat"
 
-    def __init__(self, response: str = '{"thought": "完成", "final": true, "output": {"result": "done"}}'):
+    def __init__(
+        self, response: str = '{"thought": "完成", "final": true, "output": {"result": "done"}}'
+    ):
         self._response = response
 
     async def chat(self, messages, response_format=None):
@@ -112,13 +114,20 @@ def _run_chat(monkeypatch, session, *, is_side: bool, snapshot=None, side_messag
 
     agent = ChatAgent(registry=_FakeRegistry(session), llm=_ScriptedLLM())
     # db 传哨兵对象（非 None）以触发上下文注入块；块内 DB 依赖均已被 patch
-    return asyncio.run(agent.process("侧会话提问", "side1" if is_side else "main1", "u1", db=object())), captured
+    return (
+        asyncio.run(
+            agent.process("侧会话提问", "side1" if is_side else "main1", "u1", db=object())
+        ),
+        captured,
+    )
 
 
 def test_side_session_system_prompt_contains_snapshot(monkeypatch):
     session = _RecordingSession(llm=_ScriptedLLM())
     result, _ = _run_chat(
-        monkeypatch, session, is_side=True,
+        monkeypatch,
+        session,
+        is_side=True,
         snapshot=_SIDE_SNAPSHOT,
         side_messages=[{"id": "m1", "role": "user", "content": "侧会话自己的消息"}],
     )
@@ -135,19 +144,26 @@ def test_side_session_system_prompt_contains_snapshot(monkeypatch):
 def test_side_session_history_is_only_own_messages(monkeypatch):
     session = _RecordingSession(llm=_ScriptedLLM())
     _run_chat(
-        monkeypatch, session, is_side=True,
+        monkeypatch,
+        session,
+        is_side=True,
         snapshot=_SIDE_SNAPSHOT,
         side_messages=[{"id": "m1", "role": "user", "content": "侧会话自己的消息"}],
     )
     items = [(i.role, i.content) for i in session.last_cm.history._items]
     assert ("user", "侧会话自己的消息") in items
-    assert ("user", "主任务里聊过的内容") not in items  # 主会话内容只经快照进 system prompt，不进历史
+    assert (
+        "user",
+        "主任务里聊过的内容",
+    ) not in items  # 主会话内容只经快照进 system prompt，不进历史
 
 
 def test_side_session_list_messages_called_with_side_id(monkeypatch):
     session = _RecordingSession(llm=_ScriptedLLM())
     _, captured = _run_chat(
-        monkeypatch, session, is_side=True,
+        monkeypatch,
+        session,
+        is_side=True,
         snapshot=_SIDE_SNAPSHOT,
         side_messages=[{"id": "m1", "role": "user", "content": "侧会话自己的消息"}],
     )
@@ -158,7 +174,9 @@ def test_side_session_list_messages_called_with_side_id(monkeypatch):
 def test_main_session_not_affected_by_snapshot(monkeypatch):
     session = _RecordingSession(llm=_ScriptedLLM())
     _run_chat(
-        monkeypatch, session, is_side=False,
+        monkeypatch,
+        session,
+        is_side=False,
         snapshot=None,
         side_messages=[{"id": "m1", "role": "user", "content": "主会话消息"}],
     )

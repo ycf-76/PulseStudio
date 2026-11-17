@@ -13,10 +13,11 @@ This migration adds 6 tables for the plugin system:
 6. plugin_stats - Runtime statistics
 """
 
-from alembic import op
-import sqlalchemy as sa
 from datetime import datetime
 
+import sqlalchemy as sa
+
+from alembic import op
 
 # revision identifiers
 revision = '001_plugin_system'

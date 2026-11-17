@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 class WeChatSendFileInput(BaseModel):
-    to_user_id: str = Field(default="", description="目标微信用户ID (wxid)。留空则自动发给绑定用户（即你自己）。也可以填好友wxid或群ID。")
+    to_user_id: str = Field(
+        default="",
+        description="目标微信用户ID (wxid)。留空则自动发给绑定用户（即你自己）。也可以填好友wxid或群ID。",
+    )
     file_base64: str = Field(..., description="base64编码的文件内容")
     file_ext: str = Field(default="mp4", description="文件扩展名（如 mp4/png/jpg）")
     file_name: str = Field(default="video.mp4", description="显示的文件名")
@@ -53,16 +56,27 @@ class WeChatSendFileSkill(Skill):
 
         ctx = inputs.get("_context")
         user_id = ctx.user_id if ctx and hasattr(ctx, "user_id") else "default"
-        logger.info(f"[WeChatSendFileSkill] user_id={user_id}, to_user_id={to_user_id}, file_name={file_name}")
+        logger.info(
+            f"[WeChatSendFileSkill] user_id={user_id}, to_user_id={to_user_id}, file_name={file_name}"
+        )
 
         engine = get_wechat_engine(user_id)
         if not engine.is_logged_in:
-            return {"ok": False, "error": "WeChat bot not logged in. Please go to Settings > 自动化办公 > 微信, click 去绑定 and scan QR code first."}
+            return {
+                "ok": False,
+                "error": "WeChat bot not logged in. Please go to Settings > 自动化办公 > 微信, click 去绑定 and scan QR code first.",
+            }
 
         if not to_user_id or to_user_id == "filehelper":
-            if engine._client and engine._client._credentials and engine._client._credentials.ilink_user_id:
+            if (
+                engine._client
+                and engine._client._credentials
+                and engine._client._credentials.ilink_user_id
+            ):
                 to_user_id = engine._client._credentials.ilink_user_id
-                logger.info(f"[WeChatSendFileSkill] 未指定目标或目标为filehelper，使用绑定用户: {to_user_id}")
+                logger.info(
+                    f"[WeChatSendFileSkill] 未指定目标或目标为filehelper，使用绑定用户: {to_user_id}"
+                )
             else:
                 to_user_id = "filehelper"
 
@@ -111,4 +125,7 @@ class WeChatSendFileSkill(Skill):
                 "size": len(file_data),
             }
         else:
-            return {"ok": False, "error": "send_file returned False. The bot may need the target user to send a message first, or getconfig failed to provide context_token."}
+            return {
+                "ok": False,
+                "error": "send_file returned False. The bot may need the target user to send a message first, or getconfig failed to provide context_token.",
+            }

@@ -8,6 +8,7 @@
 - POST /api/accounts/{account_id}/sync：同步作品数据
 - POST /api/accounts/sync-all：同步所有已绑定账号
 """
+
 from __future__ import annotations
 
 import logging
@@ -15,7 +16,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select, delete as sa_delete
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import select
 
 from app.api.deps import get_current_user
 from app.api.schemas.common import StandardResponse
@@ -42,48 +44,50 @@ async def list_accounts(
 ) -> StandardResponse[list[dict[str, Any]]]:
     """列出所有平台的绑定状态，未绑定的也列出（bound: false）。"""
     async with AsyncSessionLocal() as db:
-        result = await db.scalars(
-            select(PlatformAccount).where(PlatformAccount.user_id == user_id)
-        )
-        bound_map: dict[str, PlatformAccount] = {
-            acc.platform: acc for acc in result.all()
-        }
+        result = await db.scalars(select(PlatformAccount).where(PlatformAccount.user_id == user_id))
+        bound_map: dict[str, PlatformAccount] = {acc.platform: acc for acc in result.all()}
 
     items = []
     for plat in SUPPORTED_PLATFORMS:
         acc = bound_map.get(plat)
         if acc:
-            items.append({
-                "id": acc.id,
-                "platform": acc.platform,
-                "platform_label": PLATFORM_LABELS.get(acc.platform, acc.platform),
-                "platform_uid": acc.platform_uid,
-                "platform_nickname": acc.platform_nickname,
-                "platform_avatar_url": acc.platform_avatar_url,
-                "platform_home_url": acc.platform_home_url,
-                "last_synced_at": acc.last_synced_at.isoformat() if acc.last_synced_at else None,
-                "sync_status": acc.sync_status,
-                "sync_error": acc.sync_error,
-                "works_count": acc.works_count,
-                "fans_count": acc.fans_count,
-                "bound": True,
-            })
+            items.append(
+                {
+                    "id": acc.id,
+                    "platform": acc.platform,
+                    "platform_label": PLATFORM_LABELS.get(acc.platform, acc.platform),
+                    "platform_uid": acc.platform_uid,
+                    "platform_nickname": acc.platform_nickname,
+                    "platform_avatar_url": acc.platform_avatar_url,
+                    "platform_home_url": acc.platform_home_url,
+                    "last_synced_at": (
+                        acc.last_synced_at.isoformat() if acc.last_synced_at else None
+                    ),
+                    "sync_status": acc.sync_status,
+                    "sync_error": acc.sync_error,
+                    "works_count": acc.works_count,
+                    "fans_count": acc.fans_count,
+                    "bound": True,
+                }
+            )
         else:
-            items.append({
-                "id": None,
-                "platform": plat,
-                "platform_label": PLATFORM_LABELS.get(plat, plat),
-                "platform_uid": None,
-                "platform_nickname": None,
-                "platform_avatar_url": None,
-                "platform_home_url": None,
-                "last_synced_at": None,
-                "sync_status": "idle",
-                "sync_error": None,
-                "works_count": 0,
-                "fans_count": None,
-                "bound": False,
-            })
+            items.append(
+                {
+                    "id": None,
+                    "platform": plat,
+                    "platform_label": PLATFORM_LABELS.get(plat, plat),
+                    "platform_uid": None,
+                    "platform_nickname": None,
+                    "platform_avatar_url": None,
+                    "platform_home_url": None,
+                    "last_synced_at": None,
+                    "sync_status": "idle",
+                    "sync_error": None,
+                    "works_count": 0,
+                    "fans_count": None,
+                    "bound": False,
+                }
+            )
 
     return StandardResponse(data=items)
 
@@ -98,15 +102,18 @@ async def bind_account(
         raise HTTPException(status_code=400, detail=f"不支持的平台：{req.platform}")
 
     from capabilities.messaging.services.platform_login import start_qr_login
+
     task_id, qr_data = await start_qr_login(req.platform, user_id)
 
-    return StandardResponse(data={
-        "task_id": task_id,
-        "platform": req.platform,
-        "status": "scanned",
-        "qr_code": qr_data,
-        "message": "请扫描二维码登录",
-    })
+    return StandardResponse(
+        data={
+            "task_id": task_id,
+            "platform": req.platform,
+            "status": "scanned",
+            "qr_code": qr_data,
+            "message": "请扫描二维码登录",
+        }
+    )
 
 
 @router.get("/qr-status/{task_id}")
@@ -116,6 +123,7 @@ async def qr_status(
 ) -> StandardResponse[dict[str, Any]]:
     """轮询扫码状态。"""
     from capabilities.messaging.services.platform_login import get_bind_task_status
+
     status_info = get_bind_task_status(task_id)
     if not status_info:
         raise HTTPException(status_code=404, detail="任务不存在或已过期")
@@ -138,9 +146,7 @@ async def unbind_account(
         )
         if not acc:
             raise HTTPException(status_code=404, detail="账号不存在")
-        await db.execute(
-            sa_delete(PlatformAccount).where(PlatformAccount.id == account_id)
-        )
+        await db.execute(sa_delete(PlatformAccount).where(PlatformAccount.id == account_id))
         await db.commit()
 
     return StandardResponse(data={"unbound": True, "account_id": account_id})
@@ -170,14 +176,17 @@ async def sync_account(
             )
 
     from app.services.spider_capability import start_sync
+
     await start_sync(account_id, user_id, acc.platform, force=req.force)
 
-    return StandardResponse(data={
-        "account_id": account_id,
-        "platform": acc.platform,
-        "status": "started",
-        "message": "同步已启动，通过通知总线推送进度",
-    })
+    return StandardResponse(
+        data={
+            "account_id": account_id,
+            "platform": acc.platform,
+            "status": "started",
+            "message": "同步已启动，通过通知总线推送进度",
+        }
+    )
 
 
 @router.post("/sync-all")
@@ -199,14 +208,17 @@ async def sync_all_accounts(
         return StandardResponse(data={"synced": 0, "message": "没有可同步的账号"})
 
     from app.services.spider_capability import start_sync
+
     for acc in accounts:
         try:
             await start_sync(acc.id, user_id, acc.platform, force=req.force)
         except Exception as e:
             logger.warning(f"sync_all: {acc.platform} start failed: {e}")
 
-    return StandardResponse(data={
-        "synced": len(accounts),
-        "platforms": [acc.platform for acc in accounts],
-        "message": f"已启动 {len(accounts)} 个平台的同步",
-    })
+    return StandardResponse(
+        data={
+            "synced": len(accounts),
+            "platforms": [acc.platform for acc in accounts],
+            "message": f"已启动 {len(accounts)} 个平台的同步",
+        }
+    )

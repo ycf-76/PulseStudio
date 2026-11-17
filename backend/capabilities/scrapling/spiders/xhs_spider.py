@@ -3,6 +3,7 @@
 使用 Scrapling Spider ABC + AsyncStealthySession（反检测浏览器）+ Adaptive 自适应选择器。
 登录态通过 storageState 文件传递（由 platform_login 扫码登录时保存）。
 """
+
 from __future__ import annotations
 
 import json
@@ -123,7 +124,10 @@ class XhsSpider(BasePlatformSpider):
                     await page.context.add_cookies(_cookies)
                 except Exception as e:
                     import logging
-                    logging.getLogger("xhs_user_notes").warning(f"page_setup add_cookies failed: {e}")
+
+                    logging.getLogger("xhs_user_notes").warning(
+                        f"page_setup add_cookies failed: {e}"
+                    )
 
             kwargs["page_setup"] = _inject_cookies
             kwargs["cookies"] = cookie_list
@@ -279,8 +283,7 @@ class XhsSpider(BasePlatformSpider):
         if self._is_login_page(response):
             self.login_failed = True
             self.logger.error(
-                "XhsSpider: 检测到登录页！cookies 已过期，请重新扫码登录。"
-                " 不会爬取任何数据。"
+                "XhsSpider: 检测到登录页！cookies 已过期，请重新扫码登录。" " 不会爬取任何数据。"
             )
             return
 
@@ -292,7 +295,9 @@ class XhsSpider(BasePlatformSpider):
 
         notes_from_state = self._extract_notes_from_initial_state(response)
         if notes_from_state:
-            self.logger.info(f"XhsSpider: found {len(notes_from_state)} notes from __INITIAL_STATE__")
+            self.logger.info(
+                f"XhsSpider: found {len(notes_from_state)} notes from __INITIAL_STATE__"
+            )
             for item in notes_from_state:
                 note_id = item.get("note_id", "")
                 if not note_id or note_id in seen_ids:
@@ -369,7 +374,9 @@ class XhsSpider(BasePlatformSpider):
                     continue
 
                 card = getattr(link, "parent", link)
-                like_text = self._safe_text(card, "[class*='like'] span, [class*='count'], [class*='like']")
+                like_text = self._safe_text(
+                    card, "[class*='like'] span, [class*='count'], [class*='like']"
+                )
                 likes = self._parse_count(like_text)
 
                 candidates.append(
@@ -478,7 +485,9 @@ class XhsSpider(BasePlatformSpider):
             return
 
         title = self._safe_text(response, "[class*='title'], .title, h1, [class*='note-title']")
-        content_text = self._safe_text(response, "[class*='desc'], [class*='content'], .desc, [class*='note-content']")
+        content_text = self._safe_text(
+            response, "[class*='desc'], [class*='content'], .desc, [class*='note-content']"
+        )
 
         image_urls: list[str] = []
         try:
@@ -505,7 +514,9 @@ class XhsSpider(BasePlatformSpider):
 
         tags: list[str] = []
         try:
-            tag_els = response.css("[class*='tag'] a, [class*='tag'] span, a[href*='/search_result/']", auto_save=True)
+            tag_els = response.css(
+                "[class*='tag'] a, [class*='tag'] span, a[href*='/search_result/']", auto_save=True
+            )
             for t in tag_els:
                 txt = (t.text or "").strip().lstrip("#")
                 if txt and txt not in tags and len(txt) < 30:
@@ -513,17 +524,30 @@ class XhsSpider(BasePlatformSpider):
         except Exception:
             pass
 
-        likes = self._parse_count(
-            self._safe_text(response, "[class*='like-count'], [class*='like'] span, [class*='likeCount']")
-        ) or likes_hint
+        likes = (
+            self._parse_count(
+                self._safe_text(
+                    response, "[class*='like-count'], [class*='like'] span, [class*='likeCount']"
+                )
+            )
+            or likes_hint
+        )
         collects = self._parse_count(
-            self._safe_text(response, "[class*='collect-count'], [class*='collect'] span, [class*='collectCount']")
+            self._safe_text(
+                response,
+                "[class*='collect-count'], [class*='collect'] span, [class*='collectCount']",
+            )
         )
         comments = self._parse_count(
-            self._safe_text(response, "[class*='comment-count'], [class*='comment'] span, [class*='commentCount']")
+            self._safe_text(
+                response,
+                "[class*='comment-count'], [class*='comment'] span, [class*='commentCount']",
+            )
         )
         shares = self._parse_count(
-            self._safe_text(response, "[class*='share-count'], [class*='share'] span, [class*='shareCount']")
+            self._safe_text(
+                response, "[class*='share-count'], [class*='share'] span, [class*='shareCount']"
+            )
         )
 
         cover_img_url = image_urls[0] if image_urls else ""
@@ -565,6 +589,7 @@ class XhsSpider(BasePlatformSpider):
         new WeakSet(), new WeakMap(), new RegExp(...), new Date(...) 等。
         使用括号匹配确保正确处理嵌套。
         """
+
         def _find_matching_paren(s: str, start: int) -> int:
             depth = 0
             in_str = False
@@ -614,7 +639,7 @@ class XhsSpider(BasePlatformSpider):
                 if paren_end < 0:
                     offset = abs_start + m.end()
                     continue
-                result = result[:abs_start] + replacement + result[paren_end + 1:]
+                result = result[:abs_start] + replacement + result[paren_end + 1 :]
                 offset = abs_start + len(replacement)
             raw = result
         return raw
@@ -658,9 +683,11 @@ class XhsSpider(BasePlatformSpider):
                 while json_start < len(txt) and txt[json_start] in " \t":
                     json_start += 1
                 if json_start >= len(txt) or txt[json_start] != "{":
-                    if json_start < len(txt) and txt[json_start:json_start+9] == "undefined":
+                    if json_start < len(txt) and txt[json_start : json_start + 9] == "undefined":
                         try:
-                            self.logger.debug("XhsSpider: __INITIAL_STATE__=undefined，页面数据未加载")
+                            self.logger.debug(
+                                "XhsSpider: __INITIAL_STATE__=undefined，页面数据未加载"
+                            )
                         except Exception:
                             pass
                     continue
@@ -694,10 +721,10 @@ class XhsSpider(BasePlatformSpider):
                 if depth != 0:
                     continue
                 raw = txt[json_start:json_end]
-                raw = re.sub(r'\bundefined\b', 'null', raw)
-                raw = re.sub(r'\bNaN\b', 'null', raw)
-                raw = re.sub(r'\bInfinity\b', '"Infinity"', raw)
-                raw = re.sub(r'\b-Infinity\b', '"-Infinity"', raw)
+                raw = re.sub(r"\bundefined\b", "null", raw)
+                raw = re.sub(r"\bNaN\b", "null", raw)
+                raw = re.sub(r"\bInfinity\b", '"Infinity"', raw)
+                raw = re.sub(r"\b-Infinity\b", '"-Infinity"', raw)
                 raw = self._strip_js_constructors(raw)
                 try:
                     state = json.loads(raw)
@@ -712,8 +739,8 @@ class XhsSpider(BasePlatformSpider):
                 try:
                     for m in re.finditer(r"JSON\.parse\(['\"](.+)['\"]\)", txt[idx:]):
                         raw_json = m.group(1)
-                        if raw_json.endswith(")") :
-                            raw_json = raw_json[:raw_json.rfind(")")]
+                        if raw_json.endswith(")"):
+                            raw_json = raw_json[: raw_json.rfind(")")]
                         raw_json = raw_json.replace('\\"', '"').replace("\\'", "'")
                         decoded = json.loads(raw_json)
                         if isinstance(decoded, dict):
@@ -783,7 +810,9 @@ class XhsSpider(BasePlatformSpider):
                     if not cover_img_url:
                         info_list = cover.get("infoList", [])
                         if info_list:
-                            best = max(info_list, key=lambda x: x.get("width", 0) * x.get("height", 0))
+                            best = max(
+                                info_list, key=lambda x: x.get("width", 0) * x.get("height", 0)
+                            )
                             cover_img_url = best.get("url", "")
                 elif isinstance(cover, str) and cover:
                     cover_img_url = cover
@@ -826,7 +855,9 @@ class XhsSpider(BasePlatformSpider):
                 note_detail_map = state.get("note", {}).get("noteDetailMap", {})
             if not note_detail_map:
                 return None
-            detail_key = note_id if note_id in note_detail_map else next(iter(note_detail_map), None)
+            detail_key = (
+                note_id if note_id in note_detail_map else next(iter(note_detail_map), None)
+            )
             if not detail_key:
                 return None
             note_obj = note_detail_map[detail_key]
@@ -1002,7 +1033,7 @@ class XhsSpider(BasePlatformSpider):
             profile_link = profile_links[0] if profile_links else None
             if profile_link and hasattr(profile_link, "attrib"):
                 href = profile_link.attrib.get("href", "")
-                m = re.search(r'/user/profile/([0-9a-fA-F]{16,32})', href)
+                m = re.search(r"/user/profile/([0-9a-fA-F]{16,32})", href)
                 if m:
                     logger.info(f"XhsSpider: got uid from profile link: {m.group(1)}")
                     return m.group(1)
@@ -1013,7 +1044,7 @@ class XhsSpider(BasePlatformSpider):
             all_links = page.css("a[href*='profile']")
             for link in all_links[:10]:
                 href = link.attrib.get("href", "") if hasattr(link, "attrib") else ""
-                m = re.search(r'/user/profile/(\w{10,30})', href)
+                m = re.search(r"/user/profile/(\w{10,30})", href)
                 if m:
                     logger.info(f"XhsSpider: got uid from link: {m.group(1)}")
                     return m.group(1)
@@ -1079,11 +1110,18 @@ class XhsSpider(BasePlatformSpider):
                         c["path"] = "/"
                     cookie_list.append(c)
                 else:
-                    cookie_list.append({"name": name, "value": str(val), "domain": ".xiaohongshu.com", "path": "/"})
+                    cookie_list.append(
+                        {"name": name, "value": str(val), "domain": ".xiaohongshu.com", "path": "/"}
+                    )
         elif isinstance(self.cookies, list):
             for c in self.cookies:
                 if isinstance(c, dict) and c.get("name"):
-                    item = {"name": c["name"], "value": c.get("value", ""), "domain": ".xiaohongshu.com", "path": "/"}
+                    item = {
+                        "name": c["name"],
+                        "value": c.get("value", ""),
+                        "domain": ".xiaohongshu.com",
+                        "path": "/",
+                    }
                     if c.get("domain"):
                         item["domain"] = c["domain"]
                     if c.get("path"):
@@ -1137,6 +1175,7 @@ class XhsSpider(BasePlatformSpider):
             import asyncio
 
             from capabilities.scrapling.spiders.db_sink import update_platform_uid
+
             try:
                 loop = asyncio.get_event_loop()
                 if not loop.is_running():
@@ -1200,10 +1239,10 @@ class XhsSpider(BasePlatformSpider):
     def _extract_note_id(url: str) -> str:
         """从 URL 中提取 note_id。"""
         patterns = [
-            r'xiaohongshu\.com/explore/([0-9a-fA-F]{24})',
-            r'xiaohongshu\.com/discovery/item/([0-9a-fA-F]{24})',
-            r'xiaohongshu\.com/note/([0-9a-fA-F]{24})',
-            r'/note/([0-9a-fA-F]{24})',
+            r"xiaohongshu\.com/explore/([0-9a-fA-F]{24})",
+            r"xiaohongshu\.com/discovery/item/([0-9a-fA-F]{24})",
+            r"xiaohongshu\.com/note/([0-9a-fA-F]{24})",
+            r"/note/([0-9a-fA-F]{24})",
         ]
         for pat in patterns:
             m = re.search(pat, url)
@@ -1225,10 +1264,14 @@ class XhsSpider(BasePlatformSpider):
             title_text = ""
             title_els = response.css("title")
             if title_els:
-                title_text = (title_els[0].text or "").lower() if hasattr(title_els[0], "text") else ""
+                title_text = (
+                    (title_els[0].text or "").lower() if hasattr(title_els[0], "text") else ""
+                )
             if "登录" in title_text or "login" in title_text or "signin" in title_text:
                 return True
-            login_els = response.css("[class*='login-modal'], [class*='qrcode'], [class*='sign-in']")
+            login_els = response.css(
+                "[class*='login-modal'], [class*='qrcode'], [class*='sign-in']"
+            )
             if login_els and len(login_els) >= 1:
                 return True
         except Exception:

@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # 动作类型
 # ──────────────────────────────────────────────
 
+
 class BridgeAction:
     COLLECT_LINK = "collect_link"
     SEND_LATEST = "send_latest"
@@ -169,6 +170,7 @@ def _classify_intent(text: str) -> tuple[str, dict[str, Any]]:
 # 核心桥
 # ──────────────────────────────────────────────
 
+
 class WeChatAgentBridge:
     """微信消息 → 智能体 桥接器。
 
@@ -210,7 +212,8 @@ class WeChatAgentBridge:
         except Exception as e:
             logger.error(f"[WeChatAgentBridge] 处理消息出错: {e}")
             await self._send_reply(
-                from_user_id, context_token,
+                from_user_id,
+                context_token,
                 f"处理时出错: {str(e)[:100]}",
             )
         finally:
@@ -238,9 +241,7 @@ class WeChatAgentBridge:
 
         return BridgeResult(action=BridgeAction.PLAIN_REPLY, reply="")
 
-    async def _handle_collect(
-        self, params: dict[str, Any], from_user_id: str
-    ) -> BridgeResult:
+    async def _handle_collect(self, params: dict[str, Any], from_user_id: str) -> BridgeResult:
         """处理链接采集：调用 work_collector 入库。"""
         url = params.get("url", "")
         platform = params.get("platform", "auto")
@@ -252,16 +253,17 @@ class WeChatAgentBridge:
             )
 
         try:
+            from datetime import UTC, datetime
+
+            from app.db.models import PublishedContentPerformance
+            from app.db.session import AsyncSessionLocal
+            from app.services.performance_collector import compute_performance_score
             from app.services.work_collector import (
+                _clean_share_text,
                 collect_from_url,
                 detect_platform,
                 get_last_collect_errors,
-                _clean_share_text,
             )
-            from app.services.performance_collector import compute_performance_score
-            from app.db.session import AsyncSessionLocal
-            from app.db.models import PublishedContentPerformance
-            from datetime import UTC, datetime
 
             cleaned_url = _clean_share_text(url)
             if platform == "auto" or not platform:
@@ -280,13 +282,15 @@ class WeChatAgentBridge:
                     data={"url": url, "errors": errors},
                 )
 
-            score = compute_performance_score({
-                "likes": result.get("likes", 0),
-                "collects": result.get("collects", 0),
-                "comments": result.get("comments", 0),
-                "shares": result.get("shares", 0),
-                "author_fans": result.get("author_fans", 1),
-            })
+            score = compute_performance_score(
+                {
+                    "likes": result.get("likes", 0),
+                    "collects": result.get("collects", 0),
+                    "comments": result.get("comments", 0),
+                    "shares": result.get("shares", 0),
+                    "author_fans": result.get("author_fans", 1),
+                }
+            )
 
             async with AsyncSessionLocal() as db:
                 record = PublishedContentPerformance(
@@ -315,7 +319,15 @@ class WeChatAgentBridge:
             title = result.get("title", "无标题")
             likes = result.get("likes", 0)
             collects = result.get("collects", 0)
-            platform_label = {"xiaohongshu": "小红书", "douyin": "抖音", "bilibili": "B站", "wechat_mp": "微信公众号", "instagram": "Instagram", "threads": "Threads", "web": "网页"}.get(platform, platform)
+            platform_label = {
+                "xiaohongshu": "小红书",
+                "douyin": "抖音",
+                "bilibili": "B站",
+                "wechat_mp": "微信公众号",
+                "instagram": "Instagram",
+                "threads": "Threads",
+                "web": "网页",
+            }.get(platform, platform)
 
             reply = (
                 f"已采集到AI数据分析中\n"
@@ -370,9 +382,7 @@ class WeChatAgentBridge:
                 reply=f"读取最近文案失败：{str(e)[:100]}",
             )
 
-    async def _handle_agent_chat(
-        self, text: str, from_user_id: str
-    ) -> BridgeResult:
+    async def _handle_agent_chat(self, text: str, from_user_id: str) -> BridgeResult:
         """处理智能体对话：调用 ChatAgent.process()。"""
         try:
             from app.agents.chat_agent import ChatAgent
@@ -478,6 +488,7 @@ class WeChatAgentBridge:
             content = resp.get("content", "")
             if content:
                 import json
+
                 try:
                     data = json.loads(content)
                     if isinstance(data, dict) and data.get("summary"):
@@ -490,9 +501,7 @@ class WeChatAgentBridge:
             logger.warning(f"[WeChatAgentBridge] LLM 简单回复失败: {e}")
             return "收到，我稍后处理。"
 
-    async def _send_reply(
-        self, to_user_id: str, context_token: str, text: str
-    ) -> None:
+    async def _send_reply(self, to_user_id: str, context_token: str, text: str) -> None:
         """通过微信机器人发送回复。"""
         try:
             from app.rpa.wechat_bot_engine import get_wechat_engine
@@ -504,7 +513,9 @@ class WeChatAgentBridge:
                 return
 
             if not context_token:
-                context_token = engine._client.get_context_token(to_user_id) if engine._client else ""
+                context_token = (
+                    engine._client.get_context_token(to_user_id) if engine._client else ""
+                )
 
             if not context_token:
                 logger.warning(f"[WeChatAgentBridge] 无 {to_user_id} 的 context_token，无法回复")
@@ -537,6 +548,7 @@ def get_or_create_bridge(platform_user_id: str) -> WeChatAgentBridge:
         _bridge_registry[platform_user_id] = bridge
 
         from app.rpa.wechat_bot_engine import get_wechat_engine
+
         engine = get_wechat_engine(platform_user_id)
         engine.add_message_callback(bridge.on_message)
 
@@ -550,6 +562,7 @@ def remove_bridge(platform_user_id: str) -> None:
     if platform_user_id in _bridge_registry:
         bridge = _bridge_registry.pop(platform_user_id)
         from app.rpa.wechat_bot_engine import get_wechat_engine
+
         engine = get_wechat_engine(platform_user_id)
         engine.remove_message_callback(bridge.on_message)
         logger.info(f"[WeChatAgentBridge] 已移除用户 {platform_user_id} 的桥")

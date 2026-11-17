@@ -15,14 +15,19 @@
 import asyncio
 import base64
 import logging
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
-from app.rpa.wechat_bot_engine import WeChatBotEngine, BotStatus, get_wechat_engine
-from capabilities.rpa.wechat_agent_bridge import get_or_create_bridge, remove_bridge, _bridge_registry
+from app.rpa.wechat_bot_engine import BotStatus, WeChatBotEngine, get_wechat_engine
+from capabilities.rpa.wechat_agent_bridge import (
+    _bridge_registry,
+    get_or_create_bridge,
+    remove_bridge,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,18 +36,22 @@ router = APIRouter(prefix="/api/wechat", tags=["WeChat Bot"])
 
 # ==================== 请求/响应模型 ====================
 
+
 class StartRequest(BaseModel):
     """启动请求（预留扩展）"""
+
     pass
 
 
 class StopRequest(BaseModel):
     """停止请求"""
+
     pass
 
 
 class SendMessageRequest(BaseModel):
     """发送消息请求"""
+
     to_user_id: str = Field(..., description="目标微信用户ID", min_length=1)
     content: str = Field(..., description="消息内容", min_length=1)
     context_token: str = Field("", description="会话令牌(可选，不传则从缓存获取)")
@@ -50,6 +59,7 @@ class SendMessageRequest(BaseModel):
 
 class PushContentRequest(BaseModel):
     """推送内容请求"""
+
     to_user_id: str = Field(..., description="目标微信用户ID")
     title: str = Field("", description="标题(可选)")
     text: str = Field("", description="正文内容")
@@ -60,6 +70,7 @@ class PushContentRequest(BaseModel):
 
 class SendFileRequest(BaseModel):
     """发送文件请求"""
+
     to_user_id: str = Field(..., description="目标微信用户ID", min_length=1)
     file_base64: str = Field(..., description="文件base64编码", min_length=1)
     file_ext: str = Field("mp4", description="文件扩展名(mp4/pdf/docx等)")
@@ -68,6 +79,7 @@ class SendFileRequest(BaseModel):
 
 
 # ==================== RESTful API 接口 ====================
+
 
 @router.post("/start")
 async def start_service(
@@ -83,19 +95,11 @@ async def start_service(
         engine = get_wechat_engine(user_id)
 
         if engine.is_running:
-            return {
-                "success": True,
-                "data": engine.state.to_dict(),
-                "message": "服务已在运行中"
-            }
+            return {"success": True, "data": engine.state.to_dict(), "message": "服务已在运行中"}
 
         await engine.start()
 
-        return {
-            "success": True,
-            "data": engine.state.to_dict(),
-            "message": "服务已启动，等待扫码"
-        }
+        return {"success": True, "data": engine.state.to_dict(), "message": "服务已启动，等待扫码"}
 
     except Exception as e:
         logger.error(f"[API] 启动服务失败: {e}")
@@ -112,19 +116,11 @@ async def stop_service(
         engine = get_wechat_engine(user_id)
 
         if not engine.is_running:
-            return {
-                "success": True,
-                "data": engine.state.to_dict(),
-                "message": "服务未运行"
-            }
+            return {"success": True, "data": engine.state.to_dict(), "message": "服务未运行"}
 
         await engine.stop()
 
-        return {
-            "success": True,
-            "data": engine.state.to_dict(),
-            "message": "服务已停止"
-        }
+        return {"success": True, "data": engine.state.to_dict(), "message": "服务已停止"}
 
     except Exception as e:
         logger.error(f"[API] 停止服务失败: {e}")
@@ -147,12 +143,11 @@ async def get_status(user_id: str = Depends(get_current_user)):
                     "has_typing_ticket": bool(sess.typing_ticket),
                 }
             state_data["cached_sessions"] = sessions_info
-            state_data["ilink_user_id"] = engine._client._credentials.ilink_user_id if engine._client._credentials else None
+            state_data["ilink_user_id"] = (
+                engine._client._credentials.ilink_user_id if engine._client._credentials else None
+            )
 
-        return {
-            "success": True,
-            "data": state_data
-        }
+        return {"success": True, "data": state_data}
 
     except Exception as e:
         logger.error(f"[API] 查询状态失败: {e}")
@@ -165,7 +160,9 @@ async def get_qrcode(user_id: str = Depends(get_current_user)):
     try:
         engine = get_wechat_engine(user_id)
 
-        logger.info(f"[API] get_qrcode - user={user_id}, running: {engine.is_running}, status: {engine.state.status.value}")
+        logger.info(
+            f"[API] get_qrcode - user={user_id}, running: {engine.is_running}, status: {engine.state.status.value}"
+        )
 
         qr_info = await engine.get_qrcode()
 
@@ -174,9 +171,9 @@ async def get_qrcode(user_id: str = Depends(get_current_user)):
             "data": {
                 "qrcode": qr_info.get("qrcode", ""),
                 "status": qr_info.get("status", ""),
-                "expires_in": qr_info.get("expires_in", 120)
+                "expires_in": qr_info.get("expires_in", 120),
             },
-            "message": qr_info.get("message")
+            "message": qr_info.get("message"),
         }
 
         return result
@@ -209,20 +206,19 @@ async def send_message(
             context_token = await engine._client.ensure_context_token(request.to_user_id)
 
         if not context_token:
-            raise HTTPException(status_code=400, detail="无法获取 context_token（getconfig 也未返回），可能需要对方先发一条消息")
+            raise HTTPException(
+                status_code=400,
+                detail="无法获取 context_token（getconfig 也未返回），可能需要对方先发一条消息",
+            )
 
         success = await engine.send_text(
             to_user_id=request.to_user_id.strip(),
             context_token=context_token,
-            text=request.content.strip()
+            text=request.content.strip(),
         )
 
         if success:
-            return {
-                "success": True,
-                "data": {"sent": True},
-                "message": "消息发送成功"
-            }
+            return {"success": True, "data": {"sent": True}, "message": "消息发送成功"}
         else:
             raise HTTPException(status_code=500, detail="消息发送失败")
 
@@ -243,13 +239,7 @@ async def get_messages(
         engine = get_wechat_engine(user_id)
         messages = engine.get_recent_messages(limit=limit)
 
-        return {
-            "success": True,
-            "data": {
-                "messages": messages,
-                "total": len(messages)
-            }
-        }
+        return {"success": True, "data": {"messages": messages, "total": len(messages)}}
 
     except Exception as e:
         logger.error(f"[API] 获取消息列表失败: {e}")
@@ -273,7 +263,10 @@ async def push_content(
             context_token = await engine._client.ensure_context_token(request.to_user_id)
 
         if not context_token:
-            raise HTTPException(status_code=400, detail="无法获取 context_token（getconfig 也未返回），可能需要对方先发一条消息")
+            raise HTTPException(
+                status_code=400,
+                detail="无法获取 context_token（getconfig 也未返回），可能需要对方先发一条消息",
+            )
 
         results = {"text_sent": False, "images_sent": 0, "images_failed": 0}
 
@@ -290,9 +283,7 @@ async def push_content(
                 full_text = full_text[:3997] + "..."
 
             success = await engine.send_text(
-                to_user_id=request.to_user_id,
-                context_token=context_token,
-                text=full_text
+                to_user_id=request.to_user_id, context_token=context_token, text=full_text
             )
             results["text_sent"] = success
 
@@ -307,10 +298,11 @@ async def push_content(
                     ext = "png"
 
                     if url.startswith("/uploads/"):
-                        from pathlib import Path
                         import os as _os
+                        from pathlib import Path
+
                         _base = Path(_os.environ.get("UPLOAD_DIR", "uploads"))
-                        rel = url[len("/uploads/"):]
+                        rel = url[len("/uploads/") :]
                         fp = _base / rel
                         if fp.exists():
                             image_data = fp.read_bytes()
@@ -324,10 +316,15 @@ async def push_content(
                             continue
                     else:
                         import aiohttp
+
                         async with aiohttp.ClientSession() as session:
-                            async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                            async with session.get(
+                                url, timeout=aiohttp.ClientTimeout(total=30)
+                            ) as resp:
                                 if resp.status != 200:
-                                    logger.warning(f"[API] 下载图片失败: {url}, status={resp.status}")
+                                    logger.warning(
+                                        f"[API] 下载图片失败: {url}, status={resp.status}"
+                                    )
                                     results["images_failed"] += 1
                                     continue
                                 image_data = await resp.read()
@@ -342,7 +339,7 @@ async def push_content(
                             to_user_id=request.to_user_id,
                             context_token=context_token,
                             image_data=image_data,
-                            file_ext=ext
+                            file_ext=ext,
                         )
                         if img_success:
                             results["images_sent"] += 1
@@ -372,13 +369,15 @@ async def push_content(
                         ext = "png"
 
                     image_data = base64.b64decode(raw)
-                    logger.info(f"[API] 发送base64图片 {i+1}/{len(request.images_base64)}, size={len(image_data)}bytes")
+                    logger.info(
+                        f"[API] 发送base64图片 {i+1}/{len(request.images_base64)}, size={len(image_data)}bytes"
+                    )
 
                     img_success = await engine.send_image(
                         to_user_id=request.to_user_id,
                         context_token=context_token,
                         image_data=image_data,
-                        file_ext=ext
+                        file_ext=ext,
                     )
                     if img_success:
                         results["images_sent"] += 1
@@ -397,7 +396,7 @@ async def push_content(
         return {
             "success": True,
             "data": results,
-            "message": f"推送完成: 文本={'✅' if results['text_sent'] else '❌'}, 图片={results['images_sent']}张成功{results['images_failed']}张失败"
+            "message": f"推送完成: 文本={'✅' if results['text_sent'] else '❌'}, 图片={results['images_sent']}张成功{results['images_failed']}张失败",
         }
 
     except HTTPException:
@@ -424,7 +423,10 @@ async def send_file(
             context_token = await engine._client.ensure_context_token(request.to_user_id)
 
         if not context_token:
-            raise HTTPException(status_code=400, detail="无法获取 context_token（getconfig 也未返回），可能需要对方先发一条消息")
+            raise HTTPException(
+                status_code=400,
+                detail="无法获取 context_token（getconfig 也未返回），可能需要对方先发一条消息",
+            )
 
         raw = request.file_base64
         if "," in raw:
@@ -444,7 +446,7 @@ async def send_file(
             return {
                 "success": True,
                 "data": {"sent": True, "file_name": request.file_name, "size": len(file_data)},
-                "message": f"文件 {request.file_name} 发送成功"
+                "message": f"文件 {request.file_name} 发送成功",
             }
         else:
             raise HTTPException(status_code=500, detail="文件发送失败")
@@ -457,6 +459,7 @@ async def send_file(
 
 
 # ==================== WebSocket 接口 ====================
+
 
 @router.websocket("/ws/status")
 async def websocket_status(websocket: WebSocket):
@@ -473,6 +476,7 @@ async def websocket_status(websocket: WebSocket):
 
     try:
         from app.security import decode_user_id
+
         user_id = decode_user_id(token)
     except Exception:
         await websocket.close(code=4001, reason="Invalid token")
@@ -488,7 +492,7 @@ async def websocket_status(websocket: WebSocket):
             message = {
                 "type": "status_change",
                 "data": state.to_dict(),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
             await websocket.send_json(message)
         except Exception as e:
@@ -500,7 +504,7 @@ async def websocket_status(websocket: WebSocket):
         current_state = {
             "type": "initial_status",
             "data": engine.state.to_dict(),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         await websocket.send_json(current_state)
 
@@ -519,6 +523,7 @@ async def websocket_status(websocket: WebSocket):
 
 # ==================== 健康检查 ====================
 
+
 @router.get("/health")
 async def health_check(user_id: str = Depends(get_current_user)):
     """健康检查端点"""
@@ -536,23 +541,18 @@ async def health_check(user_id: str = Depends(get_current_user)):
         if engine.state.start_time:
             uptime = int((datetime.now() - engine.state.start_time).total_seconds())
 
-        return {
-            "status": status,
-            "uptime": uptime,
-            "bot_status": engine.state.status.value
-        }
+        return {"status": status, "uptime": uptime, "bot_status": engine.state.status.value}
 
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 # ==================== 智能体融合接口 ====================
 
+
 class AgentBridgeRequest(BaseModel):
     """智能体桥开关请求"""
+
     enabled: bool = Field(..., description="是否启用智能体融合")
 
 
@@ -601,6 +601,7 @@ async def get_agent_bridge_status(
 
 
 # ==================== 注册路由到应用 ====================
+
 
 def register_routes(app):
     """

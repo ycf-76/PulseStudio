@@ -45,21 +45,31 @@ async def get_session(session_id: str) -> dict[str, Any] | None:
         return _session_to_dict(session) if session else None
 
 
-async def create_session(user_id: str, title: str = "新会话", work_id: str | None = None, folder_id: str | None = None) -> dict[str, Any]:
+async def create_session(
+    user_id: str, title: str = "新会话", work_id: str | None = None, folder_id: str | None = None
+) -> dict[str, Any]:
     async with AsyncSessionLocal() as db:
         user = await db.get(User, user_id)
         if user is None:
             user = User(id=user_id, nickname=f"user_{user_id[:8]}")
             db.add(user)
             await db.flush()
-        session = ChatSession(user_id=user_id, title=title or "新会话", work_id=work_id, folder_id=folder_id or "")
+        session = ChatSession(
+            user_id=user_id, title=title or "新会话", work_id=work_id, folder_id=folder_id or ""
+        )
         db.add(session)
         await db.commit()
         await db.refresh(session)
         return _session_to_dict(session)
 
 
-async def ensure_session(session_id: str, user_id: str, title: str = "新会话", work_id: str | None = None, folder_id: str | None = None) -> dict[str, Any]:
+async def ensure_session(
+    session_id: str,
+    user_id: str,
+    title: str = "新会话",
+    work_id: str | None = None,
+    folder_id: str | None = None,
+) -> dict[str, Any]:
     async with AsyncSessionLocal() as db:
         session = await db.get(ChatSession, session_id)
         if session is None:
@@ -68,14 +78,22 @@ async def ensure_session(session_id: str, user_id: str, title: str = "新会话"
                 user = User(id=user_id, nickname=f"user_{user_id[:8]}")
                 db.add(user)
                 await db.flush()
-            session = ChatSession(id=session_id, user_id=user_id, title=title or "新会话", work_id=work_id, folder_id=folder_id or "")
+            session = ChatSession(
+                id=session_id,
+                user_id=user_id,
+                title=title or "新会话",
+                work_id=work_id,
+                folder_id=folder_id or "",
+            )
             db.add(session)
             await db.commit()
             await db.refresh(session)
         return _session_to_dict(session)
 
 
-async def list_sessions(user_id: str, limit: int = 50, work_id: str | None = None) -> list[dict[str, Any]]:
+async def list_sessions(
+    user_id: str, limit: int = 50, work_id: str | None = None
+) -> list[dict[str, Any]]:
     async with AsyncSessionLocal() as db:
         stmt = select(ChatSession).where(ChatSession.user_id == user_id)
         if work_id is not None:
@@ -192,11 +210,21 @@ async def mark_cut_plan_resolved(
     """
     if db is not None:
         return await _mark_cut_plan_resolved_on(
-            db, session_id, resolved, error, version, asset_url,
+            db,
+            session_id,
+            resolved,
+            error,
+            version,
+            asset_url,
         )
     async with AsyncSessionLocal() as own_db:
         return await _mark_cut_plan_resolved_on(
-            own_db, session_id, resolved, error, version, asset_url,
+            own_db,
+            session_id,
+            resolved,
+            error,
+            version,
+            asset_url,
         )
 
 
@@ -274,13 +302,25 @@ async def mark_awaiting_status_resolved(
     """
     if db is not None:
         return await _mark_awaiting_status_resolved_on(
-            db, session_id, awaiting_status, resolved_key,
-            resolved_value, error_key, error, pending_values,
+            db,
+            session_id,
+            awaiting_status,
+            resolved_key,
+            resolved_value,
+            error_key,
+            error,
+            pending_values,
         )
     async with AsyncSessionLocal() as own_db:
         return await _mark_awaiting_status_resolved_on(
-            own_db, session_id, awaiting_status, resolved_key,
-            resolved_value, error_key, error, pending_values,
+            own_db,
+            session_id,
+            awaiting_status,
+            resolved_key,
+            resolved_value,
+            error_key,
+            error,
+            pending_values,
         )
 
 
@@ -356,7 +396,9 @@ async def get_last_session_id(session_id: str) -> str | None:
 
 
 async def get_recent_messages(
-    session_id: str, limit: int = 6, offset: int = 0,
+    session_id: str,
+    limit: int = 6,
+    offset: int = 0,
 ) -> list[dict[str, Any]]:
     """取最近 N 条消息（倒序取+反转），支持 offset 跳过最新消息。
 
@@ -375,9 +417,6 @@ async def get_recent_messages(
         messages = [_message_to_dict(m) for m in result.all()]
         messages.reverse()
         return messages
-
-
-
 
 
 async def update_session(session_id: str, title: str | None = None) -> dict[str, Any] | None:
@@ -436,12 +475,9 @@ _SUMMARY_META_KEY = "conversation_summary"
 async def count_messages(session_id: str) -> int:
     """统计会话消息总数（不含 system/summary 消息）。"""
     async with AsyncSessionLocal() as db:
-        stmt = (
-            select(ChatMessage)
-            .where(
-                ChatMessage.session_id == session_id,
-                ChatMessage.role.in_(["user", "assistant"]),
-            )
+        stmt = select(ChatMessage).where(
+            ChatMessage.session_id == session_id,
+            ChatMessage.role.in_(["user", "assistant"]),
         )
         result = await db.scalars(stmt)
         return len(result.all())
@@ -485,7 +521,9 @@ async def get_session_summary_meta(session_id: str) -> dict | None:
 
 
 async def save_session_summary(
-    session_id: str, summary_text: str, summarized_count: int,
+    session_id: str,
+    summary_text: str,
+    summarized_count: int,
 ) -> None:
     """保存/更新会话摘要。summarized_count 记录本次摘要覆盖了多少条消息。"""
     async with AsyncSessionLocal() as db:

@@ -23,10 +23,15 @@ _METHOD_TEXT = (
 )
 _BRIEF = "节奏收紧，别拖沓"
 
-_TL = {"fps": 8, "duration": 1.0, "canvas": {"w": 320, "h": 568},
-       "speech": [{"text": "你好世界", "start": 0.0, "end": 1.0}],
-       "beats": [{"id": "b1", "t_start": 0.0, "t_end": 1.0,
-                  "title": "开场", "visual_task": "方块右移"}]}
+_TL = {
+    "fps": 8,
+    "duration": 1.0,
+    "canvas": {"w": 320, "h": 568},
+    "speech": [{"text": "你好世界", "start": 0.0, "end": 1.0}],
+    "beats": [
+        {"id": "b1", "t_start": 0.0, "t_end": 1.0, "title": "开场", "visual_task": "方块右移"}
+    ],
+}
 
 _SCENE_HTML = (
     '<div id="p" style="position:absolute;left:0;top:0;width:10px;height:10px"></div>'
@@ -45,19 +50,21 @@ class FakeLLM:
         self.calls = []
 
     async def chat(self, messages, response_format=None):
-        self.calls.append({
-            "messages": [dict(m) for m in messages],
-            "response_format": response_format,
-        })
+        self.calls.append(
+            {
+                "messages": [dict(m) for m in messages],
+                "response_format": response_format,
+            }
+        )
         assert self.script, "FakeLLM 脚本耗尽：循环未按预期终结"
         return self.script.pop(0)
 
 
 def _make_video(tmp_path, with_audio=True):
     from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+
     src = tmp_path / "src.mp4"
-    cmd = [resolve_ffmpeg(), "-y", "-f", "lavfi",
-           "-i", "testsrc=duration=1.0:size=320x568:rate=8"]
+    cmd = [resolve_ffmpeg(), "-y", "-f", "lavfi", "-i", "testsrc=duration=1.0:size=320x568:rate=8"]
     if with_audio:
         cmd += ["-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-c:a", "aac"]
     cmd += ["-t", "1.0", "-pix_fmt", "yuv420p", str(src)]
@@ -67,11 +74,11 @@ def _make_video(tmp_path, with_audio=True):
 
 def _install_stubs(monkeypatch, review_result=None):
     """在 studio_agent 命名空间内钉 whisper/渲染/质检/预览。"""
+
     def fake_transcribe(audio_path, model_size="small", language=None):
         return [TranscribeSegment(text="你好世界", start=0.0, end=1.0, words=[])]
 
-    def fake_render(scene_html, frames_dir, duration, fps, width, height,
-                    audio_path, out_video):
+    def fake_render(scene_html, frames_dir, duration, fps, width, height, audio_path, out_video):
         Path(out_video).write_bytes(b"fake mp4")
         return SimpleNamespace(count=8, fps=float(fps), elapsed=0.1)
 
@@ -101,8 +108,9 @@ def _install_sse_recorder(monkeypatch):
     events = []
 
     async def fake_publish(workflow_id, event_type, payload, turn_id=None):
-        events.append({"workflow_id": workflow_id, "event_type": event_type,
-                       "turn_id": turn_id, **payload})
+        events.append(
+            {"workflow_id": workflow_id, "event_type": event_type, "turn_id": turn_id, **payload}
+        )
 
     monkeypatch.setattr(sse_mod.sse_bus, "publish", fake_publish)
     return events
@@ -180,12 +188,17 @@ async def test_fail_path_yields_error_and_fail_phase(monkeypatch, tmp_path):
     events = _install_sse_recorder(monkeypatch)
     llm = FakeLLM([_action("fail", reason="视频源无法解析")])
 
-    chunks = [c async for c in VideoStudioSkill().execute({
-        "video_path": str(_make_video(tmp_path)),
-        "method": {"text": _METHOD_TEXT},
-        "llm": llm,
-        "_workflow_id": "wf-fail",
-    })]
+    chunks = [
+        c
+        async for c in VideoStudioSkill().execute(
+            {
+                "video_path": str(_make_video(tmp_path)),
+                "method": {"text": _METHOD_TEXT},
+                "llm": llm,
+                "_workflow_id": "wf-fail",
+            }
+        )
+    ]
 
     assert len(chunks) == 1
     chunk = chunks[0]
@@ -197,21 +210,31 @@ async def test_fail_path_yields_error_and_fail_phase(monkeypatch, tmp_path):
 
 async def test_missing_video_yields_failure_without_llm(monkeypatch, tmp_path):
     monkeypatch.setattr(sw, "_STUDIO_ROOT", tmp_path)
-    chunks = [c async for c in VideoStudioSkill().execute({
-        "video_path": str(tmp_path / "nope.mp4"),
-    })]
+    chunks = [
+        c
+        async for c in VideoStudioSkill().execute(
+            {
+                "video_path": str(tmp_path / "nope.mp4"),
+            }
+        )
+    ]
     assert len(chunks) == 1 and chunks[0]["success"] is False
     assert "not found" in chunks[0]["error"]
 
 
 async def test_bad_method_ref_yields_failure(monkeypatch, tmp_path):
     monkeypatch.setattr(sw, "_STUDIO_ROOT", tmp_path)
-    chunks = [c async for c in VideoStudioSkill().execute({
-        "video_path": str(_make_video(tmp_path)),
-        "method": {"builtin": "no_such_method"},
-        "llm": FakeLLM([]),
-        "_workflow_id": "wf-bad-method",
-    })]
+    chunks = [
+        c
+        async for c in VideoStudioSkill().execute(
+            {
+                "video_path": str(_make_video(tmp_path)),
+                "method": {"builtin": "no_such_method"},
+                "llm": FakeLLM([]),
+                "_workflow_id": "wf-bad-method",
+            }
+        )
+    ]
     assert chunks[0]["success"] is False
     assert "no_such_method" in chunks[0]["error"]
 
@@ -227,6 +250,7 @@ async def test_input_schema_defaults():
 
 async def test_skill_registered_in_registry():
     from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
+
     ensure_builtin_skills_registered()
     cls = SkillRegistry.instance().get("edit", "video_studio")
     assert cls is VideoStudioSkill

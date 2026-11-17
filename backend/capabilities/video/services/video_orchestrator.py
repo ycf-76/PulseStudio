@@ -125,6 +125,7 @@ _STORYBOARD_PROMPT = """你是一个专业的短视频导演。根据以下参�
 
 # ═══ 2. 参考图解析（迁自 multi_image_video._resolve_image_urls） ══
 
+
 async def resolve_reference_images(
     image_asset_ids: list[str],
     user_id: str,
@@ -135,10 +136,11 @@ async def resolve_reference_images(
       - urls: /uploads/assets/... 相对 URL（存库格式）
       - local_paths: 对应的本地绝对路径（已验证存在），不存在时为空字符串
     """
-    from app.db.models import ImageAsset
-    from app.services.asset_library import url_to_local_path
     from sqlalchemy import select
+
+    from app.db.models import ImageAsset
     from app.db.session import AsyncSessionLocal
+    from app.services.asset_library import url_to_local_path
 
     urls: list[str] = []
     local_paths: list[str] = []
@@ -171,10 +173,11 @@ async def resolve_video_assets(
       - urls: /uploads/videos/... 相对 URL（存库格式）
       - local_paths: 对应的本地绝对路径（已验证存在），不存在时为空字符串
     """
-    from app.db.models import VideoAsset
-    from app.services.asset_library import url_to_local_path
     from sqlalchemy import select
+
+    from app.db.models import VideoAsset
     from app.db.session import AsyncSessionLocal
+    from app.services.asset_library import url_to_local_path
 
     urls: list[str] = []
     local_paths: list[str] = []
@@ -199,6 +202,7 @@ async def resolve_video_assets(
 
 # ═══ 3. VL 理解（迁自 multi_image_video._vl_understand_images） ══
 
+
 async def vl_understand_images(
     image_urls: list[str],
 ) -> dict[str, Any] | None:
@@ -215,8 +219,8 @@ async def vl_understand_images(
         return None
 
     try:
-        from capabilities.image_gen.adapters.qwen_vl import QwenVLAdapter
         from app.services.model_tier import PipelineStage, get_tier_router
+        from capabilities.image_gen.adapters.qwen_vl import QwenVLAdapter
 
         router = get_tier_router()
         vl_model = router.resolve(PipelineStage.VL_UNDERSTAND, "vl")
@@ -251,8 +255,7 @@ async def vl_understand_images(
         raw = result.get("content", "")
         if isinstance(raw, list):
             text = "".join(
-                item.get("text", "") if isinstance(item, dict) else str(item)
-                for item in raw
+                item.get("text", "") if isinstance(item, dict) else str(item) for item in raw
             )
         else:
             text = str(raw or "")
@@ -260,7 +263,9 @@ async def vl_understand_images(
         json_end = text.rfind("}") + 1
         if json_start >= 0 and json_end > json_start:
             scene_desc = json.loads(text[json_start:json_end])
-            logger.info(f"[video_orchestrator] VL 理解完成：{len(scene_desc.get('scenes', []))} 个场景")
+            logger.info(
+                f"[video_orchestrator] VL 理解完成：{len(scene_desc.get('scenes', []))} 个场景"
+            )
             return scene_desc
 
         logger.warning(f"[video_orchestrator] VL 返回非 JSON，跳过：{text[:200]}")
@@ -298,7 +303,9 @@ def _enforce_character_lock(
         try:
             if scene_description and isinstance(scene_description, dict):
                 anchor = scene_description.get("character_anchor")
-                logger.debug(f"[video_orchestrator] VL character_anchor 类型: {type(anchor)}, 值: {str(anchor)[:200]}")
+                logger.debug(
+                    f"[video_orchestrator] VL character_anchor 类型: {type(anchor)}, 值: {str(anchor)[:200]}"
+                )
 
                 if isinstance(anchor, dict):
                     face_features = anchor.get("face_features", "")
@@ -326,7 +333,9 @@ def _enforce_character_lock(
                 else:
                     logger.debug(f"[video_orchestrator] character_anchor 格式异常: {type(anchor)}")
         except Exception as e:
-            logger.warning(f"[video_orchestrator] 提取 character_anchor 时出错: {e}，将尝试其他方式")
+            logger.warning(
+                f"[video_orchestrator] 提取 character_anchor 时出错: {e}，将尝试其他方式"
+            )
 
     # 步骤 2：如果仍没有，尝试从第一镜提取
     if not character_lock or len(character_lock.strip()) < 10:
@@ -380,6 +389,7 @@ def _enforce_character_lock(
 
     return storyboard
 
+
 async def generate_storyboard(
     scene_description: dict[str, Any] | None,
     user_prompt: str,
@@ -412,8 +422,8 @@ async def generate_storyboard(
     )
 
     try:
-        from app.engine.factory import get_deepseek_llm
         from app.adapters.llm_base import llm_prompt_to_text
+        from app.engine.factory import get_deepseek_llm
         from app.services.model_tier import PipelineStage, get_tier_router
 
         router = get_tier_router()
@@ -436,7 +446,9 @@ async def generate_storyboard(
                 try:
                     storyboard = _enforce_character_lock(storyboard, scene_description)
                 except Exception as e:
-                    logger.error(f"[video_orchestrator] ⚠️ _enforce_character_lock 出错: {e}，跳过角色锚定注入")
+                    logger.error(
+                        f"[video_orchestrator] ⚠️ _enforce_character_lock 出错: {e}，跳过角色锚定注入"
+                    )
 
                 logger.info(f"[video_orchestrator] 分镜脚本生成：{len(storyboard['shots'])} 镜")
                 return storyboard
@@ -446,8 +458,30 @@ async def generate_storyboard(
     except Exception as e:
         logger.warning(f"[video_orchestrator] LLM 编排失败，使用默认分镜：{e}")
         num_shots = max(1, int(target_duration / shot_duration))
-        _default_motions = ["缓慢推进", "横向跟移", "微俯缓推", "低机位跟拍", "静物微动", "匀速横移", "拉远", "环绕", "仰拍推进", "手持晃动"]
-        _default_captions = ["开场引入", "场景展开", "细节特写", "人物互动", "氛围营造", "情绪推进", "转折过渡", "高潮呈现", "收束回味", "离场留白"]
+        _default_motions = [
+            "缓慢推进",
+            "横向跟移",
+            "微俯缓推",
+            "低机位跟拍",
+            "静物微动",
+            "匀速横移",
+            "拉远",
+            "环绕",
+            "仰拍推进",
+            "手持晃动",
+        ]
+        _default_captions = [
+            "开场引入",
+            "场景展开",
+            "细节特写",
+            "人物互动",
+            "氛围营造",
+            "情绪推进",
+            "转折过渡",
+            "高潮呈现",
+            "收束回味",
+            "离场留白",
+        ]
         return {
             "title": user_prompt[:30],
             "total_shots": num_shots,
@@ -467,6 +501,7 @@ async def generate_storyboard(
 
 
 # ═══ 5. 编排入口：mock/real 双模分发 ═══════════════════════
+
 
 class VideoOrchestrator:
     """编排入口。W4 REST 接口与未来 ReAct 薄封装都走这里。
@@ -538,9 +573,7 @@ class VideoOrchestrator:
                 ratio=ratio,
             )
             storyboard["degradation"] = ["mock 模式：规则拆镜，未调用 LLM"]
-            logger.info(
-                f"[video_orchestrator] mock 分镜：{len(storyboard.get('shots', []))} 镜"
-            )
+            logger.info(f"[video_orchestrator] mock 分镜：{len(storyboard.get('shots', []))} 镜")
             return storyboard
 
         # real 模式：VL → LLM 编排（可传入已算好的 scene_description 跳过 VL）

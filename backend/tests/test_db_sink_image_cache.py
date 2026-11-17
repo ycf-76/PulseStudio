@@ -24,6 +24,7 @@ from capabilities.scrapling.spiders import db_sink  # noqa: E402
 # 1. _pick_images：单张封面不得覆盖已有图集
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_pick_images_keeps_old_gallery_when_new_has_only_cover():
     """测试: _pick_images
     场景: 老记录有 6 张本地详情图，本次同步只带回封面一张（详情页没取到）
@@ -128,6 +129,7 @@ def test_pick_images_accepts_missing_old_value():
 # 2. _pick_cover：外链封面不得覆盖已缓存的本地封面
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_pick_cover_prefers_local_value():
     """测试: _pick_cover
     场景: 旧封面是本地文件，新封面是外链（缓存失败）
@@ -157,6 +159,7 @@ def test_pick_cover_keeps_old_when_new_is_empty():
 # ═══════════════════════════════════════════════════════════════════
 # 3. _cache_detail_images：外链本地化，本地路径原样返回
 # ═══════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.asyncio
 async def test_cache_detail_images_skips_download_for_local_paths():

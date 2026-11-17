@@ -23,8 +23,12 @@ router = APIRouter(prefix="/api/agents", tags=["agents"])
 class AgentCreateRequest(BaseModel):
     agent_id: str = Field(description="Agent 唯一标识，如 'my_expert'")
     role: str = Field(default="", description="角色描述，如 '美食分析专家'")
-    llm_model: str = Field(default="deepseek-v3", description="LLM 模型，如 deepseek-v3 / deepseek-r1")
-    skills: list[str] = Field(default_factory=list, description="技能名称列表，如 ['trending_search', 'viral_analysis']")
+    llm_model: str = Field(
+        default="deepseek-v3", description="LLM 模型，如 deepseek-v3 / deepseek-r1"
+    )
+    skills: list[str] = Field(
+        default_factory=list, description="技能名称列表，如 ['trending_search', 'viral_analysis']"
+    )
     executor: str = Field(default="loop", description="执行器类型：loop 或 single_shot")
     max_iterations: int = Field(default=5, description="最大迭代次数（loop 执行器生效）")
     prompt_template: str = Field(default="", description="系统提示词模板，支持 {topic} 占位符")
@@ -67,19 +71,26 @@ async def list_agents(
     registry = get_agent_registry()
     agents = registry.list_agents()
     from app.agents.registry import BUILTIN_AGENTS
+
     builtin_ids = set(BUILTIN_AGENTS.keys())
     result = []
     for a in agents:
-        result.append(AgentSummary(
-            agent_id=a.agent_id,
-            role=a.role,
-            llm_model=a.llm_model,
-            skills=a.skills or [],
-            executor=a.executor,
-            max_iterations=a.max_iterations,
-            prompt_template=a.prompt_template[:200] + "..." if len(a.prompt_template) > 200 else a.prompt_template,
-            is_builtin=(a.agent_id in builtin_ids),
-        ))
+        result.append(
+            AgentSummary(
+                agent_id=a.agent_id,
+                role=a.role,
+                llm_model=a.llm_model,
+                skills=a.skills or [],
+                executor=a.executor,
+                max_iterations=a.max_iterations,
+                prompt_template=(
+                    a.prompt_template[:200] + "..."
+                    if len(a.prompt_template) > 200
+                    else a.prompt_template
+                ),
+                is_builtin=(a.agent_id in builtin_ids),
+            )
+        )
     return StandardResponse(data=result)
 
 
@@ -94,16 +105,18 @@ async def get_agent(
     a = registry.get(agent_id)
     if a is None:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' 不存在")
-    return StandardResponse(data=AgentSummary(
-        agent_id=a.agent_id,
-        role=a.role,
-        llm_model=a.llm_model,
-        skills=a.skills or [],
-        executor=a.executor,
-        max_iterations=a.max_iterations,
-        prompt_template=a.prompt_template,
-        is_builtin=True,
-    ))
+    return StandardResponse(
+        data=AgentSummary(
+            agent_id=a.agent_id,
+            role=a.role,
+            llm_model=a.llm_model,
+            skills=a.skills or [],
+            executor=a.executor,
+            max_iterations=a.max_iterations,
+            prompt_template=a.prompt_template,
+            is_builtin=True,
+        )
+    )
 
 
 @router.post("", status_code=201)
@@ -167,9 +180,9 @@ async def update_agent(
     if existing is None:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' 不存在")
 
-    updated = existing.model_copy(update={
-        k: v for k, v in req.model_dump().items() if v is not None
-    })
+    updated = existing.model_copy(
+        update={k: v for k, v in req.model_dump().items() if v is not None}
+    )
     registry.register(updated)
     logger.info(f"[agents-api] updated agent: {agent_id}")
 
@@ -237,6 +250,7 @@ async def delete_agent(
     registry = get_agent_registry()
 
     from app.agents.registry import BUILTIN_AGENTS
+
     if agent_id in BUILTIN_AGENTS:
         raise HTTPException(status_code=403, detail=f"内置 Agent '{agent_id}' 不可删除")
 

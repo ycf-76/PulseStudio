@@ -41,7 +41,9 @@ img { max-width: 100%; }
 def md_to_html(md_text: str) -> str:
     extensions = ["tables", "fenced_code", "toc", "nl2br"]
     body = markdown.markdown(md_text, extensions=extensions)
-    return f"<!DOCTYPE html><html><head><meta charset='utf-8'>{_CSS}</head><body>{body}</body></html>"
+    return (
+        f"<!DOCTYPE html><html><head><meta charset='utf-8'>{_CSS}</head><body>{body}</body></html>"
+    )
 
 
 def convert(
@@ -87,8 +89,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Markdown format converter")
     parser.add_argument("-i", "--input", required=True, help="Markdown file path")
     parser.add_argument("-o", "--output", required=True, help="Output file path")
-    parser.add_argument("--format", default=None, choices=["html", "pdf", "png"],
-                        help="Output format (auto-detected from extension)")
+    parser.add_argument(
+        "--format",
+        default=None,
+        choices=["html", "pdf", "png"],
+        help="Output format (auto-detected from extension)",
+    )
 
     args = parser.parse_args()
     fmt = args.format or Path(args.output).suffix.lstrip(".")

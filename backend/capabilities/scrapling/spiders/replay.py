@@ -118,9 +118,7 @@ class ReplayResult:
 
     @property
     def detail_note_ids(self) -> list[str]:
-        return [
-            str(getattr(req, "meta", {}).get("note_id", "")) for req in self.requests
-        ]
+        return [str(getattr(req, "meta", {}).get("note_id", "")) for req in self.requests]
 
 
 async def run_parse(

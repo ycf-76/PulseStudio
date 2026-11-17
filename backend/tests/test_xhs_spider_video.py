@@ -45,7 +45,12 @@ class _FakeLink:
 class _FakeResponse:
     """极简 Response 替身：只实现 spider 实际用到的 css() 与 url/meta。"""
 
-    def __init__(self, html: str, url: str = "https://www.xiaohongshu.com/user/profile/x", meta: dict | None = None) -> None:
+    def __init__(
+        self,
+        html: str,
+        url: str = "https://www.xiaohongshu.com/user/profile/x",
+        meta: dict | None = None,
+    ) -> None:
         self.url = url
         self.meta = meta or {}
         self._html = html
@@ -75,6 +80,7 @@ def _spider() -> XhsSpider:
 # 1. _extract_video_url：新版字典结构 + mp4 优先
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_extract_video_url_prefers_mp4_over_higher_res_fmp4():
     """测试: _extract_video_url
     场景: 新版 stream 为画质档位字典，1080p 是 fmp4，720p 是 mp4
@@ -83,12 +89,28 @@ def test_extract_video_url_prefers_mp4_over_higher_res_fmp4():
     video = {
         "media": {
             "stream": {
-                "EF4": [{"height": 720, "size": 3948062, "format": "mp4",
-                         "masterUrl": "https://cdn/720p.mp4"}],
-                "EF5": [{"height": 720, "size": 2763608, "format": "fmp4",
-                         "masterUrl": "https://cdn/720p.m4s"},
-                        {"height": 1080, "size": 2721419, "format": "fmp4",
-                         "masterUrl": "https://cdn/1080p.m4s"}],
+                "EF4": [
+                    {
+                        "height": 720,
+                        "size": 3948062,
+                        "format": "mp4",
+                        "masterUrl": "https://cdn/720p.mp4",
+                    }
+                ],
+                "EF5": [
+                    {
+                        "height": 720,
+                        "size": 2763608,
+                        "format": "fmp4",
+                        "masterUrl": "https://cdn/720p.m4s",
+                    },
+                    {
+                        "height": 1080,
+                        "size": 2721419,
+                        "format": "fmp4",
+                        "masterUrl": "https://cdn/1080p.m4s",
+                    },
+                ],
                 "EF6": [],
                 "EF7": [],
             }
@@ -106,7 +128,12 @@ def test_extract_video_url_picks_highest_mp4_when_multiple():
         "media": {
             "stream": [
                 {"height": 540, "size": 100, "format": "mp4", "masterUrl": "https://cdn/540p.mp4"},
-                {"height": 1080, "size": 100, "format": "mp4", "masterUrl": "https://cdn/1080p.mp4"},
+                {
+                    "height": 1080,
+                    "size": 100,
+                    "format": "mp4",
+                    "masterUrl": "https://cdn/1080p.mp4",
+                },
             ]
         }
     }
@@ -117,12 +144,17 @@ def test_extract_video_url_picks_highest_mp4_when_multiple():
 # 2. _extract_video_url：旧版列表结构
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_extract_video_url_supports_legacy_list_stream():
     """测试: _extract_video_url
     场景: 旧版 media.stream 直接是列表
     预期: 正常取到 masterUrl
     """
-    video = {"media": {"stream": [{"height": 720, "format": "mp4", "masterUrl": "https://cdn/legacy.mp4"}]}}
+    video = {
+        "media": {
+            "stream": [{"height": 720, "format": "mp4", "masterUrl": "https://cdn/legacy.mp4"}]
+        }
+    }
     assert XhsSpider._extract_video_url(video) == "https://cdn/legacy.mp4"
 
 
@@ -131,8 +163,13 @@ def test_extract_video_url_uses_backup_urls_when_master_missing():
     场景: 变体没有 masterUrl，只有 backupUrls
     预期: 退到 backupUrls[0]
     """
-    video = {"media": {"stream": {"EF4": [{"height": 720, "format": "mp4",
-                                          "backupUrls": ["https://cdn/backup.mp4"]}]}}}
+    video = {
+        "media": {
+            "stream": {
+                "EF4": [{"height": 720, "format": "mp4", "backupUrls": ["https://cdn/backup.mp4"]}]
+            }
+        }
+    }
     assert XhsSpider._extract_video_url(video) == "https://cdn/backup.mp4"
 
 
@@ -140,15 +177,20 @@ def test_extract_video_url_uses_backup_urls_when_master_missing():
 # 3. _extract_video_url：mediaV2 兜底与空值
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_extract_video_url_falls_back_to_media_v2_json():
     """测试: _extract_video_url
     场景: media.stream 为空，mediaV2 是 JSON 字符串且其 stream 带地址
     预期: 解析 mediaV2 后取到地址
     """
-    media_v2 = json.dumps({
-        "video": {"width": "1842", "height": "1080"},
-        "stream": {"EF4": [{"height": 720, "format": "mp4", "masterUrl": "https://cdn/v2.mp4"}]},
-    })
+    media_v2 = json.dumps(
+        {
+            "video": {"width": "1842", "height": "1080"},
+            "stream": {
+                "EF4": [{"height": 720, "format": "mp4", "masterUrl": "https://cdn/v2.mp4"}]
+            },
+        }
+    )
     video = {"media": {"stream": {}}, "mediaV2": media_v2}
     assert XhsSpider._extract_video_url(video) == "https://cdn/v2.mp4"
 
@@ -174,6 +216,7 @@ def test_extract_video_url_ignores_broken_media_v2():
 # 4. _build_note_detail_url：必须带 xsec_token
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_build_note_detail_url_includes_xsec_token():
     """测试: _build_note_detail_url
     场景: 主页卡片带 xsecToken
@@ -198,6 +241,7 @@ def test_build_note_detail_url_without_token():
 # 5. 主页卡片解析保留 type 与 xsecToken
 # ═══════════════════════════════════════════════════════════════════
 
+
 def test_extract_notes_from_initial_state_keeps_type_and_token():
     """测试: _extract_notes_from_initial_state
     场景: 主页 __INITIAL_STATE__ 含一条视频卡片
@@ -205,16 +249,24 @@ def test_extract_notes_from_initial_state_keeps_type_and_token():
     """
     state = {
         "user": {
-            "notes": [[{
-                "noteCard": {
-                    "noteId": "6ae6e0f1000000001802936e",
-                    "type": "video",
-                    "xsecToken": "AB5vm0TTj38oDkrQCCrbswFaRFu1ikOfeXb26sHCUvK8M=",
-                    "displayTitle": "人生终究是一个人走完的",
-                    "cover": {"url": "https://cdn/cover.jpg"},
-                    "interactInfo": {"likedCount": "1200", "collectedCount": "300", "commentCount": "45"},
-                }
-            }]]
+            "notes": [
+                [
+                    {
+                        "noteCard": {
+                            "noteId": "6ae6e0f1000000001802936e",
+                            "type": "video",
+                            "xsecToken": "AB5vm0TTj38oDkrQCCrbswFaRFu1ikOfeXb26sHCUvK8M=",
+                            "displayTitle": "人生终究是一个人走完的",
+                            "cover": {"url": "https://cdn/cover.jpg"},
+                            "interactInfo": {
+                                "likedCount": "1200",
+                                "collectedCount": "300",
+                                "commentCount": "45",
+                            },
+                        }
+                    }
+                ]
+            ]
         }
     }
     notes = _spider()._extract_notes_from_initial_state(_FakeResponse(json.dumps(state)))
@@ -239,12 +291,28 @@ async def test_parse_yields_detail_request_for_every_note():
     """
     state = {
         "user": {
-            "notes": [[
-                {"noteCard": {"noteId": "vid1", "type": "video", "xsecToken": "tok1",
-                              "displayTitle": "视频笔记", "cover": {"url": "https://cdn/v.jpg"}}},
-                {"noteCard": {"noteId": "img1", "type": "normal", "xsecToken": "tok2",
-                              "displayTitle": "图文笔记", "cover": {"url": "https://cdn/i.jpg"}}},
-            ]]
+            "notes": [
+                [
+                    {
+                        "noteCard": {
+                            "noteId": "vid1",
+                            "type": "video",
+                            "xsecToken": "tok1",
+                            "displayTitle": "视频笔记",
+                            "cover": {"url": "https://cdn/v.jpg"},
+                        }
+                    },
+                    {
+                        "noteCard": {
+                            "noteId": "img1",
+                            "type": "normal",
+                            "xsecToken": "tok2",
+                            "displayTitle": "图文笔记",
+                            "cover": {"url": "https://cdn/i.jpg"},
+                        }
+                    },
+                ]
+            ]
         }
     }
     spider = _spider()
@@ -274,8 +342,9 @@ async def test_parse_marks_login_failed_when_redirected_to_login_page():
     前端因此误报"同步完成"，用户以为同步过了其实一条都没写。
     """
     spider = _spider()
-    login_response = _FakeResponse("<html><body>请登录</body></html>",
-                                   url="https://www.xiaohongshu.com/login")
+    login_response = _FakeResponse(
+        "<html><body>请登录</body></html>", url="https://www.xiaohongshu.com/login"
+    )
     results = [out async for out in spider.parse(login_response)]
     assert results == []
     assert spider.login_failed is True
@@ -297,6 +366,7 @@ async def test_parse_note_keeps_card_data_when_detail_has_no_state():
 # 6. 主页滚动翻页：首屏之外的笔记也要重新同步
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.asyncio
 async def test_parse_merges_dom_notes_outside_first_screen():
     """测试: parse
@@ -307,15 +377,28 @@ async def test_parse_merges_dom_notes_outside_first_screen():
     已过期的图文图集也就永远刷不回来。
     """
     state = {
-        "user": {"notes": [[
-            {"noteCard": {"noteId": "6ae6e0f1000000001802936e", "type": "normal", "xsecToken": "tokA",
-                          "displayTitle": "首屏笔记", "cover": {"url": "https://cdn/a.jpg"}}},
-        ]]}
+        "user": {
+            "notes": [
+                [
+                    {
+                        "noteCard": {
+                            "noteId": "6ae6e0f1000000001802936e",
+                            "type": "normal",
+                            "xsecToken": "tokA",
+                            "displayTitle": "首屏笔记",
+                            "cover": {"url": "https://cdn/a.jpg"},
+                        }
+                    },
+                ]
+            ]
+        }
     }
-    response = _FakeResponse(json.dumps(state)).with_links([
-        "/explore/6ae6e0f1000000001802936e?xsec_token=tokA&xsec_source=pc_user",
-        "/explore/5f1a2b3c0000000001000001?xsec_token=tokB&xsec_source=pc_user",
-    ])
+    response = _FakeResponse(json.dumps(state)).with_links(
+        [
+            "/explore/6ae6e0f1000000001802936e?xsec_token=tokA&xsec_source=pc_user",
+            "/explore/5f1a2b3c0000000001000001?xsec_token=tokB&xsec_source=pc_user",
+        ]
+    )
 
     results = [out async for out in _spider().parse(response)]
     requests = [r for r in results if not isinstance(r, dict)]
@@ -373,6 +456,7 @@ async def test_scroll_home_scrolls_configured_times():
 # 7. 详情页按需拉取：已落本地图集的笔记不再重复拉
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.parametrize(
     ("cached", "expected"),
     [
@@ -402,14 +486,27 @@ async def test_parse_skips_detail_request_for_cached_notes(monkeypatch):
     本地文件不会过期，重复拉详情页纯属浪费。
     """
     state = {
-        "user": {"notes": [[
-            {"noteCard": {"noteId": "6ae6e0f1000000001802936e", "type": "normal", "xsecToken": "tokA",
-                          "displayTitle": "已同步笔记", "cover": {"url": "https://cdn/a.jpg"}}},
-        ]]}
+        "user": {
+            "notes": [
+                [
+                    {
+                        "noteCard": {
+                            "noteId": "6ae6e0f1000000001802936e",
+                            "type": "normal",
+                            "xsecToken": "tokA",
+                            "displayTitle": "已同步笔记",
+                            "cover": {"url": "https://cdn/a.jpg"},
+                        }
+                    },
+                ]
+            ]
+        }
     }
-    response = _FakeResponse(json.dumps(state)).with_links([
-        "/explore/6ae6e0f1000000001802936e?xsec_token=tokA&xsec_source=pc_user",
-    ])
+    response = _FakeResponse(json.dumps(state)).with_links(
+        [
+            "/explore/6ae6e0f1000000001802936e?xsec_token=tokA&xsec_source=pc_user",
+        ]
+    )
 
     spider = _spider()
 

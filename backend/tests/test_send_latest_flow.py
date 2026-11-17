@@ -1,9 +1,13 @@
 import pytest
-pytest.skip("app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现",
+    allow_module_level=True,
+)
 
 """Regression tests for “send me the latest draft” follow-ups."""
-from app.api.routers.chat_agent import _is_bare_analysis_request
 from app.agents.top_planner import ToolName, _keyword_fallback
+from app.api.routers.chat_agent import _is_bare_analysis_request
 from app.engine.harness.executor.loop import LoopExecutor
 from capabilities.rpa.wechat_agent_bridge import BridgeAction, _classify_intent
 

@@ -26,8 +26,7 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.models import Base, ChatSession, ChatMessage, User
-from app.engine.schemas import Permission
+from app.db.models import Base, ChatMessage, ChatSession, User
 from app.engine.reactor.side_guard import (
     WRITE_PERMISSIONS,
     call_signature,
@@ -36,23 +35,28 @@ from app.engine.reactor.side_guard import (
     is_write_call,
     write_permissions_of,
 )
+from app.engine.schemas import Permission
 from app.services import side_session
-
 
 # ---------- 纯函数 ----------
 
+
 def test_write_permissions_exact_set():
-    assert WRITE_PERMISSIONS == frozenset({
-        Permission.FILE_WRITE,
-        Permission.BASH_EXEC,
-        Permission.NET_HTTP_POST,
-        Permission.SKILL_IMPORT,
-        Permission.SKILL_MANAGE,
-        Permission.BROWSER_AUTOMATE,
-        Permission.WORK_WRITE,
-    })
+    assert WRITE_PERMISSIONS == frozenset(
+        {
+            Permission.FILE_WRITE,
+            Permission.BASH_EXEC,
+            Permission.NET_HTTP_POST,
+            Permission.SKILL_IMPORT,
+            Permission.SKILL_MANAGE,
+            Permission.BROWSER_AUTOMATE,
+            Permission.WORK_WRITE,
+        }
+    )
     # 只读白名单不含其中任何项
-    assert not (WRITE_PERMISSIONS & {Permission.FILE_READ, Permission.NET_HTTP_GET, Permission.XHS_SEARCH})
+    assert not (
+        WRITE_PERMISSIONS & {Permission.FILE_READ, Permission.NET_HTTP_GET, Permission.XHS_SEARCH}
+    )
 
 
 def test_write_permissions_of_intersects():
@@ -80,7 +84,8 @@ def test_is_write_call_undeclared_skill_defaults_read():
 
 def test_describe_write_request_contains_tool_and_cn():
     desc = describe_write_request(
-        "file_write", {"path": "a/b.txt", "content": "x"},
+        "file_write",
+        {"path": "a/b.txt", "content": "x"},
         {Permission.FILE_WRITE},
     )
     assert "file_write" in desc
@@ -101,6 +106,7 @@ def test_declared_permissions_for_skill_readonly_skill():
 
 
 # ---------- ReactorSession 拦截 ----------
+
 
 def _llm_script(*steps: dict):
     """stream_chat 跨 step 依序吐 steps（每次调用消耗一个响应）。"""
@@ -153,11 +159,17 @@ def _make_session(llm, side_session_id="side1"):
     from app.engine.governance.guardian import GuardianAction
 
     guardian = AsyncMock()
-    guardian.check = AsyncMock(return_value=SimpleNamespace(
-        action=GuardianAction.ALLOW, risk_level="low",
-        hint=None, user_hint=None, confirmation_prompt=None,
-        reason="", to_observation=lambda: "",
-    ))
+    guardian.check = AsyncMock(
+        return_value=SimpleNamespace(
+            action=GuardianAction.ALLOW,
+            risk_level="low",
+            hint=None,
+            user_hint=None,
+            confirmation_prompt=None,
+            reason="",
+            to_observation=lambda: "",
+        )
+    )
     session._guardian = guardian
     session.side_session_id = side_session_id
     return session
@@ -165,10 +177,18 @@ def _make_session(llm, side_session_id="side1"):
 
 @pytest.mark.asyncio
 async def test_reactor_pauses_on_side_write(monkeypatch):
-    session = _make_session(_llm_script(
-        {"thought": "写文件", "tool_calls": [{"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}], "final": False},
-        {"thought": "done", "final": True, "output": {"summary": "ok"}},
-    ))
+    session = _make_session(
+        _llm_script(
+            {
+                "thought": "写文件",
+                "tool_calls": [
+                    {"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}
+                ],
+                "final": False,
+            },
+            {"thought": "done", "final": True, "output": {"summary": "ok"}},
+        )
+    )
     called = {}
 
     async def fake_set_pending_write(side_id, info):
@@ -194,10 +214,18 @@ async def test_reactor_pauses_on_side_write(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_main_session_not_guarded():
-    session = _make_session(_llm_script(
-        {"thought": "写文件", "tool_calls": [{"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}], "final": False},
-        {"thought": "done", "final": True, "output": {"summary": "ok"}},
-    ))
+    session = _make_session(
+        _llm_script(
+            {
+                "thought": "写文件",
+                "tool_calls": [
+                    {"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}
+                ],
+                "final": False,
+            },
+            {"thought": "done", "final": True, "output": {"summary": "ok"}},
+        )
+    )
     session.side_session_id = None  # 主会话
     result = await session.run("写文件")
     assert result.get("_awaiting_side_write_confirmation") is not True
@@ -207,11 +235,25 @@ async def test_main_session_not_guarded():
 @pytest.mark.asyncio
 async def test_allow_once_passes_exactly_once():
     sig = call_signature("file_write", {"path": "a.txt", "content": "hi"})
-    session = _make_session(_llm_script(
-        {"thought": "写文件", "tool_calls": [{"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}], "final": False},
-        {"thought": "再写一次", "tool_calls": [{"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}], "final": False},
-        {"thought": "done", "final": True, "output": {"summary": "ok"}},
-    ))
+    session = _make_session(
+        _llm_script(
+            {
+                "thought": "写文件",
+                "tool_calls": [
+                    {"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}
+                ],
+                "final": False,
+            },
+            {
+                "thought": "再写一次",
+                "tool_calls": [
+                    {"name": "file_write", "arguments": {"path": "a.txt", "content": "hi"}}
+                ],
+                "final": False,
+            },
+            {"thought": "done", "final": True, "output": {"summary": "ok"}},
+        )
+    )
     session._side_write_allow_once = sig
     result = await session.run("写文件")
     # 第一发放行，第二发再次拦截
@@ -221,16 +263,23 @@ async def test_allow_once_passes_exactly_once():
 
 @pytest.mark.asyncio
 async def test_readonly_tool_not_guarded():
-    session = _make_session(_llm_script(
-        {"thought": "读文件", "tool_calls": [{"name": "file_read", "arguments": {"path": "a.txt"}}], "final": False},
-        {"thought": "done", "final": True, "output": {"summary": "ok"}},
-    ))
+    session = _make_session(
+        _llm_script(
+            {
+                "thought": "读文件",
+                "tool_calls": [{"name": "file_read", "arguments": {"path": "a.txt"}}],
+                "final": False,
+            },
+            {"thought": "done", "final": True, "output": {"summary": "ok"}},
+        )
+    )
     result = await session.run("读一下文件")
     assert result.get("_awaiting_side_write_confirmation") is not True
     assert len(session._transport.calls) == 1
 
 
 # ---------- pending_write 服务 ----------
+
 
 @pytest.fixture()
 async def db_env(monkeypatch):
@@ -239,15 +288,29 @@ async def db_env(monkeypatch):
 
     async def _setup():
         async with engine.begin() as conn:
-            for t in [User.__table__, ChatSession.__table__, ChatMessage.__table__, Base.metadata.tables["side_snapshots"]]:
+            for t in [
+                User.__table__,
+                ChatSession.__table__,
+                ChatMessage.__table__,
+                Base.metadata.tables["side_snapshots"],
+            ]:
                 await conn.run_sync(t.create, checkfirst=True)
         async with sf() as db:
             db.add(User(id="u1", nickname="t"))
             db.add(ChatSession(id="main1", user_id="u1", kind="main"))
-            db.add(ChatSession(
-                id="side1", user_id="u1", kind="side", parent_session_id="main1",
-                side_meta={"status": "active", "has_side_effects": False, "pending_write": None},
-            ))
+            db.add(
+                ChatSession(
+                    id="side1",
+                    user_id="u1",
+                    kind="side",
+                    parent_session_id="main1",
+                    side_meta={
+                        "status": "active",
+                        "has_side_effects": False,
+                        "pending_write": None,
+                    },
+                )
+            )
             await db.commit()
 
     monkeypatch.setattr(side_session, "AsyncSessionLocal", sf)
@@ -258,7 +321,9 @@ async def db_env(monkeypatch):
 @pytest.mark.asyncio
 async def test_pending_write_roundtrip(db_env):
     await db_env()
-    await side_session.set_pending_write("side1", {"tool_name": "file_write", "arguments": {"path": "a"}})
+    await side_session.set_pending_write(
+        "side1", {"tool_name": "file_write", "arguments": {"path": "a"}}
+    )
     row = await side_session.get_side_session_row("side1")
     assert row["pending_write"]["tool_name"] == "file_write"
     assert row["has_side_effects"] is False

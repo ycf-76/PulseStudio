@@ -15,10 +15,10 @@ if str(BACKEND_ROOT) not in sys.path:
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///test_chat_session.db")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-db-test")
 
-from sqlalchemy import desc, select, func, event
+from sqlalchemy import desc, event, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.models import Base, ChatSession, ChatMessage, User
+from app.db.models import Base, ChatMessage, ChatSession, User
 
 
 async def main():
@@ -40,7 +40,9 @@ async def main():
             await conn.run_sync(t.create, checkfirst=True)
 
     sf = async_sessionmaker(
-        bind=engine, class_=AsyncSession, expire_on_commit=False,
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
     )
 
     passed = 0
@@ -253,6 +255,7 @@ async def main():
     try:
         # chat_session 服务用 AsyncSessionLocal（全局引擎），先在其上建表
         from app.db.session import engine as global_engine
+
         async with global_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
@@ -267,14 +270,14 @@ async def main():
         assert fetched is not None
         assert fetched["id"] == session_id
 
-        msg_dict = await chat_session.add_message(
-            session_id, "user", "帮我写一篇AI教育的文章"
-        )
+        msg_dict = await chat_session.add_message(session_id, "user", "帮我写一篇AI教育的文章")
         assert msg_dict["role"] == "user"
         assert msg_dict["content"] == "帮我写一篇AI教育的文章"
 
         msg_dict2 = await chat_session.add_message(
-            session_id, "assistant", "正在执行...",
+            session_id,
+            "assistant",
+            "正在执行...",
             agent_meta={"sessionId": session_id},
         )
         assert msg_dict2["agent_meta"]["sessionId"] == session_id
@@ -306,5 +309,6 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+
     success = asyncio.run(main())
     exit(0 if success else 1)

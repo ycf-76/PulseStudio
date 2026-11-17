@@ -65,6 +65,7 @@ class RedditSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             self._client = await create_async_client(
                 timeout=httpx.Timeout(30.0),
@@ -114,9 +115,7 @@ class RedditSource(ContentSource):
             logger.error(f"[reddit] failed to acquire token: {e}")
             raise RuntimeError(f"Reddit auth failed: {e}") from e
 
-    async def _api_get(
-        self, path: str, params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    async def _api_get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """带 token 的 GET 请求。"""
         await self._ensure_token()
         client = await self._ensure_client()
@@ -173,6 +172,7 @@ class RedditSource(ContentSource):
             published_at = ""
             if created_utc:
                 from datetime import datetime, timezone
+
                 published_at = datetime.fromtimestamp(created_utc, tz=timezone.utc).isoformat()
 
             tags = [f"r/{subreddit}"] if subreddit else []
@@ -227,10 +227,10 @@ class RedditSource(ContentSource):
 
         params = {
             "q": keyword,
-            "sort": "top",          # 按热度排序
-            "t": time_range,        # 时间范围
+            "sort": "top",  # 按热度排序
+            "t": time_range,  # 时间范围
             "limit": min(limit, 100),
-            "type": "link",         # 只要链接帖（过滤纯文字讨论）
+            "type": "link",  # 只要链接帖（过滤纯文字讨论）
         }
 
         try:
@@ -264,7 +264,7 @@ class RedditSource(ContentSource):
         """
         path = f"/r/{category}/top" if category else "/r/all/top"
         params = {
-            "t": "day",             # 今日热门
+            "t": "day",  # 今日热门
             "limit": min(limit, 100),
         }
 

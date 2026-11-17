@@ -8,7 +8,6 @@ from __future__ import annotations
 import re
 
 import pytest
-
 from helpers import (
     collect_openai_stream,
     extract_frontend_api_paths,
@@ -79,7 +78,10 @@ def test_protected_endpoints_reject_anonymous(anon_client, path: str):
     文档依据：backend/app/api/deps.py get_current_user。
     """
     resp = anon_client.get(path)
-    assert resp.status_code in (401, 403), f"{path} 未鉴权即可访问: {resp.status_code} {resp.text[:200]}"
+    assert resp.status_code in (
+        401,
+        403,
+    ), f"{path} 未鉴权即可访问: {resp.status_code} {resp.text[:200]}"
 
 
 def test_refresh_token_issues_working_token(base_url, auth, anon_client):
@@ -139,7 +141,16 @@ def test_providers_and_assignments_cover_core_agents(client):
     assert assignments.status_code == 200, assignments.text
     data = assignments.json()["data"]
     keys = {t["target_key"] for t in data["targets"]}
-    expected = {"search", "analyze", "copywrite", "image_plan", "image_gen", "image_review", "audit", "final_review"}
+    expected = {
+        "search",
+        "analyze",
+        "copywrite",
+        "image_plan",
+        "image_gen",
+        "image_review",
+        "audit",
+        "final_review",
+    }
     missing = expected - keys
     assert not missing, f"模型分配缺少核心智能体: {missing}；现有: {sorted(keys)}"
 
@@ -187,7 +198,11 @@ def test_chat_completions_unknown_model_reports_friendly_error(client):
     """
     chunks = collect_openai_stream(
         client,
-        {"model": "Not-A-Real-Model", "stream": True, "messages": [{"role": "user", "content": "hi"}]},
+        {
+            "model": "Not-A-Real-Model",
+            "stream": True,
+            "messages": [{"role": "user", "content": "hi"}],
+        },
         timeout=60.0,
     )
     blob = str(chunks)
@@ -235,7 +250,6 @@ def test_frontend_api_paths_all_exist_in_backend(client, repo_root):
             continue
         missing.setdefault(path, set()).add(source)
 
-    assert not missing, (
-        "以下前端路径在后端 openapi 中不存在（新增契约漂移）：\n"
-        + "\n".join(f"  {p}  <- {sorted(s)[:2]}" for p, s in sorted(missing.items()))
+    assert not missing, "以下前端路径在后端 openapi 中不存在（新增契约漂移）：\n" + "\n".join(
+        f"  {p}  <- {sorted(s)[:2]}" for p, s in sorted(missing.items())
     )

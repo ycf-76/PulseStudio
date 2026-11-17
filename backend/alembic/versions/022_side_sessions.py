@@ -10,8 +10,9 @@ Create Date: 2026-11-03
 2. 新建 side_snapshots 表（创建时对主会话上下文的一次性快照，一对一挂侧会话）。
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "022_side_sessions"
 down_revision = "021_local_video"

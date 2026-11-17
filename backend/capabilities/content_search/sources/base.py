@@ -70,6 +70,7 @@ def get_proxy_url() -> str:
     """
     try:
         from app.config import get_settings
+
         settings = get_settings()
         proxy = settings.http_proxy
     except Exception:
@@ -96,23 +97,23 @@ class TrendingContent:
     下游 analyze 节点不关心数据来自哪个平台。
     """
 
-    platform: str          # "reddit" | "hackernews" | "xiaohongshu" | ...
-    content_id: str        # 平台内容 ID
-    title: str             # 标题（中文译文；原文在 title_original）
-    summary: str           # 摘要（中文译文；原文在 summary_original）
-    content: str           # 正文（中文译文；原文在 content_original）
-    author: str            # 作者
-    url: str               # 原文链接
-    likes: int = 0         # 点赞/Upvote
-    comments: int = 0      # 评论数
-    shares: int = 0        # 转发/分享数
-    views: int = 0         # 浏览量（部分平台有）
-    collects: int = 0      # 收藏数（小红书有，其他平台默认0）
-    author_fans: int = 0   # 作者粉丝数（小红书/GitHub有，其他平台默认0）
-    cover_img: str = ""    # 封面图 URL（可选）
-    published_at: str = "" # ISO8601 发布时间
+    platform: str  # "reddit" | "hackernews" | "xiaohongshu" | ...
+    content_id: str  # 平台内容 ID
+    title: str  # 标题（中文译文；原文在 title_original）
+    summary: str  # 摘要（中文译文；原文在 summary_original）
+    content: str  # 正文（中文译文；原文在 content_original）
+    author: str  # 作者
+    url: str  # 原文链接
+    likes: int = 0  # 点赞/Upvote
+    comments: int = 0  # 评论数
+    shares: int = 0  # 转发/分享数
+    views: int = 0  # 浏览量（部分平台有）
+    collects: int = 0  # 收藏数（小红书有，其他平台默认0）
+    author_fans: int = 0  # 作者粉丝数（小红书/GitHub有，其他平台默认0）
+    cover_img: str = ""  # 封面图 URL（可选）
+    published_at: str = ""  # ISO8601 发布时间
     tags: list[str] = field(default_factory=list)  # 标签/版块
-    title_original: str = ""    # 标题原文（英文）
+    title_original: str = ""  # 标题原文（英文）
     summary_original: str = ""  # 摘要原文（英文）
     content_original: str = ""  # 正文原文（英文）
     raw: dict[str, Any] = field(default_factory=dict)  # 原始数据（诊断用）

@@ -59,6 +59,7 @@ def _load_capability_skill_modules() -> tuple[str, ...]:
     """从 capability.toml 读取能力 Skill 模块路径；toml 不存在则走硬编码兼容。"""
     try:
         from app.core.capability_loader import load_capability_skills
+
         cap_skills = load_capability_skills()
         if cap_skills:
             return tuple(cap_skills)
@@ -98,7 +99,11 @@ def ensure_builtin_skills_registered() -> None:
     """确保内置 Skill 模块已导入并完成 @register。"""
     for module_name in BUILTIN_SKILL_MODULES:
         importlib.import_module(module_name)
-    from app.core.prompt_skills import scan_and_register_prompt_skills, scan_and_register_user_prompt_skills
+    from app.core.prompt_skills import (
+        scan_and_register_prompt_skills,
+        scan_and_register_user_prompt_skills,
+    )
+
     scan_and_register_prompt_skills()
     scan_and_register_user_prompt_skills()
 
@@ -162,8 +167,7 @@ class SkillRegistry:
                 )
             self._skills[node_type][skill_name] = skill_cls
             logger.debug(
-                f"[SkillRegistry] registered: {node_type}.{skill_name} "
-                f"-> {skill_cls.__name__}"
+                f"[SkillRegistry] registered: {node_type}.{skill_name} " f"-> {skill_cls.__name__}"
             )
         return skill_cls
 
@@ -217,7 +221,21 @@ class SkillRegistry:
     def find_by_description(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         import jieba
 
-        query_words = set(jieba.cut(query)) - {" ", "\n", "的", "了", "是", "在", "和", "我", "要", "把", "被", "让", "用"}
+        query_words = set(jieba.cut(query)) - {
+            " ",
+            "\n",
+            "的",
+            "了",
+            "是",
+            "在",
+            "和",
+            "我",
+            "要",
+            "把",
+            "被",
+            "让",
+            "用",
+        }
         candidates: list[dict[str, Any]] = []
 
         for node_type, skills_map in self._skills.items():
@@ -227,8 +245,24 @@ class SkillRegistry:
                 display_name = getattr(skill_cls, "display_name", "") or ""
                 trigger_words = getattr(skill_cls, "trigger_words", []) or []
 
-                desc_words = set(jieba.cut(desc + " " + display_name + " " + " ".join(trigger_words)))
-                desc_words -= {" ", "\n", "的", "了", "是", "在", "和", "我", "要", "把", "被", "让", "用"}
+                desc_words = set(
+                    jieba.cut(desc + " " + display_name + " " + " ".join(trigger_words))
+                )
+                desc_words -= {
+                    " ",
+                    "\n",
+                    "的",
+                    "了",
+                    "是",
+                    "在",
+                    "和",
+                    "我",
+                    "要",
+                    "把",
+                    "被",
+                    "让",
+                    "用",
+                }
 
                 if not query_words or not desc_words:
                     continue
@@ -241,13 +275,15 @@ class SkillRegistry:
                 score = max(score, name_match * 0.8)
 
                 if score > 0:
-                    candidates.append({
-                        "skill": skill_cls,
-                        "name": name,
-                        "node_type": node_type,
-                        "description": desc[:100],
-                        "score": round(score, 3),
-                    })
+                    candidates.append(
+                        {
+                            "skill": skill_cls,
+                            "name": name,
+                            "node_type": node_type,
+                            "description": desc[:100],
+                            "score": round(score, 3),
+                        }
+                    )
 
         candidates.sort(key=lambda x: x["score"], reverse=True)
         return candidates[:top_k]
@@ -319,9 +355,7 @@ class SkillRegistry:
             logger.debug(f"[SkillRegistry] loaded third-party module: {module_name}")
             return module_name
         except Exception as e:
-            logger.exception(
-                f"[SkillRegistry] failed to load third-party skill {file_path}: {e}"
-            )
+            logger.exception(f"[SkillRegistry] failed to load third-party skill {file_path}: {e}")
             return None
 
     def reset(self) -> None:
@@ -340,7 +374,9 @@ class SkillRegistry:
                 del user_map[node_type]
             if not user_map:
                 del self._user_skills[user_id]
-            logger.debug(f"[SkillRegistry] unregistered user skill: user={user_id} {node_type}.{skill_name}")
+            logger.debug(
+                f"[SkillRegistry] unregistered user skill: user={user_id} {node_type}.{skill_name}"
+            )
             return True
 
         skills_map = self._skills.get(node_type)
@@ -348,12 +384,13 @@ class SkillRegistry:
             return False
         skill_cls = skills_map[skill_name]
         module_name = getattr(skill_cls, "__module__", "")
-        _hot_removable = (
-            module_name.startswith("_third_party_skill_")
-            or module_name.startswith("app.core.prompt_skills.")
+        _hot_removable = module_name.startswith("_third_party_skill_") or module_name.startswith(
+            "app.core.prompt_skills."
         )
         if not _hot_removable:
-            logger.warning(f"[SkillRegistry] cannot unregister builtin skill: {node_type}.{skill_name}")
+            logger.warning(
+                f"[SkillRegistry] cannot unregister builtin skill: {node_type}.{skill_name}"
+            )
             return False
         del skills_map[skill_name]
         if not skills_map:
@@ -369,7 +406,9 @@ def register(skill_cls: type[Skill]) -> type[Skill]:
     return SkillRegistry.instance().register(skill_cls)
 
 
-def get_skill_class(node_type: str, skill_name: str | None, user_id: str = "") -> type[Skill] | None:
+def get_skill_class(
+    node_type: str, skill_name: str | None, user_id: str = ""
+) -> type[Skill] | None:
     registry = _ensure_registry_loaded()
 
     if skill_name:

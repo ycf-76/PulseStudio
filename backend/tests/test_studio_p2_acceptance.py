@@ -100,8 +100,11 @@ def _ensure_llm_env(monkeypatch):
 def _git_snapshot() -> list[str]:
     """git status --porcelain 快照（过滤允许变动的路径）。"""
     proc = subprocess.run(
-        ["git", "status", "--porcelain"], cwd=str(BACKEND.parent),
-        capture_output=True, text=True, timeout=60,
+        ["git", "status", "--porcelain"],
+        cwd=str(BACKEND.parent),
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
     out = []
     for line in (proc.stdout or "").splitlines():
@@ -121,9 +124,9 @@ def git_freeze():
     yield
     after = set(_git_snapshot())
     drift = sorted(before ^ after)
-    assert not drift, (
-        "验收期间平台代码出现非预期改动（应只有 outputs/studio 产出）：\n"
-        + "\n".join(drift[:30]))
+    assert (
+        not drift
+    ), "验收期间平台代码出现非预期改动（应只有 outputs/studio 产出）：\n" + "\n".join(drift[:30])
 
 
 def _make_clip(tmp_path: Path) -> Path:
@@ -133,9 +136,19 @@ def _make_clip(tmp_path: Path) -> Path:
 
     clip = tmp_path / "clip15s.mp4"
     subprocess.run(
-        [resolve_ffmpeg(), "-y", "-i", str(SRC_VIDEO), "-t", "15",
-         "-pix_fmt", "yuv420p", str(clip)],
-        check=True, capture_output=True,
+        [
+            resolve_ffmpeg(),
+            "-y",
+            "-i",
+            str(SRC_VIDEO),
+            "-t",
+            "15",
+            "-pix_fmt",
+            "yuv420p",
+            str(clip),
+        ],
+        check=True,
+        capture_output=True,
     )
     assert clip.is_file() and clip.stat().st_size > 0, "15s 切片失败"
     return clip
@@ -153,23 +166,30 @@ def isolated_whisper(monkeypatch):
     def subprocess_transcribe(audio_path, model_size="small", language=None):
         code = _WHISPER_RUNNER % (BACKEND, Path(audio_path))
         proc = subprocess.run(
-            [sys.executable, "-c", code], cwd=str(BACKEND),
-            capture_output=True, text=True, timeout=900,
+            [sys.executable, "-c", code],
+            cwd=str(BACKEND),
+            capture_output=True,
+            text=True,
+            timeout=900,
         )
         for line in (proc.stdout or "").splitlines():
             if line.startswith("@@TRANSCRIPT@@"):
-                raw = json.loads(line[len("@@TRANSCRIPT@@"):])
+                raw = json.loads(line[len("@@TRANSCRIPT@@") :])
                 return [
                     TranscribeSegment(
-                        text=s["text"], start=s["start"], end=s["end"],
-                        words=[TranscribeWord(text=w["text"], start=w["start"],
-                                              end=w["end"])
-                               for w in s.get("words") or []],
+                        text=s["text"],
+                        start=s["start"],
+                        end=s["end"],
+                        words=[
+                            TranscribeWord(text=w["text"], start=w["start"], end=w["end"])
+                            for w in s.get("words") or []
+                        ],
                     )
                     for s in raw
                 ]
         raise RuntimeError(
-            f"子进程 whisper 转录失败 rc={proc.returncode}：{(proc.stderr or '')[-500:]}")
+            f"子进程 whisper 转录失败 rc={proc.returncode}：{(proc.stderr or '')[-500:]}"
+        )
 
     monkeypatch.setattr(sa, "transcribe", subprocess_transcribe)
 
@@ -187,8 +207,7 @@ def _dump_summary(method: str, summary: dict) -> None:
     f.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-async def _run_one(monkeypatch, tmp_path: Path, method_ref: dict,
-                   method: str, llm) -> dict:
+async def _run_one(monkeypatch, tmp_path: Path, method_ref: dict, method: str, llm) -> dict:
     from capabilities.video.skills.video_studio import VideoStudioSkill
 
     clip = _make_clip(tmp_path)
@@ -203,26 +222,29 @@ async def _run_one(monkeypatch, tmp_path: Path, method_ref: dict,
 
     monkeypatch.setattr(sse_mod.sse_bus, "publish", fake_publish)
     t0 = time.perf_counter()
-    async for c in skill.execute({
-        "video_path": str(clip),
-        "method": method_ref,
-        "llm": llm,
-        "_user_id": "acceptance",
-        "_workflow_id": f"acceptance-{method}",
-    }):
+    async for c in skill.execute(
+        {
+            "video_path": str(clip),
+            "method": method_ref,
+            "llm": llm,
+            "_user_id": "acceptance",
+            "_workflow_id": f"acceptance-{method}",
+        }
+    ):
         chunks.append(c)
     elapsed = time.perf_counter() - t0
     assert len(chunks) == 1, f"{method}: 应恰好 yield 一次，实际 {len(chunks)} 次"
 
     chunk = chunks[0]
-    assert chunk["success"] is True, (
-        f"{method} 失败：error={chunk.get('error')!r} review={chunk.get('review')!r}")
+    assert (
+        chunk["success"] is True
+    ), f"{method} 失败：error={chunk.get('error')!r} review={chunk.get('review')!r}"
     video_path = Path(chunk["video_path"])
     assert video_path.is_file(), f"{method}: 成片不存在 {video_path}"
-    assert STUDIO_ROOT in video_path.parents, (
-        f"{method}: 产出不在 {STUDIO_ROOT} 下：{video_path}")
-    assert chunk["review_summary"]["errors"] == [], (
-        f"{method} review errors 非空：{chunk['review_summary']['errors']}")
+    assert STUDIO_ROOT in video_path.parents, f"{method}: 产出不在 {STUDIO_ROOT} 下：{video_path}"
+    assert (
+        chunk["review_summary"]["errors"] == []
+    ), f"{method} review errors 非空：{chunk['review_summary']['errors']}"
 
     film_dir = Path(chunk["workspace"])
     tl_path = film_dir / "analysis" / "timeline.json"
@@ -231,12 +253,16 @@ async def _run_one(monkeypatch, tmp_path: Path, method_ref: dict,
     assert scene_path.is_file(), f"{method}: scene/index.html 未落盘 {scene_path}"
     phases = [e.get("phase") for e in events if e.get("phase")]
     preview_events = [e for e in events if e.get("preview_url")]
-    print(f"\n[acceptance:{method}] film_id={film_dir.name} turns={chunk.get('turns')} "
-          f"elapsed={elapsed:.1f}s")
+    print(
+        f"\n[acceptance:{method}] film_id={film_dir.name} turns={chunk.get('turns')} "
+        f"elapsed={elapsed:.1f}s"
+    )
     print(f"[acceptance:{method}] workspace={film_dir}")
     print(f"[acceptance:{method}] final={video_path}")
-    print(f"[acceptance:{method}] sse_events={len(events)} "
-          f"preview_events={len(preview_events)} preview_url={chunk.get('preview_url')}")
+    print(
+        f"[acceptance:{method}] sse_events={len(events)} "
+        f"preview_events={len(preview_events)} preview_url={chunk.get('preview_url')}"
+    )
     print(f"[acceptance:{method}] phases={phases}")
     summary = {
         "film_id": film_dir.name,
@@ -257,16 +283,13 @@ async def _run_one(monkeypatch, tmp_path: Path, method_ref: dict,
 
 async def test_acceptance_general_talk(monkeypatch, tmp_path, isolated_whisper):
     llm = _ensure_llm_env(monkeypatch)
-    s = await _run_one(monkeypatch, tmp_path,
-                       {"builtin": "general_talk"}, "general_talk", llm)
+    s = await _run_one(monkeypatch, tmp_path, {"builtin": "general_talk"}, "general_talk", llm)
     assert s["beats"], "general_talk：timeline 无 beats"
 
 
-async def test_acceptance_minimal_cards_and_divergence(monkeypatch, tmp_path,
-                                                       isolated_whisper):
+async def test_acceptance_minimal_cards_and_divergence(monkeypatch, tmp_path, isolated_whisper):
     llm = _ensure_llm_env(monkeypatch)
-    s = await _run_one(monkeypatch, tmp_path,
-                       {"builtin": "minimal_cards"}, "minimal_cards", llm)
+    s = await _run_one(monkeypatch, tmp_path, {"builtin": "minimal_cards"}, "minimal_cards", llm)
     assert s["beats"], "minimal_cards：timeline 无 beats"
 
     other = _RESULTS.get("general_talk") or _load_summary("general_talk")
@@ -278,7 +301,9 @@ async def test_acceptance_minimal_cards_and_divergence(monkeypatch, tmp_path,
     beats_b = json.dumps(b["beats"], ensure_ascii=False, sort_keys=True)
     assert beats_a != beats_b, (
         f"两套打法的 timeline beats 完全雷同（差异判据不成立）：\n"
-        f"general_talk({a['film_id']}) vs minimal_cards({b['film_id']})")
+        f"general_talk({a['film_id']}) vs minimal_cards({b['film_id']})"
+    )
     assert a["scene_html"] != b["scene_html"], (
         f"两套打法的 scene/index.html 完全雷同（差异判据不成立）："
-        f"{a['film_id']} vs {b['film_id']}")
+        f"{a['film_id']} vs {b['film_id']}"
+    )

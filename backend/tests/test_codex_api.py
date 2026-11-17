@@ -1,5 +1,8 @@
 import pytest
-pytest.skip("app.engine.codex 已删除（API 路由随模块退役），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.engine.codex 已删除（API 路由随模块退役），本文件测退役实现", allow_module_level=True
+)
 
 """Tests for codex API endpoint — Step 4 validation."""
 
@@ -23,8 +26,8 @@ class _MockLLM:
 class TestCodexRouterInfo:
     @pytest.mark.asyncio
     async def test_info_response_structure(self):
-        from app.engine.codex.primitives import ALL_PRIMITIVES
         from app.api.routers.codex import CodexInfoResponse
+        from app.engine.codex.primitives import ALL_PRIMITIVES
 
         primitives = [p.info() for p in ALL_PRIMITIVES]
         permissions = [p.value for p in Permission]
@@ -37,6 +40,7 @@ class TestCodexRouterInfo:
     @pytest.mark.asyncio
     async def test_info_has_expected_primitives(self):
         from app.engine.codex.primitives import ALL_PRIMITIVES
+
         names = [p.name for p in ALL_PRIMITIVES]
         assert "file_read" in names
         assert "file_write" in names
@@ -51,10 +55,14 @@ class TestCodexRunEndpoint:
     async def test_run_with_mock_llm(self):
         from app.engine.codex.session import CodexSession
 
-        llm = _MockLLM({
-            "content": json.dumps({"thought": "done", "final": True, "output": {"title": "咖啡指南"}}),
-            "token_usage": 50,
-        })
+        llm = _MockLLM(
+            {
+                "content": json.dumps(
+                    {"thought": "done", "final": True, "output": {"title": "咖啡指南"}}
+                ),
+                "token_usage": 50,
+            }
+        )
         session = CodexSession(
             llm=llm,
             allowed_permissions={Permission.FILE_READ, Permission.BASH_EXEC},
@@ -77,18 +85,21 @@ class TestCodexRunEndpoint:
     @pytest.mark.asyncio
     async def test_run_unknown_permission_ignored(self):
         from app.api.routers.codex import _parse_permissions
+
         perms = _parse_permissions(["file:read", "unknown:perm"])
         assert len(perms) == 1
 
     @pytest.mark.asyncio
     async def test_run_empty_permissions(self):
         from app.api.routers.codex import _parse_permissions
+
         perms = _parse_permissions([])
         assert len(perms) == 0
 
     @pytest.mark.asyncio
     async def test_codex_run_response_model(self):
         from app.api.routers.codex import CodexRunResponse
+
         resp = CodexRunResponse(
             ok=True,
             output={"title": "test"},

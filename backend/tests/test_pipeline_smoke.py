@@ -1,11 +1,13 @@
 """链路连通性冒烟测试：不调 LLM，只验证导入/注册/路由/守卫是否通畅。"""
 
 import asyncio
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-os.environ.setdefault("DATABASE_URL", "mysql+aiomysql://ycf:ycf94946@127.0.0.1:3306/xhs_agent?charset=utf8mb4")
+os.environ.setdefault(
+    "DATABASE_URL", "mysql+aiomysql://ycf:ycf94946@127.0.0.1:3306/xhs_agent?charset=utf8mb4"
+)
 
 PASSED = 0
 FAILED = 0
@@ -50,12 +52,14 @@ def test_skill_registration():
     print("\n── 2. Skill 注册测试 ──")
     try:
         from capabilities.video.skills.multi_image_video import MultiImageVideoSkill
+
         skill = MultiImageVideoSkill()
         _ok(f"multi_image_video Skill 可实例化（display_name={skill.display_name}）")
         _ok(f"trigger_words = {skill.trigger_words[:5]}...")
         _ok(f"input_schema fields = {list(skill.input_schema.model_fields.keys())}")
 
         from app.core.skill_registry import SkillRegistry
+
         registry = SkillRegistry()
         try:
             registry.register("produce", "multi_image_video", MultiImageVideoSkill)
@@ -75,11 +79,11 @@ def test_tier_router():
     print("\n── 3. 算力分级路由测试 ──")
     try:
         from app.services.model_tier import (
-            PipelineStage,
-            ModelTier,
-            TieredModelRouter,
             _DEFAULT_STAGE_TIERS,
             _DEFAULT_TIER_MODELS,
+            ModelTier,
+            PipelineStage,
+            TieredModelRouter,
         )
 
         router = TieredModelRouter()
@@ -129,6 +133,7 @@ def test_asset_ref_guard():
         patterns_real = ["01JKABCDEF", "01XYZ12345"]
 
         import re
+
         from app.services.asset_ref import _HALLUCINATION_PATTERNS
 
         for p in patterns_hallucination:
@@ -151,16 +156,17 @@ def test_pipeline_functions():
     print("\n── 5. 流水线函数存在性测试 ──")
     try:
         from capabilities.video.skills.multi_image_video import (
-            _resolve_image_urls,
-            _vl_understand_images,
+            MultiImageVideoInput,
+            MultiImageVideoSkill,
+            _compose_final,
+            _generate_shot_clips,
+            _generate_shot_frames,
             _generate_storyboard,
             _resolve_i2v_model,
-            _generate_shot_frames,
-            _generate_shot_clips,
-            _compose_final,
-            MultiImageVideoSkill,
-            MultiImageVideoInput,
+            _resolve_image_urls,
+            _vl_understand_images,
         )
+
         _ok("_resolve_image_urls")
         _ok("_vl_understand_images")
         _ok("_generate_storyboard")
@@ -177,11 +183,12 @@ def test_pipeline_functions():
         )
         _ok(f"MultiImageVideoInput 可实例化（image_asset_ids={input_model.image_asset_ids}）")
 
-        _ok(f"max_length=10（图片上限）: {MultiImageVideoInput.model_fields['image_asset_ids'].metadata}")
+        _ok(
+            f"max_length=10（图片上限）: {MultiImageVideoInput.model_fields['image_asset_ids'].metadata}"
+        )
 
     except Exception as e:
         _fail("流水线函数", str(e))
-
 
 
 def test_workflow_stub():
@@ -213,7 +220,12 @@ def test_vl_model_names():
         else:
             _fail("quality VL", f"非 qwen3 系列：{quality_vl}")
 
-        old_names = {"qwen-vl-plus", "qwen-vl-max", "qwen2.5-vl-7b-instruct", "qwen2.5-vl-72b-instruct"}
+        old_names = {
+            "qwen-vl-plus",
+            "qwen-vl-max",
+            "qwen2.5-vl-7b-instruct",
+            "qwen2.5-vl-72b-instruct",
+        }
         all_vls = {economy_vl, standard_vl, quality_vl}
         if not all_vls & old_names:
             _ok("无旧模型名（qwen-vl-plus/qwen-vl-max）残留")

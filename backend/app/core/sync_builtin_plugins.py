@@ -14,8 +14,9 @@ from typing import Any, Dict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.plugin_models import Plugin as PluginModel
+from app.db.plugin_models import PluginCategory, PluginStatus
 from app.db.session import AsyncSessionLocal
-from app.db.plugin_models import Plugin as PluginModel, PluginCategory, PluginStatus
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +83,7 @@ async def _sync_plugin_dir(
 
     fields = _parse_manifest(data, is_builtin=is_builtin)
 
-    result = await session.execute(
-        select(PluginModel).where(PluginModel.id == plugin_id)
-    )
+    result = await session.execute(select(PluginModel).where(PluginModel.id == plugin_id))
     existing = result.scalar_one_or_none()
 
     if existing:
@@ -125,7 +124,9 @@ async def sync_builtin_plugins_to_db() -> Dict[str, int]:
     if not BUILTIN_DIR.exists():
         logger.warning(f"Builtin plugins dir not found: {BUILTIN_DIR}")
     else:
-        plugin_dirs = [d for d in BUILTIN_DIR.iterdir() if d.is_dir() and (d / "plugin.json").exists()]
+        plugin_dirs = [
+            d for d in BUILTIN_DIR.iterdir() if d.is_dir() and (d / "plugin.json").exists()
+        ]
         async with AsyncSessionLocal() as session:
             for plugin_dir in plugin_dirs:
                 result = await _sync_plugin_dir(plugin_dir, is_builtin=True, session=session)
@@ -208,9 +209,7 @@ async def _cleanup_orphaned_third_party(session: AsyncSession) -> int:
     Returns:
         清理的记录数
     """
-    result = await session.execute(
-        select(PluginModel).where(PluginModel.is_builtin == False)
-    )
+    result = await session.execute(select(PluginModel).where(PluginModel.is_builtin == False))
     third_party_plugins = result.scalars().all()
 
     cleaned = 0

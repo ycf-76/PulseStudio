@@ -10,6 +10,7 @@
 `outputs/<user_id>/agent_media/<文件名>/`，返回 `/outputs/...` 可直连
 渲染的地址。发布幂等：同名同大小的目标已存在就复用，不重复复制。
 """
+
 from __future__ import annotations
 
 import logging

@@ -43,6 +43,7 @@ class AgentMessage:
       - author (AgentPath)
       - content (the actual message text)
     """
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:10])
     message_type: MessageType = MessageType.MESSAGE
     sender_id: str = ""
@@ -174,15 +175,17 @@ class InterAgentBus:
         for _ in range(min(limit, inbox.qsize())):
             try:
                 msg = inbox.get_nowait()
-                messages.append({
-                    "id": msg.id,
-                    "message_type": msg.message_type.value,
-                    "sender_id": msg.sender_id,
-                    "recipient_id": msg.recipient_id,
-                    "content": msg.content,
-                    "trigger_turn": msg.trigger_turn,
-                    "timestamp": msg.timestamp,
-                })
+                messages.append(
+                    {
+                        "id": msg.id,
+                        "message_type": msg.message_type.value,
+                        "sender_id": msg.sender_id,
+                        "recipient_id": msg.recipient_id,
+                        "content": msg.content,
+                        "trigger_turn": msg.trigger_turn,
+                        "timestamp": msg.timestamp,
+                    }
+                )
             except asyncio.QueueEmpty:
                 break
 
@@ -216,10 +219,7 @@ class InterAgentBus:
         return {
             "registered_agents": len(self._inboxes),
             "total_messages_sent": len(self._history),
-            "pending_per_agent": {
-                aid: inbox.qsize()
-                for aid, inbox in self._inboxes.items()
-            },
+            "pending_per_agent": {aid: inbox.qsize() for aid, inbox in self._inboxes.items()},
         }
 
     def shutdown(self) -> None:

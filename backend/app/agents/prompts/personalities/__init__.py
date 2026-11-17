@@ -61,11 +61,13 @@ def list_personalities() -> list[dict[str, str]]:
     result: list[dict[str, str]] = []
     for pid, label in _PRESET_LABELS.items():
         desc = _PRESET_DESCRIPTIONS.get(pid, "")
-        result.append({
-            "id": pid,
-            "label": label,
-            "description": desc,
-        })
+        result.append(
+            {
+                "id": pid,
+                "label": label,
+                "description": desc,
+            }
+        )
     return result
 
 

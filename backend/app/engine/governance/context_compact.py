@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from app.engine.governance.token_budget import TokenBudget, BudgetAction
+from app.engine.governance.token_budget import BudgetAction, TokenBudget
 
 logger = logging.getLogger(__name__)
 
@@ -140,9 +140,7 @@ class ContextCompactor:
 
         return result
 
-    def _compact_truncate(
-        self, messages: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def _compact_truncate(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Truncate strategy: keep system + recent messages.
 
         Ref: Codex's token-budget compaction (compact_token_budget.rs):
@@ -174,13 +172,15 @@ class ContextCompactor:
         result = list(system_msgs)
 
         if dropped > 0:
-            result.append({
-                "role": "system",
-                "content": (
-                    f"[上下文压缩] 为节省 Token 空间，已省略 {dropped} 条历史消息。"
-                    "以下是最近的对话内容，请继续。"
-                ),
-            })
+            result.append(
+                {
+                    "role": "system",
+                    "content": (
+                        f"[上下文压缩] 为节省 Token 空间，已省略 {dropped} 条历史消息。"
+                        "以下是最近的对话内容，请继续。"
+                    ),
+                }
+            )
 
         result.extend(kept)
         return result
@@ -236,17 +236,17 @@ class ContextCompactor:
             return self._compact_truncate(messages)
 
         result = list(system_msgs)
-        result.append({
-            "role": "system",
-            "content": f"[对话摘要]\n{summary_text}",
-        })
+        result.append(
+            {
+                "role": "system",
+                "content": f"[对话摘要]\n{summary_text}",
+            }
+        )
         result.extend(recent_msgs)
 
         return result
 
-    def _format_messages_for_summary(
-        self, messages: list[dict[str, Any]]
-    ) -> str:
+    def _format_messages_for_summary(self, messages: list[dict[str, Any]]) -> str:
         """Format messages for the summarization prompt.
 
         Ref: Codex's compact.rs — builds a user message from the
@@ -257,9 +257,7 @@ class ContextCompactor:
             role = msg.get("role", "unknown")
             content = msg.get("content", "")
             if isinstance(content, list):
-                content = " ".join(
-                    c.get("text", "") for c in content if isinstance(c, dict)
-                )
+                content = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
             lines.append(f"[{role}]: {content[:500]}")
         return "\n".join(lines)
 

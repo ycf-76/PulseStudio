@@ -7,8 +7,8 @@ ExecutablePath will show the base Python, but sys.prefix and sys.path still
 point to the venv, so all venv packages and project code are correctly loaded.
 """
 
-import sys
 import os
+import sys
 
 print(f"[start_server] PID={os.getpid()}", flush=True)
 print(f"[start_server] sys.executable = {sys.executable}", flush=True)

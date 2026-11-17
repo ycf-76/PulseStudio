@@ -47,8 +47,11 @@ def test_path_md_file_reads_directly(tmp_path):
     f = tmp_path / "my_own_skill.md"
     f.write_text("# 我的打法\n按卡片推进，一卡一拍。", encoding="utf-8")
     m = load_method({"path": str(f)})
-    assert m == {"name": "my_own_skill", "source": "path",
-                 "text": "# 我的打法\n按卡片推进，一卡一拍。"}
+    assert m == {
+        "name": "my_own_skill",
+        "source": "path",
+        "text": "# 我的打法\n按卡片推进，一卡一拍。",
+    }
 
 
 def test_path_directory_reads_method_md(tmp_path):
@@ -96,8 +99,15 @@ def test_invalid_ref_empty_or_multi_key():
 
 
 def test_invalid_ref_wrong_types():
-    for bad in (None, "general_talk", 42, {"builtin": 123}, {"path": 7},
-                {"text": 3.5}, {"unknown_key": "x"}):
+    for bad in (
+        None,
+        "general_talk",
+        42,
+        {"builtin": 123},
+        {"path": 7},
+        {"text": 3.5},
+        {"unknown_key": "x"},
+    ):
         with pytest.raises(RuntimeError) as ei:
             load_method(bad)
         assert _has_chinese(str(ei.value)), bad

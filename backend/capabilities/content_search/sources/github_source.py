@@ -58,6 +58,7 @@ class GitHubSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             headers = {
                 "User-Agent": _DEFAULT_UA,
@@ -141,11 +142,11 @@ class GitHubSource(ContentSource):
                 content=content,
                 author=author,
                 url=html_url,
-                likes=stars,           # stars 作为点赞数
+                likes=stars,  # stars 作为点赞数
                 comments=open_issues,  # open issues 作为评论数
-                shares=forks,          # forks 作为分享数
-                views=watchers,        # watchers 作为浏览量
-                cover_img="",          # GitHub 仓库无封面图
+                shares=forks,  # forks 作为分享数
+                views=watchers,  # watchers 作为浏览量
+                cover_img="",  # GitHub 仓库无封面图
                 published_at=published_at,
                 tags=topics + ([language] if language else []),
                 title_original=name,

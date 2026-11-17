@@ -71,9 +71,7 @@ def _block_type_names() -> list[str]:
         # Block 是 Annotated[Union[...], Field(...)]，get_args 返回 (Union, FieldInfo)
         union_type = next((a for a in args if getattr(a, "__origin__", None) is typing.Union), None)
         if union_type is not None:
-            return sorted(
-                {t.model_fields["type"].default for t in typing.get_args(union_type)}
-            )
+            return sorted({t.model_fields["type"].default for t in typing.get_args(union_type)})
     except Exception as exc:  # pragma: no cover - 反射仅用于元数据
         logger.warning("提取 block 类型名失败: %s", exc)
     return []
@@ -137,9 +135,7 @@ async def meta() -> StandardResponse[dict]:
                 for name, spec in THEMES.items()
             },
             "block_types": _block_type_names(),
-            "optional_blocks": {
-                lid: sorted(optional_blocks(lid)) for lid in LAYOUTS
-            },
+            "optional_blocks": {lid: sorted(optional_blocks(lid)) for lid in LAYOUTS},
         }
     )
 

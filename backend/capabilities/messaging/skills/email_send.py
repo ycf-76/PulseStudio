@@ -44,7 +44,10 @@ def _send_email(
     smtp_from = settings.smtp_from or smtp_user
 
     if not smtp_host or not smtp_user or not smtp_pass:
-        return {"ok": False, "error": "SMTP not configured. Please set smtp_host, smtp_user, smtp_pass in .env"}
+        return {
+            "ok": False,
+            "error": "SMTP not configured. Please set smtp_host, smtp_user, smtp_pass in .env",
+        }
 
     try:
         if html_body:
@@ -106,8 +109,9 @@ class EmailSendSkill(Skill):
             ctx = inputs.get("_context")
             if ctx and hasattr(ctx, "user_id") and ctx.user_id:
                 from sqlalchemy import select
-                from app.db.models import User
+
                 from app.core.context_vars import current_db_session
+                from app.db.models import User
 
                 db = current_db_session.get()
                 if db:
@@ -115,10 +119,15 @@ class EmailSendSkill(Skill):
                     user = result.scalar_one_or_none()
                     if user and user.email:
                         to_addr = user.email
-                        logger.info(f"[EmailSendSkill] to not specified, using current user email: {to_addr}")
+                        logger.info(
+                            f"[EmailSendSkill] to not specified, using current user email: {to_addr}"
+                        )
 
         if not to_addr:
-            return {"ok": False, "error": "No recipient email address. Please provide 'to' parameter or ensure the current user has an email."}
+            return {
+                "ok": False,
+                "error": "No recipient email address. Please provide 'to' parameter or ensure the current user has an email.",
+            }
 
         if not subject:
             return {"ok": False, "error": "subject is required"}

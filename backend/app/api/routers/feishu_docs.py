@@ -263,10 +263,16 @@ async def bitable_data(
         table = tables[0]
 
         fields = await client.list_bitable_fields(app_token, table["table_id"], access_token=bearer)
-        raw_records = await client.search_bitable_records(app_token, table["table_id"], access_token=bearer)
+        raw_records = await client.search_bitable_records(
+            app_token, table["table_id"], access_token=bearer
+        )
     except FeishuAPIError as exc:
         logger.error(f"[FeishuDocs] bitable fetch failed: {exc}")
-        hint = "请确认你对该多维表格有阅读权限，或应用已开通 bitable 相关权限" if exc.code in (91402, 91403, 1254302, 1254045) else exc.msg
+        hint = (
+            "请确认你对该多维表格有阅读权限，或应用已开通 bitable 相关权限"
+            if exc.code in (91402, 91403, 1254302, 1254045)
+            else exc.msg
+        )
         raise HTTPException(status_code=502, detail=f"读取多维表格失败：{hint}")
 
     field_meta = [

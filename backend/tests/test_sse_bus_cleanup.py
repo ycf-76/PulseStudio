@@ -16,7 +16,7 @@ import time
 
 import pytest
 
-from app.services.sse_bus import SSEEventBus, _CLEANUP_DELAY_SECONDS
+from app.services.sse_bus import _CLEANUP_DELAY_SECONDS, SSEEventBus
 
 
 @pytest.fixture

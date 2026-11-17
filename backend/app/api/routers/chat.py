@@ -39,6 +39,7 @@ async def get_optional_user(
     except Exception:
         return "anonymous"
 
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
@@ -130,7 +131,9 @@ def _build_model_registry(settings) -> dict[str, dict[str, str]]:
     }
 
 
-async def _resolve_model(request: ChatRequest, user_id: str = "anonymous") -> tuple[str | None, str, str | None, str]:
+async def _resolve_model(
+    request: ChatRequest, user_id: str = "anonymous"
+) -> tuple[str | None, str, str | None, str]:
     """Return (api_model, base_url, api_key, provider_type) based on user selection.
 
     Resolution order (BYOK):
@@ -203,7 +206,11 @@ async def _resolve_model(request: ChatRequest, user_id: str = "anonymous") -> tu
                                 )
                                 used_credential_provider = cred.provider
                             except Exception:
-                                logger.warning("[BYOK] Failed to decrypt key for user=%s provider=%s", user_id, cred.provider)
+                                logger.warning(
+                                    "[BYOK] Failed to decrypt key for user=%s provider=%s",
+                                    user_id,
+                                    cred.provider,
+                                )
                             break
         except Exception as e:
             logger.debug("[BYOK] Custom model lookup skipped: %s", e)
@@ -242,7 +249,11 @@ async def _resolve_model(request: ChatRequest, user_id: str = "anonymous") -> tu
                         )
                         used_credential_provider = matched_provider
                     except Exception:
-                        logger.warning("[BYOK] Failed to decrypt key for user=%s provider=%s", user_id, matched_provider)
+                        logger.warning(
+                            "[BYOK] Failed to decrypt key for user=%s provider=%s",
+                            user_id,
+                            matched_provider,
+                        )
                     if cred.custom_base_url and not base_url:
                         base_url = cred.custom_base_url
         except Exception as e:
@@ -255,6 +266,7 @@ async def _resolve_model(request: ChatRequest, user_id: str = "anonymous") -> tu
     if used_credential_provider:
         try:
             from app.services.credential_audit import record_use_audit
+
             await record_use_audit(
                 user_id, used_credential_provider, detail=f"model={request.model}"
             )
@@ -357,7 +369,9 @@ async def chat_completions(
                         {
                             "index": 0,
                             "delta": delta,
-                            "finish_reason": chunk.choices[0].finish_reason if chunk.choices else None,
+                            "finish_reason": (
+                                chunk.choices[0].finish_reason if chunk.choices else None
+                            ),
                         }
                     ],
                 }
@@ -674,16 +688,20 @@ async def _call_highlight_agent(text: str, density: str = "medium") -> str | Non
             # 格式修复：LLM 可能用 **...** 替代 ==...==，自动转换
             # 只在原文没有 ** 时才转换（避免误伤原文中的加粗）
             if "**" not in text:
-                result = re.sub(r'\*\*(.+?)\*\*', r'==\1==', result)
+                result = re.sub(r"\*\*(.+?)\*\*", r"==\1==", result)
             # LLM 可能用 【...】 替代 ==...==，自动转换
             if "【" not in text:
-                result = re.sub(r'【(.+?)】', r'==\1==', result)
+                result = re.sub(r"【(.+?)】", r"==\1==", result)
 
             # 基本校验：结果应包含 == 标记
             if "==" in result:
                 break
 
-            logger.warning("[highlight] attempt %d: no markers, %s", attempt + 1, "retrying" if attempt == 0 else "giving up")
+            logger.warning(
+                "[highlight] attempt %d: no markers, %s",
+                attempt + 1,
+                "retrying" if attempt == 0 else "giving up",
+            )
         else:
             return None
 

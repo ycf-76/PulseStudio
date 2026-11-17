@@ -42,8 +42,12 @@ LOW_INTEGRITY_SID = "S-1-16-4096"
 
 # 环境变量白名单：子进程仅能看到这些（密钥类一律不透传）
 _ENV_WHITELIST = (
-    "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC", "PATH",
-    "PYTHONIOENCODING", "LANG",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "COMSPEC",
+    "PATH",
+    "PYTHONIOENCODING",
+    "LANG",
 )
 # 沙箱内固定注入的环境变量
 # PYTHONDONTWRITEBYTECODE：site-packages 为 Medium，Low 进程写 __pycache__ 会报错
@@ -61,6 +65,7 @@ class SandboxError(RuntimeError):
 # 令牌构建
 # ---------------------------------------------------------------------------
 
+
 def build_low_integrity_token():
     """从当前进程主令牌派生 Low 完整性令牌。
 
@@ -69,7 +74,8 @@ def build_low_integrity_token():
     """
     tok = win32security.OpenProcessToken(
         win32api.GetCurrentProcess(),
-        win32security.TOKEN_DUPLICATE | win32security.TOKEN_QUERY
+        win32security.TOKEN_DUPLICATE
+        | win32security.TOKEN_QUERY
         | win32security.TOKEN_ASSIGN_PRIMARY,
     )
     primary = win32security.DuplicateTokenEx(
@@ -80,7 +86,9 @@ def build_low_integrity_token():
     )
     low_sid = win32security.CreateWellKnownSid(win32security.WinLowLabelSid)
     win32security.SetTokenInformation(
-        primary, win32security.TokenIntegrityLevel, (low_sid, SE_GROUP_INTEGRITY),
+        primary,
+        win32security.TokenIntegrityLevel,
+        (low_sid, SE_GROUP_INTEGRITY),
     )
     return primary
 
@@ -88,6 +96,7 @@ def build_low_integrity_token():
 # ---------------------------------------------------------------------------
 # ML 强制标签（完整性标签）
 # ---------------------------------------------------------------------------
+
 
 def _set_ml_label(path: str | Path, sddl: str) -> None:
     """对文件/目录设置强制完整性标签（SACL）。幂等。"""
@@ -99,7 +108,10 @@ def _set_ml_label(path: str | Path, sddl: str) -> None:
         str(path),
         win32security.SE_FILE_OBJECT,
         win32security.LABEL_SECURITY_INFORMATION,
-        None, None, None, sacl,
+        None,
+        None,
+        None,
+        sacl,
     )
 
 
@@ -140,6 +152,7 @@ def label_tree_low_writable(root: str | Path) -> None:
 # 环境变量净化（凭据隔离，ref: Claude Code envVars mask）
 # ---------------------------------------------------------------------------
 
+
 def build_env_block(
     extra: dict[str, str] | None = None,
     temp_dir: str | Path | None = None,
@@ -166,6 +179,7 @@ def build_env_block(
 # ---------------------------------------------------------------------------
 # Job Object
 # ---------------------------------------------------------------------------
+
 
 def create_job_object(
     active_process_limit: int = 8,
@@ -205,7 +219,9 @@ def create_job_object(
         "PeakJobMemoryUsed": 0,
     }
     win32job.SetInformationJobObject(
-        job, win32job.JobObjectExtendedLimitInformation, info,
+        job,
+        win32job.JobObjectExtendedLimitInformation,
+        info,
     )
     return job
 
@@ -214,9 +230,11 @@ def create_job_object(
 # 沙箱执行
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SandboxResult:
     """沙箱执行结果。timed_out=True 时 exit_code 为 Job 终止码。"""
+
     exit_code: int | None
     stdout: bytes
     stderr: bytes
@@ -284,7 +302,16 @@ def spawn_sandboxed(
     h_process = h_thread = None
     try:
         h_process, h_thread, pid, _tid = win32process.CreateProcessAsUser(
-            token, None, cmdline, None, None, 1, creation, env, str(cwd), si,
+            token,
+            None,
+            cmdline,
+            None,
+            None,
+            1,
+            creation,
+            env,
+            str(cwd),
+            si,
         )
         # 子进程已持有管道读/写端，父进程立即关闭自己的冗余端
         win32api.CloseHandle(stdin_r)
@@ -306,8 +333,12 @@ def spawn_sandboxed(
         out_bufs: list[bytearray] = []
         err_bufs: list[bytearray] = []
         lock = threading.Lock()
-        t_out = threading.Thread(target=_read_pipe_thread, args=(stdout_r, out_bufs, lock), daemon=True)
-        t_err = threading.Thread(target=_read_pipe_thread, args=(stderr_r, err_bufs, lock), daemon=True)
+        t_out = threading.Thread(
+            target=_read_pipe_thread, args=(stdout_r, out_bufs, lock), daemon=True
+        )
+        t_err = threading.Thread(
+            target=_read_pipe_thread, args=(stderr_r, err_bufs, lock), daemon=True
+        )
         t_out.start()
         t_err.start()
 
@@ -372,6 +403,7 @@ def spawn_sandboxed(
 def win32event_wait(handle, timeout_ms: int) -> int:
     """WaitForSingleObject 封装，返回 WAIT_OBJECT_0 / WAIT_TIMEOUT。"""
     import win32event
+
     return win32event.WaitForSingleObject(handle, timeout_ms)
 
 
@@ -381,12 +413,14 @@ def subprocess_list2cmdline(argv: list[str]) -> str:
     沙箱模块不 import subprocess（避免与 asyncio 语义混淆），语义一致。
     """
     import subprocess as _sp
+
     return _sp.list2cmdline(argv)
 
 
 # ---------------------------------------------------------------------------
 # 初始化（启动时幂等调用）
 # ---------------------------------------------------------------------------
+
 
 def default_workspace_root() -> Path:
     """与 file_tools._workspace_root 相同的约定，避免循环 import。"""

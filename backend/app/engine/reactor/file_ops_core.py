@@ -10,6 +10,7 @@
 （2026-10-22 修正文档：旧注释写的 backend/data/workspace 是错的，实际
 默认路径一直是 app/data/workspace——与 cards/projects 等运行数据同区。）
 """
+
 from __future__ import annotations
 
 import os

@@ -94,7 +94,9 @@ async def download_image(url: str, timeout: float = 30.0) -> tuple[bytes, str] |
             async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
                 resp = await client.get(url, headers=headers)
                 if resp.status_code != 200:
-                    logger.warning(f"download_image failed: status={resp.status_code} url={url[:80]} attempt={attempt+1}")
+                    logger.warning(
+                        f"download_image failed: status={resp.status_code} url={url[:80]} attempt={attempt+1}"
+                    )
                     if attempt == 0:
                         continue
                     return None
@@ -297,7 +299,7 @@ def read_workflow_image_as_base64(url: str) -> str | None:
 
     if not url or not url.startswith("/uploads/"):
         return None
-    rel_path = url[len("/uploads/"):]
+    rel_path = url[len("/uploads/") :]
     filepath = _BASE_DIR / rel_path
     if not filepath.exists():
         return None

@@ -49,10 +49,7 @@ def _percentile_rank(data: list[float], value: float) -> float:
 
 def _has_fans_field(notes: list[dict]) -> bool:
     """检查样本是否包含有效的 author_fans 字段。"""
-    valid_count = sum(
-        1 for n in notes
-        if n.get("author_fans") and n["author_fans"] > 0
-    )
+    valid_count = sum(1 for n in notes if n.get("author_fans") and n["author_fans"] > 0)
     return valid_count >= len(notes) * 0.5  # 50% 以上有粉丝数才算有效
 
 
@@ -243,6 +240,7 @@ def compute_viral_score(notes: list[dict]) -> list[dict]:
     # 从 performance_collector 获取当前权重（支持 T+7 校准后自动更新）
     try:
         from app.services.performance_collector import get_current_weights
+
         weights = get_current_weights()
     except ImportError:
         weights = {"rate_weight": 0.5, "viral_weight": 0.3, "likes_weight": 0.2}

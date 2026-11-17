@@ -58,14 +58,22 @@ def _maybe_cache_image_background(url: str, data: bytes, content_type: str) -> N
 
     async def _cache_and_update():
         try:
-            from app.services.image_store import _ensure_dirs, _TOPIC_COVERS_DIR, _ext_from_content_type, is_local_url
+            from sqlalchemy import select
+            from sqlalchemy import update as sa_update
+
+            from app.db.models import PublishedContentPerformance, TopicPoolItem
             from app.db.session import AsyncSessionLocal
-            from app.db.models import TopicPoolItem, PublishedContentPerformance
-            from sqlalchemy import select, update as sa_update
+            from app.services.image_store import (
+                _TOPIC_COVERS_DIR,
+                _ensure_dirs,
+                _ext_from_content_type,
+                is_local_url,
+            )
 
             # 直接写文件（data 已经在内存中，无需再下载）
             _ensure_dirs()
             import hashlib
+
             content_id = hashlib.md5(url.encode()).hexdigest()[:16]
             ext = _ext_from_content_type(content_type)
             filename = f"{content_id}{ext}"
@@ -101,16 +109,11 @@ def _maybe_cache_image_background(url: str, data: bytes, content_type: str) -> N
                     )
 
                 # 也更新 images JSON 数组中的匹配 URL
-                stmt2 = select(TopicPoolItem).where(
-                    TopicPoolItem.images.contains([url])
-                )
+                stmt2 = select(TopicPoolItem).where(TopicPoolItem.images.contains([url]))
                 rows = await db.scalars(stmt2)
                 for row in rows:
                     if row.images and isinstance(row.images, list):
-                        row.images = [
-                            local_url if img == url else img
-                            for img in row.images
-                        ]
+                        row.images = [local_url if img == url else img for img in row.images]
 
                 # 作品表 images 也更新
                 stmt4 = select(PublishedContentPerformance).where(
@@ -119,10 +122,7 @@ def _maybe_cache_image_background(url: str, data: bytes, content_type: str) -> N
                 rows4 = await db.scalars(stmt4)
                 for row in rows4:
                     if row.images and isinstance(row.images, list):
-                        row.images = [
-                            local_url if img == url else img
-                            for img in row.images
-                        ]
+                        row.images = [local_url if img == url else img for img in row.images]
 
                 await db.commit()
 
@@ -144,9 +144,10 @@ async def _try_local_fallback(url: str) -> FileResponse | None:
     2. 再按 URL 的 MD5 哈希直接在 uploads/ 目录下找文件
     """
     try:
-        from app.db.session import AsyncSessionLocal
-        from app.db.models import TopicPoolItem, PublishedContentPerformance
         from sqlalchemy import select
+
+        from app.db.models import PublishedContentPerformance, TopicPoolItem
+        from app.db.session import AsyncSessionLocal
 
         async with AsyncSessionLocal() as db:
             stmt = select(TopicPoolItem.cover_img).where(TopicPoolItem.cover_img == url).limit(1)
@@ -156,9 +157,11 @@ async def _try_local_fallback(url: str) -> FileResponse | None:
                 if local_path.exists():
                     return FileResponse(local_path, media_type="image/webp")
 
-            stmt2 = select(PublishedContentPerformance.cover_img_url).where(
-                PublishedContentPerformance.cover_img_url == url
-            ).limit(1)
+            stmt2 = (
+                select(PublishedContentPerformance.cover_img_url)
+                .where(PublishedContentPerformance.cover_img_url == url)
+                .limit(1)
+            )
             row2 = await db.scalar(stmt2)
             if row2 and row2.startswith("/uploads/"):
                 local_path = Path(row2.lstrip("/"))
@@ -267,7 +270,9 @@ async def proxy_image(request: Request) -> StreamingResponse:
             resp = await client.get(url, headers=headers)
 
         if resp.status_code != 200:
-            logger.warning(f"proxy_image upstream {resp.status_code} for {url[:80]}, trying local fallback")
+            logger.warning(
+                f"proxy_image upstream {resp.status_code} for {url[:80]}, trying local fallback"
+            )
             fallback = await _try_local_fallback(url)
             if fallback:
                 logger.info(f"proxy_image: served from local cache for {url[:80]}")

@@ -23,6 +23,7 @@ from app.services.work_context_prompt import (
 
 # ── 1. 引用收集 ──────────────────────────────────────────────
 
+
 def test_collects_images_and_cover():
     """场景: 作品同时有 images 和 coverUrl
     预期: 都收集，cover 不重复
@@ -50,9 +51,7 @@ def test_skips_data_uri():
     """场景: images 里混了 base64 data URI
     预期: 跳过（进 prompt 会撑爆预算），只留可用引用
     """
-    refs = collect_image_refs(
-        {"images": ["data:image/png;base64,AAAA", "https://cdn/a.jpg"]}
-    )
+    refs = collect_image_refs({"images": ["data:image/png;base64,AAAA", "https://cdn/a.jpg"]})
     assert refs == ["https://cdn/a.jpg"]
 
 
@@ -87,13 +86,12 @@ def test_keeps_signed_cdn_url_without_ext():
     """场景: CDN 链接带签名参数、路径无扩展名
     预期: 保留（小红书图片常见形态）
     """
-    refs = collect_image_refs(
-        {"images": ["https://cdn.example.com/img?sign=abc&w=1080"]}
-    )
+    refs = collect_image_refs({"images": ["https://cdn.example.com/img?sign=abc&w=1080"]})
     assert refs == ["https://cdn.example.com/img?sign=abc&w=1080"]
 
 
 # ── 2. prompt 渲染 ───────────────────────────────────────────
+
 
 def test_prompt_lists_refs_and_requires_vl():
     """场景: 作品有 2 张配图

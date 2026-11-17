@@ -5,7 +5,7 @@
 
 开发步骤：
 1. 在 backend/skills/ 下新建 .py 文件（本文件即为示例）
-2. import Skill 基类和 register 装饰器 
+2. import Skill 基类和 register 装饰器
 3. 定义 Skill 子类，声明 node_type + name + display_name 等元数据
 4. 用 @register 装饰器注册到全局 SkillRegistry
 5. 重启后端，前端 GET /api/skills 即可看到新 Skill
@@ -14,8 +14,8 @@
 工作流运行到 copywrite 节点时会加载并执行这个 Skill。
 """
 
-from app.skills.copywrite.builder import CopywriteSkillBase
 from app.core.skill_registry import register
+from app.skills.copywrite.builder import CopywriteSkillBase
 
 
 @register
@@ -31,8 +31,7 @@ class PoeticCopywriteSkill(CopywriteSkillBase):
 
     # 注入到 LLM prompt 的调性指令
     style_instruction = (
-        "诗意文艺风：语气含蓄克制，多用意象和比喻，"
-        "有画面感和留白，少用 emoji，像散文诗"
+        "诗意文艺风：语气含蓄克制，多用意象和比喻，" "有画面感和留白，少用 emoji，像散文诗"
     )
 
     # LLM 不可用时的降级模板（含 {topic}/{direction} 占位符）

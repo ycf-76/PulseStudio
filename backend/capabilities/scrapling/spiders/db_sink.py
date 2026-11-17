@@ -5,6 +5,7 @@
 
 关键：content_status='collected' → 前端 worksByStatus.collected 自动展示
 """
+
 from __future__ import annotations
 
 import logging
@@ -30,12 +31,15 @@ async def save_scraped_item(item: dict[str, Any], platform: str, user_id: str) -
     """
     try:
         from app.services.performance_collector import compute_performance_score
-        score = compute_performance_score({
-            "likes": item.get("likes", 0),
-            "collects": item.get("collects", 0),
-            "comments": item.get("comments", 0),
-            "shares": item.get("shares", 0),
-        })
+
+        score = compute_performance_score(
+            {
+                "likes": item.get("likes", 0),
+                "collects": item.get("collects", 0),
+                "comments": item.get("comments", 0),
+                "shares": item.get("shares", 0),
+            }
+        )
     except Exception:
         score = 0.0
 
@@ -68,6 +72,7 @@ async def save_scraped_item(item: dict[str, Any], platform: str, user_id: str) -
         )
 
         if existing:
+
             def pick(new_value: Any, old_value: Any) -> Any:
                 if new_value is None or new_value == "" or new_value == 0 or new_value == []:
                     return old_value
@@ -76,9 +81,10 @@ async def save_scraped_item(item: dict[str, Any], platform: str, user_id: str) -
             # 只有主页卡片（from_card=True）带来的单张封面是"低质量兜底"，
             # 详情页的 imageList 是完整图集（单图笔记本身就是一张），可信。
             # 该笔记详情页已重试到上限时也放宽，宁可留一张本地封面也别留 403 外链。
-            allow_single = not item.get("from_card") or int(
-                existing.detail_refresh_attempts or 0
-            ) >= _max_detail_attempts()
+            allow_single = (
+                not item.get("from_card")
+                or int(existing.detail_refresh_attempts or 0) >= _max_detail_attempts()
+            )
             merged_images = _pick_images(
                 image_urls,
                 existing.images,
@@ -244,15 +250,11 @@ async def load_detail_refresh_state(user_id: str, platform: str) -> dict[str, An
         for note_id, last_at, attempts in rows:
             if not note_id:
                 continue
-            states[note_id] = RefreshState(
-                last_attempt_at=last_at, attempts=int(attempts or 0)
-            )
+            states[note_id] = RefreshState(last_attempt_at=last_at, attempts=int(attempts or 0))
         return states
 
 
-async def record_detail_attempts(
-    user_id: str, platform: str, note_ids: list[str]
-) -> None:
+async def record_detail_attempts(user_id: str, platform: str, note_ids: list[str]) -> None:
     """登记本轮即将抓取的详情页（次数 +1、时间置为当前）。
 
     在发请求之前登记而不是抓完之后，即使子进程被超时强杀，
@@ -317,6 +319,7 @@ async def _cache_cover_image(note_id: str, url: str) -> str:
 
     try:
         from app.services.image_store import save_topic_cover
+
         local_url = await save_topic_cover(note_id, url)
         if local_url:
             return local_url
@@ -335,6 +338,7 @@ async def _cache_detail_images(note_id: str, urls: list[str]) -> list[str]:
         return urls
 
     from app.services.image_store import cache_detail_images
+
     cached = await cache_detail_images(note_id, urls)
     return cached or urls
 
@@ -343,9 +347,11 @@ def _max_detail_attempts() -> int:
     """详情页自动重试上限（与爬虫侧策略保持一致）。"""
     try:
         from app.config import get_settings
+
         return int(get_settings().spider_detail_max_attempts)
     except Exception:
         from capabilities.scrapling.spiders.detail_refresh import DEFAULT_MAX_ATTEMPTS
+
         return DEFAULT_MAX_ATTEMPTS
 
 

@@ -78,9 +78,7 @@ async def delete_folder(folder_id: str, user_id: str) -> bool:
             .values(folder_id="")
         )
         await db.execute(
-            update(ChatFile)
-            .where(ChatFile.folder_id == folder_id)
-            .values(folder_id="")
+            update(ChatFile).where(ChatFile.folder_id == folder_id).values(folder_id="")
         )
         await db.delete(folder)
         await db.commit()

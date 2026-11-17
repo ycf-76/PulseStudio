@@ -8,6 +8,7 @@
 - 一个产物 = 一个「直接含有图片/视频」的目录；祖先目录若自身无媒体则不重复产出。
 - 媒体通过 `/outputs/<相对路径>` 静态路径对外暴露，前端零代理直接渲染。
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -101,7 +102,11 @@ def _clean_segment(seg: str) -> str:
     例如 `OwdN5Jwjo_9XA_iAvuht-Q`、`6a0d0d3457a3cd9896755cfa6d042596`。
     """
     collapsed = re.sub(r"[\W_]+", "", seg).lower()
-    if len(collapsed) >= 16 and any(c.isdigit() for c in collapsed) and any(c.isalpha() for c in collapsed):
+    if (
+        len(collapsed) >= 16
+        and any(c.isdigit() for c in collapsed)
+        and any(c.isalpha() for c in collapsed)
+    ):
         return ""
     tokens = re.split(r"[^0-9A-Za-z\u4e00-\u9fff]+", seg)
     kept = [t for t in tokens if not _is_noise_token(t)]
@@ -158,7 +163,9 @@ def _collect_media(directory: Path) -> tuple[list[Path], list[Path], list[Path]]
     return images, videos, svgs
 
 
-def _build_product(root: Path, directory: Path, rel_parts: tuple[str, ...]) -> dict[str, Any] | None:
+def _build_product(
+    root: Path, directory: Path, rel_parts: tuple[str, ...]
+) -> dict[str, Any] | None:
     images, videos, svgs = _collect_media(directory)
     if not images and not videos and not svgs:
         return None
@@ -171,9 +178,7 @@ def _build_product(root: Path, directory: Path, rel_parts: tuple[str, ...]) -> d
         mtime = directory.stat().st_mtime
     except OSError:
         mtime = 0.0
-    created_at = (
-        datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat() if mtime else None
-    )
+    created_at = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat() if mtime else None
     pages = [
         {"type": "image", "imageUrl": url, "pngUrls": [url], "id": f"page-{idx}"}
         for idx, url in enumerate(image_urls)

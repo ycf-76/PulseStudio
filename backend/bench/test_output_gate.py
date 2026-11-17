@@ -28,20 +28,30 @@ def test_receipt_ledger_basic():
 
     receipt_artifacts: dict = {}
     if isinstance(obs, dict) and obs_ok:
-        for rk in ("card_draft", "asset_ids", "file_path",
-                    "html_path", "image_url", "title", "pages",
-                    "deck", "schema_version"):
+        for rk in (
+            "card_draft",
+            "asset_ids",
+            "file_path",
+            "html_path",
+            "image_url",
+            "title",
+            "pages",
+            "deck",
+            "schema_version",
+        ):
             rv = obs.get(rk)
             if rv is not None:
                 receipt_artifacts[rk] = rv
 
-    ledger.append({
-        "call_id": f"call_{iteration}_{step_tool_count}",
-        "tool": tool_name,
-        "ok": obs_ok,
-        "artifacts": receipt_artifacts,
-        "iter": iteration,
-    })
+    ledger.append(
+        {
+            "call_id": f"call_{iteration}_{step_tool_count}",
+            "tool": tool_name,
+            "ok": obs_ok,
+            "artifacts": receipt_artifacts,
+            "iter": iteration,
+        }
+    )
 
     assert len(ledger) == 1
     assert ledger[0]["ok"] is True
@@ -64,13 +74,15 @@ def test_receipt_ledger_failed():
     if isinstance(obs, dict) and obs_ok:
         pass
 
-    ledger.append({
-        "call_id": f"call_{iteration}_0",
-        "tool": tool_name,
-        "ok": obs_ok,
-        "artifacts": receipt_artifacts,
-        "iter": iteration,
-    })
+    ledger.append(
+        {
+            "call_id": f"call_{iteration}_0",
+            "tool": tool_name,
+            "ok": obs_ok,
+            "artifacts": receipt_artifacts,
+            "iter": iteration,
+        }
+    )
 
     assert len(ledger) == 1
     assert ledger[0]["ok"] is False
@@ -81,8 +93,13 @@ def test_receipt_ledger_failed():
 def test_output_gate_removes_unproven():
     """Output Gate removes artifact keys that have no ok=True receipt."""
     ledger = [
-        {"call_id": "call_1_0", "tool": "compose_card_deck", "ok": False,
-         "artifacts": {}, "iter": 1},
+        {
+            "call_id": "call_1_0",
+            "tool": "compose_card_deck",
+            "ok": False,
+            "artifacts": {},
+            "iter": 1,
+        },
     ]
 
     final_output = {
@@ -92,10 +109,18 @@ def test_output_gate_removes_unproven():
         "ended_reason": "completed",
     }
 
-    PRODUCT_ARTIFACT_KEYS = frozenset({
-        "card_draft", "asset_ids", "file_path",
-        "html_path", "image_url", "title", "pages", "deck",
-    })
+    PRODUCT_ARTIFACT_KEYS = frozenset(
+        {
+            "card_draft",
+            "asset_ids",
+            "file_path",
+            "html_path",
+            "image_url",
+            "title",
+            "pages",
+            "deck",
+        }
+    )
 
     proven_artifacts: set = set()
     for rcpt in ledger:
@@ -119,8 +144,13 @@ def test_output_gate_removes_unproven():
 def test_output_gate_preserves_proven():
     """Output Gate preserves artifact keys that have ok=True receipt."""
     ledger = [
-        {"call_id": "call_1_0", "tool": "compose_card_deck", "ok": True,
-         "artifacts": {"card_draft": {"v": 1}, "title": "real"}, "iter": 1},
+        {
+            "call_id": "call_1_0",
+            "tool": "compose_card_deck",
+            "ok": True,
+            "artifacts": {"card_draft": {"v": 1}, "title": "real"},
+            "iter": 1,
+        },
     ]
 
     final_output = {
@@ -129,10 +159,18 @@ def test_output_gate_preserves_proven():
         "ended_reason": "completed",
     }
 
-    PRODUCT_ARTIFACT_KEYS = frozenset({
-        "card_draft", "asset_ids", "file_path",
-        "html_path", "image_url", "title", "pages", "deck",
-    })
+    PRODUCT_ARTIFACT_KEYS = frozenset(
+        {
+            "card_draft",
+            "asset_ids",
+            "file_path",
+            "html_path",
+            "image_url",
+            "title",
+            "pages",
+            "deck",
+        }
+    )
 
     proven_artifacts: set = set()
     for rcpt in ledger:
@@ -159,8 +197,13 @@ def test_output_gate_type2_hallucination():
     llm_generate's receipt has no card_draft artifact.
     """
     ledger = [
-        {"call_id": "call_1_0", "tool": "llm_generate", "ok": True,
-         "artifacts": {"title": "generated title"}, "iter": 1},
+        {
+            "call_id": "call_1_0",
+            "tool": "llm_generate",
+            "ok": True,
+            "artifacts": {"title": "generated title"},
+            "iter": 1,
+        },
     ]
 
     final_output = {
@@ -169,10 +212,18 @@ def test_output_gate_type2_hallucination():
         "ended_reason": "completed",
     }
 
-    PRODUCT_ARTIFACT_KEYS = frozenset({
-        "card_draft", "asset_ids", "file_path",
-        "html_path", "image_url", "title", "pages", "deck",
-    })
+    PRODUCT_ARTIFACT_KEYS = frozenset(
+        {
+            "card_draft",
+            "asset_ids",
+            "file_path",
+            "html_path",
+            "image_url",
+            "title",
+            "pages",
+            "deck",
+        }
+    )
 
     proven_artifacts: set = set()
     for rcpt in ledger:
@@ -194,8 +245,13 @@ def test_output_gate_type2_hallucination():
 def test_output_gate_supplement_missing():
     """Output Gate supplements artifact keys that are in ledger but missing from output."""
     ledger = [
-        {"call_id": "call_1_0", "tool": "compose_card_deck", "ok": True,
-         "artifacts": {"card_draft": {"v": 1}, "title": "real"}, "iter": 1},
+        {
+            "call_id": "call_1_0",
+            "tool": "compose_card_deck",
+            "ok": True,
+            "artifacts": {"card_draft": {"v": 1}, "title": "real"},
+            "iter": 1,
+        },
     ]
 
     observed_artifacts = {"card_draft": {"v": 1}, "title": "real"}
@@ -204,10 +260,18 @@ def test_output_gate_supplement_missing():
         "ended_reason": "completed",
     }
 
-    PRODUCT_ARTIFACT_KEYS = frozenset({
-        "card_draft", "asset_ids", "file_path",
-        "html_path", "image_url", "title", "pages", "deck",
-    })
+    PRODUCT_ARTIFACT_KEYS = frozenset(
+        {
+            "card_draft",
+            "asset_ids",
+            "file_path",
+            "html_path",
+            "image_url",
+            "title",
+            "pages",
+            "deck",
+        }
+    )
 
     proven_artifacts: set = set()
     for rcpt in ledger:
@@ -226,10 +290,20 @@ def test_output_gate_supplement_missing():
 def test_output_gate_mixed_scenario():
     """Mixed: some tools succeed, some fail, LLM fabricates extra keys."""
     ledger = [
-        {"call_id": "call_1_0", "tool": "llm_generate", "ok": True,
-         "artifacts": {"title": "real title"}, "iter": 1},
-        {"call_id": "call_2_0", "tool": "compose_card_deck", "ok": False,
-         "artifacts": {}, "iter": 2},
+        {
+            "call_id": "call_1_0",
+            "tool": "llm_generate",
+            "ok": True,
+            "artifacts": {"title": "real title"},
+            "iter": 1,
+        },
+        {
+            "call_id": "call_2_0",
+            "tool": "compose_card_deck",
+            "ok": False,
+            "artifacts": {},
+            "iter": 2,
+        },
     ]
 
     final_output = {
@@ -239,10 +313,18 @@ def test_output_gate_mixed_scenario():
         "ended_reason": "completed",
     }
 
-    PRODUCT_ARTIFACT_KEYS = frozenset({
-        "card_draft", "asset_ids", "file_path",
-        "html_path", "image_url", "title", "pages", "deck",
-    })
+    PRODUCT_ARTIFACT_KEYS = frozenset(
+        {
+            "card_draft",
+            "asset_ids",
+            "file_path",
+            "html_path",
+            "image_url",
+            "title",
+            "pages",
+            "deck",
+        }
+    )
 
     proven_artifacts: set = set()
     for rcpt in ledger:
@@ -347,8 +429,13 @@ def test_execution_gate_max_iterations_no_rewrite():
 def test_execution_gate_normal_completion_skipped():
     """Execution Gate: normal completion with receipts → no _fake_final."""
     ledger = [
-        {"call_id": "call_1_0", "tool": "compose_card_deck", "ok": True,
-         "artifacts": {"card_draft": {"v": 1}}, "iter": 1},
+        {
+            "call_id": "call_1_0",
+            "tool": "compose_card_deck",
+            "ok": True,
+            "artifacts": {"card_draft": {"v": 1}},
+            "iter": 1,
+        },
     ]
     observed_artifacts = {"card_draft": {"v": 1}}
     ended_reason = "completed"
@@ -373,7 +460,9 @@ def test_execution_gate_paused_skipped():
     final_output: dict = {"ended_reason": ended_reason}
 
     is_paused = ended_reason in (
-        "clarification_paused", "guardian_paused", "storyboard_paused",
+        "clarification_paused",
+        "guardian_paused",
+        "storyboard_paused",
     )
 
     if not is_paused:
@@ -389,11 +478,24 @@ def test_pure_qa_bypass_nudge():
     thought = "用户只是让我自我介绍，这是纯问答，不需要调用工具"
     _is_pure_qa = False
     _qa_signals = (
-        "纯问答", "纯聊天", "闲聊", "不需要调用工具",
-        "不需要工具", "无需调用", "无需工具", "直接回答",
-        "直接回复", "不需要调用任何工具", "不涉及创作",
-        "问答场景", "聊天场景", "只是聊天", "只是问答",
-        "不涉及工具", "无需执行", "无需创作",
+        "纯问答",
+        "纯聊天",
+        "闲聊",
+        "不需要调用工具",
+        "不需要工具",
+        "无需调用",
+        "无需工具",
+        "直接回答",
+        "直接回复",
+        "不需要调用任何工具",
+        "不涉及创作",
+        "问答场景",
+        "聊天场景",
+        "只是聊天",
+        "只是问答",
+        "不涉及工具",
+        "无需执行",
+        "无需创作",
     )
     _thought_lower = thought.lower()
     _is_pure_qa = any(s in _thought_lower for s in _qa_signals)
@@ -404,7 +506,13 @@ def test_pure_qa_bypass_nudge():
     _llm_call_failed = False
     _fake_final_nudge = 0
     _MAX_FAKE_FINAL_NUDGE = 2
-    should_nudge = not _any_tool_executed and not _has_artifacts and not _llm_call_failed and _fake_final_nudge < _MAX_FAKE_FINAL_NUDGE and not _is_pure_qa
+    should_nudge = (
+        not _any_tool_executed
+        and not _has_artifacts
+        and not _llm_call_failed
+        and _fake_final_nudge < _MAX_FAKE_FINAL_NUDGE
+        and not _is_pure_qa
+    )
     assert should_nudge is False
     print("✅ pure_qa bypass: thought with '不需要调用工具' → nudge skipped")
 
@@ -440,11 +548,24 @@ def test_pure_qa_no_signal_triggers_gate():
     thought = "我已经完成了卡片制作"
     _is_pure_qa = False
     _qa_signals = (
-        "纯问答", "纯聊天", "闲聊", "不需要调用工具",
-        "不需要工具", "无需调用", "无需工具", "直接回答",
-        "直接回复", "不需要调用任何工具", "不涉及创作",
-        "问答场景", "聊天场景", "只是聊天", "只是问答",
-        "不涉及工具", "无需执行", "无需创作",
+        "纯问答",
+        "纯聊天",
+        "闲聊",
+        "不需要调用工具",
+        "不需要工具",
+        "无需调用",
+        "无需工具",
+        "直接回答",
+        "直接回复",
+        "不需要调用任何工具",
+        "不涉及创作",
+        "问答场景",
+        "聊天场景",
+        "只是聊天",
+        "只是问答",
+        "不涉及工具",
+        "无需执行",
+        "无需创作",
     )
     _thought_lower = thought.lower()
     _is_pure_qa = any(s in _thought_lower for s in _qa_signals)
@@ -484,11 +605,29 @@ def test_format_nudge_natural_language_qa_accepted():
     _is_natural_language_qa = False
     if content and len(content.strip()) > 20 and not _any_tool_executed:
         _creation_signals = (
-            "做卡片", "做封面", "做视频", "写文案", "写笔记",
-            "生成", "创作", "排版", "出图", "出片", "做图",
-            "做海报", "做长图", "compose", "render",
-            "帮我做", "帮我写", "帮我生成", "帮我创",
-            "制作", "导出", "保存为", "发布",
+            "做卡片",
+            "做封面",
+            "做视频",
+            "写文案",
+            "写笔记",
+            "生成",
+            "创作",
+            "排版",
+            "出图",
+            "出片",
+            "做图",
+            "做海报",
+            "做长图",
+            "compose",
+            "render",
+            "帮我做",
+            "帮我写",
+            "帮我生成",
+            "帮我创",
+            "制作",
+            "导出",
+            "保存为",
+            "发布",
         )
         _msg_lower = (user_intent or "").lower()
         _msg_has_creation = any(s in _msg_lower for s in _creation_signals)
@@ -508,11 +647,29 @@ def test_format_nudge_creation_signal_triggers_nudge():
     _is_natural_language_qa = False
     if content and len(content.strip()) > 20 and not _any_tool_executed:
         _creation_signals = (
-            "做卡片", "做封面", "做视频", "写文案", "写笔记",
-            "生成", "创作", "排版", "出图", "出片", "做图",
-            "做海报", "做长图", "compose", "render",
-            "帮我做", "帮我写", "帮我生成", "帮我创",
-            "制作", "导出", "保存为", "发布",
+            "做卡片",
+            "做封面",
+            "做视频",
+            "写文案",
+            "写笔记",
+            "生成",
+            "创作",
+            "排版",
+            "出图",
+            "出片",
+            "做图",
+            "做海报",
+            "做长图",
+            "compose",
+            "render",
+            "帮我做",
+            "帮我写",
+            "帮我生成",
+            "帮我创",
+            "制作",
+            "导出",
+            "保存为",
+            "发布",
         )
         _msg_lower = (user_intent or "").lower()
         _msg_has_creation = any(s in _msg_lower for s in _creation_signals)

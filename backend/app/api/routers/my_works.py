@@ -8,6 +8,7 @@
 - POST /api/my-works/collect：粘贴链接采集数据入库
 - POST /api/my-works/csv-import：CSV 批量导入（创作者中心数据）
 """
+
 from __future__ import annotations
 
 import logging
@@ -15,7 +16,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, select, func, or_
+from sqlalchemy import desc, func, or_, select
 
 from app.api.deps import get_current_user
 from app.api.schemas.common import StandardResponse
@@ -38,6 +39,7 @@ GENERATED_PREFIXES = (generated_works.ARTIFACT_PREFIX, "output:")
 def _local_video_web_url(record: PublishedContentPerformance) -> str | None:
     """local_video_path → /outputs Web 路径（不暴露服务器本地路径）。"""
     from app.services.media_download_service import to_web_url
+
     return to_web_url(getattr(record, "local_video_path", None))
 
 
@@ -55,8 +57,13 @@ def _public_images(images: Any) -> list[Any]:
 
 
 class CollectRequest(BaseModel):
-    note_url: str = Field(description="内容链接（任意公开网页均可：已知平台走深度解析，其余走通用网页抓取）")
-    platform: str = Field(default="auto", description="平台标识：auto=自动检测（仅做路由提示，识别不到不影响采集）/ xiaohongshu / douyin / bilibili / wechat_mp / instagram / threads / web（通用网页）")
+    note_url: str = Field(
+        description="内容链接（任意公开网页均可：已知平台走深度解析，其余走通用网页抓取）"
+    )
+    platform: str = Field(
+        default="auto",
+        description="平台标识：auto=自动检测（仅做路由提示，识别不到不影响采集）/ xiaohongshu / douyin / bilibili / wechat_mp / instagram / threads / web（通用网页）",
+    )
 
 
 class CsvImportRequest(BaseModel):
@@ -93,7 +100,9 @@ def _record_item(r: PublishedContentPerformance) -> dict:
             "prediction_error": r.prediction_error,
             "collected_at": r.collected_at.isoformat() if r.collected_at else None,
             "content_status": (
-                "collected" if r.collected_at and (r.collected_likes or r.collected_collects or r.collected_comments)
+                "collected"
+                if r.collected_at
+                and (r.collected_likes or r.collected_collects or r.collected_comments)
                 else r.content_status
             ),
             "title_pattern": r.title_pattern,
@@ -143,7 +152,7 @@ async def _list_collected(
         if platform:
             stmt = stmt.where(PublishedContentPerformance.platform == platform)
         if content_status:
-            statuses = [s.strip() for s in content_status.split(',') if s.strip()]
+            statuses = [s.strip() for s in content_status.split(",") if s.strip()]
             if len(statuses) == 1:
                 stmt = stmt.where(PublishedContentPerformance.content_status == statuses[0])
             elif len(statuses) > 1:
@@ -171,7 +180,12 @@ async def _list_collected(
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
         records = list((await db.scalars(stmt)).all())
 
-    return {"items": [_record_item(r) for r in records], "total": total, "page": page, "page_size": page_size}
+    return {
+        "items": [_record_item(r) for r in records],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 async def _list_origin(
@@ -189,7 +203,7 @@ async def _list_origin(
         items = await generated_works.list_generated_works(user_id, platform=platform)
         start = (page - 1) * page_size
         return {
-            "items": items[start:start + page_size],
+            "items": items[start : start + page_size],
             "total": len(items),
             "page": page,
             "page_size": page_size,
@@ -211,7 +225,7 @@ async def _list_origin(
             merged.sort(key=lambda item: item.get("published_at") or "", reverse=True)
         start = (page - 1) * page_size
         return {
-            "items": merged[start:start + page_size],
+            "items": merged[start : start + page_size],
             "total": len(merged),
             "page": page,
             "page_size": page_size,
@@ -231,8 +245,13 @@ async def list_my_works(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=500),
     platform: str | None = Query(default=None, description="按平台筛选"),
-    sort_by: str = Query(default="collected_at", description="排序字段：collected_at=采集时间倒序（默认）/ published_at / performance_score"),
-    content_status: str | None = Query(default=None, description="按状态筛选：draft/published/collected"),
+    sort_by: str = Query(
+        default="collected_at",
+        description="排序字段：collected_at=采集时间倒序（默认）/ published_at / performance_score",
+    ),
+    content_status: str | None = Query(
+        default=None, description="按状态筛选：draft/published/collected"
+    ),
     origin: str = Query(
         default="collected",
         description="来源筛选：collected=采集（默认，兼容旧调用）/ generated=平台生成 / all=全部",
@@ -273,33 +292,37 @@ async def get_work_facets(
         )
         counts = {row[0]: row[1] for row in (await db.execute(stmt)).all()}
 
-        accounts = list((await db.scalars(
-            select(PlatformAccount).where(PlatformAccount.user_id == user_id)
-        )).all())
+        accounts = list(
+            (
+                await db.scalars(select(PlatformAccount).where(PlatformAccount.user_id == user_id))
+            ).all()
+        )
 
     bound = {account.platform: account for account in accounts}
     platforms = order_platforms(list(set(counts) | set(bound) | set(SUPPORTED_PLATFORMS)), counts)
-    return StandardResponse(data={
-        "platforms": [
-            {
-                "platform": p,
-                "label": platform_label(p),
-                "count": counts.get(p, 0),
-                "bound": p in bound,
-                "supported": p in SUPPORTED_PLATFORMS,
-                "nickname": bound[p].platform_nickname if p in bound else None,
-            }
-            for p in platforms
-        ],
-        "total": sum(counts.values()),
-    })
+    return StandardResponse(
+        data={
+            "platforms": [
+                {
+                    "platform": p,
+                    "label": platform_label(p),
+                    "count": counts.get(p, 0),
+                    "bound": p in bound,
+                    "supported": p in SUPPORTED_PLATFORMS,
+                    "nickname": bound[p].platform_nickname if p in bound else None,
+                }
+                for p in platforms
+            ],
+            "total": sum(counts.values()),
+        }
+    )
 
 
 async def _delete_artifact_work(record_id: str, user_id: str) -> dict[str, Any]:
     """删创作产物：先鉴权再删盘，避免越权删别人的作品。"""
     from app.services.creative_artifact import delete_artifact, load_artifact, verify_owner
 
-    artifact_id = record_id[len(generated_works.ARTIFACT_PREFIX):]
+    artifact_id = record_id[len(generated_works.ARTIFACT_PREFIX) :]
     artifact = load_artifact(artifact_id)
     if artifact is None:
         raise HTTPException(status_code=404, detail="创作产物不存在")
@@ -362,9 +385,9 @@ async def get_analysis_report(
 
     核心输出不是数据，是洞察和行动建议。
     """
-    from app.services.self_attribution import SelfAttributionEngine, get_attribution_weight
     from app.services.agent_memory import load_for_workflow
     from app.services.performance_collector import compute_performance_score
+    from app.services.self_attribution import SelfAttributionEngine, get_attribution_weight
 
     engine = SelfAttributionEngine()
 
@@ -376,18 +399,24 @@ async def get_analysis_report(
         if platform:
             base_where.append(PublishedContentPerformance.platform == platform)
 
-        all_stmt = select(PublishedContentPerformance).where(*base_where).order_by(desc(PublishedContentPerformance.performance_score))
+        all_stmt = (
+            select(PublishedContentPerformance)
+            .where(*base_where)
+            .order_by(desc(PublishedContentPerformance.performance_score))
+        )
         all_result = await db.scalars(all_stmt)
         all_works = list(all_result.all())
 
         total_count = len(all_works)
 
         if total_count == 0:
-            return StandardResponse(data={
-                "status": "no_data",
-                "message": "暂无采集数据，请先通过链接采集或 CSV 导入",
-                "actions": ["采集链接入库", "CSV 批量导入"],
-            })
+            return StandardResponse(
+                data={
+                    "status": "no_data",
+                    "message": "暂无采集数据，请先通过链接采集或 CSV 导入",
+                    "actions": ["采集链接入库", "CSV 批量导入"],
+                }
+            )
 
         high_works = [w for w in all_works if (w.performance_score or 0) >= 0.3]
         low_works = [w for w in all_works if (w.performance_score or 0) < 0.3]
@@ -397,9 +426,17 @@ async def get_analysis_report(
         avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
         median_score = sorted(all_scores)[len(all_scores) // 2] if all_scores else 0
 
-        predicted_works = [w for w in all_works if w.predicted_viral_score is not None and w.actual_viral_score is not None]
-        prediction_errors = [w.prediction_error for w in predicted_works if w.prediction_error is not None]
-        avg_prediction_error = sum(prediction_errors) / len(prediction_errors) if prediction_errors else None
+        predicted_works = [
+            w
+            for w in all_works
+            if w.predicted_viral_score is not None and w.actual_viral_score is not None
+        ]
+        prediction_errors = [
+            w.prediction_error for w in predicted_works if w.prediction_error is not None
+        ]
+        avg_prediction_error = (
+            sum(prediction_errors) / len(prediction_errors) if prediction_errors else None
+        )
         overestimate_count = sum(1 for e in prediction_errors if e < -0.1)
         underestimate_count = sum(1 for e in prediction_errors if e > 0.1)
         accurate_count = len(prediction_errors) - overestimate_count - underestimate_count
@@ -408,24 +445,32 @@ async def get_analysis_report(
         for w in all_works:
             p = w.platform or "unknown"
             if p not in platform_stats:
-                platform_stats[p] = {"count": 0, "total_score": 0.0, "replicated": 0, "likes": 0, "collects": 0}
+                platform_stats[p] = {
+                    "count": 0,
+                    "total_score": 0.0,
+                    "replicated": 0,
+                    "likes": 0,
+                    "collects": 0,
+                }
             platform_stats[p]["count"] += 1
-            platform_stats[p]["total_score"] += (w.performance_score or 0)
+            platform_stats[p]["total_score"] += w.performance_score or 0
             if w.is_replicated:
                 platform_stats[p]["replicated"] += 1
-            platform_stats[p]["likes"] += (w.collected_likes or 0)
-            platform_stats[p]["collects"] += (w.collected_collects or 0)
+            platform_stats[p]["likes"] += w.collected_likes or 0
+            platform_stats[p]["collects"] += w.collected_collects or 0
 
         platform_summary = []
         for p, s in platform_stats.items():
-            platform_summary.append({
-                "platform": p,
-                "count": s["count"],
-                "avg_score": round(s["total_score"] / s["count"], 4) if s["count"] else 0,
-                "replicated_rate": round(s["replicated"] / s["count"], 3) if s["count"] else 0,
-                "total_likes": s["likes"],
-                "total_collects": s["collects"],
-            })
+            platform_summary.append(
+                {
+                    "platform": p,
+                    "count": s["count"],
+                    "avg_score": round(s["total_score"] / s["count"], 4) if s["count"] else 0,
+                    "replicated_rate": round(s["replicated"] / s["count"], 3) if s["count"] else 0,
+                    "total_likes": s["likes"],
+                    "total_collects": s["collects"],
+                }
+            )
 
         title_patterns: dict[str, list[float]] = {}
         emotion_triggers: dict[str, list[float]] = {}
@@ -440,7 +485,11 @@ async def get_analysis_report(
                 content_structures.setdefault(w.content_structure, []).append(score)
 
         def rank_dict(d: dict[str, list[float]]) -> list[dict]:
-            items = [{"name": k, "avg_score": round(sum(v) / len(v), 4), "count": len(v)} for k, v in d.items() if v]
+            items = [
+                {"name": k, "avg_score": round(sum(v) / len(v), 4), "count": len(v)}
+                for k, v in d.items()
+                if v
+            ]
             return sorted(items, key=lambda x: x["avg_score"], reverse=True)
 
         pattern_ranking = rank_dict(title_patterns)
@@ -460,58 +509,92 @@ async def get_analysis_report(
 
     actions: list[dict] = []
     if total_count < 10:
-        actions.append({"priority": "high", "action": "继续采集数据", "reason": f"当前 {total_count} 篇，需要 10+ 篇才能生成可靠分析"})
+        actions.append(
+            {
+                "priority": "high",
+                "action": "继续采集数据",
+                "reason": f"当前 {total_count} 篇，需要 10+ 篇才能生成可靠分析",
+            }
+        )
     if pattern_ranking:
         best = pattern_ranking[0]
-        actions.append({"priority": "medium", "action": f"多用「{best['name']}」标题模式", "reason": f"{best['count']} 篇验证，平均表现最好"})
+        actions.append(
+            {
+                "priority": "medium",
+                "action": f"多用「{best['name']}」标题模式",
+                "reason": f"{best['count']} 篇验证，平均表现最好",
+            }
+        )
     if emotion_ranking:
         best_e = emotion_ranking[0]
-        actions.append({"priority": "medium", "action": f"多用「{best_e['name']}」情绪钩子", "reason": f"{best_e['count']} 篇验证"})
+        actions.append(
+            {
+                "priority": "medium",
+                "action": f"多用「{best_e['name']}」情绪钩子",
+                "reason": f"{best_e['count']} 篇验证",
+            }
+        )
     if avoid_patterns:
-        items = avoid_patterns if isinstance(avoid_patterns, list) else avoid_patterns.get("items", [])
+        items = (
+            avoid_patterns if isinstance(avoid_patterns, list) else avoid_patterns.get("items", [])
+        )
         if items:
-            actions.append({"priority": "medium", "action": "避开低效模式", "reason": f"已有 {len(items)} 条避坑规则"})
+            actions.append(
+                {
+                    "priority": "medium",
+                    "action": "避开低效模式",
+                    "reason": f"已有 {len(items)} 条避坑规则",
+                }
+            )
     if len(low_works) > len(high_works) and total_count >= 5:
-        actions.append({"priority": "medium", "action": "复盘低表现内容", "reason": f"{len(low_works)} 篇低表现 vs {len(high_works)} 篇高表现，找出差异"})
+        actions.append(
+            {
+                "priority": "medium",
+                "action": "复盘低表现内容",
+                "reason": f"{len(low_works)} 篇低表现 vs {len(high_works)} 篇高表现，找出差异",
+            }
+        )
 
     confidence = "low" if total_count < 10 else ("medium" if total_count < 30 else "high")
 
-    return StandardResponse(data={
-        "status": "ok",
-        "confidence": confidence,
-        "sample_size": total_count,
-        "my_weight": round(my_weight, 3),
-        "overview": {
-            "total": total_count,
-            "high_performers": len(high_works),
-            "low_performers": len(low_works),
-            "replicated": len(replicated_works),
-            "total_likes": total_likes,
-            "total_collects": total_collects,
-            "total_comments": total_comments,
-            "avg_score": round(avg_score, 4),
-        },
-        "platform_comparison": platform_summary,
-        "pattern_ranking": pattern_ranking[:8],
-        "emotion_ranking": emotion_ranking[:6],
-        "structure_ranking": structure_ranking[:6],
-        "top_performers": [
-            {
-                "id": w.id,
-                "title": w.title,
-                "platform": w.platform,
-                "score": round(w.performance_score or 0, 4),
-                "likes": w.collected_likes,
-                "collects": w.collected_collects,
-                "comments": w.collected_comments,
-                "cover_img_url": w.cover_img_url,
-            }
-            for w in top_works
-        ],
-        "writing_prescription": my_attribution,
-        "avoid_patterns": avoid_patterns,
-        "action_items": actions,
-    })
+    return StandardResponse(
+        data={
+            "status": "ok",
+            "confidence": confidence,
+            "sample_size": total_count,
+            "my_weight": round(my_weight, 3),
+            "overview": {
+                "total": total_count,
+                "high_performers": len(high_works),
+                "low_performers": len(low_works),
+                "replicated": len(replicated_works),
+                "total_likes": total_likes,
+                "total_collects": total_collects,
+                "total_comments": total_comments,
+                "avg_score": round(avg_score, 4),
+            },
+            "platform_comparison": platform_summary,
+            "pattern_ranking": pattern_ranking[:8],
+            "emotion_ranking": emotion_ranking[:6],
+            "structure_ranking": structure_ranking[:6],
+            "top_performers": [
+                {
+                    "id": w.id,
+                    "title": w.title,
+                    "platform": w.platform,
+                    "score": round(w.performance_score or 0, 4),
+                    "likes": w.collected_likes,
+                    "collects": w.collected_collects,
+                    "comments": w.collected_comments,
+                    "cover_img_url": w.cover_img_url,
+                }
+                for w in top_works
+            ],
+            "writing_prescription": my_attribution,
+            "avoid_patterns": avoid_patterns,
+            "action_items": actions,
+        }
+    )
 
 
 @router.post("/trigger-attribution")
@@ -520,10 +603,13 @@ async def trigger_attribution(
 ) -> StandardResponse[dict]:
     """手动触发归因分析，生成/更新写作处方。"""
     from app.services.self_attribution import SelfAttributionEngine
+
     engine = SelfAttributionEngine()
     result = await engine.generate_writing_prescription(user_id)
     if result is None:
-        return StandardResponse(success=False, data={}, message="数据不足（需要至少 5 篇已采集数据）")
+        return StandardResponse(
+            success=False, data={}, message="数据不足（需要至少 5 篇已采集数据）"
+        )
     return StandardResponse(data=result, message="归因分析完成，写作处方已更新")
 
 
@@ -533,11 +619,14 @@ async def get_attribution(
 ) -> StandardResponse[dict]:
     """我的归因分析结果（写作处方）。"""
     from app.services.agent_memory import load_for_workflow
+
     memory = await load_for_workflow(user_id)
-    return StandardResponse(data={
-        "my_attribution": memory.get("my_attribution", {}),
-        "avoid_patterns": memory.get("avoid_patterns", []),
-    })
+    return StandardResponse(
+        data={
+            "my_attribution": memory.get("my_attribution", {}),
+            "avoid_patterns": memory.get("avoid_patterns", []),
+        }
+    )
 
 
 @router.post("/{record_id}/download-media")
@@ -551,6 +640,7 @@ async def download_work_media(
     完成后 local_video_path 回写，前端轮询作品详情获取 local_video_url。
     """
     from app.services.media_download_service import start_download
+
     result = await start_download(record_id, user_id)
     success = result["status"] != "blocked"
     return StandardResponse(success=success, data=result, message=result.get("message", ""))
@@ -594,8 +684,13 @@ async def collect_note_data(
     降级链：SSR 解析（需 xsec_token）→ link-grabber → Web API → MCP
     提示：从手机 App 分享的链接自带 xsec_token，可直接解析。
     """
-    from app.services.work_collector import collect_from_url, detect_platform, get_last_collect_errors, _clean_share_text
     from app.services.performance_collector import compute_performance_score
+    from app.services.work_collector import (
+        _clean_share_text,
+        collect_from_url,
+        detect_platform,
+        get_last_collect_errors,
+    )
 
     cleaned_url = _clean_share_text(payload.note_url)
     platform = payload.platform
@@ -624,13 +719,15 @@ async def collect_note_data(
     async with AsyncSessionLocal() as db:
         from datetime import UTC, datetime
 
-        score = compute_performance_score({
-            "likes": result.get("likes", 0),
-            "collects": result.get("collects", 0),
-            "comments": result.get("comments", 0),
-            "shares": result.get("shares", 0),
-            "author_fans": result.get("author_fans", 1),
-        })
+        score = compute_performance_score(
+            {
+                "likes": result.get("likes", 0),
+                "collects": result.get("collects", 0),
+                "comments": result.get("comments", 0),
+                "shares": result.get("shares", 0),
+                "author_fans": result.get("author_fans", 1),
+            }
+        )
 
         from app.services.image_store import cache_cover_image, cache_detail_images
 
@@ -715,7 +812,8 @@ async def csv_import(
                     platform=payload.platform,
                     published_at=(
                         datetime.fromisoformat(row["published_at"])
-                        if row.get("published_at") else datetime.now(UTC)
+                        if row.get("published_at")
+                        else datetime.now(UTC)
                     ),
                     collected_likes=int(row.get("likes", 0) or 0),
                     collected_collects=int(row.get("collects", 0) or 0),
@@ -725,13 +823,16 @@ async def csv_import(
                     content_status="collected",
                 )
                 from app.services.performance_collector import compute_performance_score
-                record.performance_score = compute_performance_score({
-                    "likes": record.collected_likes,
-                    "collects": record.collected_collects,
-                    "comments": record.collected_comments,
-                    "shares": record.collected_shares,
-                    "author_fans": int(row.get("author_fans", 1) or 1),
-                })
+
+                record.performance_score = compute_performance_score(
+                    {
+                        "likes": record.collected_likes,
+                        "collects": record.collected_collects,
+                        "comments": record.collected_comments,
+                        "shares": record.collected_shares,
+                        "author_fans": int(row.get("author_fans", 1) or 1),
+                    }
+                )
                 db.add(record)
                 imported += 1
             except Exception as e:
@@ -740,11 +841,14 @@ async def csv_import(
 
         await db.commit()
 
-    return StandardResponse(data={
-        "imported": imported,
-        "errors": errors,
-        "platform": payload.platform,
-    }, message=f"导入完成：{imported} 条成功，{errors} 条失败")
+    return StandardResponse(
+        data={
+            "imported": imported,
+            "errors": errors,
+            "platform": payload.platform,
+        },
+        message=f"导入完成：{imported} 条成功，{errors} 条失败",
+    )
 
 
 class CreateDraftRequest(BaseModel):
@@ -760,6 +864,7 @@ async def create_draft(
 ) -> StandardResponse[dict]:
     """创建草稿。"""
     from datetime import UTC, datetime
+
     record = PublishedContentPerformance(
         user_id=user_id,
         workflow_id=None,
@@ -773,16 +878,19 @@ async def create_draft(
         db.add(record)
         await db.commit()
         await db.refresh(record)
-    return StandardResponse(data={
-        "id": record.id,
-        "title": record.title,
-        "platform": record.platform,
-        "content_status": record.content_status,
-    })
+    return StandardResponse(
+        data={
+            "id": record.id,
+            "title": record.title,
+            "platform": record.platform,
+            "content_status": record.content_status,
+        }
+    )
 
 
 class ContentEditRequest(BaseModel):
     """内容层编辑请求：只提交要改的字段，没提交的保持原样。"""
+
     title: str | None = Field(default=None, max_length=200)
     content_text: str | None = Field(default=None, max_length=20000)
     tags: list[str] | None = None
@@ -857,8 +965,8 @@ async def refresh_images(
     """重新采集并缓存图片（解决 CDN 签名过期导致图片 403 的问题）。"""
     import asyncio
 
-    from app.services.work_collector import collect_from_url
     from app.services.image_store import cache_cover_image, cache_detail_images, is_local_url
+    from app.services.work_collector import collect_from_url
 
     async with AsyncSessionLocal() as db:
         stmt = select(PublishedContentPerformance).where(
@@ -874,7 +982,13 @@ async def refresh_images(
         images_cached = bool(record.images and all(is_local_url(u) for u in record.images if u))
 
         if cover_cached and images_cached:
-            return StandardResponse(data={"id": record_id, "status": "already_cached", "cover_img_url": record.cover_img_url})
+            return StandardResponse(
+                data={
+                    "id": record_id,
+                    "status": "already_cached",
+                    "cover_img_url": record.cover_img_url,
+                }
+            )
 
         note_id = record.published_note_id
         platform = record.platform or "xiaohongshu"
@@ -908,27 +1022,31 @@ async def refresh_images(
 
                     # 采集可能返回空壳（未登录时小红书只给 404 跳转），
                     # 必须校验图片真的落到本地，否则不能报成功。
-                    cached_images = [
-                        u for u in (record.images or []) if is_local_url(u)
-                    ]
+                    cached_images = [u for u in (record.images or []) if is_local_url(u)]
                     if not cached_images:
                         # rollback 会让 ORM 实例过期，之后访问属性会触发异步懒加载报错，
                         # 所以先把要回传的封面值取出来。
                         current_cover = record.cover_img_url
                         await db.rollback()
                         return StandardResponse(
-                            data={"id": record_id, "status": "failed", "cover_img_url": current_cover},
+                            data={
+                                "id": record_id,
+                                "status": "failed",
+                                "cover_img_url": current_cover,
+                            },
                             message="原笔记抓取不到图片，通常是小红书登录态失效；请在账号页重新登录后重试",
                         )
 
                     await db.commit()
                     await db.refresh(record)
-                    return StandardResponse(data={
-                        "id": record_id,
-                        "status": "refreshed",
-                        "cover_img_url": record.cover_img_url,
-                        "images": len(cached_images),
-                    })
+                    return StandardResponse(
+                        data={
+                            "id": record_id,
+                            "status": "refreshed",
+                            "cover_img_url": record.cover_img_url,
+                            "images": len(cached_images),
+                        }
+                    )
             except Exception as e:
                 logger.warning(f"refresh_images collect failed: {e}")
 
@@ -942,6 +1060,7 @@ async def refresh_images(
 # 作品诊断（前端 work store 调用）
 # ═══════════════════════════════════════════
 
+
 @router.post("/{record_id}/diagnose")
 async def diagnose_work(
     record_id: str,
@@ -949,9 +1068,10 @@ async def diagnose_work(
 ) -> StandardResponse[dict]:
     """对单篇作品做 AI 诊断：分析标题/内容/标签的优化建议。"""
     try:
-        from app.db.session import AsyncSessionLocal
-        from app.db.models import PublishedContentPerformance
         from sqlalchemy import select
+
+        from app.db.models import PublishedContentPerformance
+        from app.db.session import AsyncSessionLocal
 
         async with AsyncSessionLocal() as db:
             stmt = select(PublishedContentPerformance).where(
@@ -970,6 +1090,7 @@ async def diagnose_work(
 
             try:
                 from app.engine.factory import get_deepseek_llm
+
                 llm = get_deepseek_llm(model="deepseek-v3")
                 prompt = (
                     f"分析以下小红书笔记，给出优化建议：\n\n"
@@ -982,15 +1103,16 @@ async def diagnose_work(
                     "3. 内容结构（是否有清晰分段/列表）\n"
                     "4. 标签覆盖（是否覆盖热门话题）\n"
                     "5. 互动引导（是否引导点赞/收藏/评论）\n\n"
-                    "用 JSON 返回：{\"title_score\": 0-10, \"hook_score\": 0-10, "
-                    "\"structure_score\": 0-10, \"tag_score\": 0-10, "
-                    "\"interaction_score\": 0-10, \"suggestions\": [\"建议1\", \"建议2\"]}"
+                    '用 JSON 返回：{"title_score": 0-10, "hook_score": 0-10, '
+                    '"structure_score": 0-10, "tag_score": 0-10, '
+                    '"interaction_score": 0-10, "suggestions": ["建议1", "建议2"]}'
                 )
                 resp = await llm.chat(
                     [{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"},
                 )
                 import json
+
                 text = resp.get("content", "")
                 diagnosis = json.loads(text)
             except Exception as llm_err:

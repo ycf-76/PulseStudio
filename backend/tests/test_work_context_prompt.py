@@ -15,6 +15,7 @@
 
 全部离线，不碰真机 LLM。
 """
+
 from __future__ import annotations
 
 import json
@@ -118,7 +119,12 @@ def test_long_page_is_explicitly_marked_truncated():
 
 def test_image_only_page_is_reported_as_no_text():
     """纯图片页（采集/出图产物没有文案）必须如实说明，不能伪装成有内容。"""
-    page = {"type": "cover", "title": "", "imageUrl": "/uploads/assets/a.png", "pngUrls": ["/uploads/assets/a.png"]}
+    page = {
+        "type": "cover",
+        "title": "",
+        "imageUrl": "/uploads/assets/a.png",
+        "pngUrls": ["/uploads/assets/a.png"],
+    }
     blocks = summarize_card_pages([page])
     assert "纯图片页" in blocks[0]
     assert "/uploads/assets/a.png" in blocks[0]
@@ -180,7 +186,9 @@ def test_draft_work_gets_write_boundary():
     assert "禁止调用 work_edit" in read_only
 
 
-@pytest.mark.parametrize("wc", [{}, {"title": "只有标题"}, {"cardDraft": {}}, {"cardDraft": {"pages": []}}])
+@pytest.mark.parametrize(
+    "wc", [{}, {"title": "只有标题"}, {"cardDraft": {}}, {"cardDraft": {"pages": []}}]
+)
 def test_degenerate_work_context_does_not_crash(wc):
     """空/残缺 work_context 不抛异常，仍返回可注入文本。"""
     prompt = build_work_context_prompt(wc)

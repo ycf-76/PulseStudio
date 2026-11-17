@@ -10,6 +10,7 @@
 平台正则（PLATFORM_PATTERNS）只用于路由提示：命中已知平台走该平台的深度解析链，
 未命中则走通用网页抓取（web_page_fetcher），不因为「不是这 6 个平台」就拒绝采集。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -45,33 +46,34 @@ def get_last_collect_errors() -> list[str]:
     """获取最近一次采集的各降级环节失败原因。"""
     return list(_collect_errors)
 
+
 # ──────────────────────────────────────────────
 # 平台检测 & 链接解析
 # ──────────────────────────────────────────────
 
 PLATFORM_PATTERNS: dict[str, list[re.Pattern]] = {
     "xiaohongshu": [
-        re.compile(r'(?:www\.)?xiaohongshu\.com'),
-        re.compile(r'xhslink\.(?:com|cn)'),
+        re.compile(r"(?:www\.)?xiaohongshu\.com"),
+        re.compile(r"xhslink\.(?:com|cn)"),
     ],
     "douyin": [
-        re.compile(r'(?:www\.)?douyin\.com'),
-        re.compile(r'v\.douyin\.com'),
-        re.compile(r'(?:www\.)?iesdouyin\.com'),
+        re.compile(r"(?:www\.)?douyin\.com"),
+        re.compile(r"v\.douyin\.com"),
+        re.compile(r"(?:www\.)?iesdouyin\.com"),
     ],
     "wechat_mp": [
-        re.compile(r'mp\.weixin\.qq\.com'),
-        re.compile(r'(?:www\.)?weixin\.qq\.com'),
+        re.compile(r"mp\.weixin\.qq\.com"),
+        re.compile(r"(?:www\.)?weixin\.qq\.com"),
     ],
     "bilibili": [
-        re.compile(r'(?:www\.)?bilibili\.com'),
-        re.compile(r'b23\.tv'),
+        re.compile(r"(?:www\.)?bilibili\.com"),
+        re.compile(r"b23\.tv"),
     ],
     "instagram": [
-        re.compile(r'(?:www\.)?instagram\.com'),
+        re.compile(r"(?:www\.)?instagram\.com"),
     ],
     "threads": [
-        re.compile(r'(?:www\.)?threads\.net'),
+        re.compile(r"(?:www\.)?threads\.net"),
     ],
 }
 
@@ -121,20 +123,20 @@ def _extract_xhs_note_id(url: str) -> str | None:
     """从小红书 URL 中提取 note_id。"""
     url = url.strip()
 
-    xhs_url_m = re.search(r'https?://(?:www\.)?xiaohongshu\.com/\S+', url)
+    xhs_url_m = re.search(r"https?://(?:www\.)?xiaohongshu\.com/\S+", url)
     if xhs_url_m:
         url = xhs_url_m.group(0)
-        url = re.sub(r'[^\w%&=?./:_-].*$', '', url)
+        url = re.sub(r"[^\w%&=?./:_-].*$", "", url)
 
-    if re.match(r'^[0-9a-fA-F]{24}$', url):
+    if re.match(r"^[0-9a-fA-F]{24}$", url):
         return url
 
     patterns = [
-        r'xiaohongshu\.com/explore/([0-9a-fA-F]{24})',
-        r'xiaohongshu\.com/discovery/item/([0-9a-fA-F]{24})',
-        r'xiaohongshu\.com/user/profile/[0-9a-fA-F]+/([0-9a-fA-F]{24})',
-        r'xiaohongshu\.com/note/([0-9a-fA-F]{24})',
-        r'/note/([0-9a-fA-F]{24})',
+        r"xiaohongshu\.com/explore/([0-9a-fA-F]{24})",
+        r"xiaohongshu\.com/discovery/item/([0-9a-fA-F]{24})",
+        r"xiaohongshu\.com/user/profile/[0-9a-fA-F]+/([0-9a-fA-F]{24})",
+        r"xiaohongshu\.com/note/([0-9a-fA-F]{24})",
+        r"/note/([0-9a-fA-F]{24})",
     ]
     for pattern in patterns:
         m = re.search(pattern, url)
@@ -152,10 +154,10 @@ def _extract_douyin_aweme_id(url: str) -> str | None:
     - https://v.douyin.com/xxxxxx/（短链接）
     """
     patterns = [
-        r'douyin\.com/video/(\d+)',
-        r'douyin\.com/note/(\d+)',
-        r'douyin\.com/user/\w+\?previous_page=web_code_link.*?modal_id=(\d+)',
-        r'[?&]modal_id=(\d+)',
+        r"douyin\.com/video/(\d+)",
+        r"douyin\.com/note/(\d+)",
+        r"douyin\.com/user/\w+\?previous_page=web_code_link.*?modal_id=(\d+)",
+        r"[?&]modal_id=(\d+)",
     ]
     for pattern in patterns:
         m = re.search(pattern, url)
@@ -172,10 +174,10 @@ def _extract_bilibili_bvid(url: str) -> str | None:
     - https://www.bilibili.com/video/avxxxxxxxx
     - https://b23.tv/BV1xxxxxxxx（短链接）
     """
-    bv_m = re.search(r'(BV1[\w]+)', url)
+    bv_m = re.search(r"(BV1[\w]+)", url)
     if bv_m:
         return bv_m.group(1)
-    av_m = re.search(r'/av(\d+)', url)
+    av_m = re.search(r"/av(\d+)", url)
     if av_m:
         return f"av{av_m.group(1)}"
     return None
@@ -187,9 +189,9 @@ def _extract_wechat_msgid(url: str) -> str | None:
     格式：https://mp.weixin.qq.com/s?__biz=xxx&mid=xxx&idx=1&sn=xxx
     用 biz+mid+idx 组合作为唯一标识。
     """
-    biz_m = re.search(r'__biz=([^&]+)', url)
-    mid_m = re.search(r'&mid=(\d+)', url)
-    idx_m = re.search(r'&idx=(\d+)', url)
+    biz_m = re.search(r"__biz=([^&]+)", url)
+    mid_m = re.search(r"&mid=(\d+)", url)
+    idx_m = re.search(r"&idx=(\d+)", url)
     if biz_m and mid_m:
         biz = biz_m.group(1)
         mid = mid_m.group(1)
@@ -208,9 +210,9 @@ def _extract_instagram_shortcode(url: str, platform: str) -> str | None:
     """
     domain = "instagram" if platform == "instagram" else "threads"
     if platform == "instagram":
-        m = re.search(r'instagram\.com/(?:p|reel|tv)/([\w-]+)', url)
+        m = re.search(r"instagram\.com/(?:p|reel|tv)/([\w-]+)", url)
     else:
-        m = re.search(r'threads\.net/(?:post|p)/([\w-]+)', url)
+        m = re.search(r"threads\.net/(?:post|p)/([\w-]+)", url)
     if m:
         return m.group(1)
     return None
@@ -242,7 +244,7 @@ def extract_xsec_token(url: str) -> str | None:
     手机分享链接通常带 xsec_token，有效期约 5 分钟。
     带 token 请求 SSR 页面可以拿到笔记数据。
     """
-    m = re.search(r'[?&]xsec_token=([^&\s]+)', url)
+    m = re.search(r"[?&]xsec_token=([^&\s]+)", url)
     if m:
         return m.group(1)
     return None
@@ -250,7 +252,7 @@ def extract_xsec_token(url: str) -> str | None:
 
 def extract_xsec_source(url: str) -> str | None:
     """从 URL 中提取 xsec_source 参数。"""
-    m = re.search(r'[?&]xsec_source=([^&\s]+)', url)
+    m = re.search(r"[?&]xsec_source=([^&\s]+)", url)
     if m:
         return m.group(1)
     return None
@@ -268,7 +270,7 @@ def _clean_share_text(raw: str) -> str:
     m = url_pattern.search(raw)
     if m:
         url = m.group(1)
-        if url.endswith('/'):
+        if url.endswith("/"):
             url = url
         return url
     return raw
@@ -333,7 +335,9 @@ async def collect_from_url(note_url: str, platform: str | None = None) -> dict |
 
     if not content_id:
         # 已知平台但正则没抽出内容 ID（如个人主页、动态页），仍走通用网页抓取
-        logger.info(f"[work_collector] 未提取到内容ID（platform={platform}），降级通用网页抓取: {note_url}")
+        logger.info(
+            f"[work_collector] 未提取到内容ID（platform={platform}），降级通用网页抓取: {note_url}"
+        )
         _collect_errors.append(f"未提取到内容ID（platform={platform}）")
         return await _collect_generic_web(note_url, platform)
 
@@ -383,7 +387,9 @@ async def _collect_generic_web(note_url: str, platform: str) -> dict | None:
     return None
 
 
-async def _collect_xhs(note_id: str, note_url: str, xsec_token: str | None, xsec_source: str | None) -> dict | None:
+async def _collect_xhs(
+    note_id: str, note_url: str, xsec_token: str | None, xsec_source: str | None
+) -> dict | None:
     """小红书采集降级链。"""
     platform = "xiaohongshu"
 
@@ -400,7 +406,9 @@ async def _collect_xhs(note_id: str, note_url: str, xsec_token: str | None, xsec
 
     # 降级链 1：SSR 解析（带 xsec_token / cookies / 裸请求）
     try:
-        stats = await _collect_via_ssr(note_id, platform, xsec_token=xsec_token, xsec_source=xsec_source)
+        stats = await _collect_via_ssr(
+            note_id, platform, xsec_token=xsec_token, xsec_source=xsec_source
+        )
         if stats:
             stats["source"] = "page_ssr_parse"
             return stats
@@ -556,11 +564,16 @@ async def _resolve_short_url(url: str) -> str | None:
         ua = _UA
 
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, **http_client_kwargs()) as client:
-            resp = await client.get(url, headers={
-                "User-Agent": ua,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            })
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True, **http_client_kwargs()
+        ) as client:
+            resp = await client.get(
+                url,
+                headers={
+                    "User-Agent": ua,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                },
+            )
             real_url = str(resp.url)
 
             if "douyin" in domain:
@@ -578,7 +591,9 @@ async def _resolve_short_url(url: str) -> str | None:
                         redirect_url = meta_refresh.group(1)
                         if "douyin.com" in redirect_url:
                             return redirect_url
-                    js_redirect = re.search(r"location\.(?:href|replace)\s*[=\(]\s*['\"]([^'\"]+)['\"]", html)
+                    js_redirect = re.search(
+                        r"location\.(?:href|replace)\s*[=\(]\s*['\"]([^'\"]+)['\"]", html
+                    )
                     if js_redirect:
                         redirect_url = js_redirect.group(1)
                         if "douyin.com" in redirect_url:
@@ -607,22 +622,31 @@ async def _extract_douyin_id_from_short_url(short_url: str) -> str | None:
 
     # 策略1：不跟随重定向，检查302 Location头
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=False, **http_client_kwargs()) as client:
-            resp = await client.get(short_url, headers={
-                "User-Agent": mobile_ua,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            })
+        async with httpx.AsyncClient(
+            timeout=10.0, follow_redirects=False, **http_client_kwargs()
+        ) as client:
+            resp = await client.get(
+                short_url,
+                headers={
+                    "User-Agent": mobile_ua,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                },
+            )
             location = resp.headers.get("location", "")
             if location and "douyin.com" in location:
                 aweme_id = _extract_douyin_aweme_id(location)
                 if aweme_id:
-                    logger.info(f"[work_collector] Extracted douyin aweme_id from 302 Location: {aweme_id}")
+                    logger.info(
+                        f"[work_collector] Extracted douyin aweme_id from 302 Location: {aweme_id}"
+                    )
                     return aweme_id
             # 检查302响应体
             if resp.text:
                 aweme_id = _extract_douyin_aweme_id_from_html(resp.text)
                 if aweme_id:
-                    logger.info(f"[work_collector] Extracted douyin aweme_id from 302 body: {aweme_id}")
+                    logger.info(
+                        f"[work_collector] Extracted douyin aweme_id from 302 body: {aweme_id}"
+                    )
                     return aweme_id
     except Exception as e:
         logger.warning(f"[work_collector] Douyin short URL 302 check failed: {e}")
@@ -631,16 +655,23 @@ async def _extract_douyin_id_from_short_url(short_url: str) -> str | None:
     try:
         # v.douyin.com/iRNBho6m/ 格式，路径中的编码可能是base62
         # 尝试用桌面端UA访问，看是否能拿到不同的重定向
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, **http_client_kwargs()) as client:
-            resp = await client.get(short_url, headers={
-                "User-Agent": _UA,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Cookie": "msToken=; ttwid=;",
-            })
+        async with httpx.AsyncClient(
+            timeout=10.0, follow_redirects=True, **http_client_kwargs()
+        ) as client:
+            resp = await client.get(
+                short_url,
+                headers={
+                    "User-Agent": _UA,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Cookie": "msToken=; ttwid=;",
+                },
+            )
             html = resp.text
             aweme_id = _extract_douyin_aweme_id_from_html(html)
             if aweme_id:
-                logger.info(f"[work_collector] Extracted douyin aweme_id from desktop UA page: {aweme_id}")
+                logger.info(
+                    f"[work_collector] Extracted douyin aweme_id from desktop UA page: {aweme_id}"
+                )
                 return aweme_id
     except Exception as e:
         logger.warning(f"[work_collector] Douyin short URL desktop UA check failed: {e}")
@@ -648,7 +679,9 @@ async def _extract_douyin_id_from_short_url(short_url: str) -> str | None:
     # 策略3：尝试 iesdouyin.com 的分享页（需要先从短链接路径提取标识）
     # 短链接路径如 /iRNBho6m/ 可能对应 iesdouyin.com 的某个视频
     # 但我们不知道 aweme_id，所以这个策略有限
-    logger.warning(f"[work_collector] All douyin short URL ID extraction methods failed for: {short_url}")
+    logger.warning(
+        f"[work_collector] All douyin short URL ID extraction methods failed for: {short_url}"
+    )
     return None
 
 
@@ -662,13 +695,13 @@ def _extract_douyin_aweme_id_from_html(html: str) -> str | None:
     - 分享文本中的链接
     """
     patterns = [
-        r'douyin\.com/video/(\d{15,})',
-        r'douyin\.com/note/(\d{15,})',
+        r"douyin\.com/video/(\d{15,})",
+        r"douyin\.com/note/(\d{15,})",
         r'"aweme_id"\s*:\s*"?(\d{15,})"',
         r'"itemId"\s*:\s*"?(\d{15,})"',
-        r'modal_id=(\d{15,})',
-        r'/video/(\d{15,})',
-        r'/note/(\d{15,})',
+        r"modal_id=(\d{15,})",
+        r"/video/(\d{15,})",
+        r"/note/(\d{15,})",
     ]
     for pattern in patterns:
         m = re.search(pattern, html)
@@ -752,7 +785,9 @@ def _normalize_link_grabber_result(result: dict, platform: str) -> dict:
     return {
         "note_id": result.get("note_id", "") or result.get("noteId", ""),
         "title": result.get("title", ""),
-        "content_text": result.get("desc", "") or result.get("content", "") or result.get("text", ""),
+        "content_text": result.get("desc", "")
+        or result.get("content", "")
+        or result.get("text", ""),
         "tags": tags,
         "cover_img_url": cover_url,
         "image_urls": image_urls,
@@ -804,7 +839,9 @@ async def _collect_via_ssr(
 
     for params, cookies, label in request_attempts:
         try:
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, **http_client_kwargs()) as client:
+            async with httpx.AsyncClient(
+                timeout=15.0, follow_redirects=True, **http_client_kwargs()
+            ) as client:
                 resp = await client.get(page_url, headers=headers, params=params, cookies=cookies)
                 resp.raise_for_status()
                 html = resp.text
@@ -825,14 +862,14 @@ async def _collect_via_ssr(
 def _parse_ssr_html(html: str, note_id: str, platform: str) -> dict | None:
     """从 SSR HTML 中解析 __INITIAL_STATE__ 提取笔记数据。"""
     m = re.search(
-        r'<script[^>]*>\s*window\.__INITIAL_STATE__\s*=\s*({.+?})\s*</script>',
+        r"<script[^>]*>\s*window\.__INITIAL_STATE__\s*=\s*({.+?})\s*</script>",
         html,
         re.DOTALL,
     )
     if not m:
         return None
 
-    raw_json = re.sub(r'\bundefined\b', 'null', m.group(1))
+    raw_json = re.sub(r"\bundefined\b", "null", m.group(1))
 
     try:
         state = json.loads(raw_json)
@@ -901,9 +938,10 @@ async def _collect_via_web_api(note_id: str, platform: str) -> dict | None:
 
     使用 storageState 中的 cookies，作为 SSR 解析失败时的降级方案。
     """
-    import httpx
     import json
     from pathlib import Path
+
+    import httpx
 
     storage_path = Path(__file__).resolve().parent.parent / "storage_states" / "xiaohongshu.json"
     cookies_dict: dict[str, str] = {}
@@ -1033,6 +1071,7 @@ def _normalize_csv_row(row: dict, platform: str) -> dict | None:
 # 抖音采集
 # ──────────────────────────────────────────────
 
+
 async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
     """抖音 Web API 采集视频数据。
 
@@ -1041,9 +1080,10 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
     策略3：移动端 UA 访问 iesdouyin.com 分享页，解析 meta 标签
     策略4：访问 douyin.com/video/{id} 页面，从 SSR/RENDER_DATA 中提取
     """
-    import httpx
     import random
     import urllib.parse
+
+    import httpx
 
     def _safe_int(val: Any) -> int:
         if val is None:
@@ -1076,7 +1116,9 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
         }
 
         dy_cookies = _get_douyin_cookies()
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, **http_client_kwargs()) as client:
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True, **http_client_kwargs()
+        ) as client:
             resp = await client.get(api_url, params=params, headers=api_headers, cookies=dy_cookies)
             if resp.status_code == 200 and resp.text.strip():
                 data = resp.json()
@@ -1084,7 +1126,9 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
                 if aweme_detail:
                     desc = aweme_detail.get("desc", "")
                     author = aweme_detail.get("author", {}) or {}
-                    stats = aweme_detail.get("statistics", {}) or aweme_detail.get("stats", {}) or {}
+                    stats = (
+                        aweme_detail.get("statistics", {}) or aweme_detail.get("stats", {}) or {}
+                    )
                     video = aweme_detail.get("video", {}) or {}
                     cover = video.get("cover", {}) or video.get("origin_cover", {}) or {}
 
@@ -1102,7 +1146,11 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
                             if isinstance(img, dict):
                                 img_url_list = img.get("url_list", [])
                                 if img_url_list:
-                                    img_url = img_url_list[-1] if len(img_url_list) > 1 else img_url_list[0]
+                                    img_url = (
+                                        img_url_list[-1]
+                                        if len(img_url_list) > 1
+                                        else img_url_list[0]
+                                    )
                                     image_urls.append(img_url)
                         if image_urls and not cover_url:
                             cover_url = image_urls[0]
@@ -1115,12 +1163,16 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
                         "note_id": aweme_id,
                         "title": desc[:50] if desc else "",
                         "content_text": desc,
-                        "tags": re.findall(r'#(\S+?)#', desc),
+                        "tags": re.findall(r"#(\S+?)#", desc),
                         "cover_img_url": cover_url,
                         "image_urls": image_urls,
                         "likes": _safe_int(stats.get("digg_count") or stats.get("likeCount")),
-                        "collects": _safe_int(stats.get("collect_count") or stats.get("collectCount")),
-                        "comments": _safe_int(stats.get("comment_count") or stats.get("commentCount")),
+                        "collects": _safe_int(
+                            stats.get("collect_count") or stats.get("collectCount")
+                        ),
+                        "comments": _safe_int(
+                            stats.get("comment_count") or stats.get("commentCount")
+                        ),
                         "shares": _safe_int(stats.get("share_count") or stats.get("shareCount")),
                         "author_fans": _safe_int(author.get("follower_count", 1)),
                         "author_nickname": author.get("nickname", ""),
@@ -1130,9 +1182,13 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
                 else:
                     status_code = data.get("status_code", "")
                     if status_code:
-                        logger.warning(f"[work_collector] Douyin Web API returned status_code={status_code}: {data.get('status_msg', '')}")
+                        logger.warning(
+                            f"[work_collector] Douyin Web API returned status_code={status_code}: {data.get('status_msg', '')}"
+                        )
             else:
-                logger.warning(f"[work_collector] Douyin Web API returned status={resp.status_code}, body_len={len(resp.text)}")
+                logger.warning(
+                    f"[work_collector] Douyin Web API returned status={resp.status_code}, body_len={len(resp.text)}"
+                )
     except Exception as e:
         logger.warning(f"[work_collector] Douyin Web API failed: {e}")
 
@@ -1150,7 +1206,9 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, **http_client_kwargs()) as client:
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True, **http_client_kwargs()
+        ) as client:
             resp = await client.get(api_url, params=params, headers=headers)
             if resp.status_code == 200 and resp.text.strip():
                 try:
@@ -1176,7 +1234,7 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
                             "note_id": aweme_id,
                             "title": desc[:50] if desc else "",
                             "content_text": desc,
-                            "tags": re.findall(r'#(\S+?)#', desc),
+                            "tags": re.findall(r"#(\S+?)#", desc),
                             "cover_img_url": cover_url,
                             "image_urls": image_urls,
                             "likes": _safe_int(stats.get("digg_count")),
@@ -1202,12 +1260,17 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
     )
     share_url = f"https://www.iesdouyin.com/share/video/{aweme_id}/"
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, **http_client_kwargs()) as client:
-            resp = await client.get(share_url, headers={
-                "User-Agent": mobile_ua,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            })
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True, **http_client_kwargs()
+        ) as client:
+            resp = await client.get(
+                share_url,
+                headers={
+                    "User-Agent": mobile_ua,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                },
+            )
             if resp.status_code == 200:
                 html = resp.text
                 result = _parse_douyin_share_html(html, aweme_id, platform, _safe_int)
@@ -1226,7 +1289,9 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
             "Referer": "https://www.douyin.com/",
         }
         dy_cookies = _get_douyin_cookies()
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, **http_client_kwargs()) as client:
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True, **http_client_kwargs()
+        ) as client:
             resp = await client.get(page_url, headers=page_headers, cookies=dy_cookies)
             if resp.status_code == 200:
                 html = resp.text
@@ -1239,7 +1304,9 @@ async def _collect_douyin_via_api(aweme_id: str, platform: str) -> dict | None:
     return None
 
 
-def _parse_douyin_share_html(html: str, aweme_id: str, platform: str, _safe_int: Any) -> dict | None:
+def _parse_douyin_share_html(
+    html: str, aweme_id: str, platform: str, _safe_int: Any
+) -> dict | None:
     """解析 iesdouyin.com 分享页 HTML，提取视频数据。"""
     import base64
 
@@ -1285,31 +1352,31 @@ def _parse_douyin_share_html(html: str, aweme_id: str, platform: str, _safe_int:
 
     desc_text = meta_desc.group(1) if meta_desc else ""
     likes = 0
-    likes_match = re.search(r'收获了(\d+)个喜欢', desc_text)
+    likes_match = re.search(r"收获了(\d+)个喜欢", desc_text)
     if likes_match:
         likes = int(likes_match.group(1))
 
     comments = 0
-    comments_match = re.search(r'(\d+)条评论', desc_text)
+    comments_match = re.search(r"(\d+)条评论", desc_text)
     if comments_match:
         comments = int(comments_match.group(1))
 
     real_desc = ""
-    publish_marker = re.search(r'于\d{8}发布在抖音', desc_text)
+    publish_marker = re.search(r"于\d{8}发布在抖音", desc_text)
     if publish_marker:
-        before = desc_text[:publish_marker.start()].strip()
+        before = desc_text[: publish_marker.start()].strip()
         if before:
             real_desc = before
 
     title_text = og_title.group(1) if og_title else ""
     if not title_text:
-        title_match = re.search(r'<title[^>]*>([^<]+)</title>', html)
+        title_match = re.search(r"<title[^>]*>([^<]+)</title>", html)
         title_text = title_match.group(1) if title_match else ""
 
     if title_text.endswith(" - 抖音"):
         title_text = title_text[:-5].strip()
 
-    if re.match(r'^在抖音记录美好生活\d+$', title_text) and real_desc:
+    if re.match(r"^在抖音记录美好生活\d+$", title_text) and real_desc:
         title_text = real_desc[:50]
 
     content_text = real_desc if real_desc else desc_text
@@ -1323,13 +1390,19 @@ def _parse_douyin_share_html(html: str, aweme_id: str, platform: str, _safe_int:
         try:
             decoded = base64.b64decode(render_data.group(1)).decode("utf-8")
             data = json.loads(decoded)
-            video_detail = data.get("videoDetail", {}) or data.get("props", {}).get("pageProps", {}).get("videoDetail", {})
+            video_detail = data.get("videoDetail", {}) or data.get("props", {}).get(
+                "pageProps", {}
+            ).get("videoDetail", {})
             if video_detail:
                 if not content_text:
                     content_text = video_detail.get("desc", "")
                 if not title_text:
                     title_text = content_text[:50] if content_text else ""
-                stats = video_detail.get("stats", {}) or video_detail.get("interactionSticker", {}).get("stats", {}) or {}
+                stats = (
+                    video_detail.get("stats", {})
+                    or video_detail.get("interactionSticker", {}).get("stats", {})
+                    or {}
+                )
                 if stats:
                     likes = _safe_int(stats.get("diggCount")) or likes
                     comments = _safe_int(stats.get("commentCount")) or comments
@@ -1348,7 +1421,7 @@ def _parse_douyin_share_html(html: str, aweme_id: str, platform: str, _safe_int:
                     "note_id": aweme_id,
                     "title": title_text[:50] if title_text else "",
                     "content_text": content_text,
-                    "tags": re.findall(r'#(\S+?)#', content_text + title_text),
+                    "tags": re.findall(r"#(\S+?)#", content_text + title_text),
                     "cover_img_url": cover_url,
                     "image_urls": image_urls,
                     "likes": likes,
@@ -1368,7 +1441,7 @@ def _parse_douyin_share_html(html: str, aweme_id: str, platform: str, _safe_int:
             "note_id": aweme_id,
             "title": title_text[:50] if title_text else "",
             "content_text": content_text,
-            "tags": re.findall(r'#(\S+?)#', content_text + title_text),
+            "tags": re.findall(r"#(\S+?)#", content_text + title_text),
             "cover_img_url": cover_url,
             "image_urls": image_urls,
             "likes": likes,
@@ -1420,7 +1493,11 @@ def _parse_douyin_page_html(html: str, aweme_id: str, platform: str, _safe_int: 
                             if isinstance(img, dict):
                                 img_url_list = img.get("url_list", [])
                                 if img_url_list:
-                                    img_url = img_url_list[-1] if len(img_url_list) > 1 else img_url_list[0]
+                                    img_url = (
+                                        img_url_list[-1]
+                                        if len(img_url_list) > 1
+                                        else img_url_list[0]
+                                    )
                                     image_urls.append(img_url)
                         if image_urls and not cover_url:
                             cover_url = image_urls[0]
@@ -1433,12 +1510,16 @@ def _parse_douyin_page_html(html: str, aweme_id: str, platform: str, _safe_int: 
                         "note_id": aweme_id,
                         "title": desc[:50] if desc else "",
                         "content_text": desc,
-                        "tags": re.findall(r'#(\S+?)#', desc),
+                        "tags": re.findall(r"#(\S+?)#", desc),
                         "cover_img_url": cover_url,
                         "image_urls": image_urls,
                         "likes": _safe_int(stats.get("digg_count") or stats.get("likeCount")),
-                        "collects": _safe_int(stats.get("collect_count") or stats.get("collectCount")),
-                        "comments": _safe_int(stats.get("comment_count") or stats.get("commentCount")),
+                        "collects": _safe_int(
+                            stats.get("collect_count") or stats.get("collectCount")
+                        ),
+                        "comments": _safe_int(
+                            stats.get("comment_count") or stats.get("commentCount")
+                        ),
                         "shares": _safe_int(stats.get("share_count") or stats.get("shareCount")),
                         "author_fans": _safe_int(author.get("follower_count", 1)),
                         "author_nickname": author.get("nickname", ""),
@@ -1448,7 +1529,9 @@ def _parse_douyin_page_html(html: str, aweme_id: str, platform: str, _safe_int: 
             except (json.JSONDecodeError, ValueError):
                 pass
 
-        logger.warning(f"[work_collector] No RENDER_DATA or __NEXT_DATA__ for douyin page {aweme_id}")
+        logger.warning(
+            f"[work_collector] No RENDER_DATA or __NEXT_DATA__ for douyin page {aweme_id}"
+        )
         return None
 
     try:
@@ -1462,24 +1545,32 @@ def _parse_douyin_page_html(html: str, aweme_id: str, platform: str, _safe_int: 
             logger.warning(f"[work_collector] Douyin page data parse failed: {e}")
             return None
 
-    video_detail = data.get("videoDetail", {}) or data.get("props", {}).get("pageProps", {}).get("videoDetail", {})
+    video_detail = data.get("videoDetail", {}) or data.get("props", {}).get("pageProps", {}).get(
+        "videoDetail", {}
+    )
     if not video_detail:
         logger.warning(f"[work_collector] No video detail in SSR data for douyin {aweme_id}")
         return None
 
     desc = video_detail.get("desc", "")
     author = video_detail.get("authorInfo", {}) or video_detail.get("author", {}) or {}
-    stats = video_detail.get("stats", {}) or video_detail.get("interactionSticker", {}).get("stats", {}) or {}
+    stats = (
+        video_detail.get("stats", {})
+        or video_detail.get("interactionSticker", {}).get("stats", {})
+        or {}
+    )
 
     cover_obj = video_detail.get("cover", {})
     cover_url = cover_obj.get("urlList", [""])[0] if isinstance(cover_obj, dict) else ""
-    image_urls = [u for u in (cover_obj.get("urlList", []) if isinstance(cover_obj, dict) else []) if u]
+    image_urls = [
+        u for u in (cover_obj.get("urlList", []) if isinstance(cover_obj, dict) else []) if u
+    ]
 
     return {
         "note_id": aweme_id,
         "title": desc[:50] if desc else "",
         "content_text": desc,
-        "tags": re.findall(r'#(\S+?)#', desc),
+        "tags": re.findall(r"#(\S+?)#", desc),
         "cover_img_url": cover_url,
         "image_urls": image_urls,
         "likes": _safe_int(stats.get("diggCount")),
@@ -1502,6 +1593,7 @@ def _get_douyin_cookies() -> dict[str, str]:
 # ──────────────────────────────────────────────
 # B 站采集
 # ──────────────────────────────────────────────
+
 
 async def _collect_bilibili_via_api(bvid: str, platform: str) -> dict | None:
     """B 站 Web API 采集（公开接口，无需登录）。"""
@@ -1544,7 +1636,9 @@ async def _collect_bilibili_via_api(bvid: str, platform: str) -> dict | None:
         "note_id": bvid,
         "title": info.get("title", ""),
         "content_text": info.get("desc", ""),
-        "tags": [t.get("tag_name", "") for t in (info.get("tag_list") or []) if isinstance(t, dict)],
+        "tags": [
+            t.get("tag_name", "") for t in (info.get("tag_list") or []) if isinstance(t, dict)
+        ],
         "cover_img_url": cover_url,
         "image_urls": [cover_url] if cover_url else [],
         "likes": _safe_int(stat.get("like")),
@@ -1562,6 +1656,7 @@ async def _collect_bilibili_via_api(bvid: str, platform: str) -> dict | None:
 # 微信公众号采集
 # ──────────────────────────────────────────────
 
+
 async def _collect_wechat_via_http(url: str, platform: str) -> dict | None:
     """微信公众号文章 HTTP 解析。
 
@@ -1577,7 +1672,9 @@ async def _collect_wechat_via_http(url: str, platform: str) -> dict | None:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, **http_client_kwargs()) as client:
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True, **http_client_kwargs()
+        ) as client:
             resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             html = resp.text
@@ -1593,9 +1690,11 @@ async def _collect_wechat_via_http(url: str, platform: str) -> dict | None:
         title = title_m.group(1) if title_m else ""
 
     # 提取正文
-    content_m = re.search(r'<div[^>]*class="rich_media_content"[^>]*>(.*?)</div>\s*<script', html, re.DOTALL)
+    content_m = re.search(
+        r'<div[^>]*class="rich_media_content"[^>]*>(.*?)</div>\s*<script', html, re.DOTALL
+    )
     content_text = content_m.group(1) if content_m else ""
-    content_text = re.sub(r'<[^>]+>', '', content_text).strip()
+    content_text = re.sub(r"<[^>]+>", "", content_text).strip()
 
     # 提取作者
     author_m = re.search(r'var nickname = "(.*?)";', html)
@@ -1635,6 +1734,7 @@ async def _collect_wechat_via_http(url: str, platform: str) -> dict | None:
 # Scrapling 采集（降级链头部增强）
 # ──────────────────────────────────────────────
 
+
 def _scrapling_safe_int(val: Any) -> int:
     """Scrapling 解析用的安全整数转换。"""
     if isinstance(val, int):
@@ -1650,6 +1750,7 @@ def _scrapling_safe_int(val: Any) -> int:
         except (ValueError, TypeError):
             return 0
     return 0
+
 
 async def _collect_via_scrapling(note_id: str, note_url: str, platform: str) -> dict | None:
     """通过 Scrapling StealthyFetcher 采集单条内容详情。

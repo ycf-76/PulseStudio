@@ -17,11 +17,15 @@ from capabilities.video.skills import video_transcribe as vt
 def _fake_rows() -> list[dict]:
     return [
         {
-            "start": 0.0, "end": 1.5, "text": "大家好",
+            "start": 0.0,
+            "end": 1.5,
+            "text": "大家好",
             "words": [{"text": "大家好", "start": 0.0, "end": 1.5}],
         },
         {
-            "start": 1.6, "end": 3.2, "text": "今天聊聊剪辑",
+            "start": 1.6,
+            "end": 3.2,
+            "text": "今天聊聊剪辑",
             "words": [
                 {"text": "今天", "start": 1.6, "end": 2.2},
                 {"text": "聊聊", "start": 2.3, "end": 2.8},

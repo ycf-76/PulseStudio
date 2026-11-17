@@ -38,6 +38,7 @@ class QwenVLAdapter(BaseLLM):
         # 此前只收下 api_key 从不注入 → app 启动链没有 load_dotenv 的场景
         # （如独立脚本直跑 skill）必然 "No api key provided" 被外层降级吞掉。
         import dashscope
+
         dashscope.api_key = api_key
         self.client = MultiModalConversation()
         self.model = model
@@ -78,7 +79,7 @@ class QwenVLAdapter(BaseLLM):
                     result_format="message",
                 )
                 if resp.status_code == 429 and attempt < max_retries:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[qwen-vl] 429 rate limited (attempt {attempt+1}/{max_retries+1}), "
                         f"retrying in {wait}s"
@@ -97,7 +98,7 @@ class QwenVLAdapter(BaseLLM):
                 raise
             except Exception as e:
                 if attempt < max_retries and "429" in str(e) or "rate" in str(e).lower():
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[qwen-vl] rate limited (attempt {attempt+1}/{max_retries+1}), "
                         f"retrying in {wait}s: {e}"

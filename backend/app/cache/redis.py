@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 _REDIS_AVAILABLE = False
 try:
     import redis.asyncio as aioredis
+
     _REDIS_AVAILABLE = True
 except ImportError:
     aioredis = None  # type: ignore[assignment]
@@ -98,7 +99,7 @@ class InMemoryFallback:
                 if expires_at > 0 and now > expires_at:
                     expired_keys.append(k)
                     continue
-                field = k[len(prefix):]
+                field = k[len(prefix) :]
                 result[field] = v.decode("utf-8") if isinstance(v, bytes) else str(v)
         for k in expired_keys:
             del self._store[k]
@@ -383,6 +384,7 @@ class RedisClient:
             if acquired:
                 return True
             import asyncio
+
             await asyncio.sleep(retry_interval)
         return False
 

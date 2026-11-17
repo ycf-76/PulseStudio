@@ -152,11 +152,13 @@ def _parse_hot_response(data: Any) -> list[dict[str, Any]]:
             continue
         hot_val = _parse_hot_value(it)
         url = it.get("url") or it.get("link") or it.get("mobil_url") or ""
-        items.append({
-            "title": str(title).strip(),
-            "hot": hot_val,
-            "url": str(url).strip(),
-        })
+        items.append(
+            {
+                "title": str(title).strip(),
+                "hot": hot_val,
+                "url": str(url).strip(),
+            }
+        )
     return items
 
 
@@ -198,6 +200,7 @@ class HotboardSource(ContentSource):
                 create_async_client,
                 get_proxy_url,
             )
+
             proxy = get_proxy_url()
             warnings.filterwarnings("ignore", message="Unverified HTTPS request")
             self._client = await create_async_client(
@@ -236,33 +239,33 @@ class HotboardSource(ContentSource):
         logger.warning(f"[hotboard] {self._key}: all sources failed")
         return []
 
-    def _to_trending_content(
-        self, items: list[dict[str, Any]]
-    ) -> list[TrendingContent]:
+    def _to_trending_content(self, items: list[dict[str, Any]]) -> list[TrendingContent]:
         """转成统一 TrendingContent 结构。"""
         results = []
         for i, it in enumerate(items):
             hot = it.get("hot", 0)
-            results.append(TrendingContent(
-                platform=self._key,
-                content_id=f"hotboard_{self._key}_{i}",
-                title=it["title"],
-                summary=it["title"],
-                content=it["title"],
-                author=self._label,
-                url=it.get("url", ""),
-                likes=hot,
-                comments=0,
-                shares=0,
-                views=0,
-                cover_img="",
-                published_at="",
-                tags=[self._label, "热搜"],
-                title_original=it["title"],
-                summary_original=it["title"],
-                content_original=it["title"],
-                raw={"hot": hot, "rank": i + 1},
-            ))
+            results.append(
+                TrendingContent(
+                    platform=self._key,
+                    content_id=f"hotboard_{self._key}_{i}",
+                    title=it["title"],
+                    summary=it["title"],
+                    content=it["title"],
+                    author=self._label,
+                    url=it.get("url", ""),
+                    likes=hot,
+                    comments=0,
+                    shares=0,
+                    views=0,
+                    cover_img="",
+                    published_at="",
+                    tags=[self._label, "热搜"],
+                    title_original=it["title"],
+                    summary_original=it["title"],
+                    content_original=it["title"],
+                    raw={"hot": hot, "rank": i + 1},
+                )
+            )
         return results
 
     async def search_trending(
@@ -286,7 +289,8 @@ class HotboardSource(ContentSource):
 
         kw_norm = _normalize(kw)
         filtered = [
-            it for it in all_items
+            it
+            for it in all_items
             if kw_norm in _normalize(it.title) or kw_norm in _normalize(it.summary)
         ]
         if not filtered:

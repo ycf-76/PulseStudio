@@ -16,11 +16,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.chat_agent import ChatAgent
-from app.engine.schemas import WorkflowContext
 from app.agents.input_rules import ChatInputRule
-from app.engine.reactor.task_classifier import build_classifier_from_skills
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.engine.reactor.task_classifier import build_classifier_from_skills
+from app.engine.schemas import WorkflowContext
 from app.services import chat_session
 from app.services.sse_bus import EVENT_INTENT_PARSED, sse_bus
 from app.services.work_context_prompt import build_work_context_prompt
@@ -72,10 +72,15 @@ async def _replay_answer_stream(session_id: str, turn_id: str | None, text: str)
         return
     try:
         for i in range(0, len(text), _ANSWER_REPLAY_CHUNK):
-            await sse_bus.publish(session_id, "agent_message_delta", {
-                "node_id": "reactor",
-                "delta": text[i:i + _ANSWER_REPLAY_CHUNK],
-            }, turn_id=turn_id)
+            await sse_bus.publish(
+                session_id,
+                "agent_message_delta",
+                {
+                    "node_id": "reactor",
+                    "delta": text[i : i + _ANSWER_REPLAY_CHUNK],
+                },
+                turn_id=turn_id,
+            )
             await asyncio.sleep(_ANSWER_REPLAY_INTERVAL_MS / 1000)
     except Exception:
         logger.warning(
@@ -188,7 +193,7 @@ def _sanitize_sse_payload(event_type: str, payload: dict) -> dict:
     - Convert raw error messages to user-friendly text
     - Keep only UI-relevant fields per event type
     """
-    INTERNAL_KEY_PREFIXES = ('_', 'sql', 'traceback', 'pymysql', 'internal')
+    INTERNAL_KEY_PREFIXES = ("_", "sql", "traceback", "pymysql", "internal")
     cleaned = {}
     for k, v in payload.items():
         if any(k.lower().startswith(p) for p in INTERNAL_KEY_PREFIXES):
@@ -198,12 +203,12 @@ def _sanitize_sse_payload(event_type: str, payload: dict) -> dict:
             v = _clean_error_leakage(v)
         cleaned[k] = v
 
-    if event_type in ('workflow_error', 'workflow_failed'):
-        error_msg = cleaned.get('error', '') or cleaned.get('message', '')
+    if event_type in ("workflow_error", "workflow_failed"):
+        error_msg = cleaned.get("error", "") or cleaned.get("message", "")
         if error_msg:
-            cleaned['error'] = '处理过程中遇到问题，请稍后重试'
-        cleaned.pop('traceback', None)
-        cleaned.pop('exception', None)
+            cleaned["error"] = "处理过程中遇到问题，请稍后重试"
+        cleaned.pop("traceback", None)
+        cleaned.pop("exception", None)
 
     return cleaned
 
@@ -211,56 +216,62 @@ def _sanitize_sse_payload(event_type: str, payload: dict) -> dict:
 def _strip_internal_markers(text: str) -> str:
     """Remove internal markers like _model_used, _duration_ms, <thinking>, <needs_clarification> tags, etc."""
     import re
+
     patterns = [
-        r'_model_used[\s\"\'=:]+[\w\-]+',
-        r'_duration_ms[\s\"\'=:]+\d+',
-        r'\$+\s*$',
-        r'\w+_gen\s*未收到[^，。]*',
-        r'未收到前端注入[^，。]*',
-        r'，?请确认[^，。\n]*生成[^，。\n]*',
-        r'Data truncated for column[^，。\n]*',
-        r'SQL:\s*[^。\n]*',
-        r'\(pymysql\.err\.[A-Za-z]+\)[^。\n]*',
-        r'工作流启动失败[^，。\n]*',
-        r'workflow\s+start\s+failed[^，.\n]*',
+        r"_model_used[\s\"\'=:]+[\w\-]+",
+        r"_duration_ms[\s\"\'=:]+\d+",
+        r"\$+\s*$",
+        r"\w+_gen\s*未收到[^，。]*",
+        r"未收到前端注入[^，。]*",
+        r"，?请确认[^，。\n]*生成[^，。\n]*",
+        r"Data truncated for column[^，。\n]*",
+        r"SQL:\s*[^。\n]*",
+        r"\(pymysql\.err\.[A-Za-z]+\)[^。\n]*",
+        r"工作流启动失败[^，。\n]*",
+        r"workflow\s+start\s+failed[^，.\n]*",
     ]
     for p in patterns:
-        text = re.sub(p, '', text)
+        text = re.sub(p, "", text)
     # 保护代码块中的内容不被误删
     code_blocks: list[str] = []
-    text = re.sub(r'```[\s\S]*?```', lambda m: (
-        code_blocks.append(m.group()) or f'\x00CB{len(code_blocks) - 1}\x00'
-    ), text)
+    text = re.sub(
+        r"```[\s\S]*?```",
+        lambda m: (code_blocks.append(m.group()) or f"\x00CB{len(code_blocks) - 1}\x00"),
+        text,
+    )
     # 清理 <thinking>...</thinking> 标签及其内容（思考过程通过 reasoning 字段单独展示）
-    text = re.sub(r'<thinking>[\s\S]*?</thinking>', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'<thinking>[\s\S]*$', '', text, flags=re.IGNORECASE)
+    text = re.sub(r"<thinking>[\s\S]*?</thinking>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"<thinking>[\s\S]*$", "", text, flags=re.IGNORECASE)
     # 清理 <needs_clarification>...</needs_clarification> 标签及其内容（澄清通过独立卡片展示）
-    text = re.sub(r'<needs_clarification>[\s\S]*?</needs_clarification>', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'<needs_clarification>[\s\S]*$', '', text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"<needs_clarification>[\s\S]*?</needs_clarification>", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(r"<needs_clarification>[\s\S]*$", "", text, flags=re.IGNORECASE)
     # 恢复代码块
-    text = re.sub(r'\x00CB(\d+)\x00', lambda m: code_blocks[int(m.group(1))], text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"\x00CB(\d+)\x00", lambda m: code_blocks[int(m.group(1))], text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
 
 def _clean_error_leakage(text: str) -> str:
     """Remove leaked internal error messages."""
     import re
+
     error_patterns = [
         # 含 "error" 键的结构化 JSON（loop 工具失败 observation 被 LLM 复述进最终回复时）
         # 必须放在行级模式之前：否则 Error 行级匹配会先破坏 JSON 结构留下残缺片段
         r'\{[^{}]*"error"\s*:[^{}]*\}',
-        r'(?:Traceback|Error|Exception)[^\n]*(?:\n[^\n]*){0,3}',
+        r"(?:Traceback|Error|Exception)[^\n]*(?:\n[^\n]*){0,3}",
         r'File\s+"[^"]+",\s*line\s+\d+',
-        r'pymysql\.err\.\w+',
-        r'DataError.*?row \d+',
+        r"pymysql\.err\.\w+",
+        r"DataError.*?row \d+",
     ]
     for p in error_patterns:
-        text = re.sub(p, '[内部错误已隐藏]', text)
+        text = re.sub(p, "[内部错误已隐藏]", text)
     # loop 工具失败/熔断标记词：直接剔除（整段替换会产生"引擎 [内部错误已隐藏] 已拦截"这类破碎句）
-    text = re.sub(r'\btool_(?:failed|blocked)\b[\s:：,，]*', '', text)
-    text = re.sub(r'\$\s*\n?', '', text)
-    text = re.sub(r'\n+', '\n', text)
+    text = re.sub(r"\btool_(?:failed|blocked)\b[\s:：,，]*", "", text)
+    text = re.sub(r"\$\s*\n?", "", text)
+    text = re.sub(r"\n+", "\n", text)
     return text.strip()
 
 
@@ -269,19 +280,47 @@ class AgentChatRequest(BaseModel):
     mode: str = Field(default="auto", pattern="^(auto|full_pipeline|chat)$")
     account_id: str | None = None
     session_id: str | None = None
-    agent_id: str | None = Field(default=None, description="指定使用的智能体 ID，不传则默认 chat_agent")
-    model: str | None = Field(default=None, description="用户在输入框手动选择的模型 ID；不传则按「模型配置」页的分配（智能体/全局默认）")
-    creation_type: str | None = Field(default=None, description="当前创作类型(image_text/voiceover/short_video/ai_edit/long_article/live_clip)，用于按需加载Skill")
-    analysis_context: str | None = Field(default=None, description="AI数据分析报告上下文，注入到 prompt 中让 AI 基于真实数据给建议")
-    work_context: dict | None = Field(default=None, description="当前作品上下文，包含标题/平台/正文/指标等")
+    agent_id: str | None = Field(
+        default=None, description="指定使用的智能体 ID，不传则默认 chat_agent"
+    )
+    model: str | None = Field(
+        default=None,
+        description="用户在输入框手动选择的模型 ID；不传则按「模型配置」页的分配（智能体/全局默认）",
+    )
+    creation_type: str | None = Field(
+        default=None,
+        description="当前创作类型(image_text/voiceover/short_video/ai_edit/long_article/live_clip)，用于按需加载Skill",
+    )
+    analysis_context: str | None = Field(
+        default=None, description="AI数据分析报告上下文，注入到 prompt 中让 AI 基于真实数据给建议"
+    )
+    work_context: dict | None = Field(
+        default=None, description="当前作品上下文，包含标题/平台/正文/指标等"
+    )
     workspace_id: str | None = Field(default=None, description="当前绑定的本地工作区 ID")
     file_context: dict | None = Field(default=None, description="当前选中的对话/本地文件元数据")
-    folder_context: dict | None = Field(default=None, description="当前文件夹的对话文件/工作区文件列表")
-    model_settings: dict | None = Field(default=None, description="模型和推送设置，包含 enable_wechat_push, wechat_target_user_id, enable_feishu_push, feishu_chat_id 等")
-    auto_approve: bool = Field(default=True, description="工具调用是否自动放行（True=自动放行，False=需要用户确认）")
-    image_asset_ids: list[str] = Field(default_factory=list, description="用户在聊天中附带/上传的图片 asset_id 列表，供视频生成等 Skill 直接使用")
-    video_asset_ids: list[str] = Field(default_factory=list, description="用户在聊天中附带/上传的视频 asset_id 列表，供智能剪辑/叠加增强等 Skill 直接使用")
-    turn_id: str | None = Field(default=None, description="回合 ID（前端发送前生成）。SSE 事件按回合隔离，防上一轮输出窜显；不传则后端生成")
+    folder_context: dict | None = Field(
+        default=None, description="当前文件夹的对话文件/工作区文件列表"
+    )
+    model_settings: dict | None = Field(
+        default=None,
+        description="模型和推送设置，包含 enable_wechat_push, wechat_target_user_id, enable_feishu_push, feishu_chat_id 等",
+    )
+    auto_approve: bool = Field(
+        default=True, description="工具调用是否自动放行（True=自动放行，False=需要用户确认）"
+    )
+    image_asset_ids: list[str] = Field(
+        default_factory=list,
+        description="用户在聊天中附带/上传的图片 asset_id 列表，供视频生成等 Skill 直接使用",
+    )
+    video_asset_ids: list[str] = Field(
+        default_factory=list,
+        description="用户在聊天中附带/上传的视频 asset_id 列表，供智能剪辑/叠加增强等 Skill 直接使用",
+    )
+    turn_id: str | None = Field(
+        default=None,
+        description="回合 ID（前端发送前生成）。SSE 事件按回合隔离，防上一轮输出窜显；不传则后端生成",
+    )
 
 
 _trigger_words_cache: dict[str, str] | None = None
@@ -297,6 +336,7 @@ def _get_third_party_trigger_words() -> dict[str, str]:
         return _trigger_words_cache
     try:
         from app.core.skill_registry import SkillRegistry, ensure_builtin_skills_registered
+
         ensure_builtin_skills_registered()
         registry = SkillRegistry.instance()
         registry.scan_third_party()
@@ -322,6 +362,7 @@ def _looks_like_local_file_request(message: str) -> bool:
 
 def _extract_local_file_terms(message: str) -> list[str]:
     import re as _re
+
     classifier = _get_classifier()
     noise_words = classifier.get_noise_words("file_search")
     msg = message
@@ -363,6 +404,7 @@ def _resolve_session_cwd(request: "AgentChatRequest", user_id: str) -> Path | No
     if request.workspace_id:
         try:
             from app.api.routers import workspace as workspace_api
+
             return workspace_api._resolve_root(request.workspace_id, user_id)
         except Exception as exc:
             logger.warning(f"[chat_agent] resolve workspace root failed: {exc}")
@@ -387,7 +429,9 @@ async def _try_local_file_search(
         return None
     _trigger_words = _get_third_party_trigger_words()
     if _trigger_words and any(kw in message.lower() for kw in _trigger_words):
-        logger.info(f"[chat_agent] skip local_file_search: third-party platform keyword detected in '{message[:60]}'")
+        logger.info(
+            f"[chat_agent] skip local_file_search: third-party platform keyword detected in '{message[:60]}'"
+        )
         return None
 
     terms = _extract_local_file_terms(message)
@@ -397,6 +441,7 @@ async def _try_local_file_search(
 
     try:
         from app.services import chat_file as chat_file_svc
+
         records = await chat_file_svc.list_files_for_session(session_id)
         for f in records:
             name = str(f.get("name") or "")
@@ -405,30 +450,56 @@ async def _try_local_file_search(
             meta_text = str(meta.get("topic") or meta.get("source") or "")
             all_file_count += 1
             if len(all_files) < 40:
-                all_files.append({
-                    "name": name,
-                    "path": name,
-                    "size": f.get("size") or 0,
-                    "source": "对话文件",
-                    "meta": meta,
-                })
+                all_files.append(
+                    {
+                        "name": name,
+                        "path": name,
+                        "size": f.get("size") or 0,
+                        "source": "对话文件",
+                        "meta": meta,
+                    }
+                )
             haystack = (name + "\n" + content + "\n" + meta_text).lower()
             if any(term.lower() in haystack for term in terms):
-                matches.append({
-                    "name": name,
-                    "path": name,
-                    "size": f.get("size") or 0,
-                    "source": "对话文件",
-                    "meta": meta,
-                })
+                matches.append(
+                    {
+                        "name": name,
+                        "path": name,
+                        "size": f.get("size") or 0,
+                        "source": "对话文件",
+                        "meta": meta,
+                    }
+                )
     except Exception as exc:
         logger.warning(f"[chat_agent] local chat-file scan failed: {exc}")
 
     if workspace_root is not None:
         try:
             root = workspace_root
-            skip_dirs = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", ".next"}
-            text_exts = {".md", ".txt", ".json", ".csv", ".py", ".ts", ".vue", ".js", ".html", ".yaml", ".yml", ".org"}
+            skip_dirs = {
+                ".git",
+                "node_modules",
+                "__pycache__",
+                ".venv",
+                "venv",
+                "dist",
+                "build",
+                ".next",
+            }
+            text_exts = {
+                ".md",
+                ".txt",
+                ".json",
+                ".csv",
+                ".py",
+                ".ts",
+                ".vue",
+                ".js",
+                ".html",
+                ".yaml",
+                ".yml",
+                ".org",
+            }
             for p in root.rglob("*"):
                 try:
                     rel = str(p.relative_to(root))
@@ -438,25 +509,32 @@ async def _try_local_file_search(
                         continue
                     all_file_count += 1
                     if len(all_files) < 40:
-                        all_files.append({
-                            "name": p.name,
-                            "path": rel,
-                            "size": p.stat().st_size if p.stat().st_size is not None else 0,
-                            "source": "本地工作区",
-                        })
+                        all_files.append(
+                            {
+                                "name": p.name,
+                                "path": rel,
+                                "size": p.stat().st_size if p.stat().st_size is not None else 0,
+                                "source": "本地工作区",
+                            }
+                        )
                     haystack = rel.lower()
                     if p.suffix.lower() in text_exts and p.stat().st_size <= 200_000:
                         try:
-                            haystack += "\n" + p.read_text(encoding="utf-8", errors="ignore")[:20000].lower()
+                            haystack += (
+                                "\n"
+                                + p.read_text(encoding="utf-8", errors="ignore")[:20000].lower()
+                            )
                         except Exception:
                             pass
                     if any(term.lower() in haystack for term in terms):
-                        matches.append({
-                            "name": p.name,
-                            "path": rel,
-                            "size": p.stat().st_size,
-                            "source": "本地工作区",
-                        })
+                        matches.append(
+                            {
+                                "name": p.name,
+                                "path": rel,
+                                "size": p.stat().st_size,
+                                "source": "本地工作区",
+                            }
+                        )
                 except Exception:
                     continue
         except Exception as exc:
@@ -480,7 +558,9 @@ async def _try_local_file_search(
             size_text = f"{size / 1024:.1f} KB" if size >= 1024 else f"{size} B"
             topic = (m.get("meta") or {}).get("topic") if isinstance(m.get("meta"), dict) else ""
             topic_text = f" · {topic}" if topic else ""
-            lines.append(f"- **{m.get('name')}** [{tag} · {size_text}]\n  `{m.get('path')}`{topic_text}")
+            lines.append(
+                f"- **{m.get('name')}** [{tag} · {size_text}]\n  `{m.get('path')}`{topic_text}"
+            )
     else:
         lines = [f"未找到含「{' / '.join(terms)}」的文件。"]
         if all_files:
@@ -500,7 +580,9 @@ async def _try_local_file_search(
         "is_chat": False,
     }
     await chat_session.add_message(
-        session_id, "assistant", summary,
+        session_id,
+        "assistant",
+        summary,
         {"intent": intent, "workflow_status": "completed", "source": "local_file_search"},
     )
     _cs = await chat_session.get_creative_state(session_id)
@@ -519,18 +601,16 @@ async def _generate_session_summary(
     recent_limit: int = 2,
 ) -> str | None:
     """用 LLM 将旧消息压缩为摘要，保留最近 recent_limit 条不参与摘要。"""
-    from app.services import chat_session as _cs
     from app.engine.governance.llm_circuit import get_llm_circuit
+    from app.services import chat_session as _cs
+
     _circuit = get_llm_circuit()
     if not _circuit.allow_request():
         return None
 
     try:
         all_messages = await _cs.list_messages(session_id, limit=200)
-        user_assistant_msgs = [
-            m for m in all_messages
-            if m["role"] in ("user", "assistant")
-        ]
+        user_assistant_msgs = [m for m in all_messages if m["role"] in ("user", "assistant")]
 
         if len(user_assistant_msgs) <= recent_limit:
             return None
@@ -559,6 +639,7 @@ async def _generate_session_summary(
         )
 
         from app.agents.registry import AgentRegistry
+
         _registry = AgentRegistry()
         try:
             _session = _registry.build_session("chat_agent")
@@ -598,7 +679,9 @@ async def agent_chat(
     if request.session_id:
         existing = await chat_session.get_session(request.session_id)
         if existing is None:
-            logger.warning(f"[chat_agent] session_id={request.session_id} not found in DB, ensuring session")
+            logger.warning(
+                f"[chat_agent] session_id={request.session_id} not found in DB, ensuring session"
+            )
             await chat_session.ensure_session(request.session_id, user_id)
             session_id = request.session_id
         elif existing["user_id"] != user_id:
@@ -613,6 +696,7 @@ async def agent_chat(
     # 本回合所有 SSE 事件（chat_turn_started / decision_made / observer 全量 /
     # workflow_completed）均盖章该值，响应体回传供前端对账。
     import uuid as _uuid
+
     _turn_id = request.turn_id or f"turn_{_uuid.uuid4().hex[:16]}"
     logger.info(f"[chat_agent] turn_id={_turn_id} session={session_id}")
 
@@ -641,30 +725,37 @@ async def agent_chat(
     # 1.5 注入作品上下文（强化版：强制AI必须使用）
     if request.work_context:
         wc = request.work_context
-        logger.info(f"[chat_agent] work_context received: keys={list(wc.keys())}, title={wc.get('title')}, contentText_len={len(wc.get('contentText') or '')}")
+        logger.info(
+            f"[chat_agent] work_context received: keys={list(wc.keys())}, title={wc.get('title')}, contentText_len={len(wc.get('contentText') or '')}"
+        )
         work_prompt_parts = [build_work_context_prompt(wc)]
-        work_prompt_parts.extend([
-            "",
-            "=== 强制要求 ===",
-            "1. 回答时必须引用上述作品的实际内容，不要说'没有内容'或'未保存'",
-            "2. 如果用户要求分析/优化/改写，直接针对上述正文内容进行操作",
-            "3. 绝对禁止回复'草稿文件还没有保存'或类似的内容缺失提示",
-            "4. 作品内容已经完整提供给你，立即开始工作！",
-            "",
-        ])
+        work_prompt_parts.extend(
+            [
+                "",
+                "=== 强制要求 ===",
+                "1. 回答时必须引用上述作品的实际内容，不要说'没有内容'或'未保存'",
+                "2. 如果用户要求分析/优化/改写，直接针对上述正文内容进行操作",
+                "3. 绝对禁止回复'草稿文件还没有保存'或类似的内容缺失提示",
+                "4. 作品内容已经完整提供给你，立即开始工作！",
+                "",
+            ]
+        )
         await chat_session.add_message(session_id, "system", "\n".join(work_prompt_parts))
 
     # 1.6 注入分析上下文
     if request.analysis_context:
         await chat_session.add_message(
-            session_id, "system",
-            request.analysis_context + "\n\n请基于以上数据分析上下文来回答用户问题，给出具体、可操作的建议。",
+            session_id,
+            "system",
+            request.analysis_context
+            + "\n\n请基于以上数据分析上下文来回答用户问题，给出具体、可操作的建议。",
         )
 
     # 1.7 注入草稿结构说明书
     if request.work_context:
         try:
             from app.agents.draft_schema import build_draft_schema_prompt
+
             schema_prompt = build_draft_schema_prompt(request.work_context)
             await chat_session.add_message(session_id, "system", schema_prompt)
         except Exception:
@@ -697,7 +788,11 @@ async def agent_chat(
     # 3.6 本地文件请求直接走文件检索
     _session_cwd = _resolve_session_cwd(request, user_id)
     _local_file_result = await _try_local_file_search(
-        sanitized_message, session_id, user_id, request, workspace_root=_session_cwd,
+        sanitized_message,
+        session_id,
+        user_id,
+        request,
+        workspace_root=_session_cwd,
     )
     if _local_file_result is not None:
         return _local_file_result
@@ -747,12 +842,14 @@ async def agent_chat(
 
     # 4. LLM 熔断检查
     from app.engine.governance.llm_circuit import get_llm_circuit
+
     _circuit = get_llm_circuit()
     if not _circuit.allow_request():
         _abort_reason = _circuit.open_reason or "LLM 连续失败"
         logger.error(f"[chat_agent] LLM circuit OPEN at entry, refusing: {_abort_reason}")
         await chat_session.add_message(
-            session_id, "assistant",
+            session_id,
+            "assistant",
             f"LLM 服务不可用（{_abort_reason}），请检查 API 余额和配置后重试。",
             {"workflow_status": "error", "source": "llm_circuit"},
         )
@@ -773,34 +870,46 @@ async def agent_chat(
         _last_summarized_count = (_summary_meta or {}).get("summarized_count", 0) or 0
         _new_msgs_since_summary = _total_msg_count - _last_summarized_count
 
-        logger.info(f"[chat_agent] summary check: total={_total_msg_count}, last_summarized={_last_summarized_count}, new_since={_new_msgs_since_summary}, threshold={_SUMMARY_THRESHOLD}")
+        logger.info(
+            f"[chat_agent] summary check: total={_total_msg_count}, last_summarized={_last_summarized_count}, new_since={_new_msgs_since_summary}, threshold={_SUMMARY_THRESHOLD}"
+        )
 
         if _new_msgs_since_summary > _SUMMARY_THRESHOLD:
             try:
-                await sse_bus.publish(session_id, "decision_made", {
-                    "decision": f"正在更新对话摘要…",
-                    "iteration": 0,
-                }, turn_id=_turn_id)
+                await sse_bus.publish(
+                    session_id,
+                    "decision_made",
+                    {
+                        "decision": f"正在更新对话摘要…",
+                        "iteration": 0,
+                    },
+                    turn_id=_turn_id,
+                )
             except Exception as _sse_err:
                 logger.warning(f"[chat_agent] SSE publish failed: {_sse_err}")
-            _new_summary = await _generate_session_summary(
-                session_id, recent_limit=_RECENT_LIMIT
-            )
+            _new_summary = await _generate_session_summary(session_id, recent_limit=_RECENT_LIMIT)
             if _new_summary:
                 await chat_session.save_session_summary(
-                    session_id, _new_summary,
+                    session_id,
+                    _new_summary,
                     summarized_count=_total_msg_count - _RECENT_LIMIT,
                 )
                 _session_summary_text = _new_summary
-                logger.info(f"[chat_agent] summary updated, {len(_new_summary)} chars, summarized_count={_total_msg_count - _RECENT_LIMIT}")
+                logger.info(
+                    f"[chat_agent] summary updated, {len(_new_summary)} chars, summarized_count={_total_msg_count - _RECENT_LIMIT}"
+                )
             else:
-                logger.warning("[chat_agent] _generate_session_summary returned None, fallback to cached")
+                logger.warning(
+                    "[chat_agent] _generate_session_summary returned None, fallback to cached"
+                )
                 _cached_summary = await chat_session.get_session_summary(session_id)
                 if _cached_summary:
                     _session_summary_text = _cached_summary
         else:
             _session_summary_text = await chat_session.get_session_summary(session_id)
-            logger.info(f"[chat_agent] new msgs ({_new_msgs_since_summary}) <= threshold ({_SUMMARY_THRESHOLD}), use cached summary")
+            logger.info(
+                f"[chat_agent] new msgs ({_new_msgs_since_summary}) <= threshold ({_SUMMARY_THRESHOLD}), use cached summary"
+            )
     except Exception as _summary_err:
         logger.warning(f"[chat_agent] summary block error: {_summary_err}")
 
@@ -821,20 +930,24 @@ async def agent_chat(
     if request.work_context:
         wc = request.work_context
         _work_prompt_parts = [build_work_context_prompt(wc)]
-        _work_prompt_parts.extend([
-            "",
-            "=== 强制要求 ===",
-            "1. 回答时必须引用上述作品的实际内容，不要说'没有内容'或'未保存'",
-            "2. 如果用户要求分析/优化/改写，直接针对上述正文内容进行操作",
-            "3. 绝对禁止回复'草稿文件还没有保存'或类似的内容缺失提示",
-            "4. 作品内容已经完整提供给你，立即开始工作！",
-        ])
+        _work_prompt_parts.extend(
+            [
+                "",
+                "=== 强制要求 ===",
+                "1. 回答时必须引用上述作品的实际内容，不要说'没有内容'或'未保存'",
+                "2. 如果用户要求分析/优化/改写，直接针对上述正文内容进行操作",
+                "3. 绝对禁止回复'草稿文件还没有保存'或类似的内容缺失提示",
+                "4. 作品内容已经完整提供给你，立即开始工作！",
+            ]
+        )
         _work_prompt_str = "\n".join(_work_prompt_parts)
         if _extra_prompt:
             _extra_prompt = _extra_prompt + "\n" + _work_prompt_str
         else:
             _extra_prompt = _work_prompt_str
-        logger.info(f"[chat_agent] work_context injected into extra_system_prompt, len={len(_work_prompt_str)}")
+        logger.info(
+            f"[chat_agent] work_context injected into extra_system_prompt, len={len(_work_prompt_str)}"
+        )
 
     if request.file_context:
         fc = request.file_context
@@ -852,7 +965,9 @@ async def agent_chat(
             _extra_prompt = _extra_prompt + "\n" + _file_prompt_str
         else:
             _extra_prompt = _file_prompt_str
-        logger.info(f"[chat_agent] file_context injected into extra_system_prompt, len={len(_file_prompt_str)}")
+        logger.info(
+            f"[chat_agent] file_context injected into extra_system_prompt, len={len(_file_prompt_str)}"
+        )
 
     # 会话级工作目录 —— 对标 Codex 的 <environment_context><cwd>：
     # 入口只解析出一个绝对路径，写进 run context，让 file_read /
@@ -860,7 +975,11 @@ async def agent_chat(
     # （Codex 靠 exec_command、Claude Code 靠 read_file/glob/grep 按需读取）。
     if request.folder_context or _session_cwd is not None:
         fctx = request.folder_context or {}
-        _folder_name = fctx.get("name") or fctx.get("folderId") or (_session_cwd.name if _session_cwd else "未知")
+        _folder_name = (
+            fctx.get("name")
+            or fctx.get("folderId")
+            or (_session_cwd.name if _session_cwd else "未知")
+        )
         _folder_parts = ["", "<environment_context>"]
         if _session_cwd is not None:
             _folder_parts.append(f"  <cwd>{_session_cwd}</cwd>")
@@ -884,7 +1003,9 @@ async def agent_chat(
                         _file_line += f"\n  内容:\n  {_f['contentText'][:1200]}"
                     _folder_parts.append(_file_line)
                 if len(_folder_files) > 5:
-                    _folder_parts.append(f"（其余 {len(_folder_files) - 5} 个文件未展开，需要时请让用户指定文件名）")
+                    _folder_parts.append(
+                        f"（其余 {len(_folder_files) - 5} 个文件未展开，需要时请让用户指定文件名）"
+                    )
         _folder_prompt_str = "\n".join(_folder_parts)
         if _extra_prompt:
             _extra_prompt = _extra_prompt + "\n" + _folder_prompt_str
@@ -904,24 +1025,34 @@ async def agent_chat(
         try:
             if event_type == "agent_message_delta":
                 delta_preview = (payload.get("delta") or "")[:60]
-                logger.info(f"[chat_agent] SSE emit: {event_type}, node={node_id}, delta_len={len(payload.get('delta', ''))}, preview={delta_preview!r}")
-                _echo_state["content_tail"] = (_echo_state["content_tail"] + (payload.get("delta") or ""))[-400:]
+                logger.info(
+                    f"[chat_agent] SSE emit: {event_type}, node={node_id}, delta_len={len(payload.get('delta', ''))}, preview={delta_preview!r}"
+                )
+                _echo_state["content_tail"] = (
+                    _echo_state["content_tail"] + (payload.get("delta") or "")
+                )[-400:]
                 # 记录本回合已实时流出的正文全文：终稿回放层据此判断
                 # 是否还需要 replay（skill 已边跑边推正文时，回放会造成
                 # 同一段文字重复两遍——2026-11-08 前端实锤）
-                _echo_state["answer_text"] += (payload.get("delta") or "")
+                _echo_state["answer_text"] += payload.get("delta") or ""
             elif event_type == "reasoning_summary_text_delta":
                 delta_preview = (payload.get("delta") or "")[:60]
-                logger.info(f"[chat_agent] SSE emit: {event_type}, node={node_id}, delta_len={len(payload.get('delta', ''))}, preview={delta_preview!r}")
+                logger.info(
+                    f"[chat_agent] SSE emit: {event_type}, node={node_id}, delta_len={len(payload.get('delta', ''))}, preview={delta_preview!r}"
+                )
                 # 回声抑制：reasoning 片段尾部（≤40 字符）已逐字出现在最近 content 中 → 跳过
                 _delta = (payload.get("delta") or "").strip()
                 _probe = _delta[-40:] if len(_delta) > 40 else _delta
                 _tail = _echo_state["content_tail"]
                 if _delta and _probe and _tail and _probe in _tail:
-                    logger.info(f"[chat_agent] reasoning echo suppressed: {len(_delta)} chars overlap with content tail")
+                    logger.info(
+                        f"[chat_agent] reasoning echo suppressed: {len(_delta)} chars overlap with content tail"
+                    )
                     return
             else:
-                logger.info(f"[chat_agent] SSE emit: {event_type}, node={node_id}, keys={list(payload.keys())}")
+                logger.info(
+                    f"[chat_agent] SSE emit: {event_type}, node={node_id}, keys={list(payload.keys())}"
+                )
             await sse_bus.publish(session_id, event_type, payload, turn_id=_turn_id)
         except Exception as _cb_err:
             logger.warning(f"[chat_agent] SSE emit callback error: {_cb_err}")
@@ -930,11 +1061,16 @@ async def agent_chat(
 
     # 发送 chat_turn_started 事件，标记新一轮对话开始
     # 前端用此事件作为"开始接收事件"的标志，忽略之前的 replay 事件
-    await sse_bus.publish(session_id, "chat_turn_started", {
-        "session_id": session_id,
-        "message_preview": sanitized_message[:60],
-        "turn_id": _turn_id,
-    }, turn_id=_turn_id)
+    await sse_bus.publish(
+        session_id,
+        "chat_turn_started",
+        {
+            "session_id": session_id,
+            "message_preview": sanitized_message[:60],
+            "turn_id": _turn_id,
+        },
+        turn_id=_turn_id,
+    )
     # 注入 image_asset_ids 到消息上下文
     if request.image_asset_ids:
         # 主对话模型是纯文本模型（DeepSeek），看不见像素。这里必须把
@@ -951,9 +1087,12 @@ async def agent_chat(
 
     # 注入 video_asset_ids 到消息上下文（含本地路径，供 LLM 调用 Skill 时传 video_path）
     if request.video_asset_ids:
-        _video_parts = [f"用户附带了 {len(request.video_asset_ids)} 个视频，video_asset_ids: {request.video_asset_ids}"]
+        _video_parts = [
+            f"用户附带了 {len(request.video_asset_ids)} 个视频，video_asset_ids: {request.video_asset_ids}"
+        ]
         try:
             from capabilities.video.services.video_orchestrator import resolve_video_assets
+
             _v_urls, _v_paths = await resolve_video_assets(request.video_asset_ids, user_id)
             _valid_paths = [p for p in _v_paths if p]
             if _valid_paths:
@@ -997,11 +1136,16 @@ async def agent_chat(
     except Exception as _agent_err:
         logger.error(f"[chat_agent] agent.process() failed: {_agent_err}", exc_info=_agent_err)
         try:
-            await sse_bus.publish(session_id, "workflow_error", {
-                "workflow_id": session_id,
-                "error": "agent processing failed",
-                "detail": str(_agent_err),
-            }, turn_id=_turn_id)
+            await sse_bus.publish(
+                session_id,
+                "workflow_error",
+                {
+                    "workflow_id": session_id,
+                    "error": "agent processing failed",
+                    "detail": str(_agent_err),
+                },
+                turn_id=_turn_id,
+            )
         except Exception:
             pass
         raise
@@ -1010,7 +1154,9 @@ async def agent_chat(
     if result.status == "awaiting_clarification":
         output_data = result.output.output if result.output else {}
         await chat_session.add_message(
-            session_id, "assistant", result.message,
+            session_id,
+            "assistant",
+            result.message,
             {
                 "workflow_status": "awaiting_clarification",
                 "source": "react_loop",
@@ -1033,7 +1179,9 @@ async def agent_chat(
     if result.status == "awaiting_confirmation":
         output_data = result.output.output if result.output else {}
         await chat_session.add_message(
-            session_id, "assistant", result.message,
+            session_id,
+            "assistant",
+            result.message,
             {
                 "workflow_status": "awaiting_confirmation",
                 "source": "react_loop",
@@ -1054,7 +1202,9 @@ async def agent_chat(
     if result.status == "awaiting_storyboard_confirmation":
         output_data = result.output.output if result.output else {}
         await chat_session.add_message(
-            session_id, "assistant", result.message,
+            session_id,
+            "assistant",
+            result.message,
             {
                 "workflow_status": "awaiting_storyboard_confirmation",
                 "source": "react_loop",
@@ -1077,7 +1227,9 @@ async def agent_chat(
     if result.status == "awaiting_cut_plan_confirmation":
         output_data = result.output.output if result.output else {}
         await chat_session.add_message(
-            session_id, "assistant", result.message,
+            session_id,
+            "assistant",
+            result.message,
             {
                 "workflow_status": "awaiting_cut_plan_confirmation",
                 "source": "react_loop",
@@ -1096,7 +1248,9 @@ async def agent_chat(
     if result.status == "awaiting_guardian_confirmation":
         output_data = result.output.output if result.output else {}
         await chat_session.add_message(
-            session_id, "assistant", result.message,
+            session_id,
+            "assistant",
+            result.message,
             {
                 "workflow_status": "awaiting_guardian_confirmation",
                 "source": "react_loop",
@@ -1120,7 +1274,9 @@ async def agent_chat(
     if result.status == "awaiting_side_write_confirmation":
         output_data = result.output.output if result.output else {}
         await chat_session.add_message(
-            session_id, "assistant", result.message,
+            session_id,
+            "assistant",
+            result.message,
             {
                 "workflow_status": "awaiting_side_write_confirmation",
                 "source": "react_loop",
@@ -1187,20 +1343,31 @@ async def agent_chat(
     # 正文以 POST message 为准，绝不重复投喂。
     _live_answer = _echo_state.get("answer_text", "")
     if _live_answer and humanized_message.startswith(_live_answer):
-        _replay_tail = humanized_message[len(_live_answer):]
+        _replay_tail = humanized_message[len(_live_answer) :]
         if _replay_tail:
-            logger.info(f"[chat_agent] answer already streamed live ({len(_live_answer)} chars), replaying tail only ({len(_replay_tail)} chars)")
+            logger.info(
+                f"[chat_agent] answer already streamed live ({len(_live_answer)} chars), replaying tail only ({len(_replay_tail)} chars)"
+            )
             await _replay_answer_stream(session_id, _turn_id, _replay_tail)
     elif _live_answer:
-        logger.info(f"[chat_agent] answer already streamed live ({len(_live_answer)} chars) but final differs, skip replay to avoid duplication")
+        logger.info(
+            f"[chat_agent] answer already streamed live ({len(_live_answer)} chars) but final differs, skip replay to avoid duplication"
+        )
     else:
         await _replay_answer_stream(session_id, _turn_id, humanized_message)
 
     try:
-        await sse_bus.publish(session_id, "workflow_completed", {
-            "workflow_id": session_id,
-        }, turn_id=_turn_id)
-        logger.info(f"[chat_agent] workflow_completed published to SSE bus for session={session_id}")
+        await sse_bus.publish(
+            session_id,
+            "workflow_completed",
+            {
+                "workflow_id": session_id,
+            },
+            turn_id=_turn_id,
+        )
+        logger.info(
+            f"[chat_agent] workflow_completed published to SSE bus for session={session_id}"
+        )
     except Exception as _sse_finish_err:
         logger.warning(f"[chat_agent] failed to publish workflow_completed: {_sse_finish_err}")
 
@@ -1218,13 +1385,17 @@ async def agent_chat(
         "turn_id": _turn_id,
     }
 
+
 # Confirm API
 class ConfirmRequest(BaseModel):
     session_id: str = Field(..., description="会话 ID")
     loop_state_path: str = Field(..., description="循环状态文件路径")
     action: str = Field(..., pattern="^(approve|reject)$")
     feedback: str = Field(default="", description="用户反馈（可选）")
-    turn_id: str | None = Field(default=None, description="首轮回合 ID（前端发送前生成）。续跑事件按该回合盖章，前端沙箱放行；不传则续跑事件不带回合标识")
+    turn_id: str | None = Field(
+        default=None,
+        description="首轮回合 ID（前端发送前生成）。续跑事件按该回合盖章，前端沙箱放行；不传则续跑事件不带回合标识",
+    )
 
 
 async def _serialize_resume_by_state(http_request: Request):
@@ -1259,13 +1430,16 @@ async def confirm_action(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """确认或拒绝等待中的高危操作，恢复 ReactorSession。"""
-    import logging as _logging
     import asyncio
-    _logger = _logging.getLogger("chat_agent.confirm")
-    _logger.info(f"[confirm] session={request.session_id} action={request.action} path={request.loop_state_path}")
+    import logging as _logging
 
-    from app.engine.reactor.loop_state import load_loop_state, cleanup_loop_state
+    _logger = _logging.getLogger("chat_agent.confirm")
+    _logger.info(
+        f"[confirm] session={request.session_id} action={request.action} path={request.loop_state_path}"
+    )
+
     from app.agents.registry import AgentRegistry
+    from app.engine.reactor.loop_state import cleanup_loop_state, load_loop_state
 
     try:
         state = load_loop_state(request.loop_state_path)
@@ -1273,8 +1447,10 @@ async def confirm_action(
         # 2026-11-03 死卡推广：状态文件没了，库里那条"待确认"也该退场
         try:
             await chat_session.mark_awaiting_status_resolved(
-                request.session_id, "awaiting_confirmation",
-                "confirmation_resolved", "rejected",
+                request.session_id,
+                "awaiting_confirmation",
+                "confirmation_resolved",
+                "rejected",
                 db=db,
             )
         except Exception:
@@ -1282,21 +1458,27 @@ async def confirm_action(
         raise HTTPException(status_code=404, detail="循环状态不存在或已过期")
 
     decision = "approved" if request.action == "approve" else "rejected"
-    obs = f"[observation] 用户{decision}了操作" + (f": {request.feedback}" if request.feedback else "")
+    obs = f"[observation] 用户{decision}了操作" + (
+        f": {request.feedback}" if request.feedback else ""
+    )
     state["messages"].append({"role": "user", "content": obs})
 
     if request.action == "reject":
         # 落库：拒绝后旧"待确认"消息标记 resolved，重进会话不再弹卡
         try:
             await chat_session.mark_awaiting_status_resolved(
-                request.session_id, "awaiting_confirmation",
-                "confirmation_resolved", "rejected",
+                request.session_id,
+                "awaiting_confirmation",
+                "confirmation_resolved",
+                "rejected",
                 db=db,
             )
         except Exception:
             _logger.warning("[confirm] failed to persist reject state", exc_info=True)
         await chat_session.add_message(
-            request.session_id, "assistant", "操作已取消。",
+            request.session_id,
+            "assistant",
+            "操作已取消。",
             {"workflow_status": "completed", "source": "react_loop"},
         )
         cleanup_loop_state(request.loop_state_path)
@@ -1311,10 +1493,10 @@ async def confirm_action(
 
     async def _run_resume_background():
         """后台续跑 ReactorSession，结果通过 SSE 实时推送。"""
-        from app.engine.reactor.session import ReactorSession
-        from app.engine.factory import get_deepseek_llm
-        from app.db.session import AsyncSessionLocal
         from app.core.context_vars import current_db_session as _cdbs
+        from app.db.session import AsyncSessionLocal
+        from app.engine.factory import get_deepseek_llm
+        from app.engine.reactor.session import ReactorSession
 
         registry = AgentRegistry()
         session = registry.build_session(
@@ -1329,7 +1511,10 @@ async def confirm_action(
         # 必须从落盘的 context_snapshot 恢复 cwd，否则续跑时被批准的工具
         # 会以默认工作区为根，所有相对路径都指错地方。
         from app.core.context_vars import current_workspace_root as _cwr
-        _cwd_token = _cwr.set((state.get("context_snapshot", {}) or {}).get("workspace_root") or None)
+
+        _cwd_token = _cwr.set(
+            (state.get("context_snapshot", {}) or {}).get("workspace_root") or None
+        )
         try:
             _ctx_snapshot = state.get("context_snapshot", {}) or {}
             context = dict(_ctx_snapshot)
@@ -1360,10 +1545,15 @@ async def confirm_action(
 
         _output_ended_reason = output.get("ended_reason", "") if isinstance(output, dict) else ""
         _is_paused_output = _output_ended_reason in (
-            "clarification_paused", "guardian_paused", "storyboard_paused", "cut_plan_paused",
+            "clarification_paused",
+            "guardian_paused",
+            "storyboard_paused",
+            "cut_plan_paused",
         )
         if _is_paused_output:
-            logger.info(f"[confirm] resume paused again (ended_reason={_output_ended_reason}), skipping agent_loop_done")
+            logger.info(
+                f"[confirm] resume paused again (ended_reason={_output_ended_reason}), skipping agent_loop_done"
+            )
             return
 
         output_data = output if isinstance(output, dict) else {}
@@ -1374,16 +1564,23 @@ async def confirm_action(
             _lt = str(output_data.get("_last_thought", "") or "").strip()
             final_message = _lt or "本轮执行结束，但没有产出文本结果（可重发或换个说法再试）。"
         await chat_session.add_message(
-            request.session_id, "assistant", final_message,
+            request.session_id,
+            "assistant",
+            final_message,
             {"workflow_status": "completed", "source": "react_loop"},
         )
         try:
-            await sse_bus.publish(_confirm_session_id, "agent_loop_done", {
-                "status": "completed",
-                "message": final_message,
-                # BUG-007：终态事件带终止原因，前端据此区分正常完成/资源截断/假完成
-                "ended_reason": _output_ended_reason or "completed",
-            }, turn_id=request.turn_id)
+            await sse_bus.publish(
+                _confirm_session_id,
+                "agent_loop_done",
+                {
+                    "status": "completed",
+                    "message": final_message,
+                    # BUG-007：终态事件带终止原因，前端据此区分正常完成/资源截断/假完成
+                    "ended_reason": _output_ended_reason or "completed",
+                },
+                turn_id=request.turn_id,
+            )
         except Exception:
             pass
 
@@ -1392,8 +1589,10 @@ async def confirm_action(
     # 落库：批准即标 resolved=confirmed，续跑等待期间刷新/重进不再弹旧确认卡
     try:
         await chat_session.mark_awaiting_status_resolved(
-            request.session_id, "awaiting_confirmation",
-            "confirmation_resolved", "confirmed",
+            request.session_id,
+            "awaiting_confirmation",
+            "confirmation_resolved",
+            "confirmed",
             db=db,
         )
     except Exception:
@@ -1408,10 +1607,17 @@ async def confirm_action(
         _logger.error(f"[confirm] background task failed: {exc}", exc_info=exc)
         try:
             loop = asyncio.get_running_loop()
-            _spawn_background(sse_bus.publish(request.session_id, "workflow_error", {
-                "error": "background task failed",
-                "detail": str(exc),
-            }, turn_id=request.turn_id))
+            _spawn_background(
+                sse_bus.publish(
+                    request.session_id,
+                    "workflow_error",
+                    {
+                        "error": "background task failed",
+                        "detail": str(exc),
+                    },
+                    turn_id=request.turn_id,
+                )
+            )
         except Exception:
             pass
 
@@ -1430,7 +1636,9 @@ async def confirm_action(
 class ConfirmGuardianRequest(BaseModel):
     session_id: str = Field(..., description="会话 ID")
     loop_state_path: str = Field(..., description="循环状态文件路径")
-    action: str = Field(..., pattern="^(approve|reject)$", description="approve 批准执行，reject 拒绝")
+    action: str = Field(
+        ..., pattern="^(approve|reject)$", description="approve 批准执行，reject 拒绝"
+    )
     feedback: str = Field(default="", description="用户反馈（可选）")
     turn_id: str | None = Field(default=None, description="首轮回合 ID")
 
@@ -1442,13 +1650,14 @@ async def confirm_guardian_action(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """确认或拒绝 Guardian 拦截的高危操作。"""
-    import logging as _logging
     import asyncio
+    import logging as _logging
+
     _logger = _logging.getLogger("chat_agent.confirm_guardian")
     _logger.info(f"[confirm-guardian] session={request.session_id} action={request.action}")
 
-    from app.engine.reactor.loop_state import load_loop_state, cleanup_loop_state
     from app.agents.registry import AgentRegistry
+    from app.engine.reactor.loop_state import cleanup_loop_state, load_loop_state
 
     try:
         state = load_loop_state(request.loop_state_path)
@@ -1456,8 +1665,10 @@ async def confirm_guardian_action(
         # 2026-11-03 死卡推广：库里那条"等待批准"消息同步退场
         try:
             await chat_session.mark_awaiting_status_resolved(
-                request.session_id, "awaiting_guardian_confirmation",
-                "guardian_resolved", "rejected",
+                request.session_id,
+                "awaiting_guardian_confirmation",
+                "guardian_resolved",
+                "rejected",
                 db=db,
             )
         except Exception:
@@ -1469,27 +1680,38 @@ async def confirm_guardian_action(
 
     if request.action == "reject":
         decision = "rejected"
-        obs = f"[observation] 用户拒绝了此操作" + (f": {request.feedback}" if request.feedback else "")
+        obs = f"[observation] 用户拒绝了此操作" + (
+            f": {request.feedback}" if request.feedback else ""
+        )
         state["messages"].append({"role": "user", "content": obs})
         # 落库：拒绝后旧"等待批准"消息标记 resolved，重进会话不再弹卡
         try:
             await chat_session.mark_awaiting_status_resolved(
-                request.session_id, "awaiting_guardian_confirmation",
-                "guardian_resolved", "rejected",
+                request.session_id,
+                "awaiting_guardian_confirmation",
+                "guardian_resolved",
+                "rejected",
                 db=db,
             )
         except Exception:
             _logger.warning("[confirm-guardian] failed to persist reject state", exc_info=True)
         await chat_session.add_message(
-            request.session_id, "assistant", "操作已取消。",
+            request.session_id,
+            "assistant",
+            "操作已取消。",
             {"workflow_status": "completed", "source": "react_loop"},
         )
         cleanup_loop_state(request.loop_state_path)
         try:
-            await sse_bus.publish(request.session_id, "agent_loop_done", {
-                "status": "rejected",
-                "message": "操作已取消。",
-            }, turn_id=request.turn_id)
+            await sse_bus.publish(
+                request.session_id,
+                "agent_loop_done",
+                {
+                    "status": "rejected",
+                    "message": "操作已取消。",
+                },
+                turn_id=request.turn_id,
+            )
         except Exception:
             pass
         return {
@@ -1501,10 +1723,10 @@ async def confirm_guardian_action(
     _guardian_session_id = state["context_snapshot"].get("workflow_id", "") or request.session_id
 
     async def _run_guardian_resume_background():
-        from app.engine.reactor.session import ReactorSession
-        from app.engine.factory import get_deepseek_llm
-        from app.db.session import AsyncSessionLocal
         from app.core.context_vars import current_db_session as _cdbs
+        from app.db.session import AsyncSessionLocal
+        from app.engine.factory import get_deepseek_llm
+        from app.engine.reactor.session import ReactorSession
 
         registry = AgentRegistry()
         session = registry.build_session(
@@ -1522,7 +1744,10 @@ async def confirm_guardian_action(
         # 同 confirm 续跑：独立请求拿不到首轮的 contextvar，从落盘快照恢复 cwd，
         # 否则被批准的工具（如 bash）会以默认工作区为根跑偏。
         from app.core.context_vars import current_workspace_root as _cwr
-        _cwd_token = _cwr.set((state.get("context_snapshot", {}) or {}).get("workspace_root") or None)
+
+        _cwd_token = _cwr.set(
+            (state.get("context_snapshot", {}) or {}).get("workspace_root") or None
+        )
         try:
             _ctx_snapshot = state.get("context_snapshot", {}) or {}
             context = dict(_ctx_snapshot)
@@ -1535,6 +1760,7 @@ async def confirm_guardian_action(
             _tool_name = _pending.get("name", "") if isinstance(_pending, dict) else ""
             _tool_args = _pending.get("arguments", {}) if isinstance(_pending, dict) else {}
             import json as _json
+
             _args_preview = _json.dumps(_tool_args, ensure_ascii=False, default=str)[:200]
 
             # Execute the intercepted tool call now that user has approved it.
@@ -1550,27 +1776,49 @@ async def confirm_guardian_action(
                     _tool = session._transport.get_tool(_tool_name)
                     if _tool is not None:
                         from app.engine.schemas import Permission
+
                         for _perm in _tool.required_permissions:
                             if _perm not in session.allowed_permissions:
-                                _exec_result = {"ok": False, "error": f"permission denied: {_perm.value}"}
+                                _exec_result = {
+                                    "ok": False,
+                                    "error": f"permission denied: {_perm.value}",
+                                }
                                 break
                         if _exec_result is None:
-                            await sse_bus.publish(_guardian_session_id, "tool_call_start", {
-                                "node_id": "reactor",
-                                "iteration": 0,
-                                "tool_name": _tool_name,
-                                "inputs": _tool_args,
-                            }, turn_id=request.turn_id)
+                            await sse_bus.publish(
+                                _guardian_session_id,
+                                "tool_call_start",
+                                {
+                                    "node_id": "reactor",
+                                    "iteration": 0,
+                                    "tool_name": _tool_name,
+                                    "inputs": _tool_args,
+                                },
+                                turn_id=request.turn_id,
+                            )
                             _exec_result = await session._transport.call(_tool_name, _tool_args)
-                            _exec_ok = _exec_result.get("ok", True) if isinstance(_exec_result, dict) else True
-                            await sse_bus.publish(_guardian_session_id, "tool_call_end", {
-                                "node_id": "reactor",
-                                "iteration": 0,
-                                "tool_name": _tool_name,
-                                "success": _exec_ok,
-                                "summary": str(_exec_result)[:200] if isinstance(_exec_result, dict) else str(_exec_result)[:200],
-                                "duration_ms": 0,
-                            }, turn_id=request.turn_id)
+                            _exec_ok = (
+                                _exec_result.get("ok", True)
+                                if isinstance(_exec_result, dict)
+                                else True
+                            )
+                            await sse_bus.publish(
+                                _guardian_session_id,
+                                "tool_call_end",
+                                {
+                                    "node_id": "reactor",
+                                    "iteration": 0,
+                                    "tool_name": _tool_name,
+                                    "success": _exec_ok,
+                                    "summary": (
+                                        str(_exec_result)[:200]
+                                        if isinstance(_exec_result, dict)
+                                        else str(_exec_result)[:200]
+                                    ),
+                                    "duration_ms": 0,
+                                },
+                                turn_id=request.turn_id,
+                            )
                     else:
                         _exec_result = {"ok": False, "error": f"unknown tool: {_tool_name}"}
                     _logger.info(
@@ -1625,14 +1873,19 @@ async def confirm_guardian_action(
                 )
 
                 try:
-                    await sse_bus.publish(_guardian_session_id, "cut_plan_confirmation_required", {
-                        "node_id": "reactor",
-                        "iteration": 0,
-                        "skill": _cp_inner_name,
-                        "plan": _exec_result.get("data", {}),
-                        "message": _exec_result.get("message", ""),
-                        "loop_state_path": _cp_path,
-                    }, turn_id=request.turn_id)
+                    await sse_bus.publish(
+                        _guardian_session_id,
+                        "cut_plan_confirmation_required",
+                        {
+                            "node_id": "reactor",
+                            "iteration": 0,
+                            "skill": _cp_inner_name,
+                            "plan": _exec_result.get("data", {}),
+                            "message": _exec_result.get("message", ""),
+                            "loop_state_path": _cp_path,
+                        },
+                        turn_id=request.turn_id,
+                    )
                 except Exception:
                     pass
 
@@ -1640,7 +1893,8 @@ async def confirm_guardian_action(
                 # （/confirm-cut-plan 的版本号按此计数）。
                 try:
                     await chat_session.add_message(
-                        request.session_id, "assistant",
+                        request.session_id,
+                        "assistant",
                         _exec_result.get("message") or "叠加方案已规划完成，请确认后开始渲染。",
                         {
                             "workflow_status": "awaiting_cut_plan_confirmation",
@@ -1650,7 +1904,10 @@ async def confirm_guardian_action(
                         },
                     )
                 except Exception:
-                    _logger.warning("[confirm-guardian] failed to persist awaiting_cut_plan message", exc_info=True)
+                    _logger.warning(
+                        "[confirm-guardian] failed to persist awaiting_cut_plan message",
+                        exc_info=True,
+                    )
                 return
 
             # Build resume intent: include the actual execution result so
@@ -1692,10 +1949,15 @@ async def confirm_guardian_action(
 
         _output_ended_reason = output.get("ended_reason", "") if isinstance(output, dict) else ""
         _is_paused_output = _output_ended_reason in (
-            "clarification_paused", "guardian_paused", "storyboard_paused", "cut_plan_paused",
+            "clarification_paused",
+            "guardian_paused",
+            "storyboard_paused",
+            "cut_plan_paused",
         )
         if _is_paused_output:
-            logger.info(f"[guardian] resume paused again (ended_reason={_output_ended_reason}), skipping agent_loop_done")
+            logger.info(
+                f"[guardian] resume paused again (ended_reason={_output_ended_reason}), skipping agent_loop_done"
+            )
             return
 
         output_data = output if isinstance(output, dict) else {}
@@ -1706,16 +1968,23 @@ async def confirm_guardian_action(
             _lt = str(output_data.get("_last_thought", "") or "").strip()
             final_message = _lt or "本轮执行结束，但没有产出文本结果（可重发或换个说法再试）。"
         await chat_session.add_message(
-            request.session_id, "assistant", final_message,
+            request.session_id,
+            "assistant",
+            final_message,
             {"workflow_status": "completed", "source": "react_loop"},
         )
         try:
-            await sse_bus.publish(_guardian_session_id, "agent_loop_done", {
-                "status": "completed",
-                "message": final_message,
-                # BUG-007：终态事件带终止原因，前端据此区分正常完成/资源截断/假完成
-                "ended_reason": _output_ended_reason or "completed",
-            }, turn_id=request.turn_id)
+            await sse_bus.publish(
+                _guardian_session_id,
+                "agent_loop_done",
+                {
+                    "status": "completed",
+                    "message": final_message,
+                    # BUG-007：终态事件带终止原因，前端据此区分正常完成/资源截断/假完成
+                    "ended_reason": _output_ended_reason or "completed",
+                },
+                turn_id=request.turn_id,
+            )
         except Exception:
             pass
 
@@ -1724,8 +1993,10 @@ async def confirm_guardian_action(
     # 落库：批准即标 resolved=confirmed，续跑等待期间刷新/重进不再弹旧批准卡
     try:
         await chat_session.mark_awaiting_status_resolved(
-            request.session_id, "awaiting_guardian_confirmation",
-            "guardian_resolved", "confirmed",
+            request.session_id,
+            "awaiting_guardian_confirmation",
+            "guardian_resolved",
+            "confirmed",
             db=db,
         )
     except Exception:
@@ -1740,15 +2011,24 @@ async def confirm_guardian_action(
         _logger.error(f"[confirm-guardian] background task failed: {exc}", exc_info=exc)
         try:
             loop = asyncio.get_running_loop()
-            _spawn_background(sse_bus.publish(request.session_id, "workflow_error", {
-                "error": "background task failed",
-                "detail": str(exc),
-            }, turn_id=request.turn_id))
+            _spawn_background(
+                sse_bus.publish(
+                    request.session_id,
+                    "workflow_error",
+                    {
+                        "error": "background task failed",
+                        "detail": str(exc),
+                    },
+                    turn_id=request.turn_id,
+                )
+            )
         except Exception:
             pass
 
     _bg_task.add_done_callback(_on_guardian_done)
-    _logger.info(f"[confirm-guardian] approve → background resume started for session={request.session_id}")
+    _logger.info(
+        f"[confirm-guardian] approve → background resume started for session={request.session_id}"
+    )
 
     return {
         "session_id": request.session_id,
@@ -1766,7 +2046,10 @@ class ClarifyRequest(BaseModel):
     batch_id: str = Field(default="", description="当前批次 ID")
     action: str = Field(default="answer", pattern="^(answer|skip|cancel)$")
     user_comment: str = Field(default="", description="用户补充说明")
-    turn_id: str | None = Field(default=None, description="首轮回合 ID（前端发送前生成）。续跑事件按该回合盖章，前端沙箱放行；不传则续跑事件不带回合标识")
+    turn_id: str | None = Field(
+        default=None,
+        description="首轮回合 ID（前端发送前生成）。续跑事件按该回合盖章，前端沙箱放行；不传则续跑事件不带回合标识",
+    )
 
 
 @router.post("/clarify")
@@ -1776,10 +2059,16 @@ async def clarify_action(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """回答澄清问题，恢复 ReactorSession。"""
-    from app.engine.reactor.loop_state import load_loop_state, cleanup_loop_state, check_clarification_timeout, mark_loop_state_expired, _get_async_lock
+    from app.agents.clarification_graph import collect_clarify_fields, compile_clarification_result
     from app.agents.registry import AgentRegistry
     from app.core.context_vars import current_db_session
-    from app.agents.clarification_graph import compile_clarification_result, collect_clarify_fields
+    from app.engine.reactor.loop_state import (
+        _get_async_lock,
+        check_clarification_timeout,
+        cleanup_loop_state,
+        load_loop_state,
+        mark_loop_state_expired,
+    )
 
     _file_lock = _get_async_lock(request.loop_state_path)
     await _file_lock.acquire()
@@ -1801,7 +2090,9 @@ async def clarify_action(
         if request.action == "cancel":
             _pending = state.get("pending_clarification") or state.get("pending_skill_call") or {}
             _skill_name = _pending.get("name", "") if isinstance(_pending, dict) else ""
-            _cancel_session_id = state["context_snapshot"].get("workflow_id", "") or request.session_id
+            _cancel_session_id = (
+                state["context_snapshot"].get("workflow_id", "") or request.session_id
+            )
 
             registry = AgentRegistry()
             session = registry.build_session(
@@ -1810,15 +2101,29 @@ async def clarify_action(
                 auto_approve=_resume_auto_approve(state),
             )
             session.turn_id = request.turn_id
-            _CLARIFY_TRIGGER_NODE_TYPES_CANCEL = {"produce", "create", "design", "generate", "copywrite", "card_design"}
+            _CLARIFY_TRIGGER_NODE_TYPES_CANCEL = {
+                "produce",
+                "create",
+                "design",
+                "generate",
+                "copywrite",
+                "card_design",
+            }
             _clarify_skills_cancel = [
-                s for s in getattr(session, '_skills', [])
+                s
+                for s in getattr(session, "_skills", [])
                 if getattr(s, "node_type", "") in _CLARIFY_TRIGGER_NODE_TYPES_CANCEL
                 and getattr(s, "clarify_meta", None)
             ]
-            _fields = collect_clarify_fields(_clarify_skills_cancel, clarified_answers={}) if _clarify_skills_cancel else {}
+            _fields = (
+                collect_clarify_fields(_clarify_skills_cancel, clarified_answers={})
+                if _clarify_skills_cancel
+                else {}
+            )
             _ctx_snapshot = state.get("context_snapshot", {}) or {}
-            _model_settings = _ctx_snapshot.get("model_settings", {}) or _ctx_snapshot.get("extra", {}).get("model_settings", {})
+            _model_settings = _ctx_snapshot.get("model_settings", {}) or _ctx_snapshot.get(
+                "extra", {}
+            ).get("model_settings", {})
             _clarification_result = compile_clarification_result(
                 all_answers={},
                 fields=_fields,
@@ -1897,22 +2202,40 @@ async def clarify_action(
             auto_approve=_resume_auto_approve(state),
         )
         session.turn_id = request.turn_id
-        _CLARIFY_TRIGGER_NODE_TYPES = {"produce", "create", "design", "generate", "copywrite", "card_design"}
+        _CLARIFY_TRIGGER_NODE_TYPES = {
+            "produce",
+            "create",
+            "design",
+            "generate",
+            "copywrite",
+            "card_design",
+        }
         _clarify_skills = [
-            s for s in getattr(session, '_skills', [])
+            s
+            for s in getattr(session, "_skills", [])
             if getattr(s, "node_type", "") in _CLARIFY_TRIGGER_NODE_TYPES
             and getattr(s, "clarify_meta", None)
         ]
-        _fields = collect_clarify_fields(_clarify_skills, clarified_answers=_existing) if _clarify_skills else {}
+        _fields = (
+            collect_clarify_fields(_clarify_skills, clarified_answers=_existing)
+            if _clarify_skills
+            else {}
+        )
         _ctx_snapshot = state.get("context_snapshot", {}) or {}
-        _model_settings = _ctx_snapshot.get("model_settings", {}) or _ctx_snapshot.get("extra", {}).get("model_settings", {})
+        _model_settings = _ctx_snapshot.get("model_settings", {}) or _ctx_snapshot.get(
+            "extra", {}
+        ).get("model_settings", {})
         _clarification_result = compile_clarification_result(
             all_answers=_existing,
             fields=_fields,
             model_settings=_model_settings,
         )
 
-        _answer_summary = ", ".join(f"{k}={v}" for k, v in request.answers.items()) if request.answers else "skipped"
+        _answer_summary = (
+            ", ".join(f"{k}={v}" for k, v in request.answers.items())
+            if request.answers
+            else "skipped"
+        )
         obs = f"[observation] 用户确认了创作偏好: {_answer_summary}"
         state["messages"].append({"role": "user", "content": obs})
 
@@ -1936,8 +2259,8 @@ async def clarify_action(
         _resume_intent = ""
 
         async def _run_clarify_resume_background():
-            from app.db.session import AsyncSessionLocal
             from app.core.context_vars import current_db_session as _cdbs
+            from app.db.session import AsyncSessionLocal
 
             _bg_db = AsyncSessionLocal()
             _bg_token = _cdbs.set(_bg_db)
@@ -1974,22 +2297,34 @@ async def clarify_action(
             # session.run() 可能因后续澄清/确认而暂停返回，
             # 此时不应发 agent_loop_done（终态事件，会关闭 SSE 流）。
             # 只有正常完成才发。
-            _output_ended_reason = output.get("ended_reason", "") if isinstance(output, dict) else ""
-            _output_keys = list(output.keys()) if isinstance(output, dict) else type(output).__name__
-            logger.warning(f"[clarify] session.run() output: ended_reason={_output_ended_reason!r}, keys={_output_keys}, type={type(output).__name__}")
+            _output_ended_reason = (
+                output.get("ended_reason", "") if isinstance(output, dict) else ""
+            )
+            _output_keys = (
+                list(output.keys()) if isinstance(output, dict) else type(output).__name__
+            )
+            logger.warning(
+                f"[clarify] session.run() output: ended_reason={_output_ended_reason!r}, keys={_output_keys}, type={type(output).__name__}"
+            )
             # 强制写文件日志
             try:
                 import pathlib
+
                 pathlib.Path("clarify_debug.log").write_text(
                     f"ended_reason={_output_ended_reason!r}\nkeys={_output_keys}\ntype={type(output).__name__}\n",
                 )
             except Exception as _de:
                 pass
             _is_paused_output = _output_ended_reason in (
-                "clarification_paused", "guardian_paused", "storyboard_paused", "cut_plan_paused",
+                "clarification_paused",
+                "guardian_paused",
+                "storyboard_paused",
+                "cut_plan_paused",
             )
             if _is_paused_output:
-                logger.info(f"[clarify] resume paused again (ended_reason={_output_ended_reason}), skipping agent_loop_done")
+                logger.info(
+                    f"[clarify] resume paused again (ended_reason={_output_ended_reason}), skipping agent_loop_done"
+                )
                 return
 
             output_data = output if isinstance(output, dict) else {}
@@ -2000,17 +2335,26 @@ async def clarify_action(
                 _lt = str(output_data.get("_last_thought", "") or "").strip()
                 final_message = _lt or "本轮执行结束，但没有产出文本结果（可重发或换个说法再试）。"
             await chat_session.add_message(
-                request.session_id, "assistant", final_message,
+                request.session_id,
+                "assistant",
+                final_message,
                 {"workflow_status": "completed", "source": "react_loop"},
             )
-            logger.warning(f"[clarify] PUBLISHING agent_loop_done (ended_reason={_output_ended_reason!r}, is_paused={_is_paused_output})")
+            logger.warning(
+                f"[clarify] PUBLISHING agent_loop_done (ended_reason={_output_ended_reason!r}, is_paused={_is_paused_output})"
+            )
             try:
-                await sse_bus.publish(_clarify_session_id, "agent_loop_done", {
-                    "status": "completed",
-                    "message": final_message,
-                    # BUG-007：终态事件带终止原因，前端据此区分正常完成/资源截断/假完成
-                    "ended_reason": _output_ended_reason or "completed",
-                }, turn_id=request.turn_id)
+                await sse_bus.publish(
+                    _clarify_session_id,
+                    "agent_loop_done",
+                    {
+                        "status": "completed",
+                        "message": final_message,
+                        # BUG-007：终态事件带终止原因，前端据此区分正常完成/资源截断/假完成
+                        "ended_reason": _output_ended_reason or "completed",
+                    },
+                    turn_id=request.turn_id,
+                )
             except Exception:
                 pass
 
@@ -2025,15 +2369,24 @@ async def clarify_action(
             logger.error(f"[clarify] background task failed: {exc}", exc_info=exc)
             try:
                 loop = asyncio.get_running_loop()
-                _spawn_background(sse_bus.publish(request.session_id, "workflow_error", {
-                    "error": "background task failed",
-                    "detail": str(exc),
-                }, turn_id=request.turn_id))
+                _spawn_background(
+                    sse_bus.publish(
+                        request.session_id,
+                        "workflow_error",
+                        {
+                            "error": "background task failed",
+                            "detail": str(exc),
+                        },
+                        turn_id=request.turn_id,
+                    )
+                )
             except Exception:
                 pass
 
         _bg_task.add_done_callback(_on_clarify_done)
-        logger.info(f"[clarify] answer → background resume started for session={request.session_id}")
+        logger.info(
+            f"[clarify] answer → background resume started for session={request.session_id}"
+        )
 
         return {
             "session_id": request.session_id,
@@ -2043,6 +2396,7 @@ async def clarify_action(
         }
     finally:
         _file_lock.release()
+
 
 class StoryboardConfirmRequest(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
@@ -2073,13 +2427,13 @@ async def confirm_storyboard_action(
     不经 LLM。因为整份分镜 JSON 若靠 LLM 从对话历史重新吐出，
     镜头一多就容易字段丢失/串镜——那是"效果不好还查不出原因"的典型来源。
     """
+    from app.core.context_vars import current_db_session
     from app.engine.reactor.loop_state import (
-        load_loop_state,
-        cleanup_loop_state,
         _get_async_lock,
+        cleanup_loop_state,
+        load_loop_state,
     )
     from app.engine.reactor.primitives import SkillCallPrimitive
-    from app.core.context_vars import current_db_session
 
     _sb_logger = logging.getLogger("chat_agent.confirm_storyboard")
 
@@ -2093,9 +2447,12 @@ async def confirm_storyboard_action(
             # 2026-11-03 死卡推广：库里那条"待确认分镜"同步退场
             try:
                 await chat_session.mark_awaiting_status_resolved(
-                    request.session_id, "awaiting_storyboard_confirmation",
-                    "storyboard_resolved", "cancelled",
-                    error_key="storyboard_error", error="分镜待确认状态已过期",
+                    request.session_id,
+                    "awaiting_storyboard_confirmation",
+                    "storyboard_resolved",
+                    "cancelled",
+                    error_key="storyboard_error",
+                    error="分镜待确认状态已过期",
                     db=db,
                 )
             except Exception:
@@ -2108,9 +2465,11 @@ async def confirm_storyboard_action(
         stored_title = str(stored.get("title") or "").strip()
         _ctx = state.get("context_snapshot") or {}
         _workflow_id = _ctx.get("workflow_id", "") or request.session_id
-        _sb_logger.info(f"[confirm-storyboard] session_id={request.session_id!r} "
-                     f"ctx_workflow_id={_ctx.get('workflow_id')!r} "
-                     f"resolved_workflow_id={_workflow_id!r}")
+        _sb_logger.info(
+            f"[confirm-storyboard] session_id={request.session_id!r} "
+            f"ctx_workflow_id={_ctx.get('workflow_id')!r} "
+            f"resolved_workflow_id={_workflow_id!r}"
+        )
 
         async def _resolve_event(action: str, **extra: Any) -> None:
             try:
@@ -2128,12 +2487,16 @@ async def confirm_storyboard_action(
             # 落库：取消后旧"待确认分镜"消息标记 resolved，重进会话不再弹卡
             try:
                 await chat_session.mark_awaiting_status_resolved(
-                    request.session_id, "awaiting_storyboard_confirmation",
-                    "storyboard_resolved", "cancelled",
+                    request.session_id,
+                    "awaiting_storyboard_confirmation",
+                    "storyboard_resolved",
+                    "cancelled",
                     db=db,
                 )
             except Exception:
-                _sb_logger.warning("[confirm-storyboard] failed to persist cancel state", exc_info=True)
+                _sb_logger.warning(
+                    "[confirm-storyboard] failed to persist cancel state", exc_info=True
+                )
             await _resolve_event("cancel")
             return {
                 "session_id": request.session_id,
@@ -2179,11 +2542,16 @@ async def confirm_storyboard_action(
                 _sb_logger.exception(f"[confirm-storyboard] refine execute failed: {exc}")
                 await _resolve_event("confirm", ok=False, error=str(exc))
                 try:
-                    await sse_bus.publish(request.session_id, "workflow_error", {
-                        "workflow_id": request.session_id,
-                        "error": "storyboard refine failed",
-                        "detail": str(exc),
-                    }, turn_id=request.turn_id)
+                    await sse_bus.publish(
+                        request.session_id,
+                        "workflow_error",
+                        {
+                            "workflow_id": request.session_id,
+                            "error": "storyboard refine failed",
+                            "detail": str(exc),
+                        },
+                        turn_id=request.turn_id,
+                    )
                 except Exception:
                     pass
                 return
@@ -2197,6 +2565,7 @@ async def confirm_storyboard_action(
                 _rf_data = result.get("data") if isinstance(result.get("data"), dict) else {}
                 ok = bool(result.get("success", result.get("ok", False)))
                 from app.services.media_download_service import to_web_url as _rf_to_web
+
                 _rf_out = (
                     result.get("output_path")
                     or _rf_data.get("output_path")
@@ -2217,25 +2586,35 @@ async def confirm_storyboard_action(
             # （接受时已先标 confirmed——pending_values 让这条渲染中的消息仍可被翻到）
             try:
                 await chat_session.mark_awaiting_status_resolved(
-                    request.session_id, "awaiting_storyboard_confirmation",
-                    "storyboard_resolved", "confirmed" if ok else "failed",
-                    error_key="storyboard_error", error=_error,
+                    request.session_id,
+                    "awaiting_storyboard_confirmation",
+                    "storyboard_resolved",
+                    "confirmed" if ok else "failed",
+                    error_key="storyboard_error",
+                    error=_error,
                     pending_values={"confirmed"},
                 )
             except Exception:
-                _sb_logger.warning("[confirm-storyboard] failed to persist render result", exc_info=True)
+                _sb_logger.warning(
+                    "[confirm-storyboard] failed to persist render result", exc_info=True
+                )
 
         import asyncio
+
         # 落库：确认即标 resolved=confirmed，视频生成等待期间刷新/重进不再弹分镜卡；
         # 渲染结果（confirmed/failed）由后台任务完成后继续回写。
         try:
             await chat_session.mark_awaiting_status_resolved(
-                request.session_id, "awaiting_storyboard_confirmation",
-                "storyboard_resolved", "confirmed",
+                request.session_id,
+                "awaiting_storyboard_confirmation",
+                "storyboard_resolved",
+                "confirmed",
                 db=db,
             )
         except Exception:
-            _sb_logger.warning("[confirm-storyboard] failed to persist confirm state", exc_info=True)
+            _sb_logger.warning(
+                "[confirm-storyboard] failed to persist confirm state", exc_info=True
+            )
         _bg_task = _spawn_background(_run_refine_in_background())
 
         def _on_storyboard_done(t: asyncio.Task) -> None:
@@ -2247,10 +2626,17 @@ async def confirm_storyboard_action(
             logger.error(f"[confirm-storyboard] background task failed: {exc}", exc_info=exc)
             try:
                 loop = asyncio.get_running_loop()
-                _spawn_background(sse_bus.publish(request.session_id, "workflow_error", {
-                    "error": "background task failed",
-                    "detail": str(exc),
-                }, turn_id=request.turn_id))
+                _spawn_background(
+                    sse_bus.publish(
+                        request.session_id,
+                        "workflow_error",
+                        {
+                            "error": "background task failed",
+                            "detail": str(exc),
+                        },
+                        turn_id=request.turn_id,
+                    )
+                )
             except Exception:
                 pass
 
@@ -2288,13 +2674,13 @@ async def confirm_cut_plan_action(
     gate_mode="auto_confirm" 重放落盘的 pending_skill_call——不经 LLM，
     避免重新规划出不一致的方案。cancel 则直接清理状态并广播 resolved。
     """
+    from app.core.context_vars import current_db_session
     from app.engine.reactor.loop_state import (
-        load_loop_state,
-        cleanup_loop_state,
         _get_async_lock,
+        cleanup_loop_state,
+        load_loop_state,
     )
     from app.engine.reactor.primitives import SkillCallPrimitive
-    from app.core.context_vars import current_db_session
 
     _cp_logger = logging.getLogger("chat_agent.confirm_cut_plan")
 
@@ -2310,19 +2696,25 @@ async def confirm_cut_plan_action(
             # DB 状态标成 cancelled，让这张历史死卡永久退场。
             try:
                 await chat_session.mark_cut_plan_resolved(
-                    request.session_id, "cancelled", error="叠加方案待确认状态已过期",
+                    request.session_id,
+                    "cancelled",
+                    error="叠加方案待确认状态已过期",
                     db=db,
                 )
             except Exception:
-                logger.warning("[confirm-cut-plan] failed to expire stale awaiting message", exc_info=True)
+                logger.warning(
+                    "[confirm-cut-plan] failed to expire stale awaiting message", exc_info=True
+                )
             raise HTTPException(status_code=404, detail="叠加方案待确认状态不存在或已过期")
 
         pending = state.get("pending_skill_call") or {}
         _ctx = state.get("context_snapshot") or {}
         _workflow_id = _ctx.get("workflow_id", "") or request.session_id
-        _cp_logger.info(f"[confirm-cut-plan] session_id={request.session_id!r} "
-                     f"ctx_workflow_id={_ctx.get('workflow_id')!r} "
-                     f"resolved_workflow_id={_workflow_id!r}")
+        _cp_logger.info(
+            f"[confirm-cut-plan] session_id={request.session_id!r} "
+            f"ctx_workflow_id={_ctx.get('workflow_id')!r} "
+            f"resolved_workflow_id={_workflow_id!r}"
+        )
 
         async def _resolve_event(action: str, **extra: Any) -> None:
             try:
@@ -2397,11 +2789,16 @@ async def confirm_cut_plan_action(
                 _cp_logger.exception(f"[confirm-cut-plan] replay execute failed: {exc}")
                 await _resolve_event("confirm", ok=False, error=str(exc))
                 try:
-                    await sse_bus.publish(request.session_id, "workflow_error", {
-                        "workflow_id": request.session_id,
-                        "error": "cut_plan replay failed",
-                        "detail": str(exc),
-                    }, turn_id=request.turn_id)
+                    await sse_bus.publish(
+                        request.session_id,
+                        "workflow_error",
+                        {
+                            "workflow_id": request.session_id,
+                            "error": "cut_plan replay failed",
+                            "detail": str(exc),
+                        },
+                        turn_id=request.turn_id,
+                    )
                 except Exception:
                     pass
                 return
@@ -2417,6 +2814,7 @@ async def confirm_cut_plan_action(
                 _rp_data = result.get("data") if isinstance(result.get("data"), dict) else {}
                 ok = bool(result.get("success", result.get("ok", False)))
                 from app.services.media_download_service import to_web_url as _rp_to_web
+
                 _rp_out = (
                     result.get("output_path")
                     or _rp_data.get("output_path")
@@ -2440,17 +2838,22 @@ async def confirm_cut_plan_action(
             try:
                 if ok:
                     await chat_session.mark_cut_plan_resolved(
-                        request.session_id, "confirmed",
-                        version=version, asset_url=_asset_url,
+                        request.session_id,
+                        "confirmed",
+                        version=version,
+                        asset_url=_asset_url,
                     )
                 else:
                     await chat_session.mark_cut_plan_resolved(
-                        request.session_id, "failed", error=_error,
+                        request.session_id,
+                        "failed",
+                        error=_error,
                     )
             except Exception:
                 logger.warning("[confirm-cut-plan] failed to persist render result", exc_info=True)
 
         import asyncio
+
         _bg_task = _spawn_background(_run_replay_in_background())
 
         def _on_cut_plan_done(t: asyncio.Task) -> None:
@@ -2462,10 +2865,17 @@ async def confirm_cut_plan_action(
             logger.error(f"[confirm-cut-plan] background task failed: {exc}", exc_info=exc)
             try:
                 loop = asyncio.get_running_loop()
-                _spawn_background(sse_bus.publish(request.session_id, "workflow_error", {
-                    "error": "background task failed",
-                    "detail": str(exc),
-                }, turn_id=request.turn_id))
+                _spawn_background(
+                    sse_bus.publish(
+                        request.session_id,
+                        "workflow_error",
+                        {
+                            "error": "background task failed",
+                            "detail": str(exc),
+                        },
+                        turn_id=request.turn_id,
+                    )
+                )
             except Exception:
                 pass
 
@@ -2486,6 +2896,7 @@ async def reset_llm_circuit(
 ) -> dict:
     """重置 LLM 熔断器（用户充值/更换 API Key 后调用）。"""
     from app.engine.governance.llm_circuit import get_llm_circuit
+
     circuit = get_llm_circuit()
     old_state = circuit.to_dict()
     circuit.reset()
@@ -2499,6 +2910,7 @@ async def get_llm_circuit_status(
 ) -> dict:
     """查询 LLM 熔断器状态。"""
     from app.engine.governance.llm_circuit import get_llm_circuit
+
     return get_llm_circuit().to_dict()
 
 
@@ -2509,6 +2921,7 @@ async def internal_reset_llm_circuit(request: Request) -> dict:
     if client_host not in ("127.0.0.1", "::1", "localhost"):
         raise HTTPException(status_code=403, detail="仅限本地调用")
     from app.engine.governance.llm_circuit import get_llm_circuit
+
     circuit = get_llm_circuit()
     old_state = circuit.to_dict()
     circuit.reset()
@@ -2529,6 +2942,7 @@ async def probe_llm_circuit(
       - 失败 → 保持 OPEN → 返回 {recovered: false, detail: ...}
     """
     from app.engine.governance.llm_circuit import get_llm_circuit
+
     circuit = get_llm_circuit()
     result = await circuit.probe_and_recover()
     logger.info(f"[chat_agent] LLM circuit probe: {result}")

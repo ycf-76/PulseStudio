@@ -172,7 +172,7 @@ def test_required_line_truncated_to_max_chars():
     catalog = build_skill_catalog([_FakeSkill("x", "d", schema=schema_cls)])
     required_lines = [ln for ln in catalog.splitlines() if ln.strip().startswith("必填: ")]
     assert len(required_lines) == 1
-    assert len(required_lines[0].strip()[len("必填: "):]) <= _REQUIRED_MAX_CHARS
+    assert len(required_lines[0].strip()[len("必填: ") :]) <= _REQUIRED_MAX_CHARS
 
 
 def test_usage_hint_lines_preserved_in_catalog():

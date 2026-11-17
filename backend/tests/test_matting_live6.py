@@ -4,6 +4,7 @@
 live6_frames，旧版对照 = deck_auto/slide_01-06.png（人工看图）。
 断言：slide_type 混用（≥2 型且含 quote）+ emphasis 非全 none（A 生效）。
 """
+
 import asyncio
 import json
 import shutil
@@ -34,7 +35,11 @@ async def main() -> None:
         shutil.rmtree(out_dir)
 
     pngs = await generate_deck_slides(
-        transcript, llm, out_dir, max_slides=6, theme="midnight",
+        transcript,
+        llm,
+        out_dir,
+        max_slides=6,
+        theme="midnight",
         person_clearance_px=640,
     )
     assert pngs and all(p.is_file() for p in pngs), "新版生成失败"

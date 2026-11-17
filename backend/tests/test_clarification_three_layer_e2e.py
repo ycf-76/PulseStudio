@@ -31,6 +31,7 @@ from app.engine.reactor.session import ReactorSession
 # 辅助：构造 fake skill
 # ============================================================================
 
+
 def _make_fake_skill(
     name: str = "compose_card_deck",
     node_type: str = "produce",
@@ -66,6 +67,7 @@ def _make_fake_skill(
 # ============================================================================
 # 链路 1: Layer 1 — LLM 自决策 (ask_user_question)
 # ============================================================================
+
 
 class TestLayer1AskUserQuestion:
     """ask_user_question 工具注册、Guardian 放行、信号格式。"""
@@ -125,6 +127,7 @@ class TestLayer1AskUserQuestion:
 # 链路 2: Layer 2 — 分类器兜底 (_classifier_fallback_check)
 # ============================================================================
 
+
 class TestLayer2ClassifierFallback:
     """_classifier_fallback_check 三重缺失检查。"""
 
@@ -134,17 +137,22 @@ class TestLayer2ClassifierFallback:
         session._run_context = context or {}
         session.auto_approve = True
         session._guardian = Guardian()
-        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset({
-            "produce", "create", "design", "generate", "copywrite", "card_design",
-        })
+        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset(
+            {
+                "produce",
+                "create",
+                "design",
+                "generate",
+                "copywrite",
+                "card_design",
+            }
+        )
         return session
 
     def test_no_skill_args_skips_clarification(self):
         """LLM 一个专属参数都没传 → 不弹（承诺度守卫：可能是误路由，让 LLM 自纠正）。"""
         session = self._make_session()
-        result = session._classifier_fallback_check(
-            "compose_card_deck", {}
-        )
+        result = session._classifier_fallback_check("compose_card_deck", {})
         assert result is None
 
     def test_partial_args_triggers_clarification(self):
@@ -163,9 +171,7 @@ class TestLayer2ClassifierFallback:
         根因（2026-10-21 实锤）：Layer 1（ask_user_question，q_0/q_1 键）
         与 Layer 2（技能 clarify_meta 字段键）键空间不同，用户答完
         Layer 1 后技能字段仍"缺失"，Layer 2 再补弹 = 澄清死循环。"""
-        session = self._make_session(
-            context={"user_clarified": True}
-        )
+        session = self._make_session(context={"user_clarified": True})
         # LLM 传了部分参数（满足承诺度守卫），但用户已答过澄清 → 不弹
         result = session._classifier_fallback_check(
             "compose_card_deck", {"recipe_id": "bullet_list"}
@@ -183,21 +189,17 @@ class TestLayer2ClassifierFallback:
     def test_clarification_result_suppresses_clarification(self):
         """用户之前已回答过所有字段 → 不弹。"""
         session = self._make_session(
-            context={"clarification_result": {"recipe_id": "bullet_list", "theme_id": "minimal_white"}}
+            context={
+                "clarification_result": {"recipe_id": "bullet_list", "theme_id": "minimal_white"}
+            }
         )
-        result = session._classifier_fallback_check(
-            "compose_card_deck", {}
-        )
+        result = session._classifier_fallback_check("compose_card_deck", {})
         assert result is None
 
     def test_partial_clarification_result_still_clarifies(self):
         """用户只回答了部分字段 → 仍弹（问缺失的）。"""
-        session = self._make_session(
-            context={"clarification_result": {"recipe_id": "bullet_list"}}
-        )
-        result = session._classifier_fallback_check(
-            "compose_card_deck", {}
-        )
+        session = self._make_session(context={"clarification_result": {"recipe_id": "bullet_list"}})
+        result = session._classifier_fallback_check("compose_card_deck", {})
         assert result is not None
 
     def test_auto_default_with_empty_string_suppresses(self):
@@ -213,18 +215,14 @@ class TestLayer2ClassifierFallback:
             ),
         }
         session = self._make_session(skills=[skill])
-        result = session._classifier_fallback_check(
-            "compose_card_deck", {}
-        )
+        result = session._classifier_fallback_check("compose_card_deck", {})
         assert result is None
 
     def test_non_trigger_node_type_skips(self):
         """node_type 不在 CLARIFY_TRIGGER_NODE_TYPES → 不弹。"""
         skill = _make_fake_skill(node_type="search")
         session = self._make_session(skills=[skill])
-        result = session._classifier_fallback_check(
-            "compose_card_deck", {}
-        )
+        result = session._classifier_fallback_check("compose_card_deck", {})
         assert result is None
 
     def test_no_clarify_meta_skips(self):
@@ -232,9 +230,7 @@ class TestLayer2ClassifierFallback:
         skill = _make_fake_skill()
         skill.clarify_meta = None
         session = self._make_session(skills=[skill])
-        result = session._classifier_fallback_check(
-            "compose_card_deck", {}
-        )
+        result = session._classifier_fallback_check("compose_card_deck", {})
         assert result is None
 
     def test_skill_call_unwraps_inner_skill(self):
@@ -251,6 +247,7 @@ class TestLayer2ClassifierFallback:
 # 链路 3: Layer 3 — 用户显式规则 (_check_user_ask_rules)
 # ============================================================================
 
+
 class TestLayer3UserAskRules:
     """_check_user_ask_rules 检查 GuardianPolicy.needs_clarification。"""
 
@@ -266,9 +263,16 @@ class TestLayer3UserAskRules:
                 risk_level="low",
                 needs_clarification=True,
             )
-        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset({
-            "produce", "create", "design", "generate", "copywrite", "card_design",
-        })
+        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset(
+            {
+                "produce",
+                "create",
+                "design",
+                "generate",
+                "copywrite",
+                "card_design",
+            }
+        )
         return session
 
     def test_no_needs_clarification_policy_returns_none(self):
@@ -294,6 +298,7 @@ class TestLayer3UserAskRules:
 # ============================================================================
 # 链路 4: /clarify 端点 context 构建
 # ============================================================================
+
 
 class TestClarifyEndpointContext:
     """验证 /clarify 端点正确构建 context["clarification_result"]。"""
@@ -329,6 +334,7 @@ class TestClarifyEndpointContext:
 # 链路 5: /confirm 端点 context 构建
 # ============================================================================
 
+
 class TestConfirmEndpointContext:
     """验证 /confirm 端点正确构建 context["clarification_result"]。"""
 
@@ -352,6 +358,7 @@ class TestConfirmEndpointContext:
 # 链路 6: 三层调度顺序
 # ============================================================================
 
+
 class TestThreeLayerDispatchOrder:
     """验证 _dispatch 中三层澄清的调度顺序：Layer 3 → Layer 1 → Layer 2。"""
 
@@ -369,14 +376,23 @@ class TestThreeLayerDispatchOrder:
             risk_level="low",
             needs_clarification=True,
         )
-        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset({
-            "produce", "create", "design", "generate", "copywrite", "card_design",
-        })
+        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset(
+            {
+                "produce",
+                "create",
+                "design",
+                "generate",
+                "copywrite",
+                "card_design",
+            }
+        )
 
         layer3_result = session._check_user_ask_rules("compose_card_deck")
         assert layer3_result is not None
 
-        layer2_result = session._classifier_fallback_check("compose_card_deck", {"recipe_id": "bullet_list"})
+        layer2_result = session._classifier_fallback_check(
+            "compose_card_deck", {"recipe_id": "bullet_list"}
+        )
         assert layer2_result is not None
 
     def test_layer3_not_triggered_layer2_fallback(self):
@@ -387,20 +403,30 @@ class TestThreeLayerDispatchOrder:
         session._run_context = {}
         session.auto_approve = True
         session._guardian = Guardian()
-        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset({
-            "produce", "create", "design", "generate", "copywrite", "card_design",
-        })
+        session._CLARIFY_TRIGGER_NODE_TYPES = frozenset(
+            {
+                "produce",
+                "create",
+                "design",
+                "generate",
+                "copywrite",
+                "card_design",
+            }
+        )
 
         layer3_result = session._check_user_ask_rules("compose_card_deck")
         assert layer3_result is None
 
-        layer2_result = session._classifier_fallback_check("compose_card_deck", {"recipe_id": "bullet_list"})
+        layer2_result = session._classifier_fallback_check(
+            "compose_card_deck", {"recipe_id": "bullet_list"}
+        )
         assert layer2_result is not None
 
 
 # ============================================================================
 # 链路 7: auto_default 空字符串判断
 # ============================================================================
+
 
 class TestAutoDefaultEmptyString:
     """验证 auto_default=True + default="" 时不弹澄清。"""
@@ -430,6 +456,7 @@ class TestAutoDefaultEmptyString:
 # ============================================================================
 # 链路 8: _resolve_intent_skill 意图解析
 # ============================================================================
+
 
 class TestResolveIntentSkill:
     """验证 pre-flight 意图解析。"""
@@ -468,6 +495,7 @@ class TestResolveIntentSkill:
 # 链路 9: loop_state 持久化
 # ============================================================================
 
+
 class TestLoopStatePersistence:
     """验证 loop_state save/load/cleanup。"""
 
@@ -493,5 +521,6 @@ class TestLoopStatePersistence:
 
     def test_load_nonexistent_raises(self):
         from app.engine.reactor.loop_state import load_loop_state
+
         with pytest.raises(FileNotFoundError):
             load_loop_state("nonexistent_path_12345")

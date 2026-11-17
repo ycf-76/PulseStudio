@@ -16,8 +16,8 @@ import httpx
 from pydantic import BaseModel, Field
 
 from app.core.skill_base import Skill
-from app.engine.schemas import Permission
 from app.core.skill_registry import register
+from app.engine.schemas import Permission
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +60,13 @@ class BilibiliSearchSkill(Skill):
     input_schema = BilibiliSearchInput
     required_permissions = [Permission.XHS_SEARCH]
     trigger_words = [
-        "B站搜索", "哔哩哔哩搜索", "搜索B站", "bilibili搜索",
-        "B站视频", "找B站", "bilibili",
+        "B站搜索",
+        "哔哩哔哩搜索",
+        "搜索B站",
+        "bilibili搜索",
+        "B站视频",
+        "找B站",
+        "bilibili",
     ]
 
     prompt_guidance: str = (
@@ -129,18 +134,20 @@ class BilibiliSearchSkill(Skill):
         for item in video_result[: in_.limit]:
             title = item.get("title", "")
             title = _strip_html_tags(title)
-            results.append({
-                "title": title,
-                "author": item.get("author", ""),
-                "plays": item.get("play", 0),
-                "likes": item.get("like", 0),
-                "duration": item.get("duration", ""),
-                "bvid": item.get("bvid", ""),
-                "url": f"https://www.bilibili.com/video/{item.get('bvid', '')}",
-                "cover": item.get("pic", ""),
-                "pubdate": item.get("pubdate", 0),
-                "tag": item.get("tag", ""),
-            })
+            results.append(
+                {
+                    "title": title,
+                    "author": item.get("author", ""),
+                    "plays": item.get("play", 0),
+                    "likes": item.get("like", 0),
+                    "duration": item.get("duration", ""),
+                    "bvid": item.get("bvid", ""),
+                    "url": f"https://www.bilibili.com/video/{item.get('bvid', '')}",
+                    "cover": item.get("pic", ""),
+                    "pubdate": item.get("pubdate", 0),
+                    "tag": item.get("tag", ""),
+                }
+            )
 
         return {
             "ok": True,
@@ -153,4 +160,5 @@ class BilibiliSearchSkill(Skill):
 
 def _strip_html_tags(text: str) -> str:
     import re
+
     return re.sub(r"<[^>]+>", "", text)

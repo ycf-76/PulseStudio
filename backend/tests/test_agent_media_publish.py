@@ -5,6 +5,7 @@
 预期：回合结束时收割本轮新增媒体，复制进 outputs/<user>/agent_media/，
       返回 /outputs/... 可直连地址；坏文件（<1KB）与旧文件不发布；重复发布幂等。
 """
+
 from __future__ import annotations
 
 import asyncio

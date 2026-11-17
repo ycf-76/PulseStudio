@@ -7,6 +7,7 @@
 
 全程 mock LLM，不发任何真实请求、不产生费用。
 """
+
 import asyncio
 import json
 import sys
@@ -28,13 +29,20 @@ class RecordingLLM:
 
     async def stream_chat(self, messages, response_format=None, tools=None):
         self.calls.append({"response_format": response_format})
-        yield {"content": '{"thought": "ok", "final": true, "output": {"summary": "done"}}',
-               "reasoning_content": None, "is_final": True, "token_usage": 10}
+        yield {
+            "content": '{"thought": "ok", "final": true, "output": {"summary": "done"}}',
+            "reasoning_content": None,
+            "is_final": True,
+            "token_usage": 10,
+        }
 
     async def chat(self, messages, response_format=None, max_tokens=None):
         self.calls.append({"response_format": response_format})
-        return {"content": '{"thought": "ok", "final": true, "output": {"summary": "done"}}',
-                "reasoning_content": None, "token_usage": 10}
+        return {
+            "content": '{"thought": "ok", "final": true, "output": {"summary": "done"}}',
+            "reasoning_content": None,
+            "token_usage": 10,
+        }
 
 
 class OldSignatureLLM:
@@ -46,13 +54,20 @@ class OldSignatureLLM:
 
     async def stream_chat(self, messages):
         self.calls.append({"args": messages})
-        yield {"content": '{"final": true, "output": {"summary": "done"}}',
-               "reasoning_content": None, "is_final": True, "token_usage": 10}
+        yield {
+            "content": '{"final": true, "output": {"summary": "done"}}',
+            "reasoning_content": None,
+            "is_final": True,
+            "token_usage": 10,
+        }
 
     async def chat(self, messages):
         self.calls.append({"args": messages})
-        return {"content": '{"final": true, "output": {"summary": "done"}}',
-                "reasoning_content": None, "token_usage": 10}
+        return {
+            "content": '{"final": true, "output": {"summary": "done"}}',
+            "reasoning_content": None,
+            "token_usage": 10,
+        }
 
 
 class KwArgsLLM:
@@ -64,8 +79,12 @@ class KwArgsLLM:
 
     async def stream_chat(self, messages, **kwargs):
         self.calls.append(kwargs)
-        yield {"content": '{"final": true, "output": {"summary": "done"}}',
-               "reasoning_content": None, "is_final": True, "token_usage": 10}
+        yield {
+            "content": '{"final": true, "output": {"summary": "done"}}',
+            "reasoning_content": None,
+            "is_final": True,
+            "token_usage": 10,
+        }
 
 
 def _session(llm) -> ReactorSession:

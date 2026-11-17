@@ -1,4 +1,5 @@
 """CreativeArtifact API：统一创作对象的读写与构建。"""
+
 from __future__ import annotations
 
 from typing import Any

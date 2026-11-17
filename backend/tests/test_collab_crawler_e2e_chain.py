@@ -13,25 +13,27 @@ Test categories:
   7. Error propagation: source error → skill error → sub-agent result → parent
   8. Concurrency: multiple sub-agents calling crawler simultaneously
 """
+
 from __future__ import annotations
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from app.engine.collab import (
-    AgentManager,
     AgentHandle,
-    AgentStatus,
-    InterAgentBus,
+    AgentManager,
     AgentMessage,
-    ConcurrencyPool,
+    AgentStatus,
     CollaborationTools,
+    ConcurrencyPool,
+    InterAgentBus,
 )
 from app.engine.collab.message_bus import MessageType
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 async def collab():
@@ -76,12 +78,14 @@ class _DBMock:
 
     def __enter__(self):
         import app.db.session as db_mod
+
         self._original = db_mod.AsyncSessionLocal
         db_mod.AsyncSessionLocal = self.mock_factory
         return self
 
     def __exit__(self, *args):
         import app.db.session as db_mod
+
         db_mod.AsyncSessionLocal = self._original
 
 
@@ -89,11 +93,16 @@ class _DBMock:
 # 1. SKILL REGISTRY: crawler skills are registered and discoverable
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestCrawlerSkillRegistration:
     """验证爬虫 Skill 在 SkillRegistry 中正确注册。"""
 
     def test_xhs_search_registered(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
         cls = get_skill_class_by_name("xhs_search")
         assert cls is not None
@@ -101,7 +110,11 @@ class TestCrawlerSkillRegistration:
         assert cls.name == "xhs_search"
 
     def test_trending_search_registered(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
         cls = get_skill_class_by_name("trending_search")
         assert cls is not None
@@ -109,7 +122,11 @@ class TestCrawlerSkillRegistration:
         assert cls.name == "trending_search"
 
     def test_spider_sync_registered(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
         cls = get_skill_class_by_name("spider_sync")
         assert cls is not None
@@ -117,7 +134,11 @@ class TestCrawlerSkillRegistration:
         assert cls.name == "spider_sync"
 
     def test_url_collect_registered(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
         cls = get_skill_class_by_name("url_collect")
         assert cls is not None
@@ -125,19 +146,27 @@ class TestCrawlerSkillRegistration:
         assert cls.name == "url_collect"
 
     def test_all_crawler_skills_have_xhs_search_permission(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
         from app.engine.schemas import Permission
+
         ensure_builtin_skills_registered()
 
         for name in ("xhs_search", "trending_search", "spider_sync", "url_collect"):
             cls = get_skill_class_by_name(name)
             assert cls is not None, f"{name} should be registered"
-            assert Permission.XHS_SEARCH in cls.required_permissions, (
-                f"{name} should require XHS_SEARCH permission"
-            )
+            assert (
+                Permission.XHS_SEARCH in cls.required_permissions
+            ), f"{name} should require XHS_SEARCH permission"
 
     def test_crawler_skills_have_trigger_words(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
 
         for name in ("spider_sync", "url_collect"):
@@ -146,7 +175,11 @@ class TestCrawlerSkillRegistration:
             assert len(cls.trigger_words) > 0, f"{name} should have trigger_words for LLM routing"
 
     def test_crawler_skills_have_prompt_guidance(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
 
         for name in ("spider_sync", "url_collect"):
@@ -155,7 +188,11 @@ class TestCrawlerSkillRegistration:
             assert len(cls.prompt_guidance) > 0, f"{name} should have prompt_guidance"
 
     def test_crawler_skills_have_description_for_llm(self):
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
 
         for name in ("xhs_search", "trending_search", "spider_sync", "url_collect"):
@@ -168,13 +205,18 @@ class TestCrawlerSkillRegistration:
 # 2. SKILL INHERITANCE: sub-agent inherits crawler skills
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestSubAgentSkillInheritance:
     """验证子 Agent 继承父 Agent 的全量爬虫 skill。"""
 
     def test_sub_agent_executor_inherits_parent_skills(self):
         """_ensure_collab 创建的 _sub_agent_executor 应继承父 session 的 skills。"""
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
         from app.engine.reactor.session import ReactorSession
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+
         ensure_builtin_skills_registered()
 
         crawler_skill_names = ["xhs_search", "trending_search", "spider_sync", "url_collect"]
@@ -193,28 +235,38 @@ class TestSubAgentSkillInheritance:
 
     def test_spawn_agent_description_mentions_crawler_context(self):
         """spawn_agent 的 description 应提及 Context Gathering 信号。"""
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
+
         ensure_builtin_skills_registered()
 
         cls = get_skill_class_by_name("spawn_agent")
         skill = cls()
-        assert "Context Gathering" in skill.description or "Information" in skill.description or "搜索" in skill.description
+        assert (
+            "Context Gathering" in skill.description
+            or "Information" in skill.description
+            or "搜索" in skill.description
+        )
 
     def test_reactor_system_prompt_includes_crawler_skills(self):
         """ReactorSession 的 system_prompt 应包含爬虫 skill 描述。"""
         from app.engine.reactor.session import ReactorSession, collect_reactor_skills
+
         skills = collect_reactor_skills()
         session = ReactorSession(skills=skills)
 
         for name in ("xhs_search", "trending_search", "spider_sync", "url_collect"):
-            assert name in session.system_prompt, (
-                f"{name} should appear in system_prompt for LLM to discover"
-            )
+            assert (
+                name in session.system_prompt
+            ), f"{name} should appear in system_prompt for LLM to discover"
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 3. XHS SEARCH: skill → XhsSpiderSource → XhsSearchSpider
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestXhsSearchChain:
     """xhs_search skill → XhsSpiderSource → XhsSearchSpider 链路。"""
@@ -223,6 +275,7 @@ class TestXhsSearchChain:
     async def test_xhs_search_calls_spider_source(self):
         """xhs_search execute 应调用 XhsSpiderSource.search_trending。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("xhs_search")
         skill = cls()
 
@@ -247,12 +300,14 @@ class TestXhsSearchChain:
             mock_source.search_trending = AsyncMock(return_value=fake_results)
             mock_client.return_value = mock_source
 
-            result = await skill.execute({
-                "keyword": "穿搭",
-                "limit": 10,
-                "min_likes": 0,
-                "require_cover": False,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "穿搭",
+                    "limit": 10,
+                    "min_likes": 0,
+                    "require_cover": False,
+                }
+            )
 
             mock_source.search_trending.assert_awaited_once()
             assert result["count"] >= 1
@@ -262,14 +317,37 @@ class TestXhsSearchChain:
     async def test_xhs_search_filters_low_likes(self):
         """xhs_search 应过滤低于 min_likes 的结果。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("xhs_search")
         skill = cls()
 
         fake_results = [
-            MagicMock(content_id="hot", title="Hot", summary="", likes=500, comments=10,
-                      url="", cover_img="", author="", collects=0, shares=0, tags=[]),
-            MagicMock(content_id="cold", title="Cold", summary="", likes=5, comments=0,
-                      url="", cover_img="", author="", collects=0, shares=0, tags=[]),
+            MagicMock(
+                content_id="hot",
+                title="Hot",
+                summary="",
+                likes=500,
+                comments=10,
+                url="",
+                cover_img="",
+                author="",
+                collects=0,
+                shares=0,
+                tags=[],
+            ),
+            MagicMock(
+                content_id="cold",
+                title="Cold",
+                summary="",
+                likes=5,
+                comments=0,
+                url="",
+                cover_img="",
+                author="",
+                collects=0,
+                shares=0,
+                tags=[],
+            ),
         ]
 
         with patch.object(skill, "_get_xhs_client") as mock_client:
@@ -277,12 +355,14 @@ class TestXhsSearchChain:
             mock_source.search_trending = AsyncMock(return_value=fake_results)
             mock_client.return_value = mock_source
 
-            result = await skill.execute({
-                "keyword": "test",
-                "limit": 10,
-                "min_likes": 100,
-                "require_cover": False,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "test",
+                    "limit": 10,
+                    "min_likes": 100,
+                    "require_cover": False,
+                }
+            )
 
             ids = [r["note_id"] for r in result["results"]]
             assert "hot" in ids
@@ -292,16 +372,50 @@ class TestXhsSearchChain:
     async def test_xhs_search_filters_invalid_items(self):
         """xhs_search 应过滤无 note_id 或无标题的无效项。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("xhs_search")
         skill = cls()
 
         fake_results = [
-            MagicMock(content_id="", title="No ID", summary="", likes=100, comments=0,
-                      url="", cover_img="", author="", collects=0, shares=0, tags=[]),
-            MagicMock(content_id="no_title", title="", summary="", likes=100, comments=0,
-                      url="", cover_img="", author="", collects=0, shares=0, tags=[]),
-            MagicMock(content_id="valid", title="Valid", summary="", likes=100, comments=0,
-                      url="", cover_img="", author="", collects=0, shares=0, tags=[]),
+            MagicMock(
+                content_id="",
+                title="No ID",
+                summary="",
+                likes=100,
+                comments=0,
+                url="",
+                cover_img="",
+                author="",
+                collects=0,
+                shares=0,
+                tags=[],
+            ),
+            MagicMock(
+                content_id="no_title",
+                title="",
+                summary="",
+                likes=100,
+                comments=0,
+                url="",
+                cover_img="",
+                author="",
+                collects=0,
+                shares=0,
+                tags=[],
+            ),
+            MagicMock(
+                content_id="valid",
+                title="Valid",
+                summary="",
+                likes=100,
+                comments=0,
+                url="",
+                cover_img="",
+                author="",
+                collects=0,
+                shares=0,
+                tags=[],
+            ),
         ]
 
         with patch.object(skill, "_get_xhs_client") as mock_client:
@@ -309,12 +423,14 @@ class TestXhsSearchChain:
             mock_source.search_trending = AsyncMock(return_value=fake_results)
             mock_client.return_value = mock_source
 
-            result = await skill.execute({
-                "keyword": "test",
-                "limit": 10,
-                "min_likes": 0,
-                "require_cover": False,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "test",
+                    "limit": 10,
+                    "min_likes": 0,
+                    "require_cover": False,
+                }
+            )
 
             ids = [r["note_id"] for r in result["results"]]
             assert "valid" in ids
@@ -372,6 +488,7 @@ class TestXhsSearchChain:
 # 4. TRENDING SEARCH: skill → SourceManager → multi-platform
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestTrendingSearchChain:
     """trending_search skill → SourceManager → 多平台搜索链路。"""
 
@@ -385,9 +502,15 @@ class TestTrendingSearchChain:
         skill = cls()
 
         fake_content = TrendingContent(
-            platform="reddit", content_id="r1", title="AI Trend",
-            summary="Summary", content="", author="user1",
-            url="https://reddit.com/r1", likes=100, comments=20,
+            platform="reddit",
+            content_id="r1",
+            title="AI Trend",
+            summary="Summary",
+            content="",
+            author="user1",
+            url="https://reddit.com/r1",
+            likes=100,
+            comments=20,
         )
 
         with patch.object(skill, "_get_source") as mock_get:
@@ -396,12 +519,14 @@ class TestTrendingSearchChain:
             mock_source.search_trending = AsyncMock(return_value=[fake_content])
             mock_get.return_value = mock_source
 
-            result = await skill.execute({
-                "keyword": "AI",
-                "limit": 10,
-                "platform": "reddit",
-                "min_interactions": 0,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "AI",
+                    "limit": 10,
+                    "platform": "reddit",
+                    "min_interactions": 0,
+                }
+            )
 
             assert result["count"] >= 1
             assert result["platform"] == "reddit"
@@ -416,22 +541,38 @@ class TestTrendingSearchChain:
         skill = cls()
 
         reddit_content = TrendingContent(
-            platform="reddit", content_id="r1", title="Reddit AI",
-            summary="", content="", author="", url="", likes=50, comments=10,
+            platform="reddit",
+            content_id="r1",
+            title="Reddit AI",
+            summary="",
+            content="",
+            author="",
+            url="",
+            likes=50,
+            comments=10,
         )
         hn_content = TrendingContent(
-            platform="hackernews", content_id="h1", title="HN AI",
-            summary="", content="", author="", url="", likes=200, comments=30,
+            platform="hackernews",
+            content_id="h1",
+            title="HN AI",
+            summary="",
+            content="",
+            author="",
+            url="",
+            likes=200,
+            comments=30,
         )
 
         with patch.object(skill, "_search_all_platforms") as mock_multi:
             mock_multi.return_value = ([reddit_content, hn_content], ["reddit", "hackernews"])
 
-            result = await skill.execute({
-                "keyword": "AI",
-                "limit": 10,
-                "min_interactions": 0,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "AI",
+                    "limit": 10,
+                    "min_interactions": 0,
+                }
+            )
 
             assert result["count"] == 2
             assert "reddit" in result["platform"]
@@ -447,22 +588,38 @@ class TestTrendingSearchChain:
         skill = cls()
 
         low_content = TrendingContent(
-            platform="reddit", content_id="low", title="Low",
-            summary="", content="", author="", url="", likes=2, comments=0,
+            platform="reddit",
+            content_id="low",
+            title="Low",
+            summary="",
+            content="",
+            author="",
+            url="",
+            likes=2,
+            comments=0,
         )
         high_content = TrendingContent(
-            platform="reddit", content_id="high", title="High",
-            summary="", content="", author="", url="", likes=100, comments=50,
+            platform="reddit",
+            content_id="high",
+            title="High",
+            summary="",
+            content="",
+            author="",
+            url="",
+            likes=100,
+            comments=50,
         )
 
         with patch.object(skill, "_search_all_platforms") as mock_multi:
             mock_multi.return_value = ([low_content, high_content], ["reddit"])
 
-            result = await skill.execute({
-                "keyword": "AI",
-                "limit": 10,
-                "min_interactions": 50,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "AI",
+                    "limit": 10,
+                    "min_interactions": 50,
+                }
+            )
 
             ids = [r["content_id"] for r in result["results"]]
             assert "high" in ids
@@ -472,17 +629,20 @@ class TestTrendingSearchChain:
     async def test_trending_search_unavailable_platform_returns_empty(self):
         """trending_search 对不可用平台应返回空结果而非抛异常。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("trending_search")
         skill = cls()
 
         with patch.object(skill, "_get_source", return_value=None):
             with patch.object(skill, "_list_platforms", return_value=["reddit"]):
-                result = await skill.execute({
-                    "keyword": "AI",
-                    "limit": 10,
-                    "platform": "nonexistent",
-                    "min_interactions": 0,
-                })
+                result = await skill.execute(
+                    {
+                        "keyword": "AI",
+                        "limit": 10,
+                        "platform": "nonexistent",
+                        "min_interactions": 0,
+                    }
+                )
 
                 assert result["count"] == 0
 
@@ -491,6 +651,7 @@ class TestTrendingSearchChain:
 # 5. SPIDER SYNC: skill → spider_capability → runner / HTTP
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestSpiderSyncChain:
     """spider_sync skill → spider_capability → runner / HTTP 链路。"""
 
@@ -498,13 +659,16 @@ class TestSpiderSyncChain:
     async def test_spider_sync_no_user_id_returns_error(self):
         """无 user_id 时 spider_sync 应返回 error。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("spider_sync")
         skill = cls()
 
-        result = await skill.execute({
-            "platform": "xiaohongshu",
-            "_context": None,
-        })
+        result = await skill.execute(
+            {
+                "platform": "xiaohongshu",
+                "_context": None,
+            }
+        )
         assert result.get("ok") is False
         assert "用户身份" in result.get("error", "") or "登录" in result.get("error", "")
 
@@ -512,16 +676,19 @@ class TestSpiderSyncChain:
     async def test_spider_sync_unsupported_platform_returns_error(self):
         """不支持的平台应返回 error。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("spider_sync")
         skill = cls()
 
         mock_ctx = MagicMock()
         mock_ctx.user_id = "user1"
 
-        result = await skill.execute({
-            "platform": "tiktok",
-            "_context": mock_ctx,
-        })
+        result = await skill.execute(
+            {
+                "platform": "tiktok",
+                "_context": mock_ctx,
+            }
+        )
         assert result.get("ok") is False
         assert "不支持" in result.get("error", "")
 
@@ -529,6 +696,7 @@ class TestSpiderSyncChain:
     async def test_spider_sync_no_bound_account_returns_error(self):
         """无绑定账号时应返回 error。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("spider_sync")
         skill = cls()
 
@@ -536,17 +704,21 @@ class TestSpiderSyncChain:
         mock_ctx.user_id = "user1"
 
         with _DBMock(accounts_list=[]):
-            result = await skill.execute({
-                "platform": "xiaohongshu",
-                "_context": mock_ctx,
-            })
+            result = await skill.execute(
+                {
+                    "platform": "xiaohongshu",
+                    "_context": mock_ctx,
+                }
+            )
             assert result.get("ok") is False
             assert "绑定" in result.get("error", "")
 
     @pytest.mark.asyncio
     async def test_spider_capability_inprocess_calls_runner(self):
         """spider_capability.start_sync 在 inprocess 模式下调 runner.start_sync。"""
-        with patch("capabilities.scrapling.spiders.runner.start_sync", new_callable=AsyncMock) as mock_runner:
+        with patch(
+            "capabilities.scrapling.spiders.runner.start_sync", new_callable=AsyncMock
+        ) as mock_runner:
             from app.services.spider_capability import start_sync
 
             await start_sync("acc1", "user1", "xiaohongshu", force=False)
@@ -555,7 +727,9 @@ class TestSpiderSyncChain:
     @pytest.mark.asyncio
     async def test_spider_capability_remote_calls_http(self):
         """spider_capability.start_sync 在 service 模式下调 HTTP transport。"""
-        with patch("app.services.spider_capability._service_url", return_value="http://spider-svc:8001"):
+        with patch(
+            "app.services.spider_capability._service_url", return_value="http://spider-svc:8001"
+        ):
             mock_transport = AsyncMock()
             mock_transport.call = AsyncMock(return_value={"ok": True})
             mock_transport.aclose = AsyncMock()
@@ -576,12 +750,14 @@ class TestSpiderSyncChain:
 # 6. CAPABILITY LOADER: runtime routing (inprocess / service)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestCapabilityRuntimeRouting:
     """capability_loader 的 runtime 路由逻辑。"""
 
     def test_default_runtime_is_inprocess(self):
         """未声明 runtime 时默认为 inprocess。"""
         from app.core.capability_loader import get_capability_runtime
+
         runtime = get_capability_runtime("nonexistent_cap")
         assert runtime == "inprocess"
 
@@ -589,9 +765,12 @@ class TestCapabilityRuntimeRouting:
         """inprocess 模式下 service_url 应为空。"""
         from app.core.capability_loader import get_capability_service_url
 
-        with patch("app.core.capability_loader._read_toml_data", return_value={
-            "scrapling": {"enabled": True, "runtime": "inprocess"},
-        }):
+        with patch(
+            "app.core.capability_loader._read_toml_data",
+            return_value={
+                "scrapling": {"enabled": True, "runtime": "inprocess"},
+            },
+        ):
             url = get_capability_service_url("scrapling")
             assert url == ""
 
@@ -602,9 +781,15 @@ class TestCapabilityRuntimeRouting:
         mock_settings = MagicMock()
         mock_settings.spider_service_url = "http://spider-svc:8001"
 
-        with patch("app.core.capability_loader._read_toml_data", return_value={
-            "spider": {"enabled": True, "runtime": "service"},
-        }), patch("app.config.get_settings", return_value=mock_settings):
+        with (
+            patch(
+                "app.core.capability_loader._read_toml_data",
+                return_value={
+                    "spider": {"enabled": True, "runtime": "service"},
+                },
+            ),
+            patch("app.config.get_settings", return_value=mock_settings),
+        ):
             url = get_capability_service_url("spider")
             assert url == "http://spider-svc:8001"
 
@@ -615,9 +800,15 @@ class TestCapabilityRuntimeRouting:
         mock_settings = MagicMock()
         mock_settings.spider_service_url = ""
 
-        with patch("app.core.capability_loader._read_toml_data", return_value={
-            "scrapling": {"enabled": True, "runtime": "service"},
-        }), patch("app.config.get_settings", return_value=mock_settings):
+        with (
+            patch(
+                "app.core.capability_loader._read_toml_data",
+                return_value={
+                    "scrapling": {"enabled": True, "runtime": "service"},
+                },
+            ),
+            patch("app.config.get_settings", return_value=mock_settings),
+        ):
             url = get_capability_service_url("scrapling")
             assert url == ""
 
@@ -625,9 +816,12 @@ class TestCapabilityRuntimeRouting:
         """未知 runtime 值应回退到 inprocess。"""
         from app.core.capability_loader import get_capability_runtime
 
-        with patch("app.core.capability_loader._read_toml_data", return_value={
-            "scrapling": {"enabled": True, "runtime": "kubernetes"},
-        }):
+        with patch(
+            "app.core.capability_loader._read_toml_data",
+            return_value={
+                "scrapling": {"enabled": True, "runtime": "kubernetes"},
+            },
+        ):
             runtime = get_capability_runtime("scrapling")
             assert runtime == "inprocess"
 
@@ -636,12 +830,13 @@ class TestCapabilityRuntimeRouting:
 # 7. SOURCE MANAGER: multi-platform source registration
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestSourceManagerChain:
     """SourceManager 多平台源注册和分发。"""
 
     def test_register_and_get_source(self):
-        from capabilities.content_search.sources.manager import SourceManager
         from capabilities.content_search.sources.base import ContentSource
+        from capabilities.content_search.sources.manager import SourceManager
 
         mgr = SourceManager()
         mock_source = MagicMock(spec=ContentSource)
@@ -654,21 +849,29 @@ class TestSourceManagerChain:
 
     def test_get_nonexistent_source_returns_none(self):
         from capabilities.content_search.sources.manager import SourceManager
+
         mgr = SourceManager()
         assert mgr.get_source("ghost") is None
         assert not mgr.is_available("ghost")
 
     @pytest.mark.asyncio
     async def test_search_trending_delegates_to_source(self):
-        from capabilities.content_search.sources.manager import SourceManager
         from capabilities.content_search.sources.base import ContentSource, TrendingContent
+        from capabilities.content_search.sources.manager import SourceManager
 
         mgr = SourceManager()
         mock_source = AsyncMock(spec=ContentSource)
         mock_source.name = "mock_platform"
         fake_content = TrendingContent(
-            platform="mock_platform", content_id="1", title="T",
-            summary="", content="", author="", url="", likes=10, comments=5,
+            platform="mock_platform",
+            content_id="1",
+            title="T",
+            summary="",
+            content="",
+            author="",
+            url="",
+            likes=10,
+            comments=5,
         )
         mock_source.search_trending = AsyncMock(return_value=[fake_content])
         mgr.register(mock_source)
@@ -680,8 +883,8 @@ class TestSourceManagerChain:
 
     @pytest.mark.asyncio
     async def test_close_all_cleans_up(self):
-        from capabilities.content_search.sources.manager import SourceManager
         from capabilities.content_search.sources.base import ContentSource
+        from capabilities.content_search.sources.manager import SourceManager
 
         mgr = SourceManager()
         mock_source = AsyncMock(spec=ContentSource)
@@ -698,6 +901,7 @@ class TestSourceManagerChain:
 # 8. SPAWN → CRAWLER: full chain via collab infrastructure
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestSpawnToCrawlerChain:
     """spawn sub-agent → sub-agent 调用爬虫 skill 的完整链路。"""
 
@@ -708,10 +912,15 @@ class TestSpawnToCrawlerChain:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "xhs_research",
-            "task_description": "搜索小红书'穿搭'关键词，返回前20条热门笔记",
-        }))
+        result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "xhs_research",
+                    "task_description": "搜索小红书'穿搭'关键词，返回前20条热门笔记",
+                },
+            )
+        )
 
         assert result.get("success") is True
         agent_id = result["agent_id"]
@@ -729,11 +938,16 @@ class TestSpawnToCrawlerChain:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "researcher",
-            "task_description": "Research trending topics",
-            "role": "researcher",
-        }))
+        result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "researcher",
+                    "task_description": "Research trending topics",
+                    "role": "researcher",
+                },
+            )
+        )
 
         assert result.get("success") is True
         assert result.get("role") == "researcher"
@@ -745,11 +959,16 @@ class TestSpawnToCrawlerChain:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "deep_research",
-            "task_description": "Deep research with reasoning model",
-            "model": "deepseek-r1",
-        }))
+        result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "deep_research",
+                    "task_description": "Deep research with reasoning model",
+                    "model": "deepseek-r1",
+                },
+            )
+        )
 
         assert result.get("success") is True
         assert result.get("model") == "deepseek-r1"
@@ -761,11 +980,16 @@ class TestSpawnToCrawlerChain:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "context_aware_search",
-            "task_description": "Search based on what we discussed",
-            "fork_mode": "fork",
-        }))
+        result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "context_aware_search",
+                    "task_description": "Search based on what we discussed",
+                    "fork_mode": "fork",
+                },
+            )
+        )
 
         assert result.get("success") is True
         assert result.get("fork_mode") == "fork"
@@ -777,17 +1001,27 @@ class TestSpawnToCrawlerChain:
         from app.core.skill_registry import get_skill_class_by_name
 
         spawn_cls = get_skill_class_by_name("spawn_agent")
-        spawn_result = await spawn_cls().execute(_inject(tools, {
-            "task_name": "crawler",
-            "task_description": "Ready to crawl",
-        }))
+        spawn_result = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "crawler",
+                    "task_description": "Ready to crawl",
+                },
+            )
+        )
         agent_id = spawn_result["agent_id"]
 
         send_cls = get_skill_class_by_name("send_message")
-        send_result = await send_cls().execute(_inject(tools, {
-            "target_agent_id": agent_id,
-            "content": "请搜索小红书'咖啡'关键词，limit=10",
-        }))
+        send_result = await send_cls().execute(
+            _inject(
+                tools,
+                {
+                    "target_agent_id": agent_id,
+                    "content": "请搜索小红书'咖啡'关键词，limit=10",
+                },
+            )
+        )
 
         assert send_result.get("success") is True
         assert send_result["delivered"] is True
@@ -806,6 +1040,7 @@ class TestSpawnToCrawlerChain:
         )
 
         from app.core.skill_registry import get_skill_class_by_name
+
         spawn_cls = get_skill_class_by_name("spawn_agent")
 
         tasks = [
@@ -816,10 +1051,15 @@ class TestSpawnToCrawlerChain:
 
         agent_ids = []
         for name, desc in tasks:
-            result = await spawn_cls().execute(_inject(tools, {
-                "task_name": name,
-                "task_description": desc,
-            }))
+            result = await spawn_cls().execute(
+                _inject(
+                    tools,
+                    {
+                        "task_name": name,
+                        "task_description": desc,
+                    },
+                )
+            )
             assert result.get("success") is True
             agent_ids.append(result["agent_id"])
 
@@ -836,6 +1076,7 @@ class TestSpawnToCrawlerChain:
 # 9. BOUNDARY: crawler-specific edge cases
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestCrawlerBoundaryConditions:
     """爬虫链路的边界条件。"""
 
@@ -843,6 +1084,7 @@ class TestCrawlerBoundaryConditions:
     async def test_xhs_search_empty_keyword(self):
         """xhs_search 空关键词应正常处理（由 source 层决定行为）。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("xhs_search")
         skill = cls()
 
@@ -851,27 +1093,32 @@ class TestCrawlerBoundaryConditions:
             mock_source.search_trending = AsyncMock(return_value=[])
             mock_client.return_value = mock_source
 
-            result = await skill.execute({
-                "keyword": "",
-                "limit": 10,
-                "min_likes": 0,
-                "require_cover": False,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "",
+                    "limit": 10,
+                    "min_likes": 0,
+                    "require_cover": False,
+                }
+            )
             assert result["count"] == 0
 
     @pytest.mark.asyncio
     async def test_xhs_search_limit_capped_at_100(self):
         """xhs_search limit 超过 100 应被 input_schema 约束。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("xhs_search")
         skill = cls()
 
         with pytest.raises(Exception):
-            await skill.execute({
-                "keyword": "test",
-                "limit": 999,
-                "min_likes": 0,
-            })
+            await skill.execute(
+                {
+                    "keyword": "test",
+                    "limit": 999,
+                    "min_likes": 0,
+                }
+            )
 
     @pytest.mark.asyncio
     async def test_trending_search_zero_results_triggers_fallback(self):
@@ -894,16 +1141,20 @@ class TestCrawlerBoundaryConditions:
             "platform": "reddit",
         }
 
-        with patch.object(skill, "_search_all_platforms", new_callable=AsyncMock) as mock_multi, \
-             patch.object(skill, "_fallback_to_trending", new_callable=AsyncMock) as mock_fallback:
+        with (
+            patch.object(skill, "_search_all_platforms", new_callable=AsyncMock) as mock_multi,
+            patch.object(skill, "_fallback_to_trending", new_callable=AsyncMock) as mock_fallback,
+        ):
             mock_multi.return_value = ([], [])
             mock_fallback.return_value = ([fallback_dict], "reddit")
 
-            result = await skill.execute({
-                "keyword": "obscure_topic_xyz",
-                "limit": 10,
-                "min_interactions": 0,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "obscure_topic_xyz",
+                    "limit": 10,
+                    "min_interactions": 0,
+                }
+            )
 
             mock_fallback.assert_awaited_once()
             assert result["count"] >= 1
@@ -912,18 +1163,21 @@ class TestCrawlerBoundaryConditions:
     async def test_trending_search_disable_fallback_skips_fallback(self):
         """disable_fallback=True 时零结果不触发 fallback。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("trending_search")
         skill = cls()
 
         with patch.object(skill, "_search_all_platforms") as mock_multi:
             mock_multi.return_value = ([], [])
 
-            result = await skill.execute({
-                "keyword": "obscure_topic_xyz",
-                "limit": 10,
-                "min_interactions": 0,
-                "disable_fallback": True,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "obscure_topic_xyz",
+                    "limit": 10,
+                    "min_interactions": 0,
+                    "disable_fallback": True,
+                }
+            )
 
             assert result["count"] == 0
             assert result["filter_stats"]["fallback_used"] is False
@@ -931,8 +1185,9 @@ class TestCrawlerBoundaryConditions:
     @pytest.mark.asyncio
     async def test_spider_sync_frequency_protection(self):
         """距上次同步不足1小时时应拒绝（除非 force=true）。"""
-        from app.core.skill_registry import get_skill_class_by_name
         from datetime import UTC, datetime, timedelta
+
+        from app.core.skill_registry import get_skill_class_by_name
 
         cls = get_skill_class_by_name("spider_sync")
         skill = cls()
@@ -946,19 +1201,22 @@ class TestCrawlerBoundaryConditions:
         mock_account.last_synced_at = datetime.now(UTC) - timedelta(minutes=30)
 
         with _DBMock(accounts_list=[mock_account]):
-            result = await skill.execute({
-                "platform": "xiaohongshu",
-                "_context": mock_ctx,
-                "force": False,
-            })
+            result = await skill.execute(
+                {
+                    "platform": "xiaohongshu",
+                    "_context": mock_ctx,
+                    "force": False,
+                }
+            )
             assert result.get("ok") is False
             assert "频繁" in result.get("error", "") or "分钟前" in result.get("error", "")
 
     @pytest.mark.asyncio
     async def test_spider_sync_force_bypasses_frequency(self):
         """force=true 时应绕过频率保护。"""
-        from app.core.skill_registry import get_skill_class_by_name
         from datetime import UTC, datetime, timedelta
+
+        from app.core.skill_registry import get_skill_class_by_name
 
         cls = get_skill_class_by_name("spider_sync")
         skill = cls()
@@ -972,15 +1230,21 @@ class TestCrawlerBoundaryConditions:
         mock_account.sync_status = "idle"
         mock_account.last_synced_at = datetime.now(UTC) - timedelta(minutes=30)
 
-        with _DBMock(accounts_list=[mock_account]), \
-             patch("capabilities.scrapling.spiders.db_sink.update_sync_status", new_callable=AsyncMock), \
-             patch("app.services.spider_capability.start_sync", new_callable=AsyncMock):
+        with (
+            _DBMock(accounts_list=[mock_account]),
+            patch(
+                "capabilities.scrapling.spiders.db_sink.update_sync_status", new_callable=AsyncMock
+            ),
+            patch("app.services.spider_capability.start_sync", new_callable=AsyncMock),
+        ):
 
-            result = await skill.execute({
-                "platform": "xiaohongshu",
-                "_context": mock_ctx,
-                "force": True,
-            })
+            result = await skill.execute(
+                {
+                    "platform": "xiaohongshu",
+                    "_context": mock_ctx,
+                    "force": True,
+                }
+            )
             assert result.get("ok") is True
             assert "小红书" in result.get("message", "")
 
@@ -1001,10 +1265,12 @@ class TestCrawlerBoundaryConditions:
         mock_account.last_synced_at = None
 
         with _DBMock(accounts_list=[mock_account]):
-            result = await skill.execute({
-                "platform": "xiaohongshu",
-                "_context": mock_ctx,
-            })
+            result = await skill.execute(
+                {
+                    "platform": "xiaohongshu",
+                    "_context": mock_ctx,
+                }
+            )
             assert result.get("ok") is False
             assert "同步中" in result.get("error", "") or "正在" in result.get("error", "")
 
@@ -1013,6 +1279,7 @@ class TestCrawlerBoundaryConditions:
 # 10. ERROR PROPAGATION: source error → skill → sub-agent → parent
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestErrorPropagation:
     """错误从 source 层传播到 parent agent 的链路。"""
 
@@ -1020,6 +1287,7 @@ class TestErrorPropagation:
     async def test_xhs_search_source_error_returns_empty(self):
         """XhsSpiderSource 搜索异常时 xhs_search 应返回空结果而非抛异常。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("xhs_search")
         skill = cls()
 
@@ -1029,30 +1297,37 @@ class TestErrorPropagation:
             mock_client.return_value = mock_source
 
             with pytest.raises(RuntimeError, match="Spider crashed"):
-                await skill.execute({
-                    "keyword": "test",
-                    "limit": 10,
-                    "min_likes": 0,
-                })
+                await skill.execute(
+                    {
+                        "keyword": "test",
+                        "limit": 10,
+                        "min_likes": 0,
+                    }
+                )
 
     @pytest.mark.asyncio
     async def test_xhs_search_no_login_state_raises(self):
         """无登录态时 _get_xhs_client 应抛 RuntimeError。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("xhs_search")
         skill = cls()
 
-        with patch("capabilities.content_search.sources.xhs_spider_source.XhsSpiderSource") as mock_cls:
+        with patch(
+            "capabilities.content_search.sources.xhs_spider_source.XhsSpiderSource"
+        ) as mock_cls:
             mock_instance = MagicMock()
             mock_instance._check_storage_state.return_value = False
             mock_cls.return_value = mock_instance
 
             with pytest.raises(RuntimeError, match="登录态"):
-                await skill.execute({
-                    "keyword": "test",
-                    "limit": 10,
-                    "min_likes": 0,
-                })
+                await skill.execute(
+                    {
+                        "keyword": "test",
+                        "limit": 10,
+                        "min_likes": 0,
+                    }
+                )
 
     @pytest.mark.asyncio
     async def test_sub_agent_error_propagates_via_bus(self, collab):
@@ -1065,13 +1340,19 @@ class TestErrorPropagation:
         handle.mark_error("Spider login expired")
 
         from app.core.skill_registry import get_skill_class_by_name
+
         wait_cls = get_skill_class_by_name("wait_agent")
         wait_skill = wait_cls()
 
-        result = await wait_skill.execute(_inject(tools, {
-            "agent_id": handle.agent_id,
-            "timeout_seconds": 5,
-        }))
+        result = await wait_skill.execute(
+            _inject(
+                tools,
+                {
+                    "agent_id": handle.agent_id,
+                    "timeout_seconds": 5,
+                },
+            )
+        )
 
         assert result["status"] == "error"
         assert result.get("error") is not None
@@ -1080,6 +1361,7 @@ class TestErrorPropagation:
     async def test_trending_search_source_runtime_error_returns_empty(self):
         """trending_search source 抛 'local client not connected' RuntimeError 时应返回空结果（不 raise）。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("trending_search")
         skill = cls()
 
@@ -1091,12 +1373,14 @@ class TestErrorPropagation:
             )
             mock_get.return_value = mock_source
 
-            result = await skill.execute({
-                "keyword": "test",
-                "limit": 10,
-                "platform": "broken_platform",
-                "min_interactions": 0,
-            })
+            result = await skill.execute(
+                {
+                    "keyword": "test",
+                    "limit": 10,
+                    "platform": "broken_platform",
+                    "min_interactions": 0,
+                }
+            )
 
             assert result["count"] == 0
             assert "broken_platform" in result["platform"]
@@ -1105,6 +1389,7 @@ class TestErrorPropagation:
     async def test_trending_search_source_unexpected_error_raises(self):
         """trending_search source 抛非 'local client' RuntimeError 时应 raise。"""
         from app.core.skill_registry import get_skill_class_by_name
+
         cls = get_skill_class_by_name("trending_search")
         skill = cls()
 
@@ -1117,17 +1402,20 @@ class TestErrorPropagation:
             mock_get.return_value = mock_source
 
             with pytest.raises(RuntimeError, match="database connection lost"):
-                await skill.execute({
-                    "keyword": "test",
-                    "limit": 10,
-                    "platform": "broken_platform",
-                    "min_interactions": 0,
-                })
+                await skill.execute(
+                    {
+                        "keyword": "test",
+                        "limit": 10,
+                        "platform": "broken_platform",
+                        "min_interactions": 0,
+                    }
+                )
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 11. CONCURRENT CRAWLER: multiple sub-agents calling crawler
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestConcurrentCrawlerAccess:
     """多个子 agent 并行调用爬虫的并发场景。"""
@@ -1146,19 +1434,29 @@ class TestConcurrentCrawlerAccess:
             with patch.object(skill, "_get_xhs_client") as mock_client:
                 mock_source = AsyncMock()
                 fake = MagicMock(
-                    content_id=f"note_{keyword}", title=f"Title {keyword}",
-                    summary="", likes=100, comments=10, url="", cover_img="",
-                    author="", collects=0, shares=0, tags=[],
+                    content_id=f"note_{keyword}",
+                    title=f"Title {keyword}",
+                    summary="",
+                    likes=100,
+                    comments=10,
+                    url="",
+                    cover_img="",
+                    author="",
+                    collects=0,
+                    shares=0,
+                    tags=[],
                 )
                 mock_source.search_trending = AsyncMock(return_value=[fake])
                 mock_client.return_value = mock_source
 
-                result = await skill.execute({
-                    "keyword": keyword,
-                    "limit": 10,
-                    "min_likes": 0,
-                    "require_cover": False,
-                })
+                result = await skill.execute(
+                    {
+                        "keyword": keyword,
+                        "limit": 10,
+                        "min_likes": 0,
+                        "require_cover": False,
+                    }
+                )
                 results_all.append((keyword, result))
 
         await asyncio.gather(
@@ -1185,18 +1483,29 @@ class TestConcurrentCrawlerAccess:
         )
 
         from app.core.skill_registry import get_skill_class_by_name
+
         spawn_cls = get_skill_class_by_name("spawn_agent")
 
-        r1 = await spawn_cls().execute(_inject(tools, {
-            "task_name": "crawler_1",
-            "task_description": "Search topic 1",
-        }))
+        r1 = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "crawler_1",
+                    "task_description": "Search topic 1",
+                },
+            )
+        )
         assert r1.get("success") is True
 
-        r2 = await spawn_cls().execute(_inject(tools, {
-            "task_name": "overflow",
-            "task_description": "Should fail - pool full",
-        }))
+        r2 = await spawn_cls().execute(
+            _inject(
+                tools,
+                {
+                    "task_name": "overflow",
+                    "task_description": "Should fail - pool full",
+                },
+            )
+        )
         assert "error" in r2, "max_concurrent=2, root+crawler_1 already active"
 
         await manager.shutdown()
@@ -1206,13 +1515,18 @@ class TestConcurrentCrawlerAccess:
 # 12. REACTOR SESSION: _ensure_collab → spawn → crawler
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestReactorToCrawlerChain:
     """ReactorSession → _ensure_collab → spawn → crawler skill 完整链路。"""
 
     def test_ensure_collab_with_crawler_skills(self):
         """_ensure_collab 初始化后，爬虫 skill 应在 session 的 skill 列表中。"""
+        from app.core.skill_registry import (
+            ensure_builtin_skills_registered,
+            get_skill_class_by_name,
+        )
         from app.engine.reactor.session import ReactorSession
-        from app.core.skill_registry import ensure_builtin_skills_registered, get_skill_class_by_name
+
         ensure_builtin_skills_registered()
 
         crawler_names = ["xhs_search", "trending_search", "spider_sync", "url_collect"]
@@ -1233,6 +1547,7 @@ class TestReactorToCrawlerChain:
     def test_collab_disabled_hides_crawler_tools(self):
         """collab_mode=disabled 时 LLM 看不到 spawn_agent，无法调度爬虫子 agent。"""
         from app.engine.reactor.session import ReactorSession
+
         session = ReactorSession(skills=[], workflow_id="test_no_collab", collab_mode="disabled")
 
         collab = session._ensure_collab()

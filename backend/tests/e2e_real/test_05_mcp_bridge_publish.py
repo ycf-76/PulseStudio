@@ -51,7 +51,7 @@ def test_bridge_stream_opens_with_hello_event(anon_client):
                 first = line
                 break
         assert first, "未收到任何 SSE 数据帧"
-        payload = json.loads(first[len("data:"):].strip())
+        payload = json.loads(first[len("data:") :].strip())
         assert payload["type"] == "hello"
 
 

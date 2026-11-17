@@ -51,9 +51,7 @@ async def save_collab_state(
             "collab_mode": collab_mode,
             "updated_at": time.time(),
         }
-        await redis_client.set_json(
-            _make_key(session_id), state, ex=_COLLAB_TTL_SECONDS
-        )
+        await redis_client.set_json(_make_key(session_id), state, ex=_COLLAB_TTL_SECONDS)
     except Exception as e:
         logger.warning(f"[collab-persist] save failed for {session_id}: {e}")
 
@@ -106,11 +104,8 @@ async def update_agent_status(
         state["updated_at"] = time.time()
         from app.cache.redis import redis_client
 
-        await redis_client.set_json(
-            _make_key(session_id), state, ex=_COLLAB_TTL_SECONDS
-        )
+        await redis_client.set_json(_make_key(session_id), state, ex=_COLLAB_TTL_SECONDS)
     except Exception as e:
         logger.warning(
-            f"[collab-persist] update_agent_status failed for "
-            f"{session_id}/{agent_id}: {e}"
+            f"[collab-persist] update_agent_status failed for " f"{session_id}/{agent_id}: {e}"
         )

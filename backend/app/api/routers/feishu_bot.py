@@ -22,9 +22,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
-from capabilities.rpa.feishu_bot import FeishuBotEngine, get_feishu_engine, remove_feishu_engine
-from capabilities.rpa.feishu_agent_bridge import get_or_create_bridge, remove_bridge
 from capabilities.messaging.adapters.feishu import FeishuAPIError
+from capabilities.rpa.feishu_agent_bridge import get_or_create_bridge, remove_bridge
+from capabilities.rpa.feishu_bot import FeishuBotEngine, get_feishu_engine, remove_feishu_engine
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ router = APIRouter(prefix="/api/feishu", tags=["Feishu Bot"])
 
 
 # ==================== 请求/响应模型 ====================
+
 
 class StartRequest(BaseModel):
     pass
@@ -59,6 +60,7 @@ class ExportToBitableRequest(BaseModel):
 
 # ==================== Webhook 回调 ====================
 
+
 async def _process_task_plan_card_action(value: dict[str, Any]) -> None:
     """后台执行任务清单卡片确认（resume/终止工作流可能耗时，不能阻塞回调响应）。"""
     try:
@@ -69,7 +71,9 @@ async def _process_task_plan_card_action(value: dict[str, Any]) -> None:
             svc = TaskPlanService(db)
             result = await svc.handle_card_action(value)
         if not result.get("success"):
-            logger.warning(f"[FeishuWebhook] task_plan card action rejected: {result.get('message')}")
+            logger.warning(
+                f"[FeishuWebhook] task_plan card action rejected: {result.get('message')}"
+            )
     except Exception as e:
         logger.exception(f"[FeishuWebhook] task_plan card action failed: {e}")
 
@@ -123,6 +127,7 @@ async def feishu_webhook(request: Request):
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     import json as _json
+
     logger.info(f"[FeishuWebhook] RAW body: {_json.dumps(body, ensure_ascii=False)[:500]}")
 
     schema = body.get("schema", "")
@@ -134,6 +139,7 @@ async def feishu_webhook(request: Request):
     if challenge:
         logger.info("[FeishuWebhook] URL verification challenge received")
         from fastapi.responses import JSONResponse
+
         return JSONResponse(content={"challenge": challenge})
 
     # 事件推送处理
@@ -142,6 +148,7 @@ async def feishu_webhook(request: Request):
     logger.info(f"[FeishuWebhook] event_type={event_type}, token={token[:8] if token else 'empty'}")
 
     from app.config import get_settings
+
     settings = get_settings()
 
     if settings.feishu_verification_token and token != settings.feishu_verification_token:
@@ -164,6 +171,7 @@ async def feishu_webhook(request: Request):
             if not engine.is_running:
                 await engine.start()
                 from capabilities.rpa.feishu_agent_bridge import get_or_create_bridge
+
                 get_or_create_bridge(default_user_id)
                 logger.info("[FeishuWebhook] Auto-started default engine for incoming event")
             active_engines = [(default_user_id, engine)]
@@ -182,6 +190,7 @@ async def feishu_webhook(request: Request):
 
 
 # ==================== 控制接口 ====================
+
 
 @router.post("/start")
 async def start_service(

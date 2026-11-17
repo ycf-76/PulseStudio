@@ -18,6 +18,7 @@
 - 半自动模式（默认）：只填写内容不点击发布按钮，等用户确认后手动点
 - 全自动模式：填写+点击发布一步完成
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,7 +31,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from capabilities.messaging.services.platform_adapter import adapt_tags, check_platform_limits, get_platform_spec
+from capabilities.messaging.services.platform_adapter import (
+    adapt_tags,
+    check_platform_limits,
+    get_platform_spec,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +109,7 @@ def _cleanup_temp_images(paths: list[str]) -> None:
 # 平台特定的 page_action 实现
 # ---------------------------------------------------------------------------
 
+
 def _xiaohongshu_page_action(
     title: str,
     content: str,
@@ -112,12 +118,16 @@ def _xiaohongshu_page_action(
     auto_submit: bool,
 ) -> Any:
     """小红书发布页自动化：填写标题/正文/标签 + 上传图片 + 可选点击发布。"""
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(2)
 
         try:
-            title_input = page.locator("input[placeholder*='标题'], input[placeholder*='填写标题'], #title, [class*='title'] input").first
+            title_input = page.locator(
+                "input[placeholder*='标题'], input[placeholder*='填写标题'], #title, [class*='title'] input"
+            ).first
             title_input.wait_for(state="visible", timeout=8000)
             title_input.fill(title)
             _t.sleep(0.3)
@@ -125,7 +135,9 @@ def _xiaohongshu_page_action(
             logger.warning(f"[publisher:xhs] title fill failed: {e}")
 
         try:
-            content_editor = page.locator("[contenteditable='true'], [class*='ql-editor'], [class*='content'] [contenteditable], textarea[placeholder*='正文']").first
+            content_editor = page.locator(
+                "[contenteditable='true'], [class*='ql-editor'], [class*='content'] [contenteditable], textarea[placeholder*='正文']"
+            ).first
             content_editor.wait_for(state="visible", timeout=8000)
             content_editor.click()
             _t.sleep(0.2)
@@ -150,7 +162,9 @@ def _xiaohongshu_page_action(
         if auto_submit:
             try:
                 _t.sleep(1)
-                publish_btn = page.locator("button:has-text('发布'), button:has-text('发布笔记'), [class*='publish'] button").first
+                publish_btn = page.locator(
+                    "button:has-text('发布'), button:has-text('发布笔记'), [class*='publish'] button"
+                ).first
                 publish_btn.wait_for(state="visible", timeout=5000)
                 publish_btn.click()
                 _t.sleep(3)
@@ -168,8 +182,10 @@ def _douyin_page_action(
     auto_submit: bool,
 ) -> Any:
     """抖音创作者中心发布自动化。"""
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(2)
 
         if image_paths:
@@ -182,7 +198,9 @@ def _douyin_page_action(
                 logger.warning(f"[publisher:dy] video upload failed: {e}")
 
         try:
-            title_input = page.locator("input[placeholder*='标题'], input[placeholder*='作品描述'], [class*='title'] input, .editor-kit-title-input input").first
+            title_input = page.locator(
+                "input[placeholder*='标题'], input[placeholder*='作品描述'], [class*='title'] input, .editor-kit-title-input input"
+            ).first
             title_input.wait_for(state="visible", timeout=8000)
             full_title = title
             if tags:
@@ -194,7 +212,9 @@ def _douyin_page_action(
             logger.warning(f"[publisher:dy] title fill failed: {e}")
 
         try:
-            desc_editor = page.locator("[contenteditable='true'], textarea[placeholder*='描述'], .editor-kit-textarea, [class*='desc'] textarea").first
+            desc_editor = page.locator(
+                "[contenteditable='true'], textarea[placeholder*='描述'], .editor-kit-textarea, [class*='desc'] textarea"
+            ).first
             desc_editor.wait_for(state="visible", timeout=5000)
             desc_editor.click()
             _t.sleep(0.2)
@@ -206,7 +226,9 @@ def _douyin_page_action(
         if auto_submit:
             try:
                 _t.sleep(1)
-                publish_btn = page.locator("button:has-text('发布'), button:has-text('发布视频')").first
+                publish_btn = page.locator(
+                    "button:has-text('发布'), button:has-text('发布视频')"
+                ).first
                 publish_btn.wait_for(state="visible", timeout=5000)
                 publish_btn.click()
                 _t.sleep(3)
@@ -224,8 +246,10 @@ def _bilibili_page_action(
     auto_submit: bool,
 ) -> Any:
     """B站创作者中心发布自动化。"""
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(2)
 
         if image_paths:
@@ -238,7 +262,9 @@ def _bilibili_page_action(
                 logger.warning(f"[publisher:bili] video upload failed: {e}")
 
         try:
-            title_input = page.locator("input[placeholder*='标题'], input[placeholder*='输入标题'], [class*='title'] input, #title").first
+            title_input = page.locator(
+                "input[placeholder*='标题'], input[placeholder*='输入标题'], [class*='title'] input, #title"
+            ).first
             title_input.wait_for(state="visible", timeout=8000)
             title_input.fill(title)
             _t.sleep(0.3)
@@ -246,7 +272,9 @@ def _bilibili_page_action(
             logger.warning(f"[publisher:bili] title fill failed: {e}")
 
         try:
-            desc_editor = page.locator("[contenteditable='true'], textarea[placeholder*='简介'], [class*='desc'] textarea, .desc-input textarea").first
+            desc_editor = page.locator(
+                "[contenteditable='true'], textarea[placeholder*='简介'], [class*='desc'] textarea, .desc-input textarea"
+            ).first
             desc_editor.wait_for(state="visible", timeout=5000)
             desc_editor.click()
             _t.sleep(0.2)
@@ -260,7 +288,9 @@ def _bilibili_page_action(
             logger.warning(f"[publisher:bili] desc fill failed: {e}")
 
         try:
-            tag_input = page.locator("input[placeholder*='标签'], input[placeholder*='tag'], [class*='tag'] input").first
+            tag_input = page.locator(
+                "input[placeholder*='标签'], input[placeholder*='tag'], [class*='tag'] input"
+            ).first
             tag_input.wait_for(state="visible", timeout=3000)
             for tag in tags[:10]:
                 tag_input.fill(tag)
@@ -291,12 +321,16 @@ def _zhihu_page_action(
     auto_submit: bool,
 ) -> Any:
     """知乎创作中心发布自动化。"""
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(2)
 
         try:
-            title_input = page.locator("input[placeholder*='标题'], [class*='title'] input, textarea[placeholder*='标题']").first
+            title_input = page.locator(
+                "input[placeholder*='标题'], [class*='title'] input, textarea[placeholder*='标题']"
+            ).first
             title_input.wait_for(state="visible", timeout=8000)
             title_input.fill(title)
             _t.sleep(0.3)
@@ -304,7 +338,9 @@ def _zhihu_page_action(
             logger.warning(f"[publisher:zhihu] title fill failed: {e}")
 
         try:
-            content_editor = page.locator("[contenteditable='true'], .ProseMirror, [class*='editor'] [contenteditable]").first
+            content_editor = page.locator(
+                "[contenteditable='true'], .ProseMirror, [class*='editor'] [contenteditable]"
+            ).first
             content_editor.wait_for(state="visible", timeout=8000)
             content_editor.click()
             _t.sleep(0.2)
@@ -323,12 +359,16 @@ def _zhihu_page_action(
                 logger.warning(f"[publisher:zhihu] image upload failed: {e}")
 
         try:
-            topic_input = page.locator("input[placeholder*='话题'], input[placeholder*='主题'], [class*='topic'] input").first
+            topic_input = page.locator(
+                "input[placeholder*='话题'], input[placeholder*='主题'], [class*='topic'] input"
+            ).first
             topic_input.wait_for(state="visible", timeout=3000)
             for tag in tags[:5]:
                 topic_input.fill(tag)
                 _t.sleep(0.5)
-                suggestion = page.locator("[class*='suggestion'] li, [class*='topic-item'], [class*='dropdown'] li").first
+                suggestion = page.locator(
+                    "[class*='suggestion'] li, [class*='topic-item'], [class*='dropdown'] li"
+                ).first
                 suggestion.click()
                 _t.sleep(0.3)
         except Exception as e:
@@ -355,8 +395,10 @@ def _kuaishou_page_action(
     auto_submit: bool,
 ) -> Any:
     """快手创作者中心发布自动化。"""
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(2)
 
         if image_paths:
@@ -369,7 +411,9 @@ def _kuaishou_page_action(
                 logger.warning(f"[publisher:ks] video upload failed: {e}")
 
         try:
-            title_input = page.locator("input[placeholder*='标题'], input[placeholder*='描述'], [class*='title'] input").first
+            title_input = page.locator(
+                "input[placeholder*='标题'], input[placeholder*='描述'], [class*='title'] input"
+            ).first
             title_input.wait_for(state="visible", timeout=8000)
             full_title = title
             if tags:
@@ -381,7 +425,9 @@ def _kuaishou_page_action(
             logger.warning(f"[publisher:ks] title fill failed: {e}")
 
         try:
-            desc_editor = page.locator("[contenteditable='true'], textarea[placeholder*='描述'], [class*='desc'] textarea").first
+            desc_editor = page.locator(
+                "[contenteditable='true'], textarea[placeholder*='描述'], [class*='desc'] textarea"
+            ).first
             desc_editor.wait_for(state="visible", timeout=5000)
             desc_editor.click()
             _t.sleep(0.2)
@@ -393,7 +439,9 @@ def _kuaishou_page_action(
         if auto_submit:
             try:
                 _t.sleep(1)
-                publish_btn = page.locator("button:has-text('发布'), button:has-text('发布作品')").first
+                publish_btn = page.locator(
+                    "button:has-text('发布'), button:has-text('发布作品')"
+                ).first
                 publish_btn.wait_for(state="visible", timeout=5000)
                 publish_btn.click()
                 _t.sleep(3)
@@ -411,8 +459,10 @@ def _wechat_page_action(
     auto_submit: bool,
 ) -> Any:
     """微信视频号创作者中心发布自动化。"""
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(2)
 
         if image_paths:
@@ -425,7 +475,9 @@ def _wechat_page_action(
                 logger.warning(f"[publisher:wx] video upload failed: {e}")
 
         try:
-            title_input = page.locator("input[placeholder*='标题'], input[placeholder*='描述'], [class*='title'] input").first
+            title_input = page.locator(
+                "input[placeholder*='标题'], input[placeholder*='描述'], [class*='title'] input"
+            ).first
             title_input.wait_for(state="visible", timeout=8000)
             title_input.fill(title)
             _t.sleep(0.3)
@@ -433,7 +485,9 @@ def _wechat_page_action(
             logger.warning(f"[publisher:wx] title fill failed: {e}")
 
         try:
-            desc_editor = page.locator("[contenteditable='true'], textarea[placeholder*='描述'], [class*='desc'] textarea").first
+            desc_editor = page.locator(
+                "[contenteditable='true'], textarea[placeholder*='描述'], [class*='desc'] textarea"
+            ).first
             desc_editor.wait_for(state="visible", timeout=5000)
             desc_editor.click()
             _t.sleep(0.2)
@@ -470,8 +524,10 @@ def _weibo_page_action(
 
     微博 140 字短文本没有独立标题位，title 非空时拼在正文首行。
     """
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(2)
 
         full_text = content
@@ -506,8 +562,7 @@ def _weibo_page_action(
             try:
                 _t.sleep(1)
                 send_btn = page.locator(
-                    "button:has-text('发送'), [node-type='send'], "
-                    "a:has-text('发送')"
+                    "button:has-text('发送'), [node-type='send'], " "a:has-text('发送')"
                 ).first
                 send_btn.wait_for(state="visible", timeout=5000)
                 send_btn.click()
@@ -530,8 +585,10 @@ def _wechat_mp_page_action(
     公众号编辑器需要登录态 token，无法直接深链到编辑页，
     因此先落首页再点「图文消息」入口。
     """
+
     def action(page: Any) -> None:
         import time as _t
+
         _t.sleep(3)
 
         try:
@@ -547,8 +604,7 @@ def _wechat_mp_page_action(
 
         try:
             title_input = page.locator(
-                "input[placeholder*='标题'], #title, .title_input input, "
-                "[class*='title'] input"
+                "input[placeholder*='标题'], #title, .title_input input, " "[class*='title'] input"
             ).first
             title_input.wait_for(state="visible", timeout=10000)
             title_input.fill(title)
@@ -665,13 +721,15 @@ async def publish_to_platform(
         logger.warning(f"[publisher:{platform}] platform limits exceeded: {limit_check['issues']}")
 
     if spec.title_max > 0 and len(title) > spec.title_max:
-        title = title[:spec.title_max]
+        title = title[: spec.title_max]
     if len(content) > spec.content_max:
-        content = content[:spec.content_max]
+        content = content[: spec.content_max]
 
     cookies = _load_cookies_from_storage(platform)
     if not cookies:
-        logger.warning(f"[publisher:{platform}] no cookies found, publishing may fail (need login first)")
+        logger.warning(
+            f"[publisher:{platform}] no cookies found, publishing may fail (need login first)"
+        )
 
     image_paths: list[str] = []
     if images_base64:
@@ -686,6 +744,7 @@ async def publish_to_platform(
     _captured_screenshot: list[str] = [""]
 
     try:
+
         def _run_publish() -> Any:
             kwargs: dict[str, Any] = {
                 "headless": True,
@@ -710,7 +769,7 @@ async def publish_to_platform(
             response = StealthyFetcher.fetch(url, **kwargs)
 
             try:
-                page = response.page if hasattr(response, 'page') else None
+                page = response.page if hasattr(response, "page") else None
                 if page:
                     shot_bytes = page.screenshot(type="jpeg", quality=60)
                     _captured_screenshot[0] = base64.b64encode(shot_bytes).decode("ascii")
@@ -733,6 +792,7 @@ async def publish_to_platform(
         if not screenshot_b64:
             try:
                 from playwright.sync_api import sync_playwright
+
                 pw = sync_playwright().start()
                 browser = pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-gpu"])
                 ctx = browser.new_context(viewport={"width": 1280, "height": 800})

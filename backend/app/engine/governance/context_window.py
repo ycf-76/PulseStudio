@@ -130,9 +130,7 @@ class ContextWindowTracker:
         scope_limit = self._auto_compact_limit
         full_limit = self._full_context_window
 
-        remaining_against_scope = (
-            scope_limit - scope_tokens if scope_limit is not None else None
-        )
+        remaining_against_scope = scope_limit - scope_tokens if scope_limit is not None else None
         remaining_against_full = full_limit - self._active_context_tokens
 
         base_remaining = None
@@ -144,19 +142,14 @@ class ContextWindowTracker:
             base_remaining = remaining_against_full
 
         buffered_scope_limit = (
-            scope_limit + self._fallback_buffer_tokens
-            if scope_limit is not None
-            else None
+            scope_limit + self._fallback_buffer_tokens if scope_limit is not None else None
         )
 
-        full_limit_reached = (
-            self._active_context_tokens >= full_limit
-        )
+        full_limit_reached = self._active_context_tokens >= full_limit
 
         token_limit_reached = (
-            (buffered_scope_limit is not None and scope_tokens >= buffered_scope_limit)
-            or full_limit_reached
-        )
+            buffered_scope_limit is not None and scope_tokens >= buffered_scope_limit
+        ) or full_limit_reached
 
         return ContextWindowStatus(
             active_context_tokens=self._active_context_tokens,

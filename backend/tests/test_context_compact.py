@@ -59,7 +59,9 @@ class TestContextCompactorTruncate:
         compactor = ContextCompactor(config)
         messages = _make_messages(n_system=2, n_conversation=10)
         result = await compactor.compact(messages)
-        system_msgs = [m for m in result if m["role"] == "system" and "System prompt" in m.get("content", "")]
+        system_msgs = [
+            m for m in result if m["role"] == "system" and "System prompt" in m.get("content", "")
+        ]
         assert len(system_msgs) == 2
 
     @pytest.mark.asyncio
@@ -68,7 +70,9 @@ class TestContextCompactorTruncate:
         compactor = ContextCompactor(config)
         messages = _make_messages(n_system=1, n_conversation=10)
         result = await compactor.compact(messages)
-        non_system = [m for m in result if m["role"] != "system" or "上下文压缩" not in m.get("content", "")]
+        non_system = [
+            m for m in result if m["role"] != "system" or "上下文压缩" not in m.get("content", "")
+        ]
         conversation_msgs = [m for m in non_system if m["role"] in ("user", "assistant")]
         assert len(conversation_msgs) <= 3
 
@@ -114,7 +118,9 @@ class TestContextCompactorTruncate:
         compactor = ContextCompactor(config)
         messages = _make_messages(n_system=1, n_conversation=5)
         result = await compactor.compact(messages)
-        system_msgs = [m for m in result if m["role"] == "system" and "System prompt" in m.get("content", "")]
+        system_msgs = [
+            m for m in result if m["role"] == "system" and "System prompt" in m.get("content", "")
+        ]
         assert len(system_msgs) == 1
 
 
@@ -158,5 +164,7 @@ class TestContextCompactorSummarize:
         messages = _make_messages(n_system=1, n_conversation=10)
         result = await compactor.compact(messages, llm=None)
         assert len(result) < len(messages)
-        system_msgs = [m for m in result if m["role"] == "system" and "System prompt" in m.get("content", "")]
+        system_msgs = [
+            m for m in result if m["role"] == "system" and "System prompt" in m.get("content", "")
+        ]
         assert len(system_msgs) == 1

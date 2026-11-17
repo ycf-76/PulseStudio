@@ -1,5 +1,9 @@
 import pytest
-pytest.skip("产品缺口：全部技能 .md frontmatter 均未声明 model_tier（0/109），tier 分级机制（TieredModelRouter）无接入点。每技能分档属成本策略决策，待大哥批量声明后取消本 skip", allow_module_level=True)
+
+pytest.skip(
+    "产品缺口：全部技能 .md frontmatter 均未声明 model_tier（0/109），tier 分级机制（TieredModelRouter）无接入点。每技能分档属成本策略决策，待大哥批量声明后取消本 skip",
+    allow_module_level=True,
+)
 
 """Tests for Skill model_tier / task_type / temperature_override — compute allocation.
 
@@ -11,12 +15,13 @@ Covers:
 5. End-to-end: xhs_note_creator has premium/copywrite/0.8
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+import app.core.prompt_skills as prompt_skills
 from app.core.skill_base import PromptDrivenSkill
 from app.core.skill_registry import SkillRegistry
-import app.core.prompt_skills as prompt_skills
 
 
 @pytest.fixture(autouse=True)
@@ -123,7 +128,9 @@ class TestLLMResolution:
         mock_main_llm = AsyncMock()
         mock_main_llm.chat = AsyncMock(return_value={"content": "fallback result"})
 
-        with patch("app.adapters.model_router.get_model_router", side_effect=Exception("router broken")):
+        with patch(
+            "app.adapters.model_router.get_model_router", side_effect=Exception("router broken")
+        ):
             with patch.object(skill, "_load_skill_md", return_value="test skill md"):
                 with patch.object(skill, "_load_references", return_value=""):
                     result = await skill.execute({"llm": mock_main_llm})

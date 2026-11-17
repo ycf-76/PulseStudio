@@ -3,6 +3,7 @@
 B站 API 相对公开，用轻量 HTTP（httpx）即可，无需浏览器。
 投稿列表接口 x/space/wbi/arc/search 需要 WBI 签名，否则返回 -352 风控校验失败。
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -33,10 +34,70 @@ UA_BILIBILI = (
 
 # WBI 签名用的重排表（bilibili-API-collect 公开算法，取 img_key+sub_key 后按此表重排取前 32 位）
 WBI_MIXIN_KEY_TAB = [
-    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35,
-    27, 43, 5, 49, 33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13,
-    37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4,
-    22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34, 44, 52,
+    46,
+    47,
+    18,
+    2,
+    53,
+    8,
+    23,
+    32,
+    15,
+    50,
+    10,
+    31,
+    58,
+    3,
+    45,
+    35,
+    27,
+    43,
+    5,
+    49,
+    33,
+    9,
+    42,
+    19,
+    29,
+    28,
+    14,
+    39,
+    12,
+    38,
+    41,
+    13,
+    37,
+    48,
+    7,
+    16,
+    24,
+    55,
+    40,
+    61,
+    26,
+    17,
+    0,
+    1,
+    60,
+    51,
+    30,
+    4,
+    22,
+    25,
+    54,
+    21,
+    56,
+    59,
+    6,
+    63,
+    57,
+    62,
+    11,
+    36,
+    20,
+    34,
+    44,
+    52,
 ]
 
 # WBI 签名要求剔除的特殊字符
@@ -142,7 +203,9 @@ class BilibiliSpider(BasePlatformSpider):
                     if detail:
                         item.update(detail)
                 except Exception as e:
-                    logger.warning(f"BilibiliSpider: detail fetch failed for {item['note_id']}: {e}")
+                    logger.warning(
+                        f"BilibiliSpider: detail fetch failed for {item['note_id']}: {e}"
+                    )
 
         return items
 
@@ -180,8 +243,7 @@ class BilibiliSpider(BasePlatformSpider):
                 data = resp.json()
             except Exception as e:
                 logger.warning(
-                    f"BilibiliSpider: 响应解析失败 (pn={pn}) "
-                    f"status={resp.status_code}: {e}"
+                    f"BilibiliSpider: 响应解析失败 (pn={pn}) " f"status={resp.status_code}: {e}"
                 )
                 break
 
@@ -305,9 +367,7 @@ class BilibiliSpider(BasePlatformSpider):
         signed["w_rid"] = hashlib.md5((query + mixin_key).encode()).hexdigest()
         return signed
 
-    def _fetch_video_detail_api(
-        self, bvid: str, client: httpx.Client
-    ) -> dict[str, Any] | None:
+    def _fetch_video_detail_api(self, bvid: str, client: httpx.Client) -> dict[str, Any] | None:
         """通过 API 获取视频详情。"""
         try:
             resp = client.get(
@@ -341,12 +401,14 @@ class BilibiliSpider(BasePlatformSpider):
             if not value:
                 continue
             domain = ck_val.get("domain") if isinstance(ck_val, dict) else None
-            cookie_list.append({
-                "name": ck_name,
-                "value": value,
-                "domain": domain or ".bilibili.com",
-                "path": "/",
-            })
+            cookie_list.append(
+                {
+                    "name": ck_name,
+                    "value": value,
+                    "domain": domain or ".bilibili.com",
+                    "path": "/",
+                }
+            )
 
         try:
             from scrapling.fetchers import StealthyFetcher
@@ -368,6 +430,7 @@ class BilibiliSpider(BasePlatformSpider):
 
         try:
             from scrapling.fetchers import Fetcher
+
             return Fetcher.get(url, headers={"User-Agent": UA_BILIBILI}, timeout=30)
         except Exception as e:
             logger.error(f"BilibiliSpider: page fetch failed: {e}")
@@ -411,24 +474,25 @@ class BilibiliSpider(BasePlatformSpider):
                     or self._safe_text(link, "", attr="title")
                 )
 
-                cover = (
-                    self._safe_text(card, "img", attr="src")
-                    or self._safe_text(link, "img", attr="src")
+                cover = self._safe_text(card, "img", attr="src") or self._safe_text(
+                    link, "img", attr="src"
                 )
 
-                items.append({
-                    "note_id": bvid,
-                    "title": title.strip(),
-                    "cover_img_url": self._normalize_url(cover),
-                    "platform": "bilibili",
-                    "likes": 0,
-                    "collects": 0,
-                    "comments": 0,
-                    "shares": 0,
-                    "tags": [],
-                    "content_text": "",
-                    "image_urls": [],
-                })
+                items.append(
+                    {
+                        "note_id": bvid,
+                        "title": title.strip(),
+                        "cover_img_url": self._normalize_url(cover),
+                        "platform": "bilibili",
+                        "likes": 0,
+                        "collects": 0,
+                        "comments": 0,
+                        "shares": 0,
+                        "tags": [],
+                        "content_text": "",
+                        "image_urls": [],
+                    }
+                )
             except Exception as e:
                 logger.warning(f"BilibiliSpider: card parse error: {e}")
 

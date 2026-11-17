@@ -11,6 +11,7 @@
 用法：
     python scripts/archive_output_cards.py --user-id <uid> [--source <dir>] [--dry-run]
 """
+
 from __future__ import annotations
 
 import argparse

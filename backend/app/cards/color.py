@@ -24,17 +24,17 @@ import colorsys
 # A theme is "dark" when its background is darker than this relative luminance.
 _DARK_LUM_THRESHOLD = 0.40
 # Required contrast floors (WCAG 2.1).
-_SURFACE_MIN = 1.6       # panel vs page must be visibly separated
-_LINE_MIN = 1.9          # hairline / divider, more separated than surface
-_MUTED_AA = 4.5          # secondary text vs page (normal-size AA)
-_ACCENT_UI = 3.0         # accent is used for small UI bits (kickers, tags)
+_SURFACE_MIN = 1.6  # panel vs page must be visibly separated
+_LINE_MIN = 1.9  # hairline / divider, more separated than surface
+_MUTED_AA = 4.5  # secondary text vs page (normal-size AA)
+_ACCENT_UI = 3.0  # accent is used for small UI bits (kickers, tags)
 
 
 def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     h = hex_color.lstrip("#")
     if len(h) == 3:
         h = "".join(c * 2 for c in h)
-    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
 
 
 def rgb_to_hex(rgb: tuple[int, int, int]) -> str:
@@ -152,7 +152,9 @@ def accent_contrast_ok(bg: str, accent: str) -> bool:
 if __name__ == "__main__":  # pragma: no cover - manual audit helper
     from app.cards.schema import THEMES
 
-    print(f"{'theme':10} {'mode':5} {'bg↔surface':>11} {'bg↔muted':>10} {'bg↔accent':>11}  derived tokens")
+    print(
+        f"{'theme':10} {'mode':5} {'bg↔surface':>11} {'bg↔muted':>10} {'bg↔accent':>11}  derived tokens"
+    )
     print("-" * 78)
     for tid, spec in THEMES.items():
         toks = derive_tokens(spec["bg"], spec["text"], spec["accent"])

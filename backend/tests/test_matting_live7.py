@@ -9,6 +9,7 @@
   2. approve → xfade 转场链合成 → 出片（时长 ≈ 源片）
   3. 抽帧：首个句边界切换点 前/中/后三帧（人工看转场与主题）
 """
+
 import asyncio
 import json
 import subprocess
@@ -28,16 +29,18 @@ async def run_round(params: dict) -> list[dict]:
     )
 
     events = []
-    async for ev in TalkingHeadOverlaySkill().execute({
-        "video_path": str(VIDEO),
-        "gate_mode": "standalone",
-        "pip": True,
-        "matting": True,
-        "slide_duration": 9.0,
-        "pip_scale": 0.3,
-        "pip_position": "bottom_right",
-        **params,
-    }):
+    async for ev in TalkingHeadOverlaySkill().execute(
+        {
+            "video_path": str(VIDEO),
+            "gate_mode": "standalone",
+            "pip": True,
+            "matting": True,
+            "slide_duration": 9.0,
+            "pip_scale": 0.3,
+            "pip_position": "bottom_right",
+            **params,
+        }
+    ):
         events.append(ev)
         name = ev.get("event") or ("success" if ev.get("success") else "error")
         print(f"  event={name} {str(ev.get('message', ev.get('error', '')))[:70]}")
@@ -45,8 +48,8 @@ async def run_round(params: dict) -> list[dict]:
 
 
 async def main() -> None:
-    from capabilities.video.adapters.silence_detect import probe_duration
     from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+    from capabilities.video.adapters.silence_detect import probe_duration
 
     ff = resolve_ffmpeg()
     src_dur = await probe_duration(str(VIDEO))
@@ -69,12 +72,13 @@ async def main() -> None:
 
     # ── 阶段2：approve → xfade 转场合成 → 出片 ──
     print("[live7] 阶段2 approve（xfade 转场链合成）")
-    ev2 = await run_round({
-        "deck_confirm": "approve", "deck_slides_json": str(slides_json),
-    })
-    out2 = Path(next(
-        e for e in ev2 if e.get("event") == "pip_done"
-    )["data"]["output_path"])
+    ev2 = await run_round(
+        {
+            "deck_confirm": "approve",
+            "deck_slides_json": str(slides_json),
+        }
+    )
+    out2 = Path(next(e for e in ev2 if e.get("event") == "pip_done")["data"]["output_path"])
     dur2 = await probe_duration(str(out2))
     assert abs(dur2 - src_dur) < 1.0, f"时长偏差: {dur2} vs {src_dur}"
     print(f"[live7] 断言2 PASS：成片 {out2.name}（{dur2:.2f}s ≈ 源 {src_dur:.2f}s）")
@@ -89,10 +93,20 @@ async def main() -> None:
     b0 = durs[0]
     OUT_FRAMES.mkdir(parents=True, exist_ok=True)
     for tag, t in (("before", b0 - 0.8), ("mid", b0 + 0.25), ("after", b0 + 1.2)):
-        subprocess.run([
-            ff, "-y", "-ss", f"{max(0.0, t):.2f}", "-i", str(out2),
-            "-frames:v", "1", str(OUT_FRAMES / f"switch_{tag}.png"),
-        ], capture_output=True)
+        subprocess.run(
+            [
+                ff,
+                "-y",
+                "-ss",
+                f"{max(0.0, t):.2f}",
+                "-i",
+                str(out2),
+                "-frames:v",
+                "1",
+                str(OUT_FRAMES / f"switch_{tag}.png"),
+            ],
+            capture_output=True,
+        )
     (OUT_FRAMES / "slides_live7.json").write_text(
         json.dumps({**data, "durations": durs}, ensure_ascii=False, indent=1),
         encoding="utf-8",

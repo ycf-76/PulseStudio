@@ -49,6 +49,7 @@ class DeepSeekAdapter(BaseLLM):
         # × 内部重试导致一次调用最坏 8 分钟无任何可见信号（2026-11-07 排查）。
         if timeout is None:
             from app.config import get_settings
+
             timeout = float(get_settings().deepseek_timeout)
         # SDK 层 max_retries=0：连接错误重试统一上收到本适配器（429）和
         # reactor StreamRetryState（连接错误，可发射 SSE 进度），不再静默重试。
@@ -118,7 +119,7 @@ class DeepSeekAdapter(BaseLLM):
                 }
             except RateLimitError as e:
                 if attempt < max_retries:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[deepseek] 429 rate limited (attempt {attempt+1}/{max_retries+1}), "
                         f"retrying in {wait}s"
@@ -178,7 +179,7 @@ class DeepSeekAdapter(BaseLLM):
                 break
             except RateLimitError:
                 if attempt < max_retries:
-                    wait = 2 ** attempt + 1
+                    wait = 2**attempt + 1
                     logger.warning(
                         f"[deepseek] stream 429 rate limited (attempt {attempt+1}/{max_retries+1}), "
                         f"retrying in {wait}s"
@@ -211,21 +212,27 @@ class DeepSeekAdapter(BaseLLM):
                 delta_tool_calls = getattr(delta, "tool_calls", None)
                 if delta_tool_calls:
                     for tc_delta in delta_tool_calls:
-                        idx = tc_delta.index if hasattr(tc_delta, 'index') and tc_delta.index is not None else 0
+                        idx = (
+                            tc_delta.index
+                            if hasattr(tc_delta, "index") and tc_delta.index is not None
+                            else 0
+                        )
                         if idx not in _tool_calls_buffer:
                             _tool_calls_buffer[idx] = {
-                                "id": getattr(tc_delta, 'id', None) or "",
+                                "id": getattr(tc_delta, "id", None) or "",
                                 "type": "function",
                                 "function": {"name": "", "arguments": ""},
                             }
-                        if hasattr(tc_delta, 'id') and tc_delta.id:
+                        if hasattr(tc_delta, "id") and tc_delta.id:
                             _tool_calls_buffer[idx]["id"] = tc_delta.id
-                        func_delta = getattr(tc_delta, 'function', None)
+                        func_delta = getattr(tc_delta, "function", None)
                         if func_delta:
-                            if getattr(func_delta, 'name', None):
+                            if getattr(func_delta, "name", None):
                                 _tool_calls_buffer[idx]["function"]["name"] += func_delta.name
-                            if getattr(func_delta, 'arguments', None):
-                                _tool_calls_buffer[idx]["function"]["arguments"] += func_delta.arguments
+                            if getattr(func_delta, "arguments", None):
+                                _tool_calls_buffer[idx]["function"][
+                                    "arguments"
+                                ] += func_delta.arguments
 
                 chunk_dict: dict[str, Any] = {}
                 if content is not None:

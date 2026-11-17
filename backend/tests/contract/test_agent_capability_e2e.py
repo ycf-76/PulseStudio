@@ -2,11 +2,12 @@
 
 验证五期外置后，Agent 通过 Skill 调用能力工具的完整链路仍然通畅。
 """
+
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 # ---------- 1. spider_capability 调用链 ----------
 
@@ -14,7 +15,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 @pytest.mark.asyncio
 async def test_spider_capability_inprocess_calls_runner():
     """spider_capability.start_sync 在 inprocess 模式下调 runner.start_sync。"""
-    with patch("capabilities.scrapling.spiders.runner.start_sync", new_callable=AsyncMock) as mock_runner:
+    with patch(
+        "capabilities.scrapling.spiders.runner.start_sync", new_callable=AsyncMock
+    ) as mock_runner:
         from app.services.spider_capability import start_sync
 
         await start_sync("acc1", "user1", "xiaohongshu", force=False)
@@ -47,7 +50,11 @@ async def test_spider_capability_remote_calls_http():
 @pytest.mark.asyncio
 async def test_media_tts_piper_inprocess_calls_synthesize():
     """media_capability.tts_piper 在 inprocess 模式下调 synthesize_piper。"""
-    with patch("app.skills.produce.tts_piper.synthesize_piper", new_callable=AsyncMock, return_value="/out/tts.wav") as mock_syn:
+    with patch(
+        "app.skills.produce.tts_piper.synthesize_piper",
+        new_callable=AsyncMock,
+        return_value="/out/tts.wav",
+    ) as mock_syn:
         from app.services.media_capability import tts_piper
 
         result = await tts_piper("hello", "/out/tts.wav")
@@ -76,7 +83,11 @@ async def test_media_tts_piper_remote_calls_http():
 async def test_media_video_compose_inprocess_calls_adapter():
     """media_capability.video_compose 在 inprocess 模式下调 compose_video adapter。"""
     fake_result = {"output_path": "/out/final.mp4"}
-    with patch("capabilities.video.adapters.video_compose.compose_video", new_callable=AsyncMock, return_value=fake_result) as mock_comp:
+    with patch(
+        "capabilities.video.adapters.video_compose.compose_video",
+        new_callable=AsyncMock,
+        return_value=fake_result,
+    ) as mock_comp:
         from app.services.media_capability import video_compose
 
         result = await video_compose({"shots": []}, "/out/final.mp4")
@@ -129,6 +140,7 @@ async def test_browser_capability_inprocess_calls_local():
 def test_accounts_router_imports_spider_capability():
     """accounts.py 已改用 spider_capability 访问层。"""
     import inspect
+
     from app.api.routers import accounts
 
     src = inspect.getsource(accounts)
@@ -142,6 +154,7 @@ def test_accounts_router_imports_spider_capability():
 def test_spider_sync_skill_imports_spider_capability():
     """spider_sync skill 已改用 spider_capability 访问层。"""
     import inspect
+
     from capabilities.content_search.skills import spider_sync
 
     src = inspect.getsource(spider_sync)
@@ -154,6 +167,7 @@ def test_spider_sync_skill_imports_spider_capability():
 def test_auto_short_video_imports_media_capability():
     """auto_short_video skill 已改用 media_capability 访问层。"""
     import inspect
+
     from capabilities.video.skills import auto_short_video
 
     src = inspect.getsource(auto_short_video)
@@ -167,13 +181,23 @@ def test_auto_short_video_imports_media_capability():
 async def test_capability_service_call_tts_piper():
     """capability-service /call tts_piper 端点可调通（mock 内部函数）。"""
     import httpx
+
     from capability_service.main import app as capability_app
 
-    with patch("app.skills.produce.tts_piper.synthesize_piper", new_callable=AsyncMock, return_value="/out/tts.wav"):
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
-            resp = await client.post("/tools/tts_piper/call", json={
-                "arguments": {"text": "test", "output_path": "/out/tts.wav"},
-            })
+    with patch(
+        "app.skills.produce.tts_piper.synthesize_piper",
+        new_callable=AsyncMock,
+        return_value="/out/tts.wav",
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+        ) as client:
+            resp = await client.post(
+                "/tools/tts_piper/call",
+                json={
+                    "arguments": {"text": "test", "output_path": "/out/tts.wav"},
+                },
+            )
         assert resp.status_code == 200
         assert resp.json()["result"]["ok"] is True
 
@@ -182,13 +206,26 @@ async def test_capability_service_call_tts_piper():
 async def test_capability_service_call_video_compose():
     """capability-service /call video_compose 端点可调通（mock 内部函数）。"""
     import httpx
+
     from capability_service.main import app as capability_app
 
-    with patch("capabilities.video.adapters.video_compose.compose_video", new_callable=AsyncMock, return_value={"output_path": "/out/final.mp4"}):
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
-            resp = await client.post("/tools/video_compose/call", json={
-                "arguments": {"storyboard_json": '{"shots": []}', "output_path": "/out/final.mp4"},
-            })
+    with patch(
+        "capabilities.video.adapters.video_compose.compose_video",
+        new_callable=AsyncMock,
+        return_value={"output_path": "/out/final.mp4"},
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+        ) as client:
+            resp = await client.post(
+                "/tools/video_compose/call",
+                json={
+                    "arguments": {
+                        "storyboard_json": '{"shots": []}',
+                        "output_path": "/out/final.mp4",
+                    },
+                },
+            )
         assert resp.status_code == 200
         assert "result" in resp.json()
 
@@ -197,12 +234,18 @@ async def test_capability_service_call_video_compose():
 async def test_capability_service_call_spider_sync():
     """capability-service /call spider_sync 端点可调通（mock 内部函数）。"""
     import httpx
+
     from capability_service.main import app as capability_app
 
     with patch("capabilities.scrapling.spiders.runner.start_sync", new_callable=AsyncMock):
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=capability_app), base_url="http://cap") as client:
-            resp = await client.post("/tools/spider_sync/call", json={
-                "arguments": {"account_id": "a1", "user_id": "u1", "platform": "xiaohongshu"},
-            })
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=capability_app), base_url="http://cap"
+        ) as client:
+            resp = await client.post(
+                "/tools/spider_sync/call",
+                json={
+                    "arguments": {"account_id": "a1", "user_id": "u1", "platform": "xiaohongshu"},
+                },
+            )
         assert resp.status_code == 200
         assert resp.json()["result"]["ok"] is True

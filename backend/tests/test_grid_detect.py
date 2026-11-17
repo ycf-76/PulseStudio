@@ -141,7 +141,9 @@ class TestSplitGrid:
     def test_degenerate_cells_are_skipped(self, workdir):
         """接缝重合时不应产出 0 宽/0 高的废片"""
         p = _grid(workdir / "g.png", n=(3, 3))
-        fake = GridDetection(is_grid=True, rows=3, cols=3, row_seams=[0.5, 0.5], col_seams=[0.5, 0.5])
+        fake = GridDetection(
+            is_grid=True, rows=3, cols=3, row_seams=[0.5, 0.5], col_seams=[0.5, 0.5]
+        )
         tiles = split_grid(p, workdir / "out", fake)
         assert all(t.is_file() for t in tiles)
 

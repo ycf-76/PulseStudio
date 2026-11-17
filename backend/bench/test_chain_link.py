@@ -1,8 +1,10 @@
 """Quick chain-link test: call LLM through the full ReAct loop for 3 scenarios."""
-import httpx
+
 import asyncio
 import json
 import sys
+
+import httpx
 
 
 async def test():

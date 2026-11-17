@@ -4,6 +4,7 @@
 任何 http(s) 链接都能走通这条通用路径，返回标题/正文/图片，
 不依赖 bs4/lxml 等额外依赖（只用标准库 html.parser 做轻量正文定位）。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,19 +32,63 @@ _UA = (
 )
 
 _VOID_TAGS = {
-    "area", "base", "br", "col", "embed", "hr", "img",
-    "input", "link", "meta", "param", "source", "track", "wbr",
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
 }
 
 _SKIP_TAGS = {
-    "script", "style", "noscript", "svg", "iframe", "canvas", "template",
-    "head", "nav", "header", "footer", "aside", "form",
-    "button", "select", "textarea", "label", "input",
+    "script",
+    "style",
+    "noscript",
+    "svg",
+    "iframe",
+    "canvas",
+    "template",
+    "head",
+    "nav",
+    "header",
+    "footer",
+    "aside",
+    "form",
+    "button",
+    "select",
+    "textarea",
+    "label",
+    "input",
 }
 
 _BLOCK_TAGS = {
-    "p", "div", "section", "article", "main", "body", "blockquote",
-    "h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol", "tr", "td", "br",
+    "p",
+    "div",
+    "section",
+    "article",
+    "main",
+    "body",
+    "blockquote",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "li",
+    "ul",
+    "ol",
+    "tr",
+    "td",
+    "br",
 }
 
 _TITLE_META_KEYS = ("og:title", "twitter:title", "title")
@@ -153,7 +198,9 @@ def _select_body(root: _Node) -> _Node:
             continue
         score = node.total - node.link
         best_score = best.total - best.link
-        if score > best_score or (score > 0 and score >= best_score * 0.95 and _depth(node) > _depth(best)):
+        if score > best_score or (
+            score > 0 and score >= best_score * 0.95 and _depth(node) > _depth(best)
+        ):
             best = node
         for kind, value in node.items:
             if kind == "node":
@@ -248,6 +295,7 @@ def http_client_kwargs() -> dict[str, Any]:
     """
     try:
         from app.config import get_settings
+
         configured = (get_settings().http_proxy or "").strip()
     except Exception:
         configured = ""
@@ -385,7 +433,9 @@ async def fetch_web_page_rendered(url: str, *, timeout_ms: int = 30000) -> dict[
     return result
 
 
-async def collect_generic_page(url: str, platform: str = "web", *, render: bool = False) -> dict[str, Any] | None:
+async def collect_generic_page(
+    url: str, platform: str = "web", *, render: bool = False
+) -> dict[str, Any] | None:
     """通用网页采集，输出与 work_collector 各平台采集一致的结构。
 
     render=True 时：HTTP 直取拿到的正文过短（JS 壳页面）才升级为浏览器渲染；

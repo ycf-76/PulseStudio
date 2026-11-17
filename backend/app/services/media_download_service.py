@@ -5,6 +5,7 @@
 
 设计文档: docs/FEATURE_yt-dlp媒体下载接入.md（前端接入章节）
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -33,6 +34,7 @@ def check_downloadable(platform: str | None, video_url: str | None) -> str | Non
         YTDLP_PLATFORM_WHITELIST,
         UnsupportedPlatformError,
     )
+
     if platform not in YTDLP_PLATFORM_WHITELIST:
         label = {"xiaohongshu": "小红书", "douyin": "抖音"}.get(platform or "", platform)
         return f"暂不支持{label}平台的视频下载（无稳定下载通道）"
@@ -116,10 +118,15 @@ async def _download_and_save(record_id: str, user_id: str) -> None:
                 record.local_video_path = result["filepath"]
                 await db.commit()
 
-        await _notify("work_media_download_finished", record_id, user_id, {
-            "platform": platform,
-            "local_video_url": to_web_url(result["filepath"]),
-        })
+        await _notify(
+            "work_media_download_finished",
+            record_id,
+            user_id,
+            {
+                "platform": platform,
+                "local_video_url": to_web_url(result["filepath"]),
+            },
+        )
         logger.info(f"work media downloaded: record={record_id}, path={result['filepath']}")
     except Exception as e:
         logger.error(f"work media download failed: record={record_id}, error={e}", exc_info=True)
@@ -132,6 +139,7 @@ async def _notify(event: str, record_id: str, user_id: str, extra: dict) -> None
     """通知总线推送（无订阅者时静默）。"""
     try:
         from app.services.notification_bus import notification_bus
+
         await notification_bus.publish(event, {"record_id": record_id, "user_id": user_id, **extra})
     except Exception:
         pass

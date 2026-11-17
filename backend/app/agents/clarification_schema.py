@@ -45,6 +45,7 @@ class ClarifyDepends(BaseModel):
 
 class ClarifyFieldMeta(BaseModel):
     """Skill 声明的单个字段澄清元数据。"""
+
     hint: str
     when: ClarifyWhen = ClarifyWhen.missing
     options: list[ClarifyOption] = []
@@ -80,20 +81,24 @@ class ClarifyFieldMeta(BaseModel):
                 value = str(opt.get("value", "") or label)
                 if not value:
                     value = f"option_{len(options)}"
-                options.append(ClarifyOption(
-                    label=label,
-                    value=value,
-                    description=str(opt.get("description", "")),
-                    preview_url=str(opt.get("preview_url", opt.get("preview", ""))),
-                ))
+                options.append(
+                    ClarifyOption(
+                        label=label,
+                        value=value,
+                        description=str(opt.get("description", "")),
+                        preview_url=str(opt.get("preview_url", opt.get("preview", ""))),
+                    )
+                )
 
         depends_on = []
         for dep in data.get("depends_on", []):
             if isinstance(dep, dict):
-                depends_on.append(ClarifyDepends(
-                    field=str(dep.get("field", "")),
-                    value=str(dep.get("value", "")),
-                ))
+                depends_on.append(
+                    ClarifyDepends(
+                        field=str(dep.get("field", "")),
+                        value=str(dep.get("value", "")),
+                    )
+                )
 
         return cls(
             hint=str(data.get("hint", "")),
@@ -112,6 +117,7 @@ class ClarifyFieldMeta(BaseModel):
 
 class ClarificationQuestion(BaseModel):
     """发送给前端的具体问题实例。"""
+
     id: str
     source_skill: str
     question: str
@@ -127,6 +133,7 @@ class ClarificationQuestion(BaseModel):
 
 class ClarificationBatch(BaseModel):
     """一批问题。"""
+
     batch_id: str
     batch_index: int
     total_batches: int

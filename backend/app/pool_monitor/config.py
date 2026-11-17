@@ -4,6 +4,7 @@
 扩展选题池专用配置项。LLM_API_KEY 留空时自动复用 deepseek_api_key，
 避免重复配置。
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -21,9 +22,7 @@ class PoolSettings(Settings):
     crawl_interval_minutes: int = Field(default=10, description="抓取间隔（分钟）")
     max_fetch_per_run: int = Field(default=10, description="单次抓取条数上限")
     max_pool_size: int = Field(default=200, description="池子最大容量")
-    pool_min_threshold: int = Field(
-        default=150, description="池子最低水位，低于此值触发紧急补抓"
-    )
+    pool_min_threshold: int = Field(default=150, description="池子最低水位，低于此值触发紧急补抓")
     pool_startup_threshold: int = Field(
         default=50, description="启动时若池子低于此值立即触发一次抓取"
     )
@@ -37,12 +36,12 @@ class PoolSettings(Settings):
     # 未列出的平台回退到 score_likes_baseline
     platform_score_baselines: dict = Field(
         default_factory=lambda: {
-            "xiaohongshu": 5000,   # 小红书赞量级大
-            "hackernews": 100,     # HN score 通常几十到几百，100+ 算热门
-            "reddit": 500,         # Reddit score 几百到几千
-            "tavily": 200,         # Tavily likes=score*1000，最多1000
-            "builtin": 5000,       # 内置话题库预设互动量高
-            "github": 500,         # GitHub stars 50+算热门，500+算很热门
+            "xiaohongshu": 5000,  # 小红书赞量级大
+            "hackernews": 100,  # HN score 通常几十到几百，100+ 算热门
+            "reddit": 500,  # Reddit score 几百到几千
+            "tavily": 200,  # Tavily likes=score*1000，最多1000
+            "builtin": 5000,  # 内置话题库预设互动量高
+            "github": 500,  # GitHub stars 50+算热门，500+算很热门
         },
         description="各平台互动量满分基准（赞数达到此值得满分）",
     )

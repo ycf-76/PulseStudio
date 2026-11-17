@@ -1,4 +1,5 @@
 import pytest
+
 pytest.skip("app.agents.nodes 模块已不存在，本文件测退役实现", allow_module_level=True)
 
 import asyncio
@@ -22,10 +23,12 @@ def test_search_recovery_broadens_on_empty(monkeypatch):
 
     monkeypatch.setattr(factory_mod, "_make_observer", lambda wf: None)
 
-    skill = _MockSkill([
-        {"count": 0, "results": []},
-        {"count": 1, "results": [{"title": "found"}]},
-    ])
+    skill = _MockSkill(
+        [
+            {"count": 0, "results": []},
+            {"count": 1, "results": [{"title": "found"}]},
+        ]
+    )
 
     async def run():
         return await _execute_search_with_recovery(
@@ -42,10 +45,12 @@ def test_search_recovery_exhausted_returns_empty(monkeypatch):
 
     monkeypatch.setattr(factory_mod, "_make_observer", lambda wf: None)
 
-    skill = _MockSkill([
-        {"count": 0, "results": []},
-        {"count": 0, "results": []},
-    ])
+    skill = _MockSkill(
+        [
+            {"count": 0, "results": []},
+            {"count": 0, "results": []},
+        ]
+    )
 
     async def run():
         return await _execute_search_with_recovery(

@@ -72,7 +72,9 @@ class NotificationBus:
         for q in dead_queues:
             self._subscribers.remove(q)
 
-        logger.info(f"[NotificationBus] published {event_type}: {json.dumps(payload, ensure_ascii=False)[:120]}")
+        logger.info(
+            f"[NotificationBus] published {event_type}: {json.dumps(payload, ensure_ascii=False)[:120]}"
+        )
 
     async def subscribe(self) -> AsyncIterator[str]:
         """SSE 订阅流，前端通过此方法接收实时通知。"""

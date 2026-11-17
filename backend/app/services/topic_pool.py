@@ -17,11 +17,11 @@ import logging
 import re
 from typing import Any
 
-from sqlalchemy import func, select, delete, case, cast, String
+from sqlalchemy import String, case, cast, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import TopicPoolItem, UserProfile
-from app.db.session import is_sqlite, is_mysql
+from app.db.session import is_mysql, is_sqlite
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +36,96 @@ def _extract_url(text: str) -> str:
 
 
 _DOMAIN_KEYWORD_MAP: dict[str, list[str]] = {
-    "tech": ["编程", "代码", "AI", "人工智能", "科技", "数码", "软件", "开发", "互联网", "产品", "算法", "机器学习", "大模型", "GPT", "Python", "前端", "后端", "云计算", "区块链"],
-    "beauty": ["护肤", "美妆", "化妆", "口红", "粉底", "防晒", "美白", "抗老", "精华", "面膜", "彩妆", "香水", "医美"],
-    "food": ["美食", "食谱", "做饭", "烘焙", "探店", "餐厅", "小吃", "甜品", "咖啡", "茶饮", "减脂餐", "便当"],
-    "travel": ["旅行", "旅游", "攻略", "打卡", "景点", "民宿", "签证", "自由行", "自驾", "出境游", "周边游"],
-    "education": ["学习", "考试", "考研", "留学", "英语", "教资", "公务员", "高考", "笔记", "课程", "培训"],
+    "tech": [
+        "编程",
+        "代码",
+        "AI",
+        "人工智能",
+        "科技",
+        "数码",
+        "软件",
+        "开发",
+        "互联网",
+        "产品",
+        "算法",
+        "机器学习",
+        "大模型",
+        "GPT",
+        "Python",
+        "前端",
+        "后端",
+        "云计算",
+        "区块链",
+    ],
+    "beauty": [
+        "护肤",
+        "美妆",
+        "化妆",
+        "口红",
+        "粉底",
+        "防晒",
+        "美白",
+        "抗老",
+        "精华",
+        "面膜",
+        "彩妆",
+        "香水",
+        "医美",
+    ],
+    "food": [
+        "美食",
+        "食谱",
+        "做饭",
+        "烘焙",
+        "探店",
+        "餐厅",
+        "小吃",
+        "甜品",
+        "咖啡",
+        "茶饮",
+        "减脂餐",
+        "便当",
+    ],
+    "travel": [
+        "旅行",
+        "旅游",
+        "攻略",
+        "打卡",
+        "景点",
+        "民宿",
+        "签证",
+        "自由行",
+        "自驾",
+        "出境游",
+        "周边游",
+    ],
+    "education": [
+        "学习",
+        "考试",
+        "考研",
+        "留学",
+        "英语",
+        "教资",
+        "公务员",
+        "高考",
+        "笔记",
+        "课程",
+        "培训",
+    ],
     "parenting": ["育儿", "母婴", "宝宝", "孕期", "辅食", "早教", "幼儿园", "疫苗", "亲子"],
     "fitness": ["健身", "运动", "减脂", "增肌", "瑜伽", "跑步", "饮食", "体态", "拉伸", "减重"],
-    "finance": ["理财", "投资", "基金", "股票", "保险", "存款", "房贷", "信用卡", "财务自由", "攒钱"],
+    "finance": [
+        "理财",
+        "投资",
+        "基金",
+        "股票",
+        "保险",
+        "存款",
+        "房贷",
+        "信用卡",
+        "财务自由",
+        "攒钱",
+    ],
 }
 
 
@@ -89,6 +171,7 @@ class TopicPoolService:
             profile_data = await self._load_user_profile(user_id)
             try:
                 from app.services import agent_memory
+
                 memory_keywords = await agent_memory.get_search_keywords(user_id, limit=5)
             except Exception as e:
                 logger.warning(f"list_items: get_search_keywords failed: {e}")
@@ -410,7 +493,9 @@ class TopicPoolService:
         agg_stmt = select(
             func.count().label("total"),
             func.sum(case((TopicPoolItem.is_favorited.is_(True), 1), else_=0)).label("favorited"),
-            func.sum(case((TopicPoolItem.auto_source == "monitor", 1), else_=0)).label("monitor_count"),
+            func.sum(case((TopicPoolItem.auto_source == "monitor", 1), else_=0)).label(
+                "monitor_count"
+            ),
             func.avg(
                 case(
                     (TopicPoolItem.auto_source == "monitor", TopicPoolItem.heat_score),
@@ -426,10 +511,7 @@ class TopicPoolService:
         avg_heat = float(agg_row.avg_heat or 0)
 
         # 各平台数量
-        plat_stmt = (
-            select(TopicPoolItem.platform, func.count())
-            .group_by(TopicPoolItem.platform)
-        )
+        plat_stmt = select(TopicPoolItem.platform, func.count()).group_by(TopicPoolItem.platform)
         plat_result = await self.db.execute(plat_stmt)
         platforms = {row[0]: row[1] for row in plat_result}
 
@@ -516,13 +598,15 @@ class TopicPoolService:
 
             skill = TrendingSearchSkill()
             try:
-                result = await skill.execute({
-                    "keyword": keyword,
-                    "limit": limit,
-                    "platform": platform,
-                    "disable_fallback": True,
-                    "min_interactions": 0,
-                })
+                result = await skill.execute(
+                    {
+                        "keyword": keyword,
+                        "limit": limit,
+                        "platform": platform,
+                        "disable_fallback": True,
+                        "min_interactions": 0,
+                    }
+                )
             except Exception as e:
                 logger.warning(f"fetch_and_save: search failed for {platform}: {e}")
                 return {
@@ -558,22 +642,24 @@ class TopicPoolService:
             title = (item.get("title") or "").strip()
             if not title:
                 continue
-            cleaned.append({
-                "content_id": str(item.get("content_id") or ""),
-                "title": title[:500],
-                "summary": (item.get("summary") or "")[:2000],
-                "content": item.get("content") or "",
-                "url": item.get("url") or "",
-                "author": item.get("author") or "",
-                "likes": int(item.get("likes") or 0),
-                "comments": int(item.get("comments") or 0),
-                "collects": int(item.get("collects") or 0),
-                "shares": int(item.get("shares") or 0),
-                "fans_count": int(item.get("fans_count") or 0),
-                "cover_img": item.get("cover_img") or "",
-                "images": item.get("images") or None,
-                "raw": item.get("raw") or None,
-            })
+            cleaned.append(
+                {
+                    "content_id": str(item.get("content_id") or ""),
+                    "title": title[:500],
+                    "summary": (item.get("summary") or "")[:2000],
+                    "content": item.get("content") or "",
+                    "url": item.get("url") or "",
+                    "author": item.get("author") or "",
+                    "likes": int(item.get("likes") or 0),
+                    "comments": int(item.get("comments") or 0),
+                    "collects": int(item.get("collects") or 0),
+                    "shares": int(item.get("shares") or 0),
+                    "fans_count": int(item.get("fans_count") or 0),
+                    "cover_img": item.get("cover_img") or "",
+                    "images": item.get("images") or None,
+                    "raw": item.get("raw") or None,
+                }
+            )
 
         if not cleaned:
             return {
@@ -628,14 +714,11 @@ class TopicPoolService:
             local_images = item["images"]
             try:
                 from app.services.image_store import cache_cover_image, cache_detail_images
+
                 if local_cover:
-                    local_cover = await cache_cover_image(
-                        item["content_id"] or "", local_cover
-                    )
+                    local_cover = await cache_cover_image(item["content_id"] or "", local_cover)
                 if local_images:
-                    local_images = await cache_detail_images(
-                        item["content_id"] or "", local_images
-                    )
+                    local_images = await cache_detail_images(item["content_id"] or "", local_images)
             except Exception as img_err:
                 logger.warning(f"fetch_and_save 图片下载失败: {img_err}")
 
@@ -665,6 +748,7 @@ class TopicPoolService:
             await self.db.commit()
             if user_id is not None:
                 from app.services import agent_memory
+
                 weight = saved_count if saved_count <= 10 else 10
                 await agent_memory.record_search_keyword(user_id, keyword, weight=weight)
 
@@ -749,7 +833,9 @@ class TopicPoolService:
 
             # 3. 内容方向加分
             if content_direction:
-                direction_parts = [p.strip().lower() for p in content_direction.split(",") if p.strip()]
+                direction_parts = [
+                    p.strip().lower() for p in content_direction.split(",") if p.strip()
+                ]
                 dir_hits = sum(1 for p in direction_parts if p in text)
                 if dir_hits > 0:
                     bonus += min(8.0, dir_hits * 4.0)
@@ -832,7 +918,9 @@ class TopicPoolService:
 
             results = await source.search_trending(keyword, limit=limit)
             if not results:
-                logger.info(f"_fetch_xhs_via_spider: keyword='{keyword}' 无结果，将回退到 TrendingSearchSkill")
+                logger.info(
+                    f"_fetch_xhs_via_spider: keyword='{keyword}' 无结果，将回退到 TrendingSearchSkill"
+                )
                 return []
 
             items = []
@@ -887,9 +975,9 @@ def _to_dict(item: TopicPoolItem, include_full: bool = False) -> dict[str, Any]:
         "tags": item.tags or [],
         "ai_summary": item.ai_summary,
         "view_count": item.view_count,
-        "ai_summary_generated_at": item.ai_summary_generated_at.isoformat()
-        if item.ai_summary_generated_at
-        else "",
+        "ai_summary_generated_at": (
+            item.ai_summary_generated_at.isoformat() if item.ai_summary_generated_at else ""
+        ),
     }
     if include_full:
         data["content"] = item.content

@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PoolSlot:
     """A concurrency slot occupied by a running agent."""
+
     agent_id: str
     acquired_at: float = field(default_factory=time.time)
     released_at: float | None = None
@@ -64,9 +65,7 @@ class ConcurrencyPool:
 
         try:
             if timeout is not None:
-                acquired = await asyncio.wait_for(
-                    self._semaphore.acquire(), timeout=timeout
-                )
+                acquired = await asyncio.wait_for(self._semaphore.acquire(), timeout=timeout)
             else:
                 await self._semaphore.acquire()
                 acquired = True

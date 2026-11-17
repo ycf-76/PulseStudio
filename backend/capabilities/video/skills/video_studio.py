@@ -62,7 +62,7 @@ _TOOL_PHASE_MAP = {
     "generate_image": "prepare",
     "save_timeline": "plan",
     "write_scene_file": "scene",
-    "render": "render",   # attempt ≥ 2 时映射为 fix
+    "render": "render",  # attempt ≥ 2 时映射为 fix
     "review": "review",
     "start_preview": "scene",
 }
@@ -104,8 +104,9 @@ class VideoStudioSkill(Skill):
     _PROGRESS_TOTAL = _PROGRESS_TOTAL
 
     def _make_progress_emitter(self, workflow_id: str, turn_id: str) -> Any:
-        async def _emit(step: int, phase: str, label: str, detail: str = "",
-                        extra: dict | None = None) -> None:
+        async def _emit(
+            step: int, phase: str, label: str, detail: str = "", extra: dict | None = None
+        ) -> None:
             if not workflow_id:
                 return
             payload = {
@@ -161,11 +162,13 @@ class VideoStudioSkill(Skill):
                 if state["preview_url"]:
                     extra["preview_url"] = state["preview_url"]
                 detail = json.dumps(payload, ensure_ascii=False, default=str)[:300]
-                tasks.append(asyncio.get_running_loop().create_task(
-                    emit(step, mapped, _PHASE_LABEL[mapped], detail, extra)))
+                tasks.append(
+                    asyncio.get_running_loop().create_task(
+                        emit(step, mapped, _PHASE_LABEL[mapped], detail, extra)
+                    )
+                )
             except Exception:
-                logger.warning("forward progress failed for phase %s", phase,
-                               exc_info=True)
+                logger.warning("forward progress failed for phase %s", phase, exc_info=True)
 
         return forward, tasks, state
 
@@ -190,8 +193,10 @@ class VideoStudioSkill(Skill):
                 logger.warning("[video_studio] resolve_llm failed: %s", exc)
                 llm = None
         if llm is None:
-            yield {"success": False,
-                   "error": "LLM 不可用：inputs 未注入 llm 且 model_router 未配置"}
+            yield {
+                "success": False,
+                "error": "LLM 不可用：inputs 未注入 llm 且 model_router 未配置",
+            }
             return
 
         film_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
@@ -202,15 +207,17 @@ class VideoStudioSkill(Skill):
         forward, tasks, state = self._make_tool_forwarder(workflow_id, turn_id)
 
         try:
-            await emit(1, "prepare", _PHASE_LABEL["prepare"],
-                       f"film={film_id} video={video_path.name}")
+            await emit(
+                1, "prepare", _PHASE_LABEL["prepare"], f"film={film_id} video={video_path.name}"
+            )
             method = load_method(parsed.method)
             install_into_workspace(ws, method)
             if parsed.brief.strip():
                 # 用户补充要求：以文本形态随打法装入 rules/（同一装载机制，
                 # agent 经 list_rules / read_rules_file 读取），不改写不解释
                 (Path(ws["inputs"]) / "rules" / "brief.md").write_text(
-                    parsed.brief, encoding="utf-8")
+                    parsed.brief, encoding="utf-8"
+                )
             await emit(2, "method", _PHASE_LABEL["method"], method["name"])
 
             required_canvas = None
@@ -219,12 +226,20 @@ class VideoStudioSkill(Skill):
                     w, h = parsed.canvas.lower().split("x")
                     required_canvas = (int(w), int(h))
                 except ValueError:
-                    yield {"success": False,
-                           "error": f"canvas 参数非法（期望 WxH，如 1920x1080）：{parsed.canvas}"}
+                    yield {
+                        "success": False,
+                        "error": f"canvas 参数非法（期望 WxH，如 1920x1080）：{parsed.canvas}",
+                    }
                     return
-            loop = StudioToolLoop(ws, llm, method["text"], str(video_path),
-                                  forward, required_canvas=required_canvas,
-                                  required_fx=parsed.require_fx)
+            loop = StudioToolLoop(
+                ws,
+                llm,
+                method["text"],
+                str(video_path),
+                forward,
+                required_canvas=required_canvas,
+                required_fx=parsed.require_fx,
+            )
             result = await loop.run()
             if tasks:
                 await asyncio.gather(*tasks, return_exceptions=True)
@@ -244,9 +259,13 @@ class VideoStudioSkill(Skill):
                 }
                 if state["preview_url"]:
                     out["preview_url"] = state["preview_url"]
-                await emit(_PROGRESS_TOTAL, "deliver", _PHASE_LABEL["deliver"],
-                           str(out.get("video_path") or ""),
-                           {"video_path": out.get("video_path")})
+                await emit(
+                    _PROGRESS_TOTAL,
+                    "deliver",
+                    _PHASE_LABEL["deliver"],
+                    str(out.get("video_path") or ""),
+                    {"video_path": out.get("video_path")},
+                )
                 yield out
             else:
                 error = result.get("error") or "创作循环失败（无错误详情）"

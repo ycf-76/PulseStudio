@@ -43,6 +43,7 @@ class TimeFragment(BaseModel):
     Ref: Codex ContextualUserFragment — a lightweight piece of context
     that the system injects on behalf of the user (or system).
     """
+
     content: str
     injected_at: float
     timezone: str = "UTC"

@@ -133,7 +133,9 @@ class SkillGovernance:
             "total_calls": self._total_calls,
             "total_tokens": self._total_tokens,
             "token_window": self._token_window,
-            "token_usage_pct": f"{self._total_tokens / self._token_window:.1%}" if self._token_window else "N/A",
+            "token_usage_pct": (
+                f"{self._total_tokens / self._token_window:.1%}" if self._token_window else "N/A"
+            ),
         }
 
 

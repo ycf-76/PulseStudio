@@ -36,8 +36,8 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from app.engine.schemas import Permission, WorkflowContext
     from app.core.skill_base import Skill
+    from app.engine.schemas import Permission, WorkflowContext
 
 logger = logging.getLogger(__name__)
 
@@ -225,14 +225,44 @@ _ARGUMENT_INJECTION_PATTERNS = [
 # 图文报告 13 步全被一条 ls -la 摁停）。
 # 现改为：首词命中只读白名单 → 自动放行（denied/injection 模式仍照查）；
 # 其余命令维持高危确认。rm -rf / sudo / chmod 由 denied_patterns 硬拒。
-_BASH_READONLY_COMMANDS: frozenset[str] = frozenset({
-    "ls", "pwd", "cat", "head", "tail", "echo", "printf", "which", "where",
-    "whoami", "date", "dir", "find", "grep", "rg", "wc", "sort", "uniq",
-    "file", "stat", "du", "df", "tree", "env", "printenv", "type",
-    # 版本/清单类探查
-    "python", "python3", "node", "npm", "pip", "pip3",
-    # git 只读子命令单独判断
-})
+_BASH_READONLY_COMMANDS: frozenset[str] = frozenset(
+    {
+        "ls",
+        "pwd",
+        "cat",
+        "head",
+        "tail",
+        "echo",
+        "printf",
+        "which",
+        "where",
+        "whoami",
+        "date",
+        "dir",
+        "find",
+        "grep",
+        "rg",
+        "wc",
+        "sort",
+        "uniq",
+        "file",
+        "stat",
+        "du",
+        "df",
+        "tree",
+        "env",
+        "printenv",
+        "type",
+        # 版本/清单类探查
+        "python",
+        "python3",
+        "node",
+        "npm",
+        "pip",
+        "pip3",
+        # git 只读子命令单独判断
+    }
+)
 
 _BASH_READONLY_SUBCOMMANDS: dict[str, frozenset[str]] = {
     "git": frozenset({"status", "log", "diff", "show", "branch", "remote", "rev-parse"}),
@@ -267,9 +297,7 @@ def _is_bash_readonly(command: str) -> bool:
         # 进交互 REPL 或跑脚本文件（python x.py）不算只读
         if first in ("python", "python3", "node"):
             return any(
-                p in ("-c", "--version", "-V", "-v")
-                or p.startswith("-c=")
-                for p in parts[1:]
+                p in ("-c", "--version", "-V", "-v") or p.startswith("-c=") for p in parts[1:]
             )
         return True
     return False
@@ -356,10 +384,7 @@ def _summarize_visible_args(args: Any, cap: int = 300) -> str:
     if not isinstance(args, dict):
         text = str(args)
     else:
-        visible = {
-            k: v for k, v in args.items()
-            if not str(k).startswith(_INTERNAL_ARG_PREFIX)
-        }
+        visible = {k: v for k, v in args.items() if not str(k).startswith(_INTERNAL_ARG_PREFIX)}
         if not visible:
             return "（无业务参数）"
         import json
@@ -397,10 +422,7 @@ def _build_skill_call_confirmation(arguments: dict[str, Any], risk_label: str) -
     """skill_call 专用确认文案：说清楚「执行什么技能、干什么、参数是什么」。"""
     inner_skill = str(arguments.get("skill") or arguments.get("name") or "")
     inner_args = (
-        arguments.get("arguments")
-        or arguments.get("args")
-        or arguments.get("parameters")
-        or {}
+        arguments.get("arguments") or arguments.get("args") or arguments.get("parameters") or {}
     )
     if not isinstance(inner_args, dict):
         inner_args = {}

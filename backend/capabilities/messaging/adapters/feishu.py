@@ -17,80 +17,79 @@ from __future__ import annotations
 import io
 import json
 import logging
-
-import httpx
 from typing import Any
 
+import httpx
 import lark_oapi as lark
-from lark_oapi.core.model.request_option import RequestOption
-from lark_oapi.api.im.v1 import (
-    CreateMessageRequest,
-    CreateMessageRequestBody,
-    CreateMessageResponse,
-    CreateImageRequest,
-    CreateImageRequestBody,
-    CreateImageResponse,
+from lark_oapi.api.bitable.v1 import (
+    AppTableCreateHeader,
+    AppTableRecord,
+    BatchCreateAppTableRecordRequest,
+    BatchCreateAppTableRecordRequestBody,
+    CreateAppRequest,
+    CreateAppTableRecordRequest,
+    CreateAppTableRequest,
+    CreateAppTableRequestBody,
+    ListAppTableFieldRequest,
+    ListAppTableFieldResponse,
+    ListAppTableRecordRequest,
+    ListAppTableRequest,
+    ListAppTableResponse,
+    ReqApp,
+    ReqTable,
+    SearchAppTableRecordRequest,
+    SearchAppTableRecordRequestBody,
+    SearchAppTableRecordResponse,
+    UpdateAppTableRecordRequest,
 )
 from lark_oapi.api.docx.v1 import (
+    Block,
+    CreateDocumentBlockChildrenRequest,
+    CreateDocumentBlockChildrenRequestBody,
+    CreateDocumentBlockChildrenResponse,
+    CreateDocumentRequest,
+    CreateDocumentRequestBody,
+    CreateDocumentResponse,
     GetDocumentRequest,
     GetDocumentResponse,
     RawContentDocumentRequest,
     RawContentDocumentResponse,
-    CreateDocumentRequest,
-    CreateDocumentRequestBody,
-    CreateDocumentResponse,
-    CreateDocumentBlockChildrenRequest,
-    CreateDocumentBlockChildrenRequestBody,
-    CreateDocumentBlockChildrenResponse,
-    Block,
     Text,
     TextElement,
     TextRun,
 )
+from lark_oapi.api.drive.v1 import (
+    CreateFolderFileRequest,
+    CreateFolderFileRequestBody,
+    CreateFolderFileResponse,
+    DownloadFileRequest,
+    DownloadFileResponse,
+    ListFileRequest,
+    ListFileResponse,
+    UploadAllFileRequest,
+    UploadAllFileRequestBody,
+    UploadAllFileResponse,
+)
+from lark_oapi.api.im.v1 import (
+    CreateImageRequest,
+    CreateImageRequestBody,
+    CreateImageResponse,
+    CreateMessageRequest,
+    CreateMessageRequestBody,
+    CreateMessageResponse,
+)
 from lark_oapi.api.wiki.v2 import (
-    ListSpaceRequest,
-    ListSpaceResponse,
-    ListSpaceNodeRequest,
-    ListSpaceNodeResponse,
     CreateSpaceNodeRequest,
     CreateSpaceNodeResponse,
     GetNodeSpaceRequest,
     GetNodeSpaceResponse,
-    Node as WikiNode,
+    ListSpaceNodeRequest,
+    ListSpaceNodeResponse,
+    ListSpaceRequest,
+    ListSpaceResponse,
 )
-from lark_oapi.api.bitable.v1 import (
-    ListAppTableRecordRequest,
-    CreateAppTableRecordRequest,
-    BatchCreateAppTableRecordRequest,
-    BatchCreateAppTableRecordRequestBody,
-    UpdateAppTableRecordRequest,
-    AppTableRecord,
-    CreateAppRequest,
-    ReqApp,
-    CreateAppTableRequest,
-    CreateAppTableRequestBody,
-    ReqTable,
-    AppTableCreateHeader,
-    ListAppTableRequest,
-    ListAppTableResponse,
-    ListAppTableFieldRequest,
-    ListAppTableFieldResponse,
-    SearchAppTableRecordRequest,
-    SearchAppTableRecordRequestBody,
-    SearchAppTableRecordResponse,
-)
-from lark_oapi.api.drive.v1 import (
-    ListFileRequest,
-    ListFileResponse,
-    CreateFolderFileRequest,
-    CreateFolderFileRequestBody,
-    CreateFolderFileResponse,
-    UploadAllFileRequest,
-    UploadAllFileRequestBody,
-    UploadAllFileResponse,
-    DownloadFileRequest,
-    DownloadFileResponse,
-)
+from lark_oapi.api.wiki.v2 import Node as WikiNode
+from lark_oapi.core.model.request_option import RequestOption
 
 logger = logging.getLogger(__name__)
 
@@ -118,11 +117,13 @@ class FeishuClient:
     def __init__(self, app_id: str, app_secret: str) -> None:
         self.app_id = app_id
         self.app_secret = app_secret
-        self.client = lark.Client.builder() \
-            .app_id(app_id) \
-            .app_secret(app_secret) \
-            .log_level(lark.LogLevel.WARNING) \
+        self.client = (
+            lark.Client.builder()
+            .app_id(app_id)
+            .app_secret(app_secret)
+            .log_level(lark.LogLevel.WARNING)
             .build()
+        )
 
     @staticmethod
     def _request_option(access_token: str | None = None) -> RequestOption | None:
@@ -208,13 +209,13 @@ class FeishuClient:
         """
         folder_token = self._normalize_folder_token(folder_token)
 
-        req = CreateFolderFileRequest.builder() \
+        req = (
+            CreateFolderFileRequest.builder()
             .request_body(
-                CreateFolderFileRequestBody.builder()
-                .name(name)
-                .folder_token(folder_token)
-                .build()
-            ).build()
+                CreateFolderFileRequestBody.builder().name(name).folder_token(folder_token).build()
+            )
+            .build()
+        )
 
         resp: CreateFolderFileResponse = await self.client.drive.v1.file.acreate_folder(req)
         self._check_response(resp, "drive.v1.file.acreate_folder")
@@ -240,7 +241,8 @@ class FeishuClient:
         parent_folder_token = self._normalize_folder_token(parent_folder_token)
 
         content_type = "application/octet-stream"
-        req = UploadAllFileRequest.builder() \
+        req = (
+            UploadAllFileRequest.builder()
             .request_body(
                 UploadAllFileRequestBody.builder()
                 .file_name(file_name)
@@ -248,7 +250,9 @@ class FeishuClient:
                 .parent_node(parent_folder_token)
                 .size(len(file_data))
                 .build()
-            ).build()
+            )
+            .build()
+        )
 
         req._files = {"file": (file_name, io.BytesIO(file_data), content_type)}
 
@@ -291,15 +295,18 @@ class FeishuClient:
         Returns:
             API 响应数据
         """
-        req = CreateMessageRequest.builder() \
-            .receive_id_type(receive_id_type) \
+        req = (
+            CreateMessageRequest.builder()
+            .receive_id_type(receive_id_type)
             .request_body(
                 CreateMessageRequestBody.builder()
                 .receive_id(receive_id)
                 .msg_type("text")
                 .content(json.dumps({"text": text}))
                 .build()
-            ).build()
+            )
+            .build()
+        )
 
         resp: CreateMessageResponse = await self.client.im.v1.message.acreate(req)
         self._check_response(resp, "im.v1.message.acreate")
@@ -321,15 +328,18 @@ class FeishuClient:
         Returns:
             API 响应数据
         """
-        req = CreateMessageRequest.builder() \
-            .receive_id_type(receive_id_type) \
+        req = (
+            CreateMessageRequest.builder()
+            .receive_id_type(receive_id_type)
             .request_body(
                 CreateMessageRequestBody.builder()
                 .receive_id(receive_id)
                 .msg_type("interactive")
                 .content(json.dumps(card))
                 .build()
-            ).build()
+            )
+            .build()
+        )
 
         resp: CreateMessageResponse = await self.client.im.v1.message.acreate(req)
         self._check_response(resp, "im.v1.message.acreate(card)")
@@ -361,12 +371,11 @@ class FeishuClient:
             image_type = "image/png" if file_ext == "png" else "image/jpeg"
             filename = f"card.{file_ext}"
 
-            req = CreateImageRequest.builder() \
-                .request_body(
-                    CreateImageRequestBody.builder()
-                    .image_type(image_type)
-                    .build()
-                ).build()
+            req = (
+                CreateImageRequest.builder()
+                .request_body(CreateImageRequestBody.builder().image_type(image_type).build())
+                .build()
+            )
 
             req._files = {"image": (filename, io.BytesIO(image_data), image_type)}
 
@@ -375,15 +384,18 @@ class FeishuClient:
 
             image_key = resp.data.image_key
 
-            msg_req = CreateMessageRequest.builder() \
-                .receive_id_type(receive_id_type) \
+            msg_req = (
+                CreateMessageRequest.builder()
+                .receive_id_type(receive_id_type)
                 .request_body(
                     CreateMessageRequestBody.builder()
                     .receive_id(receive_id)
                     .msg_type("image")
                     .content(json.dumps({"image_key": image_key}))
                     .build()
-                ).build()
+                )
+                .build()
+            )
 
             msg_resp: CreateMessageResponse = await self.client.im.v1.message.acreate(msg_req)
             self._check_response(msg_resp, "im.v1.message.acreate(image)")
@@ -462,7 +474,9 @@ class FeishuClient:
             builder = builder.page_token(page_token)
 
         req = builder.build()
-        resp: ListSpaceResponse = await self.client.wiki.v2.space.alist(req, self._request_option(access_token))
+        resp: ListSpaceResponse = await self.client.wiki.v2.space.alist(
+            req, self._request_option(access_token)
+        )
         self._check_response(resp, "wiki.v2.space.alist")
 
         items = resp.data.items if resp.data and resp.data.items else []
@@ -492,16 +506,16 @@ class FeishuClient:
         Returns:
             {"items": [{"node_token", "obj_token", "obj_type", "title", "has_child", "url"}], ...}
         """
-        builder = ListSpaceNodeRequest.builder() \
-            .space_id(space_id) \
-            .page_size(page_size)
+        builder = ListSpaceNodeRequest.builder().space_id(space_id).page_size(page_size)
         if parent_node_token:
             builder = builder.parent_node_token(parent_node_token)
         if page_token:
             builder = builder.page_token(page_token)
 
         req = builder.build()
-        resp: ListSpaceNodeResponse = await self.client.wiki.v2.space_node.alist(req, self._request_option(access_token))
+        resp: ListSpaceNodeResponse = await self.client.wiki.v2.space_node.alist(
+            req, self._request_option(access_token)
+        )
         self._check_response(resp, "wiki.v2.space_node.alist")
 
         items = resp.data.items if resp.data and resp.data.items else []
@@ -521,14 +535,18 @@ class FeishuClient:
             "page_token": resp.data.page_token if resp.data else "",
         }
 
-    async def get_wiki_node_info(self, token: str, access_token: str | None = None) -> dict[str, Any]:
+    async def get_wiki_node_info(
+        self, token: str, access_token: str | None = None
+    ) -> dict[str, Any]:
         """根据节点 token 查询知识库节点信息（用于 wiki 链接 token → 实际文档 token 的解析）。
 
         Returns:
             {"space_id", "node_token", "obj_token", "obj_type", "title", "has_child"}
         """
         req = GetNodeSpaceRequest.builder().token(token).build()
-        resp: GetNodeSpaceResponse = await self.client.wiki.v2.space.aget_node(req, self._request_option(access_token))
+        resp: GetNodeSpaceResponse = await self.client.wiki.v2.space.aget_node(
+            req, self._request_option(access_token)
+        )
         self._check_response(resp, "wiki.v2.space.aget_node")
 
         node = resp.data.node if resp.data else None
@@ -560,23 +578,27 @@ class FeishuClient:
         Returns:
             {"node_token", "document_id", "title"}
         """
-        body_builder = WikiNode.builder() \
-            .obj_type("docx") \
-            .title(title)
+        body_builder = WikiNode.builder().obj_type("docx").title(title)
         if parent_node_token:
             body_builder = body_builder.parent_node_token(parent_node_token)
 
-        req = CreateSpaceNodeRequest.builder() \
-            .space_id(space_id) \
-            .request_body(body_builder.build()) \
+        req = (
+            CreateSpaceNodeRequest.builder()
+            .space_id(space_id)
+            .request_body(body_builder.build())
             .build()
+        )
 
-        resp: CreateSpaceNodeResponse = await self.client.wiki.v2.space_node.acreate(req, self._request_option(access_token))
+        resp: CreateSpaceNodeResponse = await self.client.wiki.v2.space_node.acreate(
+            req, self._request_option(access_token)
+        )
         self._check_response(resp, "wiki.v2.space_node.acreate")
 
         node = resp.data.node if resp.data else None
         if not node:
-            raise FeishuAPIError(code=-1, msg="创建节点未返回数据", api_name="wiki.v2.space_node.acreate")
+            raise FeishuAPIError(
+                code=-1, msg="创建节点未返回数据", api_name="wiki.v2.space_node.acreate"
+            )
         return {
             "node_token": node.node_token,
             "document_id": node.obj_token,
@@ -597,11 +619,11 @@ class FeishuClient:
         Raises:
             FeishuAPIError: API 调用失败
         """
-        req = GetDocumentRequest.builder() \
-            .document_id(document_id) \
-            .build()
+        req = GetDocumentRequest.builder().document_id(document_id).build()
 
-        resp: GetDocumentResponse = await self.client.docx.v1.document.aget(req, self._request_option(access_token))
+        resp: GetDocumentResponse = await self.client.docx.v1.document.aget(
+            req, self._request_option(access_token)
+        )
         self._check_response(resp, "docx.v1.document.aget")
 
         content = resp.data.document.content
@@ -627,12 +649,16 @@ class FeishuClient:
             body = body.folder_token(folder_token)
 
         req = CreateDocumentRequest.builder().request_body(body.build()).build()
-        resp: CreateDocumentResponse = await self.client.docx.v1.document.acreate(req, self._request_option(access_token))
+        resp: CreateDocumentResponse = await self.client.docx.v1.document.acreate(
+            req, self._request_option(access_token)
+        )
         self._check_response(resp, "docx.v1.document.acreate")
 
         doc = resp.data.document if resp.data else None
         if not doc:
-            raise FeishuAPIError(code=-1, msg="创建文档未返回数据", api_name="docx.v1.document.acreate")
+            raise FeishuAPIError(
+                code=-1, msg="创建文档未返回数据", api_name="docx.v1.document.acreate"
+            )
         return {"document_id": doc.document_id, "title": doc.title or title}
 
     async def read_doc_content(self, document_id: str, access_token: str | None = None) -> str:
@@ -645,7 +671,9 @@ class FeishuClient:
             文档纯文本正文
         """
         req = RawContentDocumentRequest.builder().document_id(document_id).build()
-        resp: RawContentDocumentResponse = await self.client.docx.v1.document.araw_content(req, self._request_option(access_token))
+        resp: RawContentDocumentResponse = await self.client.docx.v1.document.araw_content(
+            req, self._request_option(access_token)
+        )
         self._check_response(resp, "docx.v1.document.araw_content")
 
         content = resp.data.content if resp.data else ""
@@ -653,8 +681,16 @@ class FeishuClient:
 
     # docx block_type 枚举（飞书开放平台文档 Block 结构）
     _BLOCK_TYPE = {
-        "text": 2, "h1": 3, "h2": 4, "h3": 5, "h4": 6,
-        "bullet": 12, "ordered": 13, "code": 14, "quote": 15, "divider": 22,
+        "text": 2,
+        "h1": 3,
+        "h2": 4,
+        "h3": 5,
+        "h4": 6,
+        "bullet": 12,
+        "ordered": 13,
+        "code": 14,
+        "quote": 15,
+        "divider": 22,
     }
     # 每次追加 block 的数量上限（飞书 API 限制 50）
     _MAX_BLOCKS_PER_CALL = 50
@@ -662,11 +698,13 @@ class FeishuClient:
     @staticmethod
     def _text_block(block_type: int, text: str):
         """构造一个纯文本内容块（Text + TextElement + TextRun）。"""
-        text_body = Text.builder().elements([
-            TextElement.builder()
-            .text_run(TextRun.builder().content(text).build())
+        text_body = (
+            Text.builder()
+            .elements(
+                [TextElement.builder().text_run(TextRun.builder().content(text).build()).build()]
+            )
             .build()
-        ]).build()
+        )
         return Block.builder().block_type(block_type).text(text_body).build()
 
     @classmethod
@@ -713,7 +751,12 @@ class FeishuClient:
                 blocks.append(cls._text_block(cls._BLOCK_TYPE["quote"], stripped[2:]))
             elif len(stripped) > 2 and stripped[0] in "-*•" and stripped[1] == " ":
                 blocks.append(cls._text_block(cls._BLOCK_TYPE["bullet"], stripped[2:].strip()))
-            elif len(stripped) > 2 and stripped[0].isdigit() and stripped[1] in ".、" and (stripped[2] == " " or not stripped[2].isdigit()):
+            elif (
+                len(stripped) > 2
+                and stripped[0].isdigit()
+                and stripped[1] in ".、"
+                and (stripped[2] == " " or not stripped[2].isdigit())
+            ):
                 blocks.append(cls._text_block(cls._BLOCK_TYPE["ordered"], stripped[2:].strip()))
             else:
                 blocks.append(cls._text_block(cls._BLOCK_TYPE["text"], stripped))
@@ -743,20 +786,22 @@ class FeishuClient:
 
         appended = 0
         for i in range(0, len(blocks), self._MAX_BLOCKS_PER_CALL):
-            chunk = blocks[i:i + self._MAX_BLOCKS_PER_CALL]
-            req = CreateDocumentBlockChildrenRequest.builder() \
-                .document_id(document_id) \
-                .block_id(document_id) \
+            chunk = blocks[i : i + self._MAX_BLOCKS_PER_CALL]
+            req = (
+                CreateDocumentBlockChildrenRequest.builder()
+                .document_id(document_id)
+                .block_id(document_id)
                 .request_body(
-                    CreateDocumentBlockChildrenRequestBody.builder()
-                    .children(chunk)
-                    .build()
-                ).build()
+                    CreateDocumentBlockChildrenRequestBody.builder().children(chunk).build()
+                )
+                .build()
+            )
 
-            resp: CreateDocumentBlockChildrenResponse = \
+            resp: CreateDocumentBlockChildrenResponse = (
                 await self.client.docx.v1.document_block_children.acreate(
                     req, self._request_option(access_token)
                 )
+            )
             self._check_response(resp, "docx.v1.document_block_children.acreate")
             appended += len(chunk)
 
@@ -784,10 +829,12 @@ class FeishuClient:
         Returns:
             记录列表
         """
-        builder = ListAppTableRecordRequest.builder() \
-            .app_token(app_token) \
-            .table_id(table_id) \
+        builder = (
+            ListAppTableRecordRequest.builder()
+            .app_token(app_token)
+            .table_id(table_id)
             .page_size(page_size)
+        )
 
         if page_token:
             builder = builder.page_token(page_token)
@@ -799,10 +846,7 @@ class FeishuClient:
         self._check_response(resp, "bitable.v1.app_table_record.alist")
 
         items = resp.data.items if resp.data and resp.data.items else []
-        return [
-            {"record_id": item.record_id, "fields": item.fields}
-            for item in items
-        ]
+        return [{"record_id": item.record_id, "fields": item.fields} for item in items]
 
     async def create_bitable_record(
         self,
@@ -822,11 +866,13 @@ class FeishuClient:
         """
         record = AppTableRecord.builder().fields(fields).build()
 
-        req = CreateAppTableRecordRequest.builder() \
-            .app_token(app_token) \
-            .table_id(table_id) \
-            .request_body(record) \
+        req = (
+            CreateAppTableRecordRequest.builder()
+            .app_token(app_token)
+            .table_id(table_id)
+            .request_body(record)
             .build()
+        )
 
         resp = await self.client.bitable.v1.app_table_record.acreate(req)
         self._check_response(resp, "bitable.v1.app_table_record.acreate")
@@ -851,19 +897,17 @@ class FeishuClient:
         Returns:
             创建的记录列表
         """
-        record_models = [
-            AppTableRecord.builder().fields(r).build()
-            for r in records
-        ]
+        record_models = [AppTableRecord.builder().fields(r).build() for r in records]
 
-        req = BatchCreateAppTableRecordRequest.builder() \
-            .app_token(app_token) \
-            .table_id(table_id) \
+        req = (
+            BatchCreateAppTableRecordRequest.builder()
+            .app_token(app_token)
+            .table_id(table_id)
             .request_body(
-                BatchCreateAppTableRecordRequestBody.builder()
-                .records(record_models)
-                .build()
-            ).build()
+                BatchCreateAppTableRecordRequestBody.builder().records(record_models).build()
+            )
+            .build()
+        )
 
         resp = await self.client.bitable.v1.app_table_record.abatch_create(
             req, self._request_option(access_token)
@@ -871,10 +915,7 @@ class FeishuClient:
         self._check_response(resp, "bitable.v1.app_table_record.abatch_create")
 
         items = resp.data.records if resp.data and resp.data.records else []
-        return [
-            {"record_id": item.record_id, "fields": item.fields}
-            for item in items
-        ]
+        return [{"record_id": item.record_id, "fields": item.fields} for item in items]
 
     async def create_bitable_app(
         self,
@@ -896,13 +937,9 @@ class FeishuClient:
         if folder_token:
             body_builder = body_builder.folder_token(folder_token)
 
-        req = CreateAppRequest.builder() \
-            .request_body(body_builder.build()) \
-            .build()
+        req = CreateAppRequest.builder().request_body(body_builder.build()).build()
 
-        resp = await self.client.bitable.v1.app.acreate(
-            req, self._request_option(access_token)
-        )
+        resp = await self.client.bitable.v1.app.acreate(req, self._request_option(access_token))
         self._check_response(resp, "bitable.v1.app.acreate")
 
         app_token = resp.data.app.app_token if resp.data and resp.data.app else ""
@@ -932,26 +969,20 @@ class FeishuClient:
             {"table_id"}
         """
         headers = [
-            AppTableCreateHeader.builder()
-            .field_name(f["field_name"])
-            .type(int(f["type"]))
-            .build()
+            AppTableCreateHeader.builder().field_name(f["field_name"]).type(int(f["type"])).build()
             for f in (fields or [])
         ]
 
-        table_builder = ReqTable.builder() \
-            .name(table_name) \
-            .default_view_name(default_view_name)
+        table_builder = ReqTable.builder().name(table_name).default_view_name(default_view_name)
         if headers:
             table_builder = table_builder.fields(headers)
 
-        req = CreateAppTableRequest.builder() \
-            .app_token(app_token) \
-            .request_body(
-                CreateAppTableRequestBody.builder()
-                .table(table_builder.build())
-                .build()
-            ).build()
+        req = (
+            CreateAppTableRequest.builder()
+            .app_token(app_token)
+            .request_body(CreateAppTableRequestBody.builder().table(table_builder.build()).build())
+            .build()
+        )
 
         resp = await self.client.bitable.v1.app_table.acreate(
             req, self._request_option(access_token)
@@ -980,7 +1011,14 @@ class FeishuClient:
         """
         record = AppTableRecord.builder().fields(fields).build()
 
-        req = UpdateAppTableRecordRequest.builder()             .app_token(app_token)             .table_id(table_id)             .record_id(record_id)             .request_body(record)             .build()
+        req = (
+            UpdateAppTableRecordRequest.builder()
+            .app_token(app_token)
+            .table_id(table_id)
+            .record_id(record_id)
+            .request_body(record)
+            .build()
+        )
 
         resp = await self.client.bitable.v1.app_table_record.aupdate(req)
         self._check_response(resp, "bitable.v1.app_table_record.aupdate")
@@ -1001,10 +1039,7 @@ class FeishuClient:
         Returns:
             [{"table_id", "name"}]
         """
-        req = ListAppTableRequest.builder() \
-            .app_token(app_token) \
-            .page_size(100) \
-            .build()
+        req = ListAppTableRequest.builder().app_token(app_token).page_size(100).build()
 
         resp: ListAppTableResponse = await self.client.bitable.v1.app_table.alist(
             req, self._request_option(access_token)
@@ -1012,10 +1047,7 @@ class FeishuClient:
         self._check_response(resp, "bitable.v1.app_table.alist")
 
         items = resp.data.items if resp.data and resp.data.items else []
-        return [
-            {"table_id": t.table_id, "name": t.name}
-            for t in items
-        ]
+        return [{"table_id": t.table_id, "name": t.name} for t in items]
 
     async def list_bitable_fields(
         self,
@@ -1033,11 +1065,13 @@ class FeishuClient:
         Returns:
             [{"field_id", "field_name", "type", "ui_type", "is_primary"}]
         """
-        req = ListAppTableFieldRequest.builder() \
-            .app_token(app_token) \
-            .table_id(table_id) \
-            .page_size(100) \
+        req = (
+            ListAppTableFieldRequest.builder()
+            .app_token(app_token)
+            .table_id(table_id)
+            .page_size(100)
             .build()
+        )
 
         resp: ListAppTableFieldResponse = await self.client.bitable.v1.app_table_field.alist(
             req, self._request_option(access_token)
@@ -1077,19 +1111,21 @@ class FeishuClient:
         records: list[dict[str, Any]] = []
         page_token = ""
         while True:
-            builder = SearchAppTableRecordRequest.builder() \
-                .app_token(app_token) \
-                .table_id(table_id) \
+            builder = (
+                SearchAppTableRecordRequest.builder()
+                .app_token(app_token)
+                .table_id(table_id)
                 .page_size(500)
+            )
             if page_token:
                 builder = builder.page_token(page_token)
 
-            req = builder.request_body(
-                SearchAppTableRecordRequestBody.builder().build()
-            ).build()
+            req = builder.request_body(SearchAppTableRecordRequestBody.builder().build()).build()
 
-            resp: SearchAppTableRecordResponse = await self.client.bitable.v1.app_table_record.asearch(
-                req, self._request_option(access_token)
+            resp: SearchAppTableRecordResponse = (
+                await self.client.bitable.v1.app_table_record.asearch(
+                    req, self._request_option(access_token)
+                )
             )
             self._check_response(resp, "bitable.v1.app_table_record.asearch")
 

@@ -3,14 +3,15 @@ Creator Platform Plugin System - Type Definitions
 定义插件系统的所有数据类型和枚举
 """
 
-from enum import Enum
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class PluginCategory(str, Enum):
     """插件分类"""
+
     PLATFORM = "platform"  # 平台发布器
     DATASOURCE = "datasource"  # 数据源
     WORKFLOW_NODE = "workflow_node"  # 工作流节点
@@ -21,6 +22,7 @@ class PluginCategory(str, Enum):
 
 class PluginStatus(str, Enum):
     """插件状态"""
+
     PENDING_REVIEW = "pending_review"  # 待审核
     APPROVED = "approved"  # 已批准
     REJECTED = "rejected"  # 已拒绝
@@ -32,6 +34,7 @@ class PluginStatus(str, Enum):
 
 class PluginPermission(str, Enum):
     """插件权限声明"""
+
     NETWORK_HTTP = "network:http"
     NETWORK_HTTPS = "network:https"
     FILESYSTEM_READ = "filesystem:read"
@@ -44,6 +47,7 @@ class PluginPermission(str, Enum):
 @dataclass
 class PluginContext:
     """插件上下文，在插件初始化时注入"""
+
     plugin_id: str
     plugin_dir: str
     config: Dict[str, Any]
@@ -59,6 +63,7 @@ class PluginContext:
 @dataclass
 class ExecutionResult:
     """插件方法执行结果"""
+
     success: bool
     data: Any = None
     error: Optional[str] = None
@@ -78,6 +83,7 @@ class ExecutionResult:
 @dataclass
 class PublishResult:
     """平台发布结果"""
+
     success: bool
     platform_url: str = ""
     content_id: str = ""
@@ -95,6 +101,7 @@ class PublishResult:
 @dataclass
 class TrendingContent:
     """趋势内容数据结构"""
+
     platform: str
     content_id: str
     title: str
@@ -124,6 +131,7 @@ class TrendingContent:
 @dataclass
 class PluginManifest:
     """plugin.json 解析后的清单对象"""
+
     id: str
     name: str
     version: str
@@ -133,22 +141,22 @@ class PluginManifest:
     author_name: str = ""
     author_email: str = ""
     description: str = ""
-    
+
     capabilities: List[str] = field(default_factory=list)
     permissions: List[PluginPermission] = field(default_factory=list)
-    
+
     config_schema: Dict[str, Any] = field(default_factory=dict)
     dependencies: Dict[str, str] = field(default_factory=dict)
-    
+
     events_publishes: List[str] = field(default_factory=list)
     events_subscribes: List[str] = field(default_factory=list)
-    
+
     pricing_model: str = "free"  # free/freemium/paid
     price_monthly: float = 0.0
-    
+
     display_icon: str = "📦"
     display_color: str = "#6366f1"
-    
+
     raw_json: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -179,26 +187,27 @@ class PluginManifest:
     def validate(self) -> tuple[bool, List[str]]:
         """验证manifest的完整性和合法性"""
         errors = []
-        
+
         if not self.id or not isinstance(self.id, str):
             errors.append("id must be a non-empty string")
-        
+
         import re
-        if not re.match(r'^[a-z][a-z0-9_-]*$', self.id):
+
+        if not re.match(r"^[a-z][a-z0-9_-]*$", self.id):
             errors.append("id must match pattern: ^[a-z][a-z0-9_-]*$")
-            
+
         if not self.name or len(self.name) < 2 or len(self.name) > 64:
             errors.append("name must be 2-64 characters")
-            
-        if not re.match(r'^\d+\.\d+\.\d+$', self.version):
+
+        if not re.match(r"^\d+\.\d+\.\d+$", self.version):
             errors.append("version must match pattern: ^\\d+\\.\\d+\\.\\d+$")
-            
+
         if self.type not in PluginCategory:
             errors.append(f"type must be one of {[c.value for c in PluginCategory]}")
-            
+
         if self.pricing_model not in ["free", "freemium", "paid"]:
             errors.append("pricing.model must be free/freemium/paid")
-            
+
         if self.pricing_model == "paid" and self.price_monthly <= 0:
             errors.append("paid plugins must have price_monthly > 0")
 
@@ -208,6 +217,7 @@ class PluginManifest:
 @dataclass
 class PluginInstanceInfo:
     """运行时插件实例信息"""
+
     manifest: PluginManifest
     status: PluginStatus = PluginStatus.ACTIVE
     loaded_at: datetime = field(default_factory=datetime.now)

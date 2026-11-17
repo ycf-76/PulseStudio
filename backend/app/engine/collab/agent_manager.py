@@ -56,6 +56,7 @@ class CollabMode(str, Enum):
         Use this for conservative deployments.
       - disabled: spawn_agent tool is hidden from skill_map entirely.
     """
+
     EXPLICIT = "explicit"
     PROACTIVE = "proactive"
     DISABLED = "disabled"
@@ -67,6 +68,7 @@ class AgentPath:
 
     Represents the spawn tree: /root/research/writer
     """
+
     segments: list[str] = field(default_factory=lambda: ["root"])
 
     def join(self, child_name: str) -> AgentPath:
@@ -92,6 +94,7 @@ class AgentHandle:
     the full agent state, just a handle to query status and
     send messages.
     """
+
     agent_id: str
     name: str
     agent_path: AgentPath
@@ -104,9 +107,7 @@ class AgentHandle:
     completed_at: float | None = None
     result: Any = None
     error: str | None = None
-    _completion_event: asyncio.Event = field(
-        default_factory=asyncio.Event, repr=False
-    )
+    _completion_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
 
     def mark_running(self) -> None:
         self.status = AgentStatus.RUNNING
@@ -234,7 +235,8 @@ class AgentManager:
             )
 
         active_count = sum(
-            1 for h in self._agents.values()
+            1
+            for h in self._agents.values()
             if h.status in (AgentStatus.RUNNING, AgentStatus.PENDING)
         )
         if active_count >= self._max_concurrent:
@@ -275,10 +277,7 @@ class AgentManager:
         """
         agents = list(self._agents.values())
         if path_prefix:
-            agents = [
-                a for a in agents
-                if str(a.agent_path).startswith(path_prefix)
-            ]
+            agents = [a for a in agents if str(a.agent_path).startswith(path_prefix)]
         return agents
 
     def interrupt(self, agent_id: str) -> bool:
@@ -308,7 +307,8 @@ class AgentManager:
             "max_depth": self._max_depth,
             "status_counts": status_counts,
             "active_count": sum(
-                1 for h in self._agents.values()
+                1
+                for h in self._agents.values()
                 if h.status in (AgentStatus.RUNNING, AgentStatus.PENDING)
             ),
         }
@@ -334,9 +334,7 @@ class AgentManager:
                 logger.info(f"[agent-manager] cancelled running task: {agent_id}")
         # Wait for cancellations to propagate
         if self._running_tasks:
-            await asyncio.gather(
-                *self._running_tasks.values(), return_exceptions=True
-            )
+            await asyncio.gather(*self._running_tasks.values(), return_exceptions=True)
         self._running_tasks.clear()
 
         # Clear all agent handles
@@ -388,9 +386,7 @@ class AgentManager:
             handle.mark_running()
             try:
                 if self._agent_executor is not None:
-                    result = await self._agent_executor(
-                        agent_id, task_description
-                    )
+                    result = await self._agent_executor(agent_id, task_description)
                     handle.mark_completed(result=result)
                 else:
                     handle.mark_completed(result=task_description)
@@ -408,18 +404,23 @@ class AgentManager:
                         pass
                 if bus and handle.parent_id:
                     from app.engine.collab.message_bus import AgentMessage, MessageType
+
                     try:
                         await asyncio.wait_for(
-                            bus.send(AgentMessage(
-                                message_type=MessageType.RESULT,
-                                sender_id=agent_id,
-                                recipient_id=handle.parent_id,
-                                content=str(handle.result)[:500] if handle.result else "",
-                            )),
+                            bus.send(
+                                AgentMessage(
+                                    message_type=MessageType.RESULT,
+                                    sender_id=agent_id,
+                                    recipient_id=handle.parent_id,
+                                    content=str(handle.result)[:500] if handle.result else "",
+                                )
+                            ),
                             timeout=5.0,
                         )
                     except asyncio.TimeoutError:
-                        logger.warning(f"[agent-manager] bus.send timed out for {agent_id}, skipping")
+                        logger.warning(
+                            f"[agent-manager] bus.send timed out for {agent_id}, skipping"
+                        )
                     except Exception:
                         pass
                 if observer is not None:
@@ -441,8 +442,10 @@ class AgentManager:
                 if session_id:
                     try:
                         from app.engine.collab.persistence import update_agent_status
+
                         await update_agent_status(
-                            session_id, agent_id,
+                            session_id,
+                            agent_id,
                             handle.status.value,
                             error=handle.error,
                         )

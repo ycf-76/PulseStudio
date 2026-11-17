@@ -71,7 +71,7 @@ class MultiImageVideoInput(BaseModel):
         default_factory=list,
         max_length=10,
         description="参考图 asset_id 列表（1-10 张）。"
-                    "refine_shots 模式（用户已确认分镜）下可省略，由系统沿用首次那份",
+        "refine_shots 模式（用户已确认分镜）下可省略，由系统沿用首次那份",
     )
     prompt: str = Field(
         min_length=5,
@@ -109,7 +109,7 @@ class MultiImageVideoInput(BaseModel):
     refine_shots: list[dict[str, Any]] | None = Field(
         default=None,
         description="微调模式：传入用户确认（或编辑）后的分镜列表，"
-                    "这是触发视频生成的唯一入口，缺省时一律只返回分镜草稿",
+        "这是触发视频生成的唯一入口，缺省时一律只返回分镜草稿",
     )
     refine_image_asset_ids: list[str] | None = Field(
         default=None,
@@ -118,16 +118,14 @@ class MultiImageVideoInput(BaseModel):
     refine_title: str | None = Field(
         default=None,
         description="微调模式的视频标题。refine 会跳过 VL+LLM，"
-                    "靠它保留用户确认时看到的那个标题（不给则退回 prompt 前 30 字）",
+        "靠它保留用户确认时看到的那个标题（不给则退回 prompt 前 30 字）",
     )
 
     @model_validator(mode="after")
     def _require_images_unless_refining(self) -> "MultiImageVideoInput":
         """首次编排必须有参考图；refine_shots（用户已确认分镜）模式可省略。"""
         if self.refine_shots is None and not self.image_asset_ids:
-            raise ValueError(
-                "image_asset_ids 至少需要 1 张；仅 refine_shots 模式下可省略"
-            )
+            raise ValueError("image_asset_ids 至少需要 1 张；仅 refine_shots 模式下可省略")
         return self
 
 
@@ -135,14 +133,19 @@ class MultiImageVideoInput(BaseModel):
 # VL 理解 / 分镜编排 / 参考图解析现在是可被 REST 接口（W4）与 ReAct 入口
 # 双向调用的纯 service。以下同名再导出保持旧调用点与既有测试的
 # patch 靶点（capabilities.video.skills.multi_image_video.*）不变。
-from capabilities.video.services.video_orchestrator import (  # noqa: E402
+from capabilities.video.services.video_orchestrator import (
     _STORYBOARD_PROMPT,
     _VL_SCENE_PROMPT,
+)
+from capabilities.video.services.video_orchestrator import (  # noqa: E402
     generate_storyboard as _generate_storyboard,
+)
+from capabilities.video.services.video_orchestrator import (
     resolve_reference_images as _resolve_image_urls,
+)
+from capabilities.video.services.video_orchestrator import (
     vl_understand_images as _vl_understand_images,
 )
-
 
 
 async def _generate_shot_frames(
@@ -174,9 +177,9 @@ async def _generate_shot_frames(
         return shots
 
     try:
-        from capabilities.image_gen.adapters.image_gen import WanxAdapter
-        from app.services.model_tier import PipelineStage, get_tier_router
         from app.services.asset_library import save_asset
+        from app.services.model_tier import PipelineStage, get_tier_router
+        from capabilities.image_gen.adapters.image_gen import WanxAdapter
 
         router = get_tier_router()
         t2i_model = router.resolve(PipelineStage.TEXT2IMAGE, "t2i")
@@ -291,7 +294,7 @@ async def _generate_shot_clips(
     """
     import time as _time
 
-    from capabilities.video.skills.video_gen import _resolve_adapter, VideoGenError
+    from capabilities.video.skills.video_gen import VideoGenError, _resolve_adapter
 
     try:
         adapter, provider_name = _resolve_adapter(provider)
@@ -491,12 +494,14 @@ async def _compose_kenburns(
             if not local:
                 degradation.append(f"关键帧无法转本地路径，跳过：{frame_url[:60]}")
                 continue
-            kb_shots.append({
-                "caption": s.get("caption", ""),
-                "image": local,
-                "duration": s.get("duration", 5.0),
-                "motion": "ken-burns",
-            })
+            kb_shots.append(
+                {
+                    "caption": s.get("caption", ""),
+                    "image": local,
+                    "duration": s.get("duration", 5.0),
+                    "motion": "ken-burns",
+                }
+            )
         if not kb_shots:
             degradation.append("无可用的本地关键帧，ken-burns 合成取消")
             return None, degradation
@@ -512,12 +517,14 @@ async def _compose_kenburns(
         output_dir.mkdir(parents=True, exist_ok=True)
         # 产物隔离：兜底片同样带镜头指纹，防止同标题的不同作品互相覆盖
         _kb_key = hashlib.md5(
-            "|".join(
-                f"{s.get('image', '')}@{s.get('duration', 5.0)}" for s in kb_shots
-            ).encode("utf-8")
+            "|".join(f"{s.get('image', '')}@{s.get('duration', 5.0)}" for s in kb_shots).encode(
+                "utf-8"
+            )
         ).hexdigest()[:8]
         final_path = output_dir / f"{title[:20]}_{_kb_key}_kenburns.mp4"
-        result_path = await compose_video(storyboard=storyboard, output_path=str(final_path), pad_mode="auto")
+        result_path = await compose_video(
+            storyboard=storyboard, output_path=str(final_path), pad_mode="auto"
+        )
         degradation.append(f"已回退 ken-burns 图片合成（{len(kb_shots)} 镜）")
         return result_path.read_bytes(), degradation
     except Exception as e:
@@ -611,7 +618,9 @@ async def _expand_grid_images(
                 out_locals.append(url_to_local_path(asset["original_url"]) or str(t))
 
             expanded_any = True
-            logger.info(f"[grid] {Path(local).name} 判定为 {det.rows}x{det.cols} 拼图，已拆成 {len(tiles)} 张")
+            logger.info(
+                f"[grid] {Path(local).name} 判定为 {det.rows}x{det.cols} 拼图，已拆成 {len(tiles)} 张"
+            )
         except Exception as e:
             # 拆不动就退回原图：素材绝不能因为拆分失败而丢失
             logger.warning(f"[grid] 拆分失败，保留原图 {local}：{e}")
@@ -647,8 +656,8 @@ async def _render_kenburns_clips(
 
     纯本地 ffmpeg，无外部依赖；已有片段复用，重跑不重复渲染。
     """
-    from capabilities.video.adapters.video_compose import compose_video
     from app.services.asset_library import url_to_local_path
+    from capabilities.video.adapters.video_compose import compose_video
 
     out_dir = _OUTPUT_DIR / user_id / "multi_image_video" / "_kb_clips"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -667,9 +676,7 @@ async def _render_kenburns_clips(
         # 产物隔离：缓存键带上「这一镜的关键帧」，不能只按镜号。
         # 此前同用户两个会话做不同视频时，镜号相同就命中对方留下的片段，
         # 成片里混进别的作品的画面。同帧重跑仍能命中缓存，隔离与复用兼得。
-        _key = hashlib.md5(
-            f"{frame_url}|{s.get('duration', 5.0)}".encode("utf-8")
-        ).hexdigest()[:8]
+        _key = hashlib.md5(f"{frame_url}|{s.get('duration', 5.0)}".encode("utf-8")).hexdigest()[:8]
         out = out_dir / f"kb_{idx:03d}_{_key}.mp4"
         if not out.exists() or out.stat().st_size == 0:
             # caption 必须留空：compose_video 见 caption 就会自动烧一层字幕，
@@ -678,16 +685,16 @@ async def _render_kenburns_clips(
             storyboard = {
                 "size": size_map.get(ratio, "1080x1920"),
                 "image_motion": "ken-burns",
-                "shots": [{
-                    "caption": "",
-                    "image": local,
-                    "duration": s.get("duration", 5.0),
-                    "motion": "ken-burns",
-                }],
+                "shots": [
+                    {
+                        "caption": "",
+                        "image": local,
+                        "duration": s.get("duration", 5.0),
+                        "motion": "ken-burns",
+                    }
+                ],
             }
-            await compose_video(
-                storyboard=storyboard, output_path=str(out), pad_mode="auto"
-            )
+            await compose_video(storyboard=storyboard, output_path=str(out), pad_mode="auto")
         if out.exists() and out.stat().st_size > 0:
             result[idx] = str(out)
     return result
@@ -723,9 +730,7 @@ async def _compose_final(
     if ken_burns_shots:
         try:
             kb_clip_by_idx = await _render_kenburns_clips(shots, ratio, user_id, size_map)
-            degradation.append(
-                f"{len(kb_clip_by_idx)} 个 ken-burns 镜头已转为视频片段参与拼接"
-            )
+            degradation.append(f"{len(kb_clip_by_idx)} 个 ken-burns 镜头已转为视频片段参与拼接")
         except Exception as e:
             logger.warning(f"[multi_image_video] ken-burns 镜头转片段失败：{e}")
             _log_compose_failure("kenburns_clips", e, user_id=user_id, shots=len(shots))
@@ -789,7 +794,10 @@ async def _compose_final(
         durations = [float(s.get("duration", 5.0)) for s in used_shots]
         try:
             return await burn_subtitles(
-                path, used_shots, durations, path,
+                path,
+                used_shots,
+                durations,
+                path,
                 size=size_map.get(ratio, "1080x1920"),
             )
         except Exception as e:
@@ -812,7 +820,8 @@ async def _compose_final(
     except Exception as e:
         logger.warning(f"[multi_image_video] video_concat 失败，尝试简单拼接：{e}")
         _log_compose_failure(
-            "concat", e,
+            "concat",
+            e,
             user_id=user_id,
             video_clips=len(video_clips),
             resolved_clip_urls=len(clip_urls),
@@ -833,7 +842,8 @@ async def _compose_final(
         except Exception as e2:
             logger.warning(f"[multi_image_video] 简单拼接也失败，回退 ken-burns：{e2}")
             _log_compose_failure(
-                "concat_simple", e2,
+                "concat_simple",
+                e2,
                 user_id=user_id,
                 video_clips=len(video_clips),
                 resolved_clip_urls=len(clip_urls),
@@ -875,9 +885,17 @@ class MultiImageVideoSkill(Skill):
     skill_category = "create"
     skill_priority = "hot"
     trigger_words = [
-        "多图生视频", "用这些图做视频", "根据图片生成视频",
-        "参考图做视频", "图片场景生成视频", "多图视频",
-        "做视频", "生成视频", "视频", "图片做视频", "照片做视频",
+        "多图生视频",
+        "用这些图做视频",
+        "根据图片生成视频",
+        "参考图做视频",
+        "图片场景生成视频",
+        "多图视频",
+        "做视频",
+        "生成视频",
+        "视频",
+        "图片做视频",
+        "照片做视频",
     ]
     input_schema = MultiImageVideoInput
 
@@ -889,9 +907,13 @@ class MultiImageVideoSkill(Skill):
         if not user_id:
             return {"error": "未能确认用户身份"}
 
-        params = MultiImageVideoInput.model_validate({
-            key: value for key, value in inputs.items() if key in MultiImageVideoInput.model_fields
-        })
+        params = MultiImageVideoInput.model_validate(
+            {
+                key: value
+                for key, value in inputs.items()
+                if key in MultiImageVideoInput.model_fields
+            }
+        )
 
         # asset_id 守卫（2026-10-14）：拦截 LLM 幻觉的假 ID（img_1 这类），
         # 失败时回带本会话 available_asset_ids 让它用真值自纠，
@@ -915,15 +937,21 @@ class MultiImageVideoSkill(Skill):
             if not workflow_id:
                 return
             from app.services.sse_bus import sse_bus
+
             pct = int(step / total * 100)
-            await sse_bus.publish(workflow_id, "multi_image_video_progress", {
-                "skill": "multi_image_video",
-                "step": step,
-                "total": total,
-                "label": label,
-                "detail": detail,
-                "percent": pct,
-            }, turn_id=_turn_id or None)
+            await sse_bus.publish(
+                workflow_id,
+                "multi_image_video_progress",
+                {
+                    "skill": "multi_image_video",
+                    "step": step,
+                    "total": total,
+                    "label": label,
+                    "detail": detail,
+                    "percent": pct,
+                },
+                turn_id=_turn_id or None,
+            )
 
         # ── 微调模式：跳过 VL+LLM，从 Step 3 开始 ──
         if params.refine_shots is not None:
@@ -934,9 +962,13 @@ class MultiImageVideoSkill(Skill):
                 _refine_kwargs["_character_lock"] = _char_lock_from_input
 
             return await self._execute_refine(
-                params, str(user_id), workflow_id, _emit_step,
-                session_id=_session_id, turn_id=_turn_id,
-                **_refine_kwargs
+                params,
+                str(user_id),
+                workflow_id,
+                _emit_step,
+                session_id=_session_id,
+                turn_id=_turn_id,
+                **_refine_kwargs,
             )
 
         # Step 1: VL 理解参考图
@@ -944,7 +976,9 @@ class MultiImageVideoSkill(Skill):
         await _emit_step(1, 6, "VL理解参考图", f"分析{len(params.image_asset_ids)}张参考图...")
 
         try:
-            image_urls, image_local_paths = await _resolve_image_urls(params.image_asset_ids, str(user_id))
+            image_urls, image_local_paths = await _resolve_image_urls(
+                params.image_asset_ids, str(user_id)
+            )
         except ValueError as e:
             return {"error": str(e)}
 
@@ -988,27 +1022,35 @@ class MultiImageVideoSkill(Skill):
                 return
             from app.services.sse_bus import sse_bus
 
-            await sse_bus.publish(workflow_id, "card_draft_ready", {
-                "card_draft": {
-                    "title": f"分镜预览 - {title}",
-                    "template": "storyboard_preview",
-                    "pages": [{
-                        "id": f"shot_{s.get('shot_index', i+1)}",
-                        "type": "content",
-                        "mediaType": "image",
-                        "title": s.get("caption", f"第{i+1}镜"),
-                        "imagePrompt": s.get("image_prompt", ""),
-                        "motionPrompt": s.get("motion_prompt", ""),
-                        "duration": s.get("duration", params.shot_duration),
-                        "transition": s.get("transition", "cut"),
-                        "referenceImages": s.get("reference_images", []),
-                    } for i, s in enumerate(shots)],
-                    "pngUrls": [],
-                    "htmlUrls": [],
+            await sse_bus.publish(
+                workflow_id,
+                "card_draft_ready",
+                {
+                    "card_draft": {
+                        "title": f"分镜预览 - {title}",
+                        "template": "storyboard_preview",
+                        "pages": [
+                            {
+                                "id": f"shot_{s.get('shot_index', i+1)}",
+                                "type": "content",
+                                "mediaType": "image",
+                                "title": s.get("caption", f"第{i+1}镜"),
+                                "imagePrompt": s.get("image_prompt", ""),
+                                "motionPrompt": s.get("motion_prompt", ""),
+                                "duration": s.get("duration", params.shot_duration),
+                                "transition": s.get("transition", "cut"),
+                                "referenceImages": s.get("reference_images", []),
+                            }
+                            for i, s in enumerate(shots)
+                        ],
+                        "pngUrls": [],
+                        "htmlUrls": [],
+                    },
+                    "png_urls": [],
+                    "html_urls": [],
                 },
-                "png_urls": [],
-                "html_urls": [],
-            }, turn_id=_turn_id or None)
+                turn_id=_turn_id or None,
+            )
 
         def _build_preview(needs_confirmation: bool) -> dict[str, Any]:
             result: dict[str, Any] = {
@@ -1021,8 +1063,8 @@ class MultiImageVideoSkill(Skill):
                 "estimated_duration": len(shots) * params.shot_duration,
                 "degradation": degradation_notes,
                 "hint": "编辑 shots 中任意镜的 image_prompt/motion_prompt/duration/transition 后，"
-                        "通过 refine_shots 参数传回即可生成视频。"
-                        "也可增删镜头（shots 列表长度可变）。",
+                "通过 refine_shots 参数传回即可生成视频。"
+                "也可增删镜头（shots 列表长度可变）。",
             }
             if needs_confirmation:
                 result["needs_confirmation"] = True
@@ -1055,9 +1097,13 @@ class MultiImageVideoSkill(Skill):
         # 从 storyboard 提取角色锚定（2026-10-18）
         character_lock = storyboard.get("character_lock", "")
         if character_lock:
-            logger.info(f"[multi_image_video] 检测到角色锚定 (长度={len(character_lock)})，将注入所有镜头")
+            logger.info(
+                f"[multi_image_video] 检测到角色锚定 (长度={len(character_lock)})，将注入所有镜头"
+            )
         else:
-            logger.warning("[multi_image_video] 未检测到角色锚定，各镜头将独立生成（可能存在换脸风险）")
+            logger.warning(
+                "[multi_image_video] 未检测到角色锚定，各镜头将独立生成（可能存在换脸风险）"
+            )
 
         shots = await _generate_shot_frames(
             shots, params.ratio, str(user_id), image_urls, character_lock=character_lock
@@ -1072,14 +1118,18 @@ class MultiImageVideoSkill(Skill):
             from app.services.sse_bus import sse_bus
 
             async def _clip_progress(elapsed: float, max_wait: float, status: str) -> None:
-                await sse_bus.publish(workflow_id, "multi_image_video_progress", {
-                    "skill": "multi_image_video",
-                    "step": 4,
-                    "total": 6,
-                    "label": "逐镜生成视频",
-                    "detail": f"轮询中 {elapsed:.0f}s/{max_wait:.0f}s 状态={status}",
-                    "percent": 50 + int(elapsed / max_wait * 15),
-                })
+                await sse_bus.publish(
+                    workflow_id,
+                    "multi_image_video_progress",
+                    {
+                        "skill": "multi_image_video",
+                        "step": 4,
+                        "total": 6,
+                        "label": "逐镜生成视频",
+                        "detail": f"轮询中 {elapsed:.0f}s/{max_wait:.0f}s 状态={status}",
+                        "percent": 50 + int(elapsed / max_wait * 15),
+                    },
+                )
 
             clip_on_progress = _clip_progress
 
@@ -1147,23 +1197,30 @@ class MultiImageVideoSkill(Skill):
             card_draft = {
                 "title": f"多图视频 - {title}",
                 "template": "video",
-                "pages": [{
-                    "id": "page_video",
-                    "type": "content",
-                    "mediaType": "video",
-                    "title": title,
-                    "videoUrl": video_url,
-                    "width": 1280,
-                    "height": 720,
-                }],
+                "pages": [
+                    {
+                        "id": "page_video",
+                        "type": "content",
+                        "mediaType": "video",
+                        "title": title,
+                        "videoUrl": video_url,
+                        "width": 1280,
+                        "height": 720,
+                    }
+                ],
                 "pngUrls": [],
                 "htmlUrls": [],
             }
-            await sse_bus.publish(workflow_id, "card_draft_ready", {
-                "card_draft": card_draft,
-                "png_urls": [],
-                "html_urls": [],
-            }, turn_id=_turn_id or None)
+            await sse_bus.publish(
+                workflow_id,
+                "card_draft_ready",
+                {
+                    "card_draft": card_draft,
+                    "png_urls": [],
+                    "html_urls": [],
+                },
+                turn_id=_turn_id or None,
+            )
 
         return {
             "success": True,
@@ -1206,7 +1263,7 @@ class MultiImageVideoSkill(Skill):
             return {
                 "error": "refine 模式缺少参考图：请把 image_asset_ids（首次那批）一起传回",
                 "hint": "refine_shots 可省略 image_asset_ids，但系统仍需要它来定位关键帧素材；"
-                        "首次调用返回的 image_urls 即对应关系",
+                "首次调用返回的 image_urls 即对应关系",
             }
         degradation_notes: list[str] = ["微调模式：跳过 VL+LLM，使用用户编辑的分镜"]
 
@@ -1249,7 +1306,9 @@ class MultiImageVideoSkill(Skill):
         character_lock = kwargs.get("_character_lock", "") or ""
         if not character_lock and shots and isinstance(shots, list) and len(shots) > 0:
             # 尝试从第一个 shot 的元数据中获取（如果用户编辑时保留）
-            character_lock = shots[0].get("character_lock", "") if isinstance(shots[0], dict) else ""
+            character_lock = (
+                shots[0].get("character_lock", "") if isinstance(shots[0], dict) else ""
+            )
 
         if character_lock:
             logger.info(f"[refine] 检测到角色锚定 (长度={len(character_lock)})，将注入所有镜头")
@@ -1271,14 +1330,19 @@ class MultiImageVideoSkill(Skill):
             from app.services.sse_bus import sse_bus
 
             async def _clip_progress(elapsed: float, max_wait: float, status: str) -> None:
-                await sse_bus.publish(workflow_id, "multi_image_video_progress", {
-                    "skill": "multi_image_video",
-                    "step": 4,
-                    "total": 6,
-                    "label": "逐镜生成视频",
-                    "detail": f"轮询中 {elapsed:.0f}s/{max_wait:.0f}s 状态={status}",
-                    "percent": 50 + int(elapsed / max_wait * 15),
-                }, turn_id=turn_id or None)
+                await sse_bus.publish(
+                    workflow_id,
+                    "multi_image_video_progress",
+                    {
+                        "skill": "multi_image_video",
+                        "step": 4,
+                        "total": 6,
+                        "label": "逐镜生成视频",
+                        "detail": f"轮询中 {elapsed:.0f}s/{max_wait:.0f}s 状态={status}",
+                        "percent": 50 + int(elapsed / max_wait * 15),
+                    },
+                    turn_id=turn_id or None,
+                )
 
             clip_on_progress = _clip_progress
 
@@ -1295,7 +1359,10 @@ class MultiImageVideoSkill(Skill):
         # Step 5: 拼接
         await emit_step(5, 6, "拼接成片", "ffmpeg 拼接视频片段...")
         final_bytes, compose_degradation = await _compose_final(
-            shots=shots, ratio=params.ratio, user_id=user_id, title=title,
+            shots=shots,
+            ratio=params.ratio,
+            user_id=user_id,
+            title=title,
         )
         degradation_notes.extend(compose_degradation)
 
@@ -1313,6 +1380,7 @@ class MultiImageVideoSkill(Skill):
         await emit_step(6, 6, "保存交付", "存储视频素材...")
 
         from app.services.asset_library import save_video_asset
+
         asset = await save_video_asset(
             user_id=user_id,
             filename=f"{title[:20]}_refine.mp4",
@@ -1332,27 +1400,35 @@ class MultiImageVideoSkill(Skill):
 
         if workflow_id:
             from app.services.sse_bus import sse_bus
+
             card_draft = {
                 "title": f"微调视频 - {title}",
                 "template": "video",
-                "pages": [{
-                    "id": "page_video",
-                    "type": "content",
-                    "mediaType": "video",
-                    "title": title,
-                    "videoUrl": video_url,
-                    "width": 1280,
-                    "height": 720,
-                }],
+                "pages": [
+                    {
+                        "id": "page_video",
+                        "type": "content",
+                        "mediaType": "video",
+                        "title": title,
+                        "videoUrl": video_url,
+                        "width": 1280,
+                        "height": 720,
+                    }
+                ],
                 "pngUrls": [],
                 "htmlUrls": [],
             }
             logger.info(f"[refine] publishing card_draft_ready to workflow_id={workflow_id!r}")
-            await sse_bus.publish(workflow_id, "card_draft_ready", {
-                "card_draft": card_draft,
-                "png_urls": [],
-                "html_urls": [],
-            }, turn_id=turn_id or None)
+            await sse_bus.publish(
+                workflow_id,
+                "card_draft_ready",
+                {
+                    "card_draft": card_draft,
+                    "png_urls": [],
+                    "html_urls": [],
+                },
+                turn_id=turn_id or None,
+            )
         else:
             logger.warning(f"[refine] workflow_id is empty, cannot publish card_draft_ready")
 

@@ -16,50 +16,61 @@ import json
 import os
 import tempfile
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+
 from app.agents.clarification_schema import (
+    ClarifyDepends,
     ClarifyFieldMeta,
     ClarifyOption,
     ClarifyWhen,
-    ClarifyDepends,
 )
 
 
-@pytest.mark.skip(reason="旧 _is_ambiguous 随 app.engine.harness 删除；模糊判定现由 clarify_meta 的 ClarifyWhen.ambiguous 声明承担（clarification_schema.py），规则式关键词判定已退役")
+@pytest.mark.skip(
+    reason="旧 _is_ambiguous 随 app.engine.harness 删除；模糊判定现由 clarify_meta 的 ClarifyWhen.ambiguous 声明承担（clarification_schema.py），规则式关键词判定已退役"
+)
 class TestAmbiguousDetection:
     def test_l1_keyword_sui_bian(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("style", {"style": "随便"}, {}) is True
 
     def test_l1_keyword_bang_wo_zuo(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("topic", {"topic": "帮我做一个图"}, {}) is True
 
     def test_l1_keyword_dou_xing(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("style", {"style": "都行"}, {}) is True
 
     def test_l2_short_value(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("topic", {"topic": "护肤"}, {}) is True
 
     def test_not_ambiguous_explicit_value(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("topic", {"topic": "我想写一篇关于秋冬护肤的种草笔记"}, {}) is False
 
     def test_not_ambiguous_already_clarified(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("style", {"style": "casual"}, {"style": "casual"}) is False
 
     def test_ambiguous_missing_value(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("style", {}, {}) is True
 
     def test_ambiguous_empty_value(self):
         from app.engine.harness.executor.loop import _is_ambiguous
+
         assert _is_ambiguous("style", {"style": ""}, {}) is True
 
 
@@ -69,6 +80,7 @@ class TestIntentFilter:
 
     def _trigger_types(self):
         from app.engine.reactor.session import ReactorSession
+
         session = ReactorSession(llm=None, primitives=[], skills=[])
         return session._CLARIFY_TRIGGER_NODE_TYPES
 
@@ -118,7 +130,7 @@ class TestWhenAlwaysDedup:
 
 class TestQuestionIdFormat:
     def test_question_id_includes_skill_name(self):
-        from app.agents.clarification_graph import collect_clarify_fields, build_batches
+        from app.agents.clarification_graph import build_batches, collect_clarify_fields
 
         class FakeSkill:
             name = "xhs_note_creator"
@@ -164,7 +176,9 @@ class TestClarificationTimeout:
 
     def test_not_timed_out(self):
         import time as _time
+
         from app.engine.reactor.loop_state import check_clarification_timeout
+
         state = {
             "_awaiting_clarification": True,
             "_saved_at": _time.time(),
@@ -173,7 +187,9 @@ class TestClarificationTimeout:
 
     def test_timed_out_expired(self):
         import time as _time
-        from app.engine.reactor.loop_state import check_clarification_timeout, _STATE_TTL_SECONDS
+
+        from app.engine.reactor.loop_state import _STATE_TTL_SECONDS, check_clarification_timeout
+
         state = {
             "_awaiting_clarification": True,
             "_saved_at": _time.time() - (_STATE_TTL_SECONDS + 10),
@@ -182,7 +198,9 @@ class TestClarificationTimeout:
 
     def test_timed_out_custom_timeout(self):
         import time as _time
+
         from app.engine.reactor.loop_state import check_clarification_timeout
+
         state = {
             "_awaiting_clarification": True,
             "_saved_at": _time.time() - 200,
@@ -192,11 +210,13 @@ class TestClarificationTimeout:
 
     def test_no_clarification_not_timed_out(self):
         from app.engine.reactor.loop_state import check_clarification_timeout
+
         state = {"_awaiting_clarification": False}
         assert check_clarification_timeout(state) == "ok"
 
     def test_expired_flag_forces_expired(self):
         from app.engine.reactor.loop_state import check_clarification_timeout
+
         state = {"_clarification_expired": True, "_saved_at": 0}
         assert check_clarification_timeout(state) == "expired"
 
@@ -204,6 +224,7 @@ class TestClarificationTimeout:
 class TestConcurrentFileLock:
     def test_lock_per_path(self):
         from app.engine.reactor.loop_state import _get_lock
+
         lock1 = _get_lock("/tmp/test_state_1.json")
         lock2 = _get_lock("/tmp/test_state_2.json")
         lock3 = _get_lock("/tmp/test_state_1.json")
@@ -212,6 +233,7 @@ class TestConcurrentFileLock:
 
     def test_lock_acquire_release(self):
         from app.engine.reactor.loop_state import _get_lock
+
         # 新实现为 RLock（无 locked() 方法，那是 Lock 的 API），
         # 验证点改为：同线程可重入不死锁 + 完全释放后可重新加锁
         lock = _get_lock("/tmp/test_lock_rr.json")
@@ -309,7 +331,12 @@ class TestLoopStateTimestamp:
 
     def test_save_loop_state_adds_saved_at_epoch(self):
         import time as _time
-        from app.engine.reactor.loop_state import save_loop_state, load_loop_state, cleanup_loop_state
+
+        from app.engine.reactor.loop_state import (
+            cleanup_loop_state,
+            load_loop_state,
+            save_loop_state,
+        )
 
         before = _time.time()
         state = {

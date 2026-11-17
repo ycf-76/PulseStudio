@@ -53,6 +53,7 @@ async def subscribe_chat(
         },
     )
 
+
 @router.get("/notifications")
 async def subscribe_notifications(
     request: Request,

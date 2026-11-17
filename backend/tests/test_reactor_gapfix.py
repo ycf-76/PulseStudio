@@ -5,6 +5,7 @@
 2. vl_analyze：不再依赖 skill_call 注入的文本 LLM，惰性构建
    QwenVLAdapter；显式注入 llm 时走注入路径。解析/工具函数纯单测。
 """
+
 from __future__ import annotations
 
 import base64
@@ -12,10 +13,10 @@ from pathlib import Path
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Fix 1: sandbox extra roots
 # ---------------------------------------------------------------------------
+
 
 def test_outputs_dir_allowed_for_read_write(tmp_path):
     from app.engine.reactor.file_ops_core import read_file, write_file
@@ -46,10 +47,14 @@ def test_outputs_path_relative_to_custom_workspace_rejected():
     from app.core.context_vars import current_workspace_root
     from app.engine.reactor.file_ops_core import resolve_and_guard
 
-    token = current_workspace_root.set(str(tmp_cwd := Path(__file__).resolve().parents[1] / "app" / "data" / "workspace"))
+    token = current_workspace_root.set(
+        str(tmp_cwd := Path(__file__).resolve().parents[1] / "app" / "data" / "workspace")
+    )
     try:
         # 绝对路径 → 放行
-        p = resolve_and_guard(str(tmp_cwd.parent.parent.parent / "outputs" / "_gapfix_test" / "a.txt"))
+        p = resolve_and_guard(
+            str(tmp_cwd.parent.parent.parent / "outputs" / "_gapfix_test" / "a.txt")
+        )
         assert "outputs" in str(p)
         # 相对路径落在 workspace 内 → 放行
         assert resolve_and_guard("x.txt").is_relative_to(tmp_cwd)
@@ -60,6 +65,7 @@ def test_outputs_path_relative_to_custom_workspace_rejected():
 # ---------------------------------------------------------------------------
 # Fix 2: vl_analyze
 # ---------------------------------------------------------------------------
+
 
 def _png_b64() -> str:
     # 1x1 红色 PNG
@@ -134,7 +140,9 @@ def test_vl_analyze_helpers():
     assert _flatten_content([{"text": "a"}, {"text": "b"}]) == "ab"
     assert _flatten_content("plain") == "plain"
     # JSON 解析 + markdown 包裹容错
-    parsed = _parse_analysis('前言 ```json\n{"tags": ["t1"], "mood": "m", "composition": "c", "color_palette": ["x"]}\n``` 后记')
+    parsed = _parse_analysis(
+        '前言 ```json\n{"tags": ["t1"], "mood": "m", "composition": "c", "color_palette": ["x"]}\n``` 后记'
+    )
     assert parsed["tags"] == ["t1"] and parsed["mood"] == "m"
     # 完全不合法 → 降级不抛错
     fallback = _parse_analysis("不是 JSON 的输出")

@@ -2,6 +2,7 @@
 
 10 项检查覆盖所有改动点，全部打印 OK/FAIL，退出码 = 失败数。
 """
+
 from __future__ import annotations
 
 import sys
@@ -75,13 +76,21 @@ check("grid._service_url() 走 capability_loader", grid_url() == get_capability_
 print("\n6. browser_capability 访问层")
 from app.services.browser_capability import _service_url as browser_url
 
-check("browser._service_url() 走 capability_loader", browser_url() == get_capability_service_url("browser"))
+check(
+    "browser._service_url() 走 capability_loader",
+    browser_url() == get_capability_service_url("browser"),
+)
 
 # ─── 7. _SERVICE_URL_FIELDS 映射完整 ───
 print("\n7. _SERVICE_URL_FIELDS 映射")
 from app.core.capability_loader import _SERVICE_URL_FIELDS
 
-expected = {"grid": "grid_service_url", "browser": "browser_service_url", "media": "media_service_url", "spider": "spider_service_url"}
+expected = {
+    "grid": "grid_service_url",
+    "browser": "browser_service_url",
+    "media": "media_service_url",
+    "spider": "spider_service_url",
+}
 check("映射完整", _SERVICE_URL_FIELDS == expected)
 
 # ─── 8. Settings 仍有 service_url 字段（向后兼容） ───

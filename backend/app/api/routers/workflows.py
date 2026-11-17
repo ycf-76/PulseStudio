@@ -53,7 +53,9 @@ class PublishRequest(BaseModel):
     )
 
 
-async def _resolve_account(account_id: str | None, platform: str, user_id: str) -> PlatformAccount | None:
+async def _resolve_account(
+    account_id: str | None, platform: str, user_id: str
+) -> PlatformAccount | None:
     """校验 account_id 归属与平台匹配，避免用别人的账号发布（IDOR）。"""
     if not account_id:
         return None
@@ -112,7 +114,8 @@ async def _publish(platform: str, body: PublishRequest, user_id: str) -> dict[st
     return {
         "status": status,
         "post_id": "",
-        "message": result.get("message", "") or (f"{label}发布完成" if status == "success" else f"{label}发布失败"),
+        "message": result.get("message", "")
+        or (f"{label}发布完成" if status == "success" else f"{label}发布失败"),
         "platform": platform,
         "url": result.get("url", ""),
         "screenshot_base64": result.get("screenshot_base64", ""),

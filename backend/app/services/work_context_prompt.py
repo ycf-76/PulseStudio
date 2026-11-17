@@ -330,7 +330,7 @@ def video_analysis_lines(wc: dict) -> list[str]:
         "",
         "=== 视频口播内容 ===",
         "这条作品是视频，正文为空，口播内容没有随记录一起采集。",
-        "需要拆解口播/文案结构时，先转写再分析：skill_call(skill=\"video_transcribe\", arguments={})",
+        '需要拆解口播/文案结构时，先转写再分析：skill_call(skill="video_transcribe", arguments={})',
         "video_path 会由系统从作品的本地缓存视频自动注入，不要自己编造路径，也不要让用户手动上传。",
         "转写失败（返回空片段）时如实说明「无法获取口播内容」，基于标题/标签/指标分析，不要虚构台词。",
     ]
@@ -352,7 +352,9 @@ def build_work_context_prompt(wc: dict) -> str:
     if wc.get("tags"):
         parts.append(f"🏷️ 标签: {wc['tags']}")
     if wc.get("metrics") or wc.get("performanceTier"):
-        parts.append(f"⭐ 数据表现: {wc.get('performanceTier') or ''} {wc.get('metrics') or ''}".strip())
+        parts.append(
+            f"⭐ 数据表现: {wc.get('performanceTier') or ''} {wc.get('metrics') or ''}".strip()
+        )
 
     content_text = str(wc.get("contentText") or "").strip()
     if content_text:
@@ -369,9 +371,7 @@ def build_work_context_prompt(wc: dict) -> str:
         pages = card_draft.get("pages")
         if isinstance(pages, list) and pages:
             blocks = summarize_card_pages(pages)
-            parts.append(
-                "\n🖼️ 当前视觉组图卡片（重新编排时必须基于这些内容，不得凭空编造）："
-            )
+            parts.append("\n🖼️ 当前视觉组图卡片（重新编排时必须基于这些内容，不得凭空编造）：")
             parts.append(f"共 {len(pages)} 页，逐页文字如下（已剥离 HTML 样式，只保留可见文案）：")
             parts.extend(blocks)
             recipe = str(card_draft.get("recipe") or "").strip()

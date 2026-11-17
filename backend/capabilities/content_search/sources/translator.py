@@ -151,6 +151,7 @@ async def translate_text(
             create_async_client,
             get_proxy_url,
         )
+
         client = await create_async_client(
             timeout=httpx.Timeout(_REQUEST_TIMEOUT),
             headers={"User-Agent": "multi-agent-xhs-platform/1.0"},
@@ -177,7 +178,11 @@ async def translate_text(
             response_data = data.get("responseData") or {}
             translated = (response_data.get("translatedText") or "").strip()
             # MyMemory 配额耗尽或异常时会返回 WARNING 或 QUOTA EXCEEDED 文本
-            if translated and "QUOTA" not in translated.upper() and "WARNING" not in translated.upper():
+            if (
+                translated
+                and "QUOTA" not in translated.upper()
+                and "WARNING" not in translated.upper()
+            ):
                 _CACHE[cache_key] = translated
                 return translated
         # 解析失败，返回原文

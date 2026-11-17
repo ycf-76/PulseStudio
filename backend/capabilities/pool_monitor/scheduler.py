@@ -15,11 +15,10 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import func, select, desc
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from sqlalchemy import desc, func, select
 
 from app.db.session import AsyncSessionLocal
 from app.pool_monitor.config import get_pool_settings
@@ -41,6 +40,7 @@ async def _get_active_user_ids(limit: int = _ACTIVE_USER_LIMIT) -> list[str]:
     """
     try:
         from app.db.models import AgentMemory
+
         async with AsyncSessionLocal() as session:
             stmt = (
                 select(AgentMemory.user_id, func.count().label("cnt"))

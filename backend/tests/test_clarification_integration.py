@@ -93,9 +93,17 @@ class TestReactorSessionClarificationFlow:
 
         mock_llm = AsyncMock()
         mock_llm.stream_chat = AsyncMock(return_value=AsyncMock())
-        mock_llm.stream_chat.return_value.__aiter__ = lambda self: iter([
-            {"content": json.dumps({"thought": "done", "final": True, "output": {"summary": "ok"}}), "is_final": True, "token_usage": 10}
-        ])
+        mock_llm.stream_chat.return_value.__aiter__ = lambda self: iter(
+            [
+                {
+                    "content": json.dumps(
+                        {"thought": "done", "final": True, "output": {"summary": "ok"}}
+                    ),
+                    "is_final": True,
+                    "token_usage": 10,
+                }
+            ]
+        )
 
         sse_bus = AsyncMock()
         sse_bus.publish = AsyncMock()
@@ -109,7 +117,13 @@ class TestReactorSessionClarificationFlow:
         )
 
         async def _fake_stream(messages):
-            yield {"content": json.dumps({"thought": "done", "final": True, "output": {"summary": "ok"}}), "is_final": True, "token_usage": 10}
+            yield {
+                "content": json.dumps(
+                    {"thought": "done", "final": True, "output": {"summary": "ok"}}
+                ),
+                "is_final": True,
+                "token_usage": 10,
+            }
 
         mock_llm.stream_chat = _fake_stream
 
@@ -129,32 +143,40 @@ class TestReactorSessionClarificationFlow:
             call_count += 1
             if call_count == 1:
                 yield {
-                    "content": json.dumps({
-                        "thought": "用户没指定骨架，我先问一下",
-                        "tool_calls": [{
-                            "name": "ask_user_question",
-                            "arguments": {
-                                "title": "创作偏好确认",
-                                "skill": "compose_card_deck",
-                                "questions": [{
-                                    "id": "q_0",
-                                    "question": "选择骨架类型",
-                                    "type": "single_choice",
-                                    "options": [
-                                        {"label": "干货清单", "value": "bullet_list"},
-                                        {"label": "步骤教程", "value": "step_by_step"},
-                                    ],
-                                }],
-                            },
-                        }],
-                        "final": False,
-                    }),
+                    "content": json.dumps(
+                        {
+                            "thought": "用户没指定骨架，我先问一下",
+                            "tool_calls": [
+                                {
+                                    "name": "ask_user_question",
+                                    "arguments": {
+                                        "title": "创作偏好确认",
+                                        "skill": "compose_card_deck",
+                                        "questions": [
+                                            {
+                                                "id": "q_0",
+                                                "question": "选择骨架类型",
+                                                "type": "single_choice",
+                                                "options": [
+                                                    {"label": "干货清单", "value": "bullet_list"},
+                                                    {"label": "步骤教程", "value": "step_by_step"},
+                                                ],
+                                            }
+                                        ],
+                                    },
+                                }
+                            ],
+                            "final": False,
+                        }
+                    ),
                     "is_final": True,
                     "token_usage": 50,
                 }
             else:
                 yield {
-                    "content": json.dumps({"thought": "done", "final": True, "output": {"summary": "ok"}}),
+                    "content": json.dumps(
+                        {"thought": "done", "final": True, "output": {"summary": "ok"}}
+                    ),
                     "is_final": True,
                     "token_usage": 10,
                 }
@@ -186,20 +208,24 @@ class TestReactorSessionClarificationFlow:
 
         async def _fake_stream(messages):
             yield {
-                "content": json.dumps({
-                    "thought": "用户已确认偏好，直接执行",
-                    "tool_calls": [{
-                        "name": "skill_call",
-                        "arguments": {
-                            "skill": "compose_card_deck",
-                            "arguments": {
-                                "recipe_id": "bullet_list",
-                                "theme_id": "minimal_white",
-                            },
-                        },
-                    }],
-                    "final": False,
-                }),
+                "content": json.dumps(
+                    {
+                        "thought": "用户已确认偏好，直接执行",
+                        "tool_calls": [
+                            {
+                                "name": "skill_call",
+                                "arguments": {
+                                    "skill": "compose_card_deck",
+                                    "arguments": {
+                                        "recipe_id": "bullet_list",
+                                        "theme_id": "minimal_white",
+                                    },
+                                },
+                            }
+                        ],
+                        "final": False,
+                    }
+                ),
                 "is_final": True,
                 "token_usage": 50,
             }
@@ -249,8 +275,16 @@ class TestLoopStateRoundTrip:
             "messages": [
                 {"role": "system", "content": "system prompt"},
                 {"role": "user", "content": "做图文卡片"},
-                {"role": "assistant", "content": json.dumps({"thought": "需要澄清", "tool_calls": [], "final": False})},
-                {"role": "user", "content": "[observation] 用户确认了创作偏好: recipe_id=bullet_list"},
+                {
+                    "role": "assistant",
+                    "content": json.dumps(
+                        {"thought": "需要澄清", "tool_calls": [], "final": False}
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": "[observation] 用户确认了创作偏好: recipe_id=bullet_list",
+                },
             ],
             "iteration": 1,
             "context_snapshot": {

@@ -129,6 +129,7 @@ class VideoWorker:
             self._running_jobs.add(job["id"])
             started = time.monotonic()
             try:
+
                 async def _report(pct: int) -> None:
                     await video_studio_service.update_job_progress(job["id"], pct)
 

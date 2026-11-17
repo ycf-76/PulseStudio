@@ -13,6 +13,7 @@
   - 卡出现前顶带无卡文字像素、卡窗口顶带有卡文字像素（说到才弹）
   - SFX 事件时刻清单打印（供用户听感核对）
 """
+
 import asyncio
 import json
 import subprocess
@@ -29,8 +30,8 @@ OUT_FRAMES = BACKEND / "outputs" / "talking_head_overlay" / "live14_frames"
 async def main() -> None:
     from PIL import Image
 
-    from capabilities.video.adapters.silence_detect import probe_duration
     from capabilities.video.adapters.html_to_video import resolve_ffmpeg
+    from capabilities.video.adapters.silence_detect import probe_duration
     from capabilities.video.skills.smart_cut import SmartCutSkill
     from capabilities.video.skills.talking_head_overlay import (
         TalkingHeadOverlaySkill,
@@ -44,25 +45,32 @@ async def main() -> None:
     # ── 阶段0：智能裁剪 ──
     print("[live14] 阶段0 smart_cut（plan 轮）")
     sc = SmartCutSkill()
-    plan = await sc.execute({
-        "video_path": str(VIDEO),
-        "detect_fluff": True,
-        "chain_with_overlay": True,
-    })
+    plan = await sc.execute(
+        {
+            "video_path": str(VIDEO),
+            "detect_fluff": True,
+            "chain_with_overlay": True,
+        }
+    )
     assert plan.get("mode") == "plan", plan
     cands = plan["plan"]["candidates"]
-    print(f"    规划 {len(cands)} 刀："
-          + "; ".join(f"{c['cut_type']} {c['start']:.1f}-{c['end']:.1f}s"
-                      for c in cands))
-    cut = await sc.execute({
-        "video_path": str(VIDEO),
-        "refine_candidates": cands,
-        "chain_with_overlay": True,
-    })
+    print(
+        f"    规划 {len(cands)} 刀："
+        + "; ".join(f"{c['cut_type']} {c['start']:.1f}-{c['end']:.1f}s" for c in cands)
+    )
+    cut = await sc.execute(
+        {
+            "video_path": str(VIDEO),
+            "refine_candidates": cands,
+            "chain_with_overlay": True,
+        }
+    )
     assert "output_path" in cut, cut
     cut_path, kept = cut["output_path"], cut["kept_segments"]
-    print(f"    裁剪 {cut['original_duration']:.2f} → "
-          f"{cut['cut_duration']:.2f}s（{cut['cuts_applied']} 刀）")
+    print(
+        f"    裁剪 {cut['original_duration']:.2f} → "
+        f"{cut['cut_duration']:.2f}s（{cut['cuts_applied']} 刀）"
+    )
     cut_dur = await probe_duration(cut_path)
 
     # ── 阶段1：decor 首轮（转录 → deck 规划 → 停点） ──
@@ -91,17 +99,23 @@ async def main() -> None:
     data = json.loads(slides_json.read_text(encoding="utf-8"))
     slides, theme, n = data["slides"], data.get("theme"), len(data["slides"])
     triggers = [
-        (s.get("trigger") or {}).get("text", "") if isinstance(
-            s.get("trigger"), dict) else str(s.get("trigger") or "")
+        (
+            (s.get("trigger") or {}).get("text", "")
+            if isinstance(s.get("trigger"), dict)
+            else str(s.get("trigger") or "")
+        )
         for s in slides
     ]
     print(f"[live14] 断言1：{n} 页 theme={theme} triggers={triggers}")
 
     # ── 阶段2：approve 回调轮（触发式弹卡 + SFX 合成） ──
     print("[live14] 阶段2 approve（触发式弹卡 + SFX 合成）")
-    ev2 = await run_round({
-        "deck_confirm": "approve", "deck_slides_json": str(slides_json),
-    })
+    ev2 = await run_round(
+        {
+            "deck_confirm": "approve",
+            "deck_slides_json": str(slides_json),
+        }
+    )
     done = next(e for e in ev2 if e.get("event") == "decor_done")
     out = Path(done["data"]["output_path"])
     dur = await probe_duration(str(out))
@@ -115,9 +129,7 @@ async def main() -> None:
     print(f"[live14] 断言2：effect=pop，SFX={sfx}，windows={wins}")
 
     # ── 断言3：触发对齐 — 卡窗 start == 词流中 trigger 词 start ──
-    rows = json.loads(
-        (slides_json.parent / "transcript_rows.json").read_text("utf-8")
-    )
+    rows = json.loads((slides_json.parent / "transcript_rows.json").read_text("utf-8"))
     aligned = 0
     for i, (a, _b) in enumerate(wins):
         tg = triggers[i] if i < len(triggers) else ""
@@ -137,8 +149,7 @@ async def main() -> None:
     def grab(t: float, name: str) -> Path:
         fp = OUT_FRAMES / name
         subprocess.run(
-            [ff, "-y", "-ss", f"{max(0.0, t):.2f}", "-i", str(out),
-             "-frames:v", "1", str(fp)],
+            [ff, "-y", "-ss", f"{max(0.0, t):.2f}", "-i", str(out), "-frames:v", "1", str(fp)],
             capture_output=True,
         )
         return fp
@@ -167,22 +178,29 @@ async def main() -> None:
         # 卡带顶部黑色渐变压暗：亮背景 → 白像素显著下降；
         # 中性背景 → 近黑像素显著上升（渐变 + 描边）
         ok = (wd < wb * 0.85 and wd > 1000) or (dd > db * 1.3 + 300)
-        print(f"    卡{i} 顶带 白 前{wb}/中{wd} 黑 前{db}/中{dd}"
-              f" → {'可见' if ok else '未检出'}（pop 帧 {pop0.name}）")
+        print(
+            f"    卡{i} 顶带 白 前{wb}/中{wd} 黑 前{db}/中{dd}"
+            f" → {'可见' if ok else '未检出'}（pop 帧 {pop0.name}）"
+        )
         if ok:
             checked += 1
-    print(f"[live14] 断言4：卡可见对 {checked}/"
-          f"{max(0, min(3, len(wins)))} 窗")
+    print(f"[live14] 断言4：卡可见对 {checked}/" f"{max(0, min(3, len(wins)))} 窗")
     assert checked >= 1, "卡窗口顶带未检出卡带像素 — 卡可能未渲染"
 
     # SFX 时刻清单（供听感核对：卡入场瞬间应有短音效）
-    print(f"[live14] SFX 事件："
-          + ", ".join(f"{s}@{a:.2f}s" for s, (a, _b) in zip(sfx, [
-              w for w in wins if w[0] >= 0.15][:len(sfx)])))
+    print(
+        f"[live14] SFX 事件："
+        + ", ".join(
+            f"{s}@{a:.2f}s"
+            for s, (a, _b) in zip(sfx, [w for w in wins if w[0] >= 0.15][: len(sfx)])
+        )
+    )
 
-    print(f"[live14] PASS：全链 {src_dur:.2f}s → {dur:.2f}s"
-          f"（省 {cut['saved_seconds']:.2f}s），{n} 卡（触发对齐 {aligned}），"
-          f"SFX {len(sfx)} 处，theme={theme}")
+    print(
+        f"[live14] PASS：全链 {src_dur:.2f}s → {dur:.2f}s"
+        f"（省 {cut['saved_seconds']:.2f}s），{n} 卡（触发对齐 {aligned}），"
+        f"SFX {len(sfx)} 处，theme={theme}"
+    )
     print(f"[live14] 成片：{out}")
     print(f"[live14] 抽帧：{OUT_FRAMES}（请连播成片实看 + 听 SFX 裁决）")
 

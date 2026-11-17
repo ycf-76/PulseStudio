@@ -14,7 +14,6 @@ POST /api/v1/chat/confirm-storyboard 的确定性回放。
 from __future__ import annotations
 
 import asyncio
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -35,13 +34,21 @@ PENDING_ARGS = {
 
 STORED_SHOTS = [
     {
-        "shot_index": 1, "caption": "到达·拖箱进门", "image_prompt": "arrival",
-        "motion_prompt": "推进", "reference_images": [1], "duration": 5.0,
+        "shot_index": 1,
+        "caption": "到达·拖箱进门",
+        "image_prompt": "arrival",
+        "motion_prompt": "推进",
+        "reference_images": [1],
+        "duration": 5.0,
         "transition": "cut",
     },
     {
-        "shot_index": 2, "caption": "房间·落地窗山景", "image_prompt": "room",
-        "motion_prompt": "由床推向窗", "reference_images": [2], "duration": 5.0,
+        "shot_index": 2,
+        "caption": "房间·落地窗山景",
+        "image_prompt": "room",
+        "motion_prompt": "由床推向窗",
+        "reference_images": [2],
+        "duration": 5.0,
         "transition": "dissolve",
     },
 ]
@@ -54,7 +61,8 @@ def _seed_state(tmp_path, *, shots=None, pending_args=None, with_pending=True):
         "context_snapshot": {"workflow_id": "wf_confirm", "extra": {}},
         "pending_skill_call": (
             {"name": "multi_image_video", "arguments": dict(pending_args or PENDING_ARGS)}
-            if with_pending else {}
+            if with_pending
+            else {}
         ),
         "storyboard": {
             "title": "山也度假酒店 vlog",
@@ -93,7 +101,9 @@ async def test_confirm_replays_with_edited_shots(tmp_path, monkeypatch):
         with patch("app.api.routers.chat_agent.sse_bus.publish", new=AsyncMock()):
             res = await confirm_storyboard_action(
                 StoryboardConfirmRequest(
-                    session_id="s1", loop_state_path=path, shots=edited,
+                    session_id="s1",
+                    loop_state_path=path,
+                    shots=edited,
                 ),
                 user_id="u1",
                 db=MagicMock(),
@@ -150,7 +160,9 @@ async def test_confirm_with_empty_shots_is_rejected(tmp_path):
             with pytest.raises(HTTPException) as exc:
                 await confirm_storyboard_action(
                     StoryboardConfirmRequest(
-                        session_id="s1", loop_state_path=path, shots=[],
+                        session_id="s1",
+                        loop_state_path=path,
+                        shots=[],
                     ),
                     user_id="u1",
                     db=MagicMock(),
@@ -171,7 +183,9 @@ async def test_cancel_never_generates(tmp_path):
         with patch("app.api.routers.chat_agent.sse_bus.publish", new=AsyncMock()):
             res = await confirm_storyboard_action(
                 StoryboardConfirmRequest(
-                    session_id="s1", loop_state_path=path, action="cancel",
+                    session_id="s1",
+                    loop_state_path=path,
+                    action="cancel",
                 ),
                 user_id="u1",
                 db=MagicMock(),
@@ -193,7 +207,8 @@ async def test_missing_state_returns_404(tmp_path):
             with pytest.raises(HTTPException) as exc:
                 await confirm_storyboard_action(
                     StoryboardConfirmRequest(
-                        session_id="s1", loop_state_path="loop_does_not_exist",
+                        session_id="s1",
+                        loop_state_path="loop_does_not_exist",
                     ),
                     user_id="u1",
                     db=MagicMock(),
@@ -228,9 +243,13 @@ async def test_state_without_pending_call_is_rejected(tmp_path):
 async def test_failed_generation_reports_failure_and_cleans_up(tmp_path):
     """回放后生成失败 → 如实返回 failed，不假装成功；状态同样清理"""
     path = _seed_state(tmp_path)
-    primitive = _mock_primitive({
-        "success": False, "error": "成片拼接失败", "clip_urls": ["/uploads/c1.mp4"],
-    })
+    primitive = _mock_primitive(
+        {
+            "success": False,
+            "error": "成片拼接失败",
+            "clip_urls": ["/uploads/c1.mp4"],
+        }
+    )
     publish = AsyncMock()
 
     with patch("app.engine.reactor.primitives.SkillCallPrimitive", return_value=primitive):
@@ -251,7 +270,11 @@ async def test_failed_generation_reports_failure_and_cleans_up(tmp_path):
         f"publish 从未被调用：后台任务未执行或未发事件。res={res}, "
         f"execute_called={primitive.execute.await_count}"
     )
-    resolved = [c for c in publish.await_args_list if len(c.args) > 1 and c.args[1] == "storyboard_confirmation_resolved"]
+    resolved = [
+        c
+        for c in publish.await_args_list
+        if len(c.args) > 1 and c.args[1] == "storyboard_confirmation_resolved"
+    ]
     assert resolved, f"未发 resolved 事件: {[c.args for c in publish.await_args_list]}"
     assert resolved[-1].args[2]["ok"] is False
     with pytest.raises(FileNotFoundError):

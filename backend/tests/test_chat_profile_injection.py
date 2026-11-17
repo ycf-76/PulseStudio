@@ -1,5 +1,9 @@
 import pytest
-pytest.skip("app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现", allow_module_level=True)
+
+pytest.skip(
+    "app.engine.harness 已删除（loop 重构合并入 reactor），本文件测退役实现",
+    allow_module_level=True,
+)
 
 """Chat 链路画像注入测试（D18）。
 
@@ -16,12 +20,11 @@ import asyncio
 
 import pytest
 
+from app.core.skill_base import Skill
+from app.engine.governance.request_queue import LLMRequestQueue
 from app.engine.harness.executor.loop import LoopExecutor
 from app.engine.harness.runtime import AgentHarness
 from app.engine.schemas import AgentOutput, WorkflowContext
-from app.engine.governance.request_queue import LLMRequestQueue
-from app.core.skill_base import Skill
-
 
 # ============================================================================
 # 公共 mock 基建（与 test_loop_executor_smoke 同款风格）
@@ -154,8 +157,8 @@ _FAKE_PROFILE_DICT = {
 
 def test_skill_receives_user_profile_via_soft_inject(monkeypatch):
     """有画像时，工具调用参数里带 user_profile（DB 唯一事实来源，LLM 传什么都不算）。"""
-    from app.services import profile_service as ps_mod
     from app.core.context_vars import current_db_session
+    from app.services import profile_service as ps_mod
 
     class _FakeProfile:
         def model_dump(self, mode="json"):
@@ -189,8 +192,8 @@ def test_skill_receives_user_profile_via_soft_inject(monkeypatch):
 
 def test_skill_no_profile_no_inject_and_no_error(monkeypatch):
     """无画像：参数里没有 user_profile，chat 正常完成（软注入不拦）。"""
-    from app.services import profile_service as ps_mod
     from app.core.context_vars import current_db_session
+    from app.services import profile_service as ps_mod
 
     async def _fake_cached(db, user_id):
         return None
@@ -216,8 +219,8 @@ def test_skill_no_profile_no_inject_and_no_error(monkeypatch):
 
 def test_skill_profile_read_failure_degrades_silently(monkeypatch):
     """画像读取抛异常：静默降级，chat 不挂。"""
-    from app.services import profile_service as ps_mod
     from app.core.context_vars import current_db_session
+    from app.services import profile_service as ps_mod
 
     async def _fake_cached(db, user_id):
         raise RuntimeError("db exploded")
@@ -250,19 +253,13 @@ def test_profile_prompt_in_llm_messages(monkeypatch):
     llm = _ScriptedLLM([_final_response("好的")])
     harness = _harness(llm, [skill])
 
-    asyncio.run(
-        harness.run(
-            {"topic": "你好", "profile_prompt": profile_prompt}, _context()
-        )
-    )
+    asyncio.run(harness.run({"topic": "你好", "profile_prompt": profile_prompt}, _context()))
 
     assert llm.seen_messages, "LLM 应被调用"
-    system_msgs = [
-        m["content"] for m in llm.seen_messages[0] if m.get("role") == "system"
-    ]
-    assert any("创作者画像" in c for c in system_msgs), (
-        f"messages 应包含画像 system 消息: {system_msgs}"
-    )
+    system_msgs = [m["content"] for m in llm.seen_messages[0] if m.get("role") == "system"]
+    assert any(
+        "创作者画像" in c for c in system_msgs
+    ), f"messages 应包含画像 system 消息: {system_msgs}"
 
 
 def test_no_profile_prompt_no_extra_system_message(monkeypatch):
@@ -273,9 +270,7 @@ def test_no_profile_prompt_no_extra_system_message(monkeypatch):
 
     asyncio.run(harness.run({"topic": "你好"}, _context()))
 
-    system_msgs = [
-        m["content"] for m in llm.seen_messages[0] if m.get("role") == "system"
-    ]
+    system_msgs = [m["content"] for m in llm.seen_messages[0] if m.get("role") == "system"]
     assert all("创作者画像" not in c for c in system_msgs)
 
 

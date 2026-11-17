@@ -14,6 +14,7 @@
   - render_htmls（Playwright/Chromium 重依赖，五期-A browser-service）
 同机部署共享文件系统，传路径即可；跨机部署时在工具实现内改传 base64。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -74,6 +75,7 @@ async def emit_progress(event: dict[str, Any]) -> None:
 
 # ---------- grid 工具（同步 CPU 函数统一 to_thread） ----------
 
+
 def _tool_grid_detect(image_path: str) -> dict[str, Any]:
     det = detect_grid(image_path)
     return det.to_dict()
@@ -86,6 +88,7 @@ def _tool_grid_split(image_path: str, out_dir: str, detection: dict[str, Any]) -
 
 
 # ---------- browser 工具（五期-A：Playwright 隔离进程） ----------
+
 
 async def _tool_render_htmls(pages_json: str, output_dir: str = "") -> dict[str, Any]:
     """HTML 列表 → PNG 列表（Playwright 渲染）。
@@ -115,6 +118,7 @@ async def _tool_render_htmls(pages_json: str, output_dir: str = "") -> dict[str,
 
 # ---------- media 工具（五期-D：onnx/ffmpeg 隔离进程） ----------
 
+
 async def _tool_tts_piper(
     text: str,
     output_path: str,
@@ -133,7 +137,9 @@ async def _tool_tts_piper(
     return {"ok": True, "output_path": result}
 
 
-async def _tool_video_compose(storyboard_json: str, output_path: str = "", pad_mode: str = "auto", sub_font: str = "") -> dict[str, Any]:
+async def _tool_video_compose(
+    storyboard_json: str, output_path: str = "", pad_mode: str = "auto", sub_font: str = ""
+) -> dict[str, Any]:
     """ffmpeg 视频合成（分钟级长任务）。
 
     Args:
@@ -155,6 +161,7 @@ async def _tool_video_compose(storyboard_json: str, output_path: str = "", pad_m
 
 
 # ---------- spider 工具（五期-E：Scrapling+Playwright 隔离进程） ----------
+
 
 async def _tool_spider_sync(
     account_id: str,
@@ -214,6 +221,7 @@ class CallRequest(BaseModel):
 
 # ---------- 协议三方法 ----------
 
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
     return {"ok": True, "service": "capability-service", "tools": len(CAPABILITY_TOOLS)}
@@ -250,8 +258,10 @@ async def call_tool(name: str, req: CallRequest) -> dict[str, Any]:
 
 # ---------- 五期-C：进度事件回推端点 ----------
 
+
 class ProgressEventRequest(BaseModel):
     """服务进程回推给主进程的进度事件。"""
+
     workflow_id: str
     event_type: str
     payload: dict[str, Any] = {}

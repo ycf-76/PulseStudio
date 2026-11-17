@@ -116,7 +116,9 @@ async def init_capabilities() -> dict[str, Any]:
                 importlib.import_module(module_path)
                 loaded_skills += 1
             except Exception as e:
-                logger.warning(f"[capability_loader] {cap_name}: import skill {module_path} failed: {e}")
+                logger.warning(
+                    f"[capability_loader] {cap_name}: import skill {module_path} failed: {e}"
+                )
 
         init_fn = cap_cfg.get("init")
         init_ok = None

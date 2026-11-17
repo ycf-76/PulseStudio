@@ -7,39 +7,64 @@
 4) 12 套纸色互不相同（不再出现 5/9 暖米纸色挤在一起的问题）；
 5) 强调色轴的 CSS 与运行时映射正确（.accent-i / theme_accent_class / set_accent 入参）。
 """
+
 import pytest
 
 from app.cards.color import contrast
+from app.cards.operations import EDIT_OPS
+from app.cards.renderer import to_card_draft
 from app.cards.schema import (
     THEMES,
-    ThemeId,
     CardDeck,
     CardPage,
-    theme_css,
-    theme_accent_class,
+    ThemeId,
     _accessible_accents,
+    theme_accent_class,
+    theme_css,
 )
-from app.cards.renderer import to_card_draft
-from app.cards.operations import EDIT_OPS
-
 
 EXPECTED_IDS = [
-    "ink", "warm", "swiss", "inkwash", "cream", "terminal",
-    "dopamine", "luxe_noir", "journal", "forest", "dune", "botanical",
+    "ink",
+    "warm",
+    "swiss",
+    "inkwash",
+    "cream",
+    "terminal",
+    "dopamine",
+    "luxe_noir",
+    "journal",
+    "forest",
+    "dune",
+    "botanical",
 ]
 
 
 def _minimal_deck(theme_id: str = "swiss") -> CardDeck:
-    return CardDeck(deck_id="deck_01", title="x", theme_id=theme_id, pages=[
-        CardPage(id="page_01", role="cover", layout_id="cover_display", blocks=[
-            {"id": "h1", "type": "heading", "text": "封面"},
-            {"id": "t1", "type": "text", "text": "副标题"},
-        ]),
-        CardPage(id="page_02", role="body", layout_id="content_text", blocks=[
-            {"id": "h2", "type": "heading", "text": "说明"},
-            {"id": "t2", "type": "text", "text": "一段话"},
-        ]),
-    ])
+    return CardDeck(
+        deck_id="deck_01",
+        title="x",
+        theme_id=theme_id,
+        pages=[
+            CardPage(
+                id="page_01",
+                role="cover",
+                layout_id="cover_display",
+                blocks=[
+                    {"id": "h1", "type": "heading", "text": "封面"},
+                    {"id": "t1", "type": "text", "text": "副标题"},
+                ],
+            ),
+            CardPage(
+                id="page_02",
+                role="body",
+                layout_id="content_text",
+                blocks=[
+                    {"id": "h2", "type": "heading", "text": "说明"},
+                    {"id": "t2", "type": "text", "text": "一段话"},
+                ],
+            ),
+        ],
+    )
 
 
 def test_all_twelve_theme_ids_present():
@@ -102,4 +127,4 @@ def test_accent_index_default_backward_compatible():
     deck = _minimal_deck("ink")
     assert deck.accent_index == 0
     draft = to_card_draft(deck)
-    assert "accent-" not in draft["pages"][0]["htmlContent"].split("class=\"card")[1].split("\"")[0]
+    assert "accent-" not in draft["pages"][0]["htmlContent"].split('class="card')[1].split('"')[0]

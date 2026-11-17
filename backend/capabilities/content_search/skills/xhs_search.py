@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 from app.core.skill_base import Skill
-from app.engine.schemas import Permission
 from app.core.skill_registry import register
+from app.engine.schemas import Permission
 
 if TYPE_CHECKING:
     from app.adapters.llm_base import LLMProtocol
@@ -52,7 +52,9 @@ class XhsSearchSkill(Skill):
 
     node_type = "search"
     name = "xhs_search"
-    description = "搜索小红书笔记。仅在用户明确要求搜索小红书内容时调用。不要在分析/追问/闲聊场景调用"
+    description = (
+        "搜索小红书笔记。仅在用户明确要求搜索小红书内容时调用。不要在分析/追问/闲聊场景调用"
+    )
     input_schema = XhsSearchInput
     output_schema = XhsNoteSummary
     required_permissions = [Permission.XHS_SEARCH]
@@ -110,7 +112,7 @@ class XhsSearchSkill(Skill):
         cleaned.sort(key=lambda r: r["likes"], reverse=True)
 
         # 5. 截断到 limit
-        final_results = cleaned[:in_.limit]
+        final_results = cleaned[: in_.limit]
 
         summary = self._summarize_result(
             total_raw=len(raw_results),
@@ -142,16 +144,13 @@ class XhsSearchSkill(Skill):
         """返回 XhsSpiderSource 实例（替代已移除的 MCPClientManager）。"""
         try:
             from capabilities.content_search.sources.xhs_spider_source import XhsSpiderSource
+
             source = XhsSpiderSource()
             if not source._check_storage_state():
-                raise RuntimeError(
-                    "小红书登录态不可用：请先扫码登录小红书以生成 storageState"
-                )
+                raise RuntimeError("小红书登录态不可用：请先扫码登录小红书以生成 storageState")
             return source
         except ImportError:
-            raise RuntimeError(
-                "XhsSpiderSource 不可用：scrapling 爬虫框架未安装"
-            )
+            raise RuntimeError("XhsSpiderSource 不可用：scrapling 爬虫框架未安装")
 
     @staticmethod
     def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
@@ -170,9 +169,13 @@ class XhsSearchSkill(Skill):
             "url": str(raw.get("url", "")).strip(),
             "cover_img": str(raw.get("cover_img", "")).strip(),
             "author": str(raw.get("author", "")).strip(),
-            "author_fans": int(raw["author_fans"]) if raw.get("author_fans") not in (None, "") else None,
+            "author_fans": (
+                int(raw["author_fans"]) if raw.get("author_fans") not in (None, "") else None
+            ),
             "published_at": str(raw.get("published_at", "")).strip() or None,
-            "collects": int(raw.get("collects", 0) or 0) if raw.get("collects") not in (None, "") else None,
+            "collects": (
+                int(raw.get("collects", 0) or 0) if raw.get("collects") not in (None, "") else None
+            ),
             "note_type": str(raw.get("note_type", "")).strip() or None,
             "tags": raw.get("tags") if isinstance(raw.get("tags"), list) else None,
         }

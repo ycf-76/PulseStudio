@@ -15,21 +15,25 @@ from typing import Any
 
 from app.engine.schemas import Permission
 
-WRITE_PERMISSIONS: frozenset[Permission] = frozenset({
-    Permission.FILE_WRITE,
-    Permission.BASH_EXEC,
-    Permission.NET_HTTP_POST,
-    Permission.SKILL_IMPORT,
-    Permission.SKILL_MANAGE,
-    Permission.BROWSER_AUTOMATE,
-    Permission.WORK_WRITE,
-})
+WRITE_PERMISSIONS: frozenset[Permission] = frozenset(
+    {
+        Permission.FILE_WRITE,
+        Permission.BASH_EXEC,
+        Permission.NET_HTTP_POST,
+        Permission.SKILL_IMPORT,
+        Permission.SKILL_MANAGE,
+        Permission.BROWSER_AUTOMATE,
+        Permission.WORK_WRITE,
+    }
+)
 
-_READONLY_PERMISSIONS: frozenset[Permission] = frozenset({
-    Permission.FILE_READ,
-    Permission.NET_HTTP_GET,
-    Permission.XHS_SEARCH,
-})
+_READONLY_PERMISSIONS: frozenset[Permission] = frozenset(
+    {
+        Permission.FILE_READ,
+        Permission.NET_HTTP_GET,
+        Permission.XHS_SEARCH,
+    }
+)
 
 _PERM_CN = {
     Permission.FILE_WRITE: "写文件",
@@ -71,7 +75,9 @@ def describe_write_request(
     write_perms: set[Permission],
 ) -> str:
     """生成给用户确认弹窗看的一句话描述。"""
-    perm_labels = "、".join(_PERM_CN.get(p, p.value) for p in sorted(write_perms, key=lambda x: x.value))
+    perm_labels = "、".join(
+        _PERM_CN.get(p, p.value) for p in sorted(write_perms, key=lambda x: x.value)
+    )
     args_preview = json.dumps(arguments, ensure_ascii=False, default=str)
     if len(args_preview) > 200:
         args_preview = args_preview[:200] + "…"

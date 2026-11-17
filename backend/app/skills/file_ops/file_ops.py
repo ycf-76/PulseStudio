@@ -12,20 +12,19 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.engine.schemas import Permission
 from app.core.skill_base import Skill
 from app.core.skill_registry import register
-from app.engine.reactor.file_ops_core import (
-    edit_file as _core_edit,
-    read_file as _core_read,
-    resolve_and_guard,
-    workspace_root as _workspace_root,
-    write_file as _core_write,
-)
+from app.engine.reactor.file_ops_core import edit_file as _core_edit
+from app.engine.reactor.file_ops_core import read_file as _core_read
+from app.engine.reactor.file_ops_core import resolve_and_guard
+from app.engine.reactor.file_ops_core import workspace_root as _workspace_root
+from app.engine.reactor.file_ops_core import write_file as _core_write
+from app.engine.schemas import Permission
 
 # ---------------------------------------------------------------------------
 # PathGuard
 # ---------------------------------------------------------------------------
+
 
 def _workspace_root() -> Path:
     """Return the workspace root, guarding all file operations.
@@ -69,15 +68,14 @@ def _resolve_and_guard(raw_path: str) -> Path:
     try:
         p.relative_to(ws)
     except ValueError:
-        raise ValueError(
-            f"path {raw_path!r} resolves to {p}, which is outside workspace {ws}"
-        )
+        raise ValueError(f"path {raw_path!r} resolves to {p}, which is outside workspace {ws}")
     return p
 
 
 # ---------------------------------------------------------------------------
 # Pydantic models
 # ---------------------------------------------------------------------------
+
 
 class FileReadInput(BaseModel):
     path: str = Field(..., description="文件路径（相对于工作区根目录）")
@@ -99,6 +97,7 @@ class FileEditInput(BaseModel):
 # ---------------------------------------------------------------------------
 # Skills
 # ---------------------------------------------------------------------------
+
 
 @register
 class FileReadSkill(Skill):
@@ -137,8 +136,7 @@ class FileEditSkill(Skill):
     node_type = "file"
     name = "file_edit"
     description = (
-        "编辑文件：精确替换文件中的文本片段。"
-        "输入 path、old_string、new_string，返回替换结果"
+        "编辑文件：精确替换文件中的文本片段。" "输入 path、old_string、new_string，返回替换结果"
     )
     input_schema = FileEditInput
     required_permissions = [Permission.FILE_WRITE]

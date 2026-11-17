@@ -4,6 +4,7 @@
 通过 stdout 输出 JSON 行与父进程通信：
   - 唯一行：{"ok": true, "items": [...]} 或 {"error": "..."}
 """
+
 from __future__ import annotations
 
 import json
@@ -40,6 +41,7 @@ def _get_spider_class(platform: str):
     module_path, class_name = class_path.rsplit(".", 1)
     try:
         import importlib
+
         module = importlib.import_module(module_path)
         return getattr(module, class_name)
     except Exception as e:
@@ -48,7 +50,11 @@ def _get_spider_class(platform: str):
 
 def main() -> None:
     if len(sys.argv) < 4:
-        _emit({"error": "用法: spider_worker.py <platform> <platform_uid> <cookies_json> [user_id] [force] [detail_budget]"})
+        _emit(
+            {
+                "error": "用法: spider_worker.py <platform> <platform_uid> <cookies_json> [user_id] [force] [detail_budget]"
+            }
+        )
         return
 
     platform = sys.argv[1]
@@ -93,7 +99,9 @@ def main() -> None:
         # 登录态失效时 Spider 会跳过全部解析并返回空列表，
         # 若仍按 ok=True 上报，前端会误报"同步完成"，实际一条都没写。
         if getattr(spider, "login_failed", False):
-            _emit({"error": "登录态已失效（被重定向到登录页），请到「平台账号」重新扫码登录后再同步"})
+            _emit(
+                {"error": "登录态已失效（被重定向到登录页），请到「平台账号」重新扫码登录后再同步"}
+            )
             return
 
         serializable = []
@@ -107,12 +115,14 @@ def main() -> None:
                     d[k] = str(v)
             serializable.append(d)
 
-        _emit({
-            "ok": True,
-            "items": serializable,
-            "saved": int(getattr(spider, "saved_count", 0)),
-            "deferred": int(getattr(spider, "detail_deferred", 0)),
-        })
+        _emit(
+            {
+                "ok": True,
+                "items": serializable,
+                "saved": int(getattr(spider, "saved_count", 0)),
+                "deferred": int(getattr(spider, "detail_deferred", 0)),
+            }
+        )
     except Exception as e:
         _emit({"error": str(e)[:500]})
 

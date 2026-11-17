@@ -27,7 +27,7 @@ import logging
 import random
 import sys
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -42,16 +42,37 @@ SEEDS_FILE = BENCH_ROOT / "hallucination_seeds.jsonl"
 RESULTS_DIR = BENCH_ROOT / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
-PRODUCT_ARTIFACT_KEYS = frozenset({
-    "card_draft", "asset_ids", "html_path", "image_url",
-    "title", "deck", "pages", "card_draft_ready",
-})
+PRODUCT_ARTIFACT_KEYS = frozenset(
+    {
+        "card_draft",
+        "asset_ids",
+        "html_path",
+        "image_url",
+        "title",
+        "deck",
+        "pages",
+        "card_draft_ready",
+    }
+)
 
-QA_PATTERNS = frozenset({
-    "是什么", "什么是", "怎么工作", "解释", "为什么",
-    "区别", "对比", "定义", "含义", "原理",
-    "what is", "how does", "explain", "why",
-})
+QA_PATTERNS = frozenset(
+    {
+        "是什么",
+        "什么是",
+        "怎么工作",
+        "解释",
+        "为什么",
+        "区别",
+        "对比",
+        "定义",
+        "含义",
+        "原理",
+        "what is",
+        "how does",
+        "explain",
+        "why",
+    }
+)
 
 
 class HallucinationType(str, Enum):
@@ -237,10 +258,14 @@ def detect_hallucination(seed: Seed, trace: RunTrace) -> HallucinationVerdict:
 async def run_single_seed(seed: Seed, model: str) -> RunResult:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-    from app.engine.reactor.session import ReactorSession, build_reactor_session, collect_reactor_skills
-    from app.engine.schemas import Permission
-    from app.engine.factory import get_deepseek_llm
     from app.core.skill_registry import ensure_builtin_skills_registered
+    from app.engine.factory import get_deepseek_llm
+    from app.engine.reactor.session import (
+        ReactorSession,
+        build_reactor_session,
+        collect_reactor_skills,
+    )
+    from app.engine.schemas import Permission
 
     ensure_builtin_skills_registered()
     skill_instances = collect_reactor_skills()
@@ -248,8 +273,11 @@ async def run_single_seed(seed: Seed, model: str) -> RunResult:
     llm = get_deepseek_llm(model=model)
 
     allowed_permissions = {
-        Permission.FILE_READ, Permission.FILE_WRITE, Permission.BASH_EXEC,
-        Permission.XHS_SEARCH, Permission.NET_HTTP_POST,
+        Permission.FILE_READ,
+        Permission.FILE_WRITE,
+        Permission.BASH_EXEC,
+        Permission.XHS_SEARCH,
+        Permission.NET_HTTP_POST,
         Permission.SKILL_MANAGE,
     }
 
@@ -286,6 +314,7 @@ async def run_single_seed(seed: Seed, model: str) -> RunResult:
                 elif role == "assistant":
                     if hasattr(session, "_messages") and isinstance(session._messages, list):
                         from langchain_core.messages import AIMessage
+
                         session._messages.append(AIMessage(content=content))
             result = await session.run(seed.user_message, context=context)
         else:
@@ -373,13 +402,18 @@ def generate_report(
         avg_waste_steps = sum(r.verdict.total_steps for r in hallucinations) / len(hallucinations)
 
     avg_first_tool = 0.0
-    non_halluc_with_tools = [r for r in results if not r.verdict.is_hallucination and r.verdict.steps_with_tools > 0]
+    non_halluc_with_tools = [
+        r for r in results if not r.verdict.is_hallucination and r.verdict.steps_with_tools > 0
+    ]
     if non_halluc_with_tools:
-        avg_first_tool = sum(r.verdict.first_tool_at_step for r in non_halluc_with_tools) / len(non_halluc_with_tools)
+        avg_first_tool = sum(r.verdict.first_tool_at_step for r in non_halluc_with_tools) / len(
+            non_halluc_with_tools
+        )
 
     confidence_half_width = 0.0
     if total > 0:
         import math
+
         confidence_half_width = 1.96 * math.sqrt(h_rate * (1 - h_rate) / total)
 
     report = {
@@ -495,7 +529,9 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"|----------|------|--------|--------|",
     ]
     for trigger, data in bt.items():
-        lines.append(f"| {trigger} | {data['total']} | {data['hallucinations']} | {data['rate']:.1%} |")
+        lines.append(
+            f"| {trigger} | {data['total']} | {data['hallucinations']} | {data['rate']:.1%} |"
+        )
 
     hallu_details = [d for d in report["details"] if d["is_hallucination"]]
     if hallu_details:
@@ -509,7 +545,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines.append(f"- **用户输入**: {d['user_message']}")
             lines.append(f"- **证据**: {d['evidence']}")
             lines.append(f"- **总步数**: {d['total_steps']}, 有工具的步数: {d['steps_with_tools']}")
-            if d['fabricated_keys']:
+            if d["fabricated_keys"]:
                 lines.append(f"- **脑补的产物key**: {', '.join(d['fabricated_keys'])}")
             lines.append(f"- **声明产出**: {', '.join(d['declared_outputs']) or '(无)'}")
             lines.append(f"- **实际产出**: {', '.join(d['actual_artifacts']) or '(无)'}")
@@ -533,9 +569,17 @@ async def main():
     parser.add_argument("--full", action="store_true", help="Full mode: all seeds")
     parser.add_argument("--samples", type=int, default=20, help="Number of samples for pilot")
     parser.add_argument("--model", type=str, default="deepseek-chat", help="LLM model id")
-    parser.add_argument("--category", type=str, default=None, choices=["high_risk", "normal"], help="Filter by category")
+    parser.add_argument(
+        "--category",
+        type=str,
+        default=None,
+        choices=["high_risk", "normal"],
+        help="Filter by category",
+    )
     parser.add_argument("--concurrency", type=int, default=3, help="Max concurrent runs")
-    parser.add_argument("--version-label", type=str, default="baseline", help="Version label for report")
+    parser.add_argument(
+        "--version-label", type=str, default="baseline", help="Version label for report"
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     args = parser.parse_args()
 
@@ -553,7 +597,9 @@ async def main():
         rng = random.Random(args.seed)
         seeds = rng.sample(seeds, min(args.samples, len(seeds)))
 
-    logger.info(f"Running {len(seeds)} seeds with model={args.model}, concurrency={args.concurrency}")
+    logger.info(
+        f"Running {len(seeds)} seeds with model={args.model}, concurrency={args.concurrency}"
+    )
     logger.info(f"Version label: {args.version_label}")
 
     results = await run_bench(seeds, args.model, concurrency=args.concurrency)

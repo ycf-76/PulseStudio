@@ -47,7 +47,9 @@ class TestTokenBudgetConfig:
             reminder_threshold_tokens=8000,
             compact_threshold_tokens=8000,
         )
-        with pytest.raises(ValueError, match="compact_threshold must be less than reminder_threshold"):
+        with pytest.raises(
+            ValueError, match="compact_threshold must be less than reminder_threshold"
+        ):
             config.validate()
 
 

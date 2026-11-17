@@ -101,7 +101,9 @@ class TieredModelRouter:
       # → "wanx2.1-i2v-plus"（quality 级别的 i2v 模型）
     """
 
-    stage_tiers: dict[PipelineStage, ModelTier] = field(default_factory=lambda: dict(_DEFAULT_STAGE_TIERS))
+    stage_tiers: dict[PipelineStage, ModelTier] = field(
+        default_factory=lambda: dict(_DEFAULT_STAGE_TIERS)
+    )
     # 深拷贝：浅拷贝会让 set_tier_model 的写入污染模块级常量 _DEFAULT_TIER_MODELS
     # （曾致测试间/运行时的 tier 调整永久泄漏，2026-10 修复）
     tier_models: dict[ModelTier, dict[str, str]] = field(
@@ -157,9 +159,7 @@ class TieredModelRouter:
             }
         return {
             "stage_tiers": stages,
-            "tier_definitions": {
-                tier.value: models for tier, models in self.tier_models.items()
-            },
+            "tier_definitions": {tier.value: models for tier, models in self.tier_models.items()},
         }
 
 
@@ -171,6 +171,7 @@ def get_tier_router() -> TieredModelRouter:
     global _DEFAULT_TIER_ROUTER
     if _DEFAULT_TIER_ROUTER is None:
         from app.config import get_settings
+
         settings = get_settings()
 
         stage_tiers = dict(_DEFAULT_STAGE_TIERS)
@@ -180,19 +181,39 @@ def get_tier_router() -> TieredModelRouter:
         # getattr 兜底必须与 config.py 的 tier_*_vl 默认值保持一致
         # （2026-10-27 教训：两者不一致 → 测试绿但生产解析出已下线模型 404）
         tier_models[ModelTier.ECONOMY]["vl"] = getattr(settings, "tier_economy_vl", "qwen3-vl-plus")
-        tier_models[ModelTier.ECONOMY]["llm"] = getattr(settings, "tier_economy_llm", "deepseek-chat")
-        tier_models[ModelTier.ECONOMY]["t2i"] = getattr(settings, "tier_economy_t2i", "wanx2.1-t2i-turbo")
-        tier_models[ModelTier.ECONOMY]["i2v"] = getattr(settings, "tier_economy_i2v", "wanx2.1-i2v-turbo")
+        tier_models[ModelTier.ECONOMY]["llm"] = getattr(
+            settings, "tier_economy_llm", "deepseek-chat"
+        )
+        tier_models[ModelTier.ECONOMY]["t2i"] = getattr(
+            settings, "tier_economy_t2i", "wanx2.1-t2i-turbo"
+        )
+        tier_models[ModelTier.ECONOMY]["i2v"] = getattr(
+            settings, "tier_economy_i2v", "wanx2.1-i2v-turbo"
+        )
 
-        tier_models[ModelTier.STANDARD]["vl"] = getattr(settings, "tier_standard_vl", "qwen3-vl-plus")
-        tier_models[ModelTier.STANDARD]["llm"] = getattr(settings, "tier_standard_llm", "deepseek-chat")
-        tier_models[ModelTier.STANDARD]["t2i"] = getattr(settings, "tier_standard_t2i", "wanx2.1-t2i-turbo")
-        tier_models[ModelTier.STANDARD]["i2v"] = getattr(settings, "tier_standard_i2v", "wanx2.1-i2v-turbo")
+        tier_models[ModelTier.STANDARD]["vl"] = getattr(
+            settings, "tier_standard_vl", "qwen3-vl-plus"
+        )
+        tier_models[ModelTier.STANDARD]["llm"] = getattr(
+            settings, "tier_standard_llm", "deepseek-chat"
+        )
+        tier_models[ModelTier.STANDARD]["t2i"] = getattr(
+            settings, "tier_standard_t2i", "wanx2.1-t2i-turbo"
+        )
+        tier_models[ModelTier.STANDARD]["i2v"] = getattr(
+            settings, "tier_standard_i2v", "wanx2.1-i2v-turbo"
+        )
 
         tier_models[ModelTier.QUALITY]["vl"] = getattr(settings, "tier_quality_vl", "qwen3-vl-plus")
-        tier_models[ModelTier.QUALITY]["llm"] = getattr(settings, "tier_quality_llm", "deepseek-chat")
-        tier_models[ModelTier.QUALITY]["t2i"] = getattr(settings, "tier_quality_t2i", "wanx2.1-t2i-plus")
-        tier_models[ModelTier.QUALITY]["i2v"] = getattr(settings, "tier_quality_i2v", "wanx2.1-i2v-plus")
+        tier_models[ModelTier.QUALITY]["llm"] = getattr(
+            settings, "tier_quality_llm", "deepseek-chat"
+        )
+        tier_models[ModelTier.QUALITY]["t2i"] = getattr(
+            settings, "tier_quality_t2i", "wanx2.1-t2i-plus"
+        )
+        tier_models[ModelTier.QUALITY]["i2v"] = getattr(
+            settings, "tier_quality_i2v", "wanx2.1-i2v-plus"
+        )
 
         _DEFAULT_TIER_ROUTER = TieredModelRouter(stage_tiers=stage_tiers, tier_models=tier_models)
     return _DEFAULT_TIER_ROUTER
