@@ -7,6 +7,10 @@
 </p>
 
 <p align="center">
+  <a href="README.md">简体中文</a> | <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <strong>你的 AI 内容运营搭档</strong>
 </p>
 <p align="center">
@@ -21,7 +25,7 @@
   <img src="https://img.shields.io/badge/Tailwind%20CSS-4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
   <a href="backend/app/agents/registry.py"><img src="https://img.shields.io/badge/Agents-12-0F9D8A?style=flat-square" alt="12 Agents"></a>
   <img src="https://img.shields.io/badge/Models-7%20Providers-F6C344?style=flat-square" alt="7 Model Providers">
-  <a href="#-license"><img src="https://img.shields.io/badge/License-MIT-2EA44F?style=flat-square" alt="License: MIT"></a>
+  <a href="#-license"><img src="https://img.shields.io/badge/License-Apache_2.0-2EA44F?style=flat-square" alt="License: Apache 2.0"></a>
   <a href="https://github.com/ycf-76?tab=packages"><img src="https://img.shields.io/badge/Docker-GHCR-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker"></a>
   <img src="https://img.shields.io/badge/Scrapling-1F6E5C?style=flat-square" alt="Scrapling">
   <img src="https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright">
@@ -300,4 +304,4 @@ pnpm dev                      # http://localhost:5173
 
 ## 📄 License
 
-本项目基于 [MIT](backend/pyproject.toml) 协议开源。
+本项目基于 [Apache License 2.0](LICENSE) 协议开源。
