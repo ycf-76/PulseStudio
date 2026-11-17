@@ -7,10 +7,10 @@
 </p>
 
 <p align="center">
-  <strong>Your AI content operations partner</strong>
+  <strong>From a trending topic to a published post</strong>
 </p>
 <p align="center">
-  Start from a trending topic, and carry it through planning, creation, review, publishing, and performance review.
+  PulseStudio is an AI content creation workbench: topic selection, creation, review, publishing, and performance review — all in one conversation.
 </p>
 
 <p align="center">

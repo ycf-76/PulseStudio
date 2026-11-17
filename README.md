@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <strong>你的 AI 内容运营搭档</strong>
+  <strong>从一个热点，到一条发布</strong>
 </p>
 <p align="center">
-  从一个热点开始，完成选题、创作、审核、发布与复盘。
+  PulseStudio 是 AI 内容创作工作台：选题、创作、审核、发布与复盘，一条对话贯穿全流程。
 </p>
 
 <p align="center">
