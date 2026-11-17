@@ -182,20 +182,20 @@ PulseStudio 是一个面向内容创作者的开源 AI 运营工作台。它把�
 -->
 
 <p align="center">
-  <img src="assets/readme/showcase/real-1.jpg" width="31%" alt="图文卡片：affect 单词卡（插画风）">
+  <img src="assets/readme/showcase/real-1.jpg" width="31%" alt="图文卡片：本地跑大模型的五个前提（极客终端风）">
   &nbsp;
-  <img src="assets/readme/showcase/real-2.jpg" width="31%" alt="图文卡片：/rewind 一键退回（马克笔手写风）">
+  <img src="assets/readme/showcase/real-2.jpg" width="31%" alt="图文卡片：一周通勤穿搭公式（多巴胺亮色风）">
   &nbsp;
-  <img src="assets/readme/showcase/real-3.jpg" width="31%" alt="图文卡片：好粮不用哄（品牌大标排版）">
+  <img src="assets/readme/showcase/real-3.jpg" width="31%" alt="图文卡片：巷子里的手冲小店（手账贴纸风）">
 </p>
 <p align="center">
-  <img src="assets/readme/showcase/real-4.jpg" width="31%" alt="图文卡片：一周穿搭清单（彩色标签版式）">
+  <img src="assets/readme/showcase/real-4.jpg" width="31%" alt="图文卡片：独居消费报告（高奢黑金风）">
   &nbsp;
-  <img src="assets/readme/showcase/real-5.jpg" width="31%" alt="图文卡片：Codex 保姆级教学（深色科技风）">
+  <img src="assets/readme/showcase/real-5.jpg" width="31%" alt="图文卡片：affect 还是 effect（奶油温柔风）">
   &nbsp;
-  <img src="assets/readme/showcase/real-6.jpg" width="31%" alt="图文卡片：甜品探店实拍（摄影种草风）">
+  <img src="assets/readme/showcase/real-6.jpg" width="31%" alt="图文卡片：自律不是靠意志力（瑞士极简风）">
 </p>
-<p align="center"><sub>图文卡片 · 实际生成效果，不同主题 × 不同版式</sub></p>
+<p align="center"><sub>图文卡片 · 卡片引擎实际渲染输出，六个使用场景 × 六套视觉主题</sub></p>
 
 <p align="center"><sub>🎨 更多生成案例：<a href="assets/showcase-local">插画系列</a>（吉卜力风铁道与向日葵 ×4 · 海底世界 ×2）</sub></p>
 
