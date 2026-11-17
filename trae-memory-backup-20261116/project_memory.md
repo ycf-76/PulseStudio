@@ -1,0 +1,398 @@
+## Hard Constraints
+- Routing is hardcoded in conditional_edges; LLM must not decide execution paths (red line constraint)
+- Search operations must use QR Worker session方式 (Playwright with database cookies) as fallback when browser extension fails, with 30s interval and daily 10次 limit to avoid Xiaohongshu risk control
+- Playwright is allowed ONLY for QR code login, card rendering (HTML→PNG, 1080x1440), and search fallback via QR Worker session; all data fetching must primarily use browser extension
+- MCP services for Xiaohongshu data access must use dual-mode architecture (browser plugin as primary, uv run as fallback)
+- UI must follow '去AI化' design principles (no gradient rainbows, emoji icons, or centered hero sections)
+- Frontend MVP must only support screen widths ≥1024px
+- Communication uses SSE + HTTP POST dual channels instead of WebSocket
+- LLM API calls must include max_tokens=1500 limit to control costs
+- Search operations must bypass LLM Loop and directly call TrendingSearchSkill.execute() to avoid dependency on DeepSeek balance
+- Business processes must not directly interact with Playwright for data fetching; QR login Playwright must use separate worker process via HTTP (card_renderer is exempt - it does async in-process rendering with 15s timeout)
+- MySQL 'node_type' ENUM must include all NodeType values (including IMAGE_PLAN and IMAGE_WORKSHOP) to prevent 500 errors during workflow execution
+- Frontend background must not include pink color gradients
+- Windows + Python 3.12 environment: ProactorEventLoop and Playwright async API cannot run in the same process (causes deadlock); QR Worker must be a separate process with HTTP communication
+- Search results must include title relevance filtering (title must contain ≥1 core keyword from topic) to remove unrelated content
+- QR Worker must limit concurrent requests and implement request throttling (2-3s interval) to avoid Xiaohongshu rate limiting and risk control measures
+- LLM testing must use mock models (text_model starting with 'mock-') to avoid token consumption; mock models return fixed JSON responses matching node types (search/analyze/copywrite/audit/publish)
+- Training datasets must be validated for platform purity before use; Xiaohongshu-focused training requires filtering to remove non-Xiaohongshu platform content
+- LLaMA-Factory training must use editable installation (-e flag) to ensure code modifications take effect immediately
+- Training processes must be started with nohup and background execution to prevent accidental termination
+- Training logs must be written to persistent storage (NAS) to preserve records across instance resets
+- Dataset registration in LLaMA-Factory requires both file placement in data directory and entry in dataset_info.json
+- Multiple concurrent training processes on the same GPU must be avoided to prevent OOM errors
+- Training configuration files must be stored in persistent storage (NAS) to survive instance resets
+- Model files must be stored in persistent storage (NAS) to avoid re-downloading across instances
+- Training completion must be verified through process status, log analysis, and output file inspection
+- Evaluation loss values must be interpreted in context of dataset characteristics rather than absolute values
+- Training artifacts must include adapter_model.safetensors, training logs, and evaluation metrics for validation
+- Loss trajectory analysis (via trainer_state.json) is required to assess training effectiveness
+- Data cleaning must include removal of duplicate content and verification of source platform
+- Training dataset size should be appropriate for model capacity (90 samples for 8B model shown effective)
+- Training process management must include verification of single process execution and resource utilization
+- Instance environment must be reconfigured (dependencies reinstalled) after reset despite persistent storage
+- Training parameters must be configured to match dataset size (e.g., 360 steps for 90 samples with 8 epochs)
+- Post-training validation must include checking for complete training artifacts and loss reduction trends
+- Training must be executed in user动手模式 (user hands-on mode) where user performs commands with assistance
+- Data quality (purity) is prioritized over data quantity for effective model fine-tuning
+- Training workflow must include systematic verification at each step (environment, data, configuration, execution)
+- GPU memory constraints must be calculated before training (model size + training overhead) to prevent OOM
+- Training processes must be monitored for resource utilization and proper execution
+- Dataset validation must confirm sample count and content integrity before training
+- Model training must use appropriate hardware (A10 GPU) when local resources (4060 8GB) are insufficient
+- Training completion must be confirmed through multiple indicators (process status, log content, resource usage)
+- Evaluation metrics must include both final loss value and loss reduction trajectory
+- Training artifacts must be stored in structured directory format for easy retrieval and validation
+- Data preprocessing must include source platform filtering and duplicate content removal
+- Training configuration must specify correct model path, dataset name, and hyperparameters
+- Environment setup must verify both persistent files and installed dependencies
+- Training execution must include proper logging and process management to ensure completion
+- Post-training analysis must compare evaluation metrics with previous iterations for improvement assessment
+- Training workflow must include error recovery procedures for failed or interrupted processes
+- Dataset registration must be verified to ensure proper recognition by training framework
+- Training commands must be carefully executed to prevent duplicate processes and resource conflicts
+- Model fine-tuning must prioritize data quality and appropriate training parameters over dataset size
+- Training validation must include both quantitative metrics (loss) and qualitative assessment (content relevance)
+- Persistent storage must be used for all critical training assets (data, models, configurations, logs)
+- Training environment must be validated for dependency consistency and resource availability
+- Training process must follow a structured workflow with verification at each stage
+- Model evaluation must consider dataset characteristics when interpreting loss values
+- Training artifacts must be validated for completeness and integrity before further use
+- Data preparation must include verification of dataset purity and content quality
+- Training execution must include safeguards against accidental process termination
+- Post-training validation must confirm successful completion and artifact generation
+- Training workflow must be documented with key decision points and verification steps
+- Model fine-tuning must balance data quality, quantity, and training parameters for optimal results
+- Training environment must be reconfigured as needed after instance reset to maintain consistency
+- Training processes must be managed to prevent resource conflicts and ensure efficient execution
+- Dataset management must include clear versioning and validation to avoid using outdated or contaminated data
+- Model training must be executed in a controlled manner with user oversight and verification
+- Training outcomes must be evaluated based on both quantitative metrics and qualitative content analysis
+- Training workflow must incorporate lessons learned from previous iterations to improve results
+- Data preprocessing must be thorough to ensure training on high-quality, relevant content
+- Training configuration must be optimized for the specific model and dataset characteristics
+- Environment setup must include verification of all required components and dependencies
+- Training execution must be monitored to ensure proper progress and resource utilization
+- Post-training analysis must include comparison with previous models to assess improvement
+- Training artifacts must be properly stored and organized for easy access and validation
+- Data validation must confirm dataset integrity and suitability for training objectives
+- Training commands must be executed correctly to ensure proper process management and logging
+- Model fine-tuning must prioritize data purity and relevance over sheer quantity of samples
+- Training workflow must include systematic troubleshooting procedures for common issues
+- Evaluation metrics must be interpreted in the context of the specific training dataset and objectives
+- Training completion must be verified through multiple sources to ensure reliability
+- Training environment must be maintained to ensure consistency across different sessions
+- Training processes must be executed with proper resource management to prevent failures
+- Dataset preparation must include careful selection and cleaning to ensure quality training data
+- Model training must be conducted with appropriate hyperparameters for the dataset size and model capacity
+- Post-training validation must include both automated checks and manual inspection
+- Training workflow must be designed to minimize errors and maximize reproducibility
+- Training artifacts must be validated for correctness and completeness before deployment
+- Data management must ensure that only validated, high-quality datasets are used for training
+- Training execution must follow best practices for process management and resource allocation
+- Model evaluation must consider both technical metrics and practical performance for the intended use case
+- Training workflow must incorporate user feedback and lessons learned to continuously improve
+- Environment setup must be efficient, leveraging persistent storage to minimize redundant configuration
+- Training processes must be documented to ensure transparency and reproducibility
+- Dataset validation must include checks for source platform, content quality, and absence of duplicates
+- Model training must be approached systematically, with clear objectives and evaluation criteria
+- Post-training analysis must provide actionable insights for future iterations
+- Training artifacts must be stored in a secure, accessible location for future use
+- Data preprocessing must be tailored to the specific requirements of the model and training objectives
+- Training configuration must be carefully reviewed and verified before execution
+- Environment validation must confirm all necessary components are present and functional
+- Training monitoring must include regular checks on progress, resource usage, and potential issues
+- Model fine-tuning must be an integral part of the project's development process
+- Post-training analysis must be detailed and provide actionable recommendations
+- Training workflow must be designed to maximize the chances of success
+- Data preprocessing must be aligned with the model's architecture and requirements
+- Training execution must be carried out with care and attention to detail
+- Model evaluation must be objective and unbiased
+- Training completion must be verified through a structured process
+- Training artifacts must be stored in a way that facilitates their use in subsequent stages
+- Dataset management must include clear policies and procedures for handling training data
+- Model training must be conducted with a focus on achieving the project's goals
+- Training workflow must be documented to ensure that it can be replicated
+- Environment setup must be optimized for the specific training task
+- Training processes must be designed to minimize the risk of failure
+- Data quality must be a top priority throughout the training process
+- Training configuration must be adjusted based on feedback from previous training sessions
+- Post-training validation must be rigorous, ensuring that the model meets all specifications
+- Training artifacts must be properly maintained and updated as needed
+- Dataset validation must be performed by qualified personnel to ensure quality
+- Training execution must be monitored to ensure that it adheres to the planned workflow
+- Model evaluation must be comprehensive and cover all relevant use cases
+- Training completion must be confirmed by multiple team members if possible
+- Training workflow must be continuously evaluated and improved
+- Data preprocessing must be efficient, making good use of available resources
+- Training configuration must be tested before full-scale training
+- Environment management must ensure that the training environment is secure
+- Training monitoring must be proactive, identifying potential issues before they become problems
+- Model fine-tuning must be based on sound principles and best practices
+- Post-training analysis must be conducted promptly after training completion
+- Training artifacts must be reviewed to ensure they meet the project's standards
+- Data management must ensure that training data is properly protected and backed up
+- Model training must be integrated into the overall project plan
+- Training workflow must be aligned with the project's objectives and timeline
+- Environment setup must be completed before training begins
+- Training processes must be executed in the correct order to ensure success
+- Data preparation must be completed and validated before training starts
+- Model evaluation must be scheduled at appropriate intervals during training
+- Training completion must be celebrated as a milestone in the project's progress
+- Training artifacts must be archived for future reference
+- Dataset validation must be documented to provide evidence of data quality
+- Training configuration must be stored for future reference
+- Environment validation must be documented to ensure compliance with requirements
+- Training monitoring must be documented to provide a record of the training process
+- Model fine-tuning must be documented to show the evolution of the model
+- Post-training analysis must be documented and shared with relevant stakeholders
+- Training workflow must be documented in the project's knowledge base
+- Data preprocessing must be documented to ensure transparency
+- Training execution must be documented to provide a clear audit trail
+- Model evaluation must be documented to support decision-making
+- Training completion must be documented as part of the project's progress
+- Training artifacts must be documented to explain their purpose and content
+- Dataset management must be documented to ensure proper handling of data
+- Model training must be documented to show compliance with project requirements
+- Training workflow must be reviewed regularly to identify areas for improvement
+- Environment setup must be reviewed to ensure it meets current needs
+- Training processes must be reviewed to identify inefficiencies or issues
+- Data preparation must be reviewed to ensure it is effective
+- Model evaluation must be reviewed to ensure it is comprehensive
+- Training completion must be reviewed to ensure all objectives were met
+- Training artifacts must be reviewed to ensure they are complete and accurate
+- Dataset validation must be reviewed to ensure it is thorough
+- Training configuration must be reviewed to ensure it is optimal
+- Environment management must be reviewed to ensure it is effective
+- Training monitoring must be reviewed to ensure it is adequate
+- Model fine-tuning must be reviewed to ensure it is achieving the desired results
+- Post-training analysis must be reviewed to ensure it is insightful
+- Training workflow must be updated based on lessons learned
+- Environment setup must be updated to reflect changing requirements
+- Training processes must be updated to improve efficiency and effectiveness
+- Data preparation must be updated to enhance data quality
+- Model evaluation must be updated to include new metrics or methods
+- Training completion must be updated to reflect new standards or requirements
+- Training artifacts must be updated to include new information or improvements
+- Dataset management must be updated to address new challenges or requirements
+- Model training must be updated to incorporate new techniques or approaches
+- Training workflow must be maintained to ensure it remains effective
+- Environment setup must be maintained to ensure it remains reliable
+- Training processes must be maintained to ensure they remain efficient
+- Skills must inherit the `Skill` base class and use the `@register` decorator to be loaded
+- Skill `node_type` must be one of the system's predefined types (search, analyze, copywrite, image_plan, image_gen, audit, final_review, publish)
+- Skill dependencies must be manually installed as they are not automatically handled
+- Feishu self-built applications can only access resources authorized to the application; root directory listing may be empty if `drive:drive` permission is not configured in Feishu Open Platform backend
+- Feishu folder visibility must be configured for the application to access target folders; this is a Feishu-side restriction that cannot be bypassed in code
+- Dynamic skill loading logic automatically connects new skills with `force=True` triggering a rescan each time
+- Feishu cloud disk file operations must use the four core methods: list_files, create_folder, upload_file, download_file
+- Feishu file upload/download must use base64 encoding for data transfer
+- Feishu folder token normalization must handle `root` → empty string mapping via `_normalize_folder_token` method
+- Feishu API error handling must use the `_check_response` method for consistency
+- Feishu file operation skills must be registered in registry.py to be automatically mounted to chat agents
+- Feishu adapter methods must be implemented in the `云盘文件` section of feishu.py
+- Feishu file operation skills must be implemented in feishu_file_ops_skill.py
+- Feishu upload_file must use `parent_type="explorer"` parameter
+- Feishu list_files must support pagination and accept `folder_token` parameter (empty/root for root directory)
+- Feishu download_file must return byte stream for file content
+- Feishu create_folder must use `drive.v1.file.acreate_folder` API
+- Feishu list_files must use `drive.v1.file.alist` API
+- Feishu upload_file must use `drive.v1.file.aupload_all` API
+- Feishu download_file must use `drive.v1.file.adownload` API
+- Workflow metrics must be aggregated at all four workflow end states (main loop/resume × completion/failure) and pushed via SSE event `workflow_metrics`
+- Failed workflows automatically trigger LLM reflection analysis, including resume path completion
+- Agent evolution proposals are stored in the EvolutionProposal table with a human review state machine
+- Agent reflection results are delivered via SSE event `agent_reflection` and added to in-app notifications
+- Agent reflection service includes idempotency deduplication and LLM fallback template
+- Agent evolution endpoints are registered under the evolution router and protected by authentication
+- AI口播剪辑叠加规划必须严格遵循OPEN VIDEO EDIT四条规则：图形绑定到词级时间戳（误差≤0.1s）、视觉内容字面化匹配口播内容、同一区域同一时间仅一个动态元素、特效仅用于每段唯一戏剧点
+- AI口播剪辑渲染必须废弃绿幕chromakey方案，改用Playwright omitBackground获取原生透明通道，通过逐帧截图序列+ffmpeg rgba叠加实现无绿边合成
+- AI口播剪辑模板必须包含大字号（68-76px）、双层描边、防越界max-width约束，避免文字裁切和发绿问题
+- AI口播剪辑规划必须包含密度约束：全片每10秒至少1个叠加，总覆盖时长占比不低于30%，否则自动带反馈重规划
+- AI口播剪辑必须实现词级时间戳对齐，使用jieba分词匹配whisper词级时间戳，确保字幕和动画严格与语音同步
+- AI口播剪辑输出必须自动进行繁简归一化，避免LLM输出繁体导致的词级对齐失败
+- AI口播剪辑叠加规划必须保证视觉多样性，全片至少混用4种不同模板，避免单一仅加字幕的效果，每个叠加必须包含亮色视觉记忆点，列举类内容的段首必须使用section_card模板
+- AI口播剪辑叠加规划必须新增arrow_point、circle_mark、full_card、split_compare四种新模板，所有模板接入持续微动效果，规划层采用3色撞色盘与节奏规则（开场3秒至少2个叠加、允许留白、结尾收束卡）并内置validate_plan_rhythm自检逻辑
+- AI口播剪辑模板参数别名必须完整覆盖所有输入字段，避免LLM传入的text/sub/主题色等参数被忽略导致内容塌缩
+- AI口播剪辑逐帧渲染必须使用定长定率的color源配置，避免ffmpeg提前截断帧序列导致叠加元素驻留时长不足
+- AI口播剪辑字幕必须统一经过繁简转换处理，避免whisper重建的字幕出现繁体导致显示异常
+- AI口播剪辑所有模板的JS逻辑必须添加空值保护，避免未传入可选参数时查询DOM元素返回null导致渲染崩溃
+- AI口播剪辑视觉自审闭环必须实现全降级机制：无VLM key、抽帧失败、VLM异常、返回坏JSON等任何环节失败时直接出片，绝不阻断成片流程
+- AI口播剪辑视觉自审闭环采用最多2轮重规划机制，重规划复用已有转录结果不重复执行Whisper转写，控制额外耗时
+- AI口播剪辑叠加规划必须实现跨模板布局分层与冲突消解机制：将所有模板按实际渲染位置划分为底部字幕带、中部带、自由绝对定位、全屏覆盖四个层级，同层级同时间的叠加自动通过贪心算法消解（先开始者胜出），避免元素堆叠叠影问题
+- AI口播剪辑视觉自审闭环的抽帧必须选择动画完成后的稳定态时刻，避免抽取半入场动画帧导致VLM误报元素缺失或未高亮
+- AI口播剪辑视觉自审闭环必须添加引用校验防线：VLM报告的问题中引用的文字必须能在对应段的params中找到，否则判定为幻觉/段号错位并丢弃该问题，避免无效重规划
+- AI口播剪辑渲染层必须完整消费规划层传入的color参数，避免LLM按规则传色但渲染层无视参数导致规划与渲染契约脱节
+- AI口播剪辑自审闭环的规划↔渲染↔审查必须三方契约闭合，规划层的每条约束必须在渲染层有对应消费点、在审查层有对应判断标准
+- AI口播剪辑模板字号必须实现分档自适应，避免长文本折行出现孤字断义问题
+- AI口播剪辑自审prompt必须添加明确的豁免条款：系统渲染的emoji颜色由字体决定不受params.color控制，不应作为违规问题上报
+- AI口播剪辑模板生成器已放开配额与提名门槛，不再限制全片生成模板数量，保留6条契约校验（seekTo契约、禁止真实时钟、选择器审计、color参数消费、占位符白名单、HTML转义）、全程无exec/eval仅将LLM产出作为数据由Python包装执行的安全约束
+- AI口播剪辑主业务管线内嵌必须采用全降级机制：叠加增强任何环节失败时仅添加降级记录，原成片照常返回，绝不阻断主管线流程
+- ffmpeg 命令调用必须使用完整路径，避免按名称查找时因文件名带版本号导致命令执行失败
+- AI口播剪辑叠加规划必须新增分布均匀性自检：同时校验全局覆盖率≥30%和最大连续无叠加区间≤max(6s, 8%×视频时长)，不满足则触发重规划，避免叠加内容全部集中在视频开头导致后半段无视觉元素
+- AI口播剪辑模板对比度计算必须使用WCAG相对亮度算法，自动选择黑白文字确保对比度≥4.5:1，避免彩色背景上文字可读性不足的问题
+- 动态布局编排层必须采用三重安全锁机制：LLM仅输出JSON结构、输出结果经过契约校验并支持失败重试、最终通过纯函数编译器执行分段渲染与拼接，全程无执行自由度；规划失败时自动降级为静态布局，最终降级为返回原片，确保流程永不阻断
+- AI口播剪辑修订层必须包含自动防御机制：当LLM返回重复的segment_id时自动重命名，避免管线执行异常
+- RVM人物抠像与faster-whisper不能在同一进程运行：ct2构造模型会拉取旧版cuDNN DLL污染进程，导致torch CUDA原生崩溃，必须采用子进程隔离方式分别执行转录和抠像任务
+- AI口播剪辑auto_deck功能必须内置子进程隔离的转录兜底逻辑，失败时自动回退到静态幻灯片降级方案，绝不阻断成片流程
+- AI口播剪辑幻灯片生成必须实现内容丰富度升级：要点富化支持强调标记、新增quote/stat/compare等多种页型、转录字符上限提升至8000、页数按内容密度自动调整、内置最多2轮自审重试机制，任何环节失败时保留上一版结果绝不阻断
+- AI口播剪辑幻灯片确认闸门必须在deck生成完成后持久化slides.json并暂停流程，等待用户确认、主题修改或重新生成后再执行合成，避免生成内容不符合预期需要整体重跑
+- AI口播剪辑人物镜头必须放置在画面右下角，主页面区域留给内容展示
+- AI口播剪辑幻灯片必须为每页生成与口播内容直接相关的AI配图，采用「LLM生成≤30词英文画面描述 → 万相文生图 → 全屏背景+主题罩层+文字浮层」的链路实现，单页生图失败时自动回退为纯文字页面，绝不阻断成片流程
+- AI口播剪辑必须支持「原片全屏为底 + 素材/特效叠加」的合成模式，该模式下不执行人物抠像和幻灯片主画面替换，所有装饰元素在原片画面上叠加且不得遮挡博主五官
+- AI口播剪辑开发必须以用户提供的实际参考视频为唯一效果标准，先对参考视频逐秒拆解形成可落地的效果规格书并经用户确认后，再进行管线开发，禁止无明确效果标准的模板堆砌式开发
+- AI口播剪辑词级karaoke字幕必须实现逐词跟随语音高亮（品牌绿+微缩放）、白字黑描边无底框，作为核心视觉效果层
+- AI口播剪辑必须废弃大横幅深蓝色块卡片，改用顶部渐变压暗+白字黑描边直接叠加，卡片宽度从85%调整为60%，配图降为小圆图
+- AI口播剪辑强调zoom系统必须遵循约束：最多5次、缩放倍率1.08-1.10x、仅由数字/转折词触发、窗长0.25-0.45s，采用4字滑窗容错匹配emphasis要点词避免语措辞漂移导致的命中失败
+- AI口播剪辑zoom合成必须使用fps显式防重定时，确保帧号换算准确、成片时长无漂移、音画零错位
+- AI口播剪辑触发词匹配必须采用顺序扫描消耗机制，每页触发词从上一页命中位置之后查找，避免片头总结句提前抢匹配导致的翻页乱序
+- AI口播剪辑触发词匹配失败时必须启用单页兜底降级，使用句边界起点作为兜底，不得因单页匹配失败导致整链放弃，提升真实场景鲁棒性
+- AI口播剪辑幻灯片页面禁止使用Ken Burns呼吸式缓动效果，该效果会导致内容晃动、文字模糊不清；幻灯片内的动态效果必须采用元素分层入场的方式，保证文字清晰稳定
+- AI口播剪辑幻灯片层动画修复必须解决N1时间轴错位问题：小窗合成时slides从τ=0直放而翻页计划按裁后轴规划导致的页链提前、页0不可见、翻页提前、片尾冻结问题，通过开场补齐t0=7s的背景垫片再concat修复
+- AI口播剪辑幻灯片层动画必须采用页内相对时刻入场，撤销错误的page_start锚定补丁
+- yt-dlp 媒体下载功能采用 Python API 调用而非 CLI 子进程，与现有 spider 架构风格保持一致
+- yt-dlp 下载仅对 Bilibili 平台启用白名单路由，小红书、抖音平台保持现有 spider 实现不变
+- yt-dlp 集成必须自动探测 ffmpeg 路径，优先使用系统 PATH 中的 ffmpeg，降级使用项目自带的 imageio_ffmpeg 二进制，无需用户额外安装
+- yt-dlp 集成必须处理 Windows 环境下临时 cookie 文件句柄未关闭导致的删除失败问题
+- AI口播剪辑前端交互全部在现有ChatView对话页面内完成，不新增独立路由或编辑器页面；所有阶段（澄清→方案确认→渲染进度→成片预览）均以消息内卡片形式承载，版本历史复用现有ContextSidebar侧栏，全屏预览复用已有VideoLightbox组件
+- talking_head_overlay 规划出 OverlayPlan 后需挂起流程，不得被自动跳过；auto_confirm 注入仅收窄至 pip/装饰场景，避免非预期的自动确认
+- confirm-cut-plan 接口需携带 gate_mode=auto_confirm 参数执行确定性回放，不经过LLM重规划，保证回放结果与原规划完全一致
+- 成片版本号通过统计当前历史待确认消息数N生成，随cut_plan_confirmation_resolved事件下发前端，支持版本条点击回看对应版本成片
+- 前端输入框上方的AI口播增强快捷提示词按钮已删除，功能不受影响，用户仍可通过手动输入对应提示词触发完整链路
+- Guardian 批准后执行结果不得被拼入文本喂给LLM，避免模型幻觉重调技能导致死循环；检测到 overlay_plan_ready + needs_confirmation 时直接落盘 loop_state 并推送确认卡，不再经过LLM处理
+- confirm-cut-plan 路由需同时兼容技能返回的 success 字段和 ok + data.output_path 两种结果形状，统一转换为前端可识别的成片Web路径，避免误判渲染失败
+- 侧会话直接复用现有ChatSession/ChatMessage管道，通过新增的kind和parent_session_id字段区分主会话与侧会话，无需新建独立的消息存储与传输链路
+- 侧会话快照使用独立的side_snapshots表，快照构建逻辑复用现有chat_agent上下文构建函数作为模板
+- 侧会话写拦截与权限控制复用项目已有的Permission枚举和required_permissions元数据机制，在reactor分发循环前置检查即可，无需新建权限系统
+- 侧会话暂停/恢复逻辑复用现有clarification打断-恢复的成熟实现先例
+- 侧会话回写采用特殊消息格式：role="user" + agent_meta.message_type="side_session_digest"，服务层硬约束回写摘要长度不超过30%
+- 侧会话finalize端点必须添加归属与parent关联校验，防止IDOR越权操纵他人侧会话
+- 侧会话确认端点必须添加每侧会话级别的锁，锁内重读pending状态，避免并发确认导致的写副作用重复执行，后到请求返回409状态码
+- 侧会话archived状态必须在/agent接口添加403只读校验，禁止已归档侧会话执行写操作
+- 侧会话快照必须取最新的200条消息再反转顺序，确保基准点落在最新消息上
+- 飞书多维表格创建功能需要应用开通 `bitable:app` 权限并发布新版本，否则API会返回权限错误
+- 飞书多维表格skill已完成三处硬编码白名单配置：registry.py的ALWAYS_LOAD_SKILLS、skill_router.py的分类映射、ops_team.py的运营团队agent技能白名单，确保主聊天链路可正常加载该技能
+- 测试飞书多维表格功能时必须使用新会话，避免旧会话中历史的「建不了」失败记录导致LLM被锚定在摆烂答案上
+- 飞书官方云文档组件不支持多维表格渲染，多维表格需采用「API拉取数据+前端自定义表格组件渲染+飞书跳转按钮」的方案实现，不得尝试使用官方组件嵌入
+- 思考链渲染完成后必须正确复位isThinking状态，避免「思考中」标签持续显示
+- 思考链展开容器必须使用独立的滚动容器，避免链路内容被CSS grid布局硬截断
+- 深度思考折叠态预览行必须固定位置，采用逐字打字机+满屏翻页的方式展示最新思考内容，不得使用左右滑动效果
+- 深度思考展开态必须默认跟随最新输出自动滚动到底部，用户手动上滑超过16px时暂停跟随，滑回底部后自动恢复跟随
+- 思考链扫光动画必须与文字输出速度完全解耦，保持固定的独立动画节奏
+- SSE连接必须在检测到会话进入暂停态时立即关闭释放连接配额，避免浏览器HTTP/1.1连接池耗尽导致后续请求阻塞
+- SSE连接异常断开且回合仍在运行时必须携带Last-Event-ID重连，不得误判为任务完成
+- 后端SSE流必须添加6分钟无事件自动关闭机制，防止连接泄漏长期占用连接配额
+- 订阅回放过程中遇到历史暂停事件时不得立即终止SSE连接，需延迟3秒复查，仅当暂停态持续且1.5秒内无新事件时才关闭连接，避免误杀正在运行的回合导致提前结束
+- AI口播剪辑末页字速需单独调整：末页可用时长 = 页长 − 1.2s（覆盖让位xfade 0.5s + acrossfade 0.6s的实测漂移），非末页字速公式保持不变，避免短末页最后一bullet被截断
+- 视频工作室（agent-video-studio）采用七层架构：场景工程宿主、确定性渲染管线、共享时钟、素材层、自审查闭环、方法论装载机制、创作型agent循环；平台层仅提供通用工具与契约，不预设任何风格、模板或固定视觉范式
+- 视频工作室平台必须严格遵循零风格预设约束：平台代码永远不出现「风格」二字，所有视觉范式、打法规则仅存在于用户输入的skill文本中，每支片子由agent现场读取规则、现场写场景代码、用完即弃，换skill仅需更换输入文本，平台代码零改动
+- 视频工作室采用创作agent循环架构：内置skill作为方法论文本输入，平台仅提供工作区、渲染、预览、自审工具，不预设固定模板或风格，支持用户自定义skill接入
+- 视频工作室必须提供实时预览功能，用户可在创作过程中实时查看画面效果
+- 视频工作室P0阶段不支持对话式修改，避免污染创作管线
+- 视频工作室素材层优先采用代码渲染的贴纸气泡、图标、进度条、karaoke字幕等组件，无需额外生图管线，保证出片效率
+- 视频工作室素材命名模式必须由prepare_assets工具明确透传给agent，禁止agent猜测文件名导致素材引用404黑屏
+- 视频工作室必须内置底部元素探测功能，自动检测源视频底部的烧录字幕、水印、台标特征，结果随素材信息回传给agent
+- 视频工作室必须在系统prompt中添加强制纪律：叠加文字必须避开底部18%区域、两层文字不得直接重叠，避免字幕打架问题
+- 视频工作室必须内置转写LLM纠错pass，仅替换同音字错误并对齐保留原有词级时间戳，纠错失败时回退使用原始转写结果，不得阻断成片流程
+- 视频工作室渲染管线原生支持16:9横屏输出，仅需在timeline配置中指定对应宽高参数即可，无需修改核心渲染脚本
+- 视频工作室原生支持按词级时间戳实现头像窗口的动态缩放（镜头推拉）效果，可根据口播节奏在讲重点时放大、普通内容时恢复正常尺寸，无需新增渲染层代码
+- 视频工作室新增generate_image工具，支持万相文生图，自动适配1:1/16:9/9:16比例，产物落盘后回喂相对路径供场景引用，与现有素材纪律同构
+- 视频工作室生图纪律明确要求图案素材内禁止出现文字，文字一律由场景代码叠加，避免文生图模型生成乱码文字的问题
+- 视频工作室必须添加两道硬校验：画幅必须为16:9（1920×1080）、timeline必须完整覆盖所有转录片段，校验不达标时直接拒绝保存并给出明确修改提示，避免agent输出不符合要求的成片
+- 视频工作室台词对齐必须实现硬校验机制：校验scene中的SEGS逐字原文与转录原文完全一致，校验不通过时直接拒绝保存并要求agent修正，避免台词与口播对不上的问题
+- 视频工作室必须添加全局累计重复调用拦截机制：同一工具同参数累计调用4次即终止任务止损，交错循环也可被拦截，避免agent陷入死循环耗尽执行预算
+- 视频工作室DeepSeek连接必须实现3次重试+2/4/8s退避机制，提升连接稳定性，避免单次超时导致任务提前失败
+- 视频工作室原生支持词级触发的画面裂开特效：通过clip-path实现舞台撕裂拆分、裂缝两侧位移旋转+裂缝高亮线，由词级时间戳定位夸张词触发，无需修改核心渲染脚本
+- 视频工作室必须实现幂等调用去重机制：相同工具+参数的第2次调用直接回喂占位符，不再重复注入大体积结果（如词级时间戳）进入上下文，控制token消耗
+- 视频工作室必须实现transcribe结果回喂瘦身：仅返回精简的segments文本+起止时间，完整词级明细落盘供运行时读取，减少单次回喂的token占用
+- 视频工作室必须实现无参幂等工具的签名归一化：忽略transcribe等无参工具的参数抖动，确保参数不同但功能等价的调用也能被重复调用拦截器识别，避免拦截失效
+- 视频工作室画面撕裂特效必须满足硬参数约束：位移≥40px、旋转≥2.5°、时长0.3–0.5s、全片2–4次，不达标直接拒绝保存并提示参数下限
+- 视频工作室素材纪律硬性规定：背景禁止大面积纯色/渐变留白，必须有纹理/图形/素材铺满构图
+- 视频工作室素材丰富度约束：全片至少3张generate_image生图入画，缺素材必须生图补齐
+- 视频工作室执行预算上限从60轮提升至90轮，避免复杂brief在渲染完成前耗尽执行轮数
+
+## Engineering Conventions
+- TaskPlan/TaskItem/TaskRun database models follow state machine design
+- Frontend views reuse existing page shell structure (mint-shell + SidebarNav + content cards) for consistency
+- API client files named with feature-specific prefixes (e.g., taskPlan.ts)
+- Task scheduling uses APScheduler with one-minute scan interval
+- LLM task decomposition includes dry_run option to preview without token consumption
+- UI components use blue primary color and Lucide outline icons
+- Critical functions use醒目 (eye-catching) icons with larger sizes
+- Interactive elements maintain清晰边界 (clear boundaries) and avoid同色背景融合 (same-color background merging)
+- Frontend routes for new features are registered with requiresAuth protection
+- Sidebar navigation items follow consistent icon + text format
+- API interfaces include complete TypeScript type definitions
+- Zero-token testing options are implemented for LLM-related features
+- Plugin management supports GitHub repository cloning to `backend/skills/` via `POST /api/skills/install-github` endpoint
+- Skill installation also supports manual .py file upload
+- Feishu adapter methods are organized in a dedicated `云盘文件` section within feishu.py
+- New skill files are named with `_skill.py` suffix (e.g., feishu_file_ops_skill.py)
+- Skill registration is performed in registry.py's built-in list
+- New feature API modules follow consistent naming pattern (e.g., evolution.ts for evolution-related endpoints)
+- Frontend feature components are placed in the settings directory under dedicated named files (e.g., EvolutionPanel.vue)
+- Workflow store events are mapped to in-app notifications for consistent user feedback
+- AI口播剪辑相关变更必须同步更新至smart-cut-and-overlay.md文档，保留完整的实现记录和验证结果
+- yt-dlp 集成代码放置在 capabilities/scrapling/spiders/media_downloader.py，通过 BasePlatformSpider 基类的 download_media 方法对外暴露
+- yt-dlp 下载产物默认输出目录为 backend/outputs/media/{platform}/，支持通过环境变量 MEDIA_DOWNLOAD_DIR 自定义覆盖
+- 侧会话相关的后端路由通过服务模块属性访问AsyncSessionLocal以支持测试patch，前端组件复用现有ChatView页面的UI结构与消息卡片渲染逻辑
+- 飞书多维表格相关方法实现在 feishu.py 适配器，对应skill文件为 feishu_bitable.py，通过shim和注册表完成注册
+- 思考链组件ThinkingChain.vue的修改需同步更新对应单元测试，确保完成态标签、展开滚动等场景的断言覆盖
+- 视频工作室P0+P1实现采用Subagent-driven方式，每个任务独立实现+独立审查，最终整体验收
+
+## Lessons Learned
+- Daily generation of content requires robust quality control mechanisms to prevent low-quality output
+- Token costs must be explicitly estimated and displayed to users before task execution
+- Account connectivity checks should be performed before content generation to avoid wasted resources
+- Complex workflows should be broken down into modular components with clear state transitions
+- Frontend development should prioritize consistency with existing UI patterns to reduce maintenance complexity
+- Critical workflow changes (like无人值守自动发布) require thorough validation before implementation
+- koa-connect wrapper caused ctx leaks when migrating Express middleware to Koa; native Koa rewrite is required instead of wrapping Express middleware
+- blcaptain-style-skill is a heavy, complex Node.js-based image rendering skill that causes performance issues (30-180s execution time, frequent timeouts) and requires specific brief.json format input which LLM often fails to generate correctly
+- Skills lacking `Skill` base class inheritance and `@register` decorator will be silently skipped during scanning
+- Skills with unregistered `node_type` values will be registered but not routed to by any nodes
+- Feishu API permissions must be properly configured in the Open Platform backend; missing `drive:drive` permission results in empty root directory listings
+- AI口播剪辑使用绿幕chromakey方案会导致文字发绿、边缘半透明像素丢失、画质损失，该路线无法通过阈值调整修复，必须完全废弃
+- AI口播剪辑使用Playwright内置录屏+chromakey会导致动画卡顿、时长漂移、帧率不可控，必须替换为逐帧截图序列渲染方案
+- AI口播剪辑模板未做分辨率适配会导致叠加内容被裁切，必须在渲染前探测视频实际分辨率并自动适配画布尺寸
+- AI口播剪辑LLM规划未做密度约束会导致叠加内容过少，观感与原视频无差异，必须内置最低密度要求和自动重规划逻辑
+- AI口播剪辑仅添加基础字幕的实现效果过于单一，无法满足用户预期，必须通过多模板混用、亮色视觉元素、专属动画效果提升视觉丰富度
+- AI口播剪辑旧模板未定义完整参数别名会导致LLM传入的text/sub/主题色等参数被忽略，出现文字塌缩、只剩emoji、标记点缺失等问题，必须为所有模板字段添加完整别名
+- AI口播剪辑逐帧渲染使用无限color源+overlay=shortest=1配置会导致ffmpeg提前截断帧序列，full_card等元素仅驻留0.3s而非预期的1.2s，必须使用定长定率的color源配置
+- AI口播剪辑仅对LLM输出做繁简转换会导致whisper词流重建的字幕仍出现繁体，必须统一对所有字幕内容执行繁简归一化处理
+- 浏览器扩展MCP方案的content script注入与响应链路不稳定，无法可靠自动提取用户信息，仅能用于基础登录态检测
+- AI口播剪辑模板JS逻辑未添加空值保护会导致LLM未传入可选参数时查询DOM元素返回null，触发TypeError导致整段渲染失败被跳过，必须为所有模板的DOM元素访问添加存在性判断
+- AI口播剪辑当前管线为开环架构，LLM规划完成后无法查看自身渲染结果，缺乏视觉自审和自动修正能力，是无法兼容多样化用户需求的核心瓶颈，而非模型能力差距
+- AI口播剪辑叠加模板的分层标签与实际渲染位置不符会导致同层冲突检测失效，进而引发多元素同时间堆叠出现文字叠影问题，必须先统一所有模板的分层标签与实际布局事实一致，再接入全局冲突消解逻辑
+- 核对VLM自审产物前必须确认demo进程已完成，且产物时间戳晚于代码修改时间，避免基于旧版本产物误判修复效果
+- AI口播剪辑自审闭环的引用校验防线必须覆盖弯引号（U+2018/2019）及CJK引号，否则VLM输出的弯引号会导致引用提取为空，幻觉问题被错误放行
+- 真机全链验收是暴露单测未覆盖的隐性依赖断链问题的有效手段，auto_short_video主管线此前使用mock LLM掩盖了旧模块路径失效的问题
+- Windows环境下imageio安装的ffmpeg binary文件名自带版本号后缀，直接调用"ffmpeg"命令会因按名查找失败导致合成流程阻塞，必须统一使用完整路径调用ffmpeg相关命令
+- AI口播剪辑固定采用「幻灯片主画面+人物小窗」的合成模式无法满足用户多样化需求，必须新增「原片全屏+素材叠加」的独立合成模式，通过参数化配置覆盖不同用户的视觉偏好
+- 仅通过抽帧截图验证AI口播剪辑成片效果会遗漏节奏、动画流畅度、元素遮挡等核心问题，必须通过完整连播成片进行效果验收，禁止以抽帧结果作为验收通过依据
+- AI口播剪辑emphasis要点词匹配未做容错会因语措辞漂移导致zoom触发点遗漏，必须通过4字滑窗容错机制提升匹配鲁棒性
+- AI口播剪辑触发词匹配采用首次出现策略会导致片头总结句提前命中后续页面的触发词，引发翻页时间乱序，进而导致整链匹配失败，必须替换为顺序扫描消耗机制
+- AI口播剪辑幻灯片Ken Burns呼吸式缓动效果会导致内容晃动、文字模糊不清，无法满足用户对文字清晰度的要求，必须替换为元素分层入场的动态效果，保证文字清晰稳定
+- AI口播剪辑幻灯片层动画修复前存在N5双重错误：live19误诊导致的错误page_start锚定补丁，叠加N1时间轴错位问题，共同导致翻页提前、元素入场时机错误，必须同时修复两处问题才能保证层动画效果正确
+- yt-dlp 官方无小红书视频下载支持，抖音下载受风控变动影响频繁稳定性不足，因此这两个平台不接入yt-dlp，保持现有spider实现
+- Guardian resume 批准后将执行结果拼入文本喂给LLM会导致模型幻觉重调技能，引发死循环，必须直接落盘loop_state并推送确认卡，不再经过LLM处理
+- confirm-cut-plan 路由仅读取 result.get("success") 字段会导致技能返回 ok + data.output_path 形状时恒判失败，误报渲染失败，必须同时兼容两种返回形状并统一转换为Web路径
+- 侧会话写确认路由若在端点定义前注册会导致路由未生效，前端确认请求返回404，必须确保路由注册顺序在端点定义之后
+- 侧会话finalize端点未加归属校验会导致IDOR越权漏洞，攻击者可通过操纵session_id参数修改任意用户的侧会话数据，必须添加严格的归属与parent关联校验
+- 侧会话确认端点未加并发锁会导致竞态条件，同一侧会话的多次确认请求会重复执行写副作用，必须添加每侧会话级别的锁并在锁内重读pending状态，后到请求返回409
+- 侧会话写暂停状态未持久化会导致刷新后确认死锁，必须补全awaiting_side_write_confirmation状态的映射与持久化分支
+- 侧会话快照取消息顺序错误会导致基准点落在旧消息上，必须改为倒序取最新200条再反转，确保快照基于最新上下文构建
+- 后端旧进程占用8000端口未终止时，新启动的后端实例无法正常加载新注册的skill，导致功能不可用，必须先终止占用端口的旧进程再启动新实例
+- 旧会话中存在多次「飞书多维表格建不了」的失败历史时，会将LLM锚定在摆烂答案上，导致即使功能已修复也无法正常触发，必须使用新会话进行测试
+- 思考链组件ThinkingChain.vue的模板bug会导致完成态「思考中」标签未随isThinking复位而隐藏，出现双重显示问题，必须为标题行元素添加v-if条件判断
+- 思考链展开容器的CSS grid布局会导致内容被内层overflow:hidden硬截断、滚动条无法正常出现，必须将滚动容器移至独立的grid item节点
+- 浏览器HTTP/1.1连接池默认仅支持6条并发连接，SSE流泄漏会导致后续请求全部排队阻塞，表现为请求无响应、需要多次刷新才能执行，必须通过暂停态立即关闭、异常断流重连、后端超时自动关闭三重机制防止连接泄漏
+- 订阅回放时遇到历史暂停事件立即终止SSE连接会导致正在运行的回合被误杀，出现提前结束、思考链重放后流被掐断的问题，必须采用延迟3秒复查的逻辑避免误判
+- 当前静态PPT式、无动态交互、配图与内容不匹配的AI口播剪辑实现无法满足用户效果要求，必须以用户提供的实际参考视频为唯一标准，先拆解效果规格再进行管线重构，禁止继续沿用现有静态幻灯片拼接的实现路线
+- 视频工作室此前的模板化偏移问题源于方法论装载与创作agent循环两层缺位，agent无规则可读时会自发滑回固定模板舒适区，必须通过设计文档锁死「平台零风格预设+agent必须先读规则再写场景」的纪律约束避免复发
+- 视频工作室agent猜测帧文件命名模式会导致素材引用404黑屏，必须由prepare_assets工具明确返回确切的文件命名模式，禁止agent自行猜测
+- 视频工作室双层字幕重叠打架问题源于agent未遵守构图约束，必须通过三层防线修复：底部元素探测、系统prompt强制纪律、打法文本内置构图规则，避免同类问题复发
+- 文生图模型生成的图案素材容易出现乱码文字，必须在生图纪律中明确禁止素材内出现文字，所有文字由场景代码叠加，避免乱码影响成片效果
+- 视频工作室台词与口播对不上的问题源于agent编造台词而非使用逐字原文，必须通过硬校验机制拦截并要求修正，而非依赖prompt约束，才能彻底根治该问题
+- 视频工作室重复调用拦截器仅基于参数签名判断会导致LLM为无参工具传入不同幻觉参数时拦截失效，触发重复转录耗尽token，必须通过无参工具签名归一化、幂等调用占位回喂、大体积结果回喂瘦身三重机制解决token浪费问题
+- 视频工作室跑片前七次连续失败的核心根因：DASHSCOPE_API_KEY未注入导致生图不可用、渲染预算0.6s/帧不足导致双图层撕裂特效必然超时、未在system prompt中写入渲染性能纪律导致agent无约束生成复杂帧图；第八次修复前两项后仍因路径问题启动失败，第九次补全绝对路径修复后跑片成功，验证了三项修复的有效性

@@ -14,7 +14,7 @@
   <strong>从一个热点，到一条发布</strong>
 </p>
 <p align="center">
-  PulseStudio 是 AI 内容创作工作台：选题、创作、审核、发布与复盘，一条对话贯穿全流程。
+  PulseStudio 是 AI 内容创作工作台：AI 图文、AI 视频、AI 口播剪辑一站完成，选题、创作、审核、发布与复盘一条对话贯穿全流程。
 </p>
 
 <p align="center">

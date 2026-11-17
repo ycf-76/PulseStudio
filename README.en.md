@@ -10,7 +10,7 @@
   <strong>From a trending topic to a published post</strong>
 </p>
 <p align="center">
-  PulseStudio is an AI content creation workbench: topic selection, creation, review, publishing, and performance review — all in one conversation.
+  PulseStudio is an AI content creation workbench: AI photo-text, AI video, and AI talking-head editing in one place — with topic selection, creation, review, publishing, and performance review all in one conversation.
 </p>
 
 <p align="center">

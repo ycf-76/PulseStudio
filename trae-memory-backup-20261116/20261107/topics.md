@@ -1,0 +1,1 @@
+[session_id: 6aedc5eba5c5a74dd7bd340d | topic_summary_time: 2026-11-07 12:21:20]用户反馈思考链渲染存在两个问题：执行完成后「思考中」状态未停止、展开后思考链路内容被截断。定位到ThinkingChain.vue的两处bug：一是「思考中」标签未绑定v-if条件，完成态仍无条件显示；二是滚动容器错误设置在grid容器上，被grid-template-rows约束导致内容被clip层硬截断。修复后将滚动容器移至独立的grid item节点，为标题行添加isThinking条件判断，同时更新单元测试覆盖对应场景，验证329个用例全绿、vue-tsc无错误。
