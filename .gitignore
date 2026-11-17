@@ -136,3 +136,5 @@ frontend/public/images/setting_images/img_5.jpg
 frontend/public/images/setting_images/agents-banner.png
 frontend/public/images/setting_images/skills-banner.png
 frontend/public/images/setting_images/image-*.png
+# local chat memory backups
+trae-memory-backup*/
