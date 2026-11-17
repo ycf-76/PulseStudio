@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="./assets/readme/hero.svg?v=2" width="760" alt="PulseStudio: AI Content Creation Workbench · Topic Pool Agent Collaboration Multi-Model Access">
 </p>
 
@@ -182,18 +182,18 @@ Video (click cover to play, lightweight 1-minute preview):
 -->
 
 <p align="center">
-  <img src="assets/readme/showcase/real-1.jpg" width="31%" alt="Photo-text card: five prerequisites for running LLMs locally (geek terminal style)">
+  <img src="assets/readme/showcase/real-1.jpg?v=3" width="31%" alt="Photo-text card: five prerequisites for running LLMs locally (geek terminal style)">
   &nbsp;
-  <img src="assets/readme/showcase/real-2.jpg" width="31%" alt="Photo-text card: a week of commuter outfit formulas (dopamine bright style)">
+  <img src="assets/readme/showcase/real-2.jpg?v=3" width="31%" alt="Photo-text card: a week of commuter outfit formulas (dopamine bright style)">
   &nbsp;
-  <img src="assets/readme/showcase/real-3.jpg" width="31%" alt="Photo-text card: a pour-over coffee shop in the alley (journal sticker style)">
+  <img src="assets/readme/showcase/real-3.jpg?v=3" width="31%" alt="Photo-text card: a pour-over coffee shop in the alley (journal sticker style)">
 </p>
 <p align="center">
-  <img src="assets/readme/showcase/real-4.jpg" width="31%" alt="Photo-text card: where the money of solo dwellers goes (luxe noir style)">
+  <img src="assets/readme/showcase/real-4.jpg?v=3" width="31%" alt="Photo-text card: where the money of solo dwellers goes (luxe noir style)">
   &nbsp;
-  <img src="assets/readme/showcase/real-5.jpg" width="31%" alt="Photo-text card: affect or effect (cream soft style)">
+  <img src="assets/readme/showcase/real-5.jpg?v=3" width="31%" alt="Photo-text card: affect or effect (cream soft style)">
   &nbsp;
-  <img src="assets/readme/showcase/real-6.jpg" width="31%" alt="Photo-text card: discipline is not willpower (Swiss minimal style)">
+  <img src="assets/readme/showcase/real-6.jpg?v=3" width="31%" alt="Photo-text card: discipline is not willpower (Swiss minimal style)">
 </p>
 <p align="center"><sub>Photo-text cards · actual output of the card engine — six scenarios × six visual themes</sub></p>
 
