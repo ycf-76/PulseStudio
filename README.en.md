@@ -55,12 +55,10 @@ PulseStudio is an open-source AI operations workbench for content creators. It c
 
 Think of it as an operations partner that remembers your account: it knows which trends you're chasing, what you've published, and which formats perform best. It stays with you from trend discovery all the way to post-publish review, instead of starting from zero every time.
 
-**PulseStudio demo video** (click the cover to play):
+**PulseStudio demo video**:
 
 <p align="center">
-  <a href="https://github.com/ycf-76/PulseStudio/releases/download/demo-v1/pulsestudio-demo.mp4">
-    <img src="assets/readme/features/clip.png" width="640" alt="PulseStudio demo video, click to play">
-  </a>
+  <video src="https://github.com/user-attachments/assets/25afa889-1638-480f-adab-20ecd241d415" controls muted width="100%"></video>
 </p>
 
 
